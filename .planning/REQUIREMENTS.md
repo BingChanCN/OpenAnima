@@ -101,33 +101,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MOD-01 | — | Pending |
-| MOD-02 | — | Pending |
-| MOD-03 | — | Pending |
-| MOD-04 | — | Pending |
-| MOD-05 | — | Pending |
-| RUN-01 | — | Pending |
-| RUN-02 | — | Pending |
-| RUN-03 | — | Pending |
-| RUN-04 | — | Pending |
-| RUN-05 | — | Pending |
-| RUN-06 | — | Pending |
-| LLM-01 | — | Pending |
-| LLM-02 | — | Pending |
-| LLM-03 | — | Pending |
-| VIS-01 | — | Pending |
-| VIS-02 | — | Pending |
-| VIS-03 | — | Pending |
-| VIS-04 | — | Pending |
-| SAF-01 | — | Pending |
-| DAT-01 | — | Pending |
-| DAT-02 | — | Pending |
+| MOD-01 | Phase 1 | Pending |
+| MOD-02 | Phase 1 | Pending |
+| MOD-03 | Phase 1 | Pending |
+| MOD-04 | Phase 2 | Pending |
+| MOD-05 | Phase 1 | Pending |
+| RUN-01 | Phase 7 | Pending |
+| RUN-02 | Phase 7 | Pending |
+| RUN-03 | Phase 2 | Pending |
+| RUN-04 | Phase 4 | Pending |
+| RUN-05 | Phase 4 | Pending |
+| RUN-06 | Phase 4 | Pending |
+| LLM-01 | Phase 3 | Pending |
+| LLM-02 | Phase 3 | Pending |
+| LLM-03 | Phase 3 | Pending |
+| VIS-01 | Phase 5 | Pending |
+| VIS-02 | Phase 5 | Pending |
+| VIS-03 | Phase 5 | Pending |
+| VIS-04 | Phase 5 | Pending |
+| SAF-01 | Phase 7 | Pending |
+| DAT-01 | Phase 6 | Pending |
+| DAT-02 | Phase 6 | Pending |
 
 **Coverage:**
 - v1 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21 ⚠️
+- Mapped to phases: 21
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 after initial definition*
+*Last updated: 2026-02-21 after roadmap creation*
