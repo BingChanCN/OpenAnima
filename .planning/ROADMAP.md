@@ -46,11 +46,11 @@ Plans:
   1. Modules send and receive typed events through MediatR bus
   2. Code heartbeat executes every 100ms without noticeable CPU impact
   3. Event delivery between modules completes within single heartbeat cycle
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — Event contracts (ModuleEvent, IEventBus, ITickable) and EventBus implementation with dynamic subscription
+- [ ] 02-02-PLAN.md — HeartbeatLoop with PeriodicTimer, end-to-end wiring, and SampleModule event demo
 
 ### Phase 3: LLM Integration
 **Goal**: Agent can call LLM APIs with streaming responses and fault tolerance
@@ -133,7 +133,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Plugin System | 1/3 | Complete    | 2026-02-21 |
-| 2. Event Bus & Heartbeat Loop | 0/TBD | Not started | - |
+| 2. Event Bus & Heartbeat Loop | 0/2 | Not started | - |
 | 3. LLM Integration | 0/TBD | Not started | - |
 | 4. Tiered Thinking Loop | 0/TBD | Not started | - |
 | 5. Visual Editor | 0/TBD | Not started | - |
