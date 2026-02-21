@@ -1,5 +1,9 @@
 <Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/SampleModule/SampleModule.csproj" />
+  </Folder>
   <Folder Name="/src/">
+    <Project Path="src/OpenAnima.Contracts/OpenAnima.Contracts.csproj" />
     <Project Path="src/OpenAnima.Core/OpenAnima.Core.csproj" />
   </Folder>
 </Solution>

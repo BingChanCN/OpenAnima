@@ -1,0 +1,6 @@
+{
+  "name": "SampleModule",
+  "version": "1.0.0",
+  "description": "A sample module for testing the plugin system",
+  "entryAssembly": "SampleModule.dll"
+}
