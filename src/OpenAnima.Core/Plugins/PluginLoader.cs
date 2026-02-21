@@ -57,13 +57,21 @@ public class PluginLoader
             Assembly assembly = context.LoadFromAssemblyName(new AssemblyName(assemblyName));
 
             // 6. Scan types for IModule implementation
+            // Use name-based comparison to handle cross-context type identity issues
             Type? moduleType = null;
             foreach (var type in assembly.GetTypes())
             {
-                if (typeof(IModule).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract)
+                if (!type.IsInterface && !type.IsAbstract)
                 {
-                    moduleType = type;
-                    break;
+                    // Check if type implements IModule by interface name
+                    var implementsIModule = type.GetInterfaces()
+                        .Any(i => i.FullName == "OpenAnima.Contracts.IModule");
+
+                    if (implementsIModule)
+                    {
+                        moduleType = type;
+                        break;
+                    }
                 }
             }
 
@@ -81,8 +89,8 @@ public class PluginLoader
             }
 
             // 7. Instantiate module
-            IModule? module = Activator.CreateInstance(moduleType) as IModule;
-            if (module == null)
+            object? instance = Activator.CreateInstance(moduleType);
+            if (instance == null)
             {
                 return new LoadResult(
                     null,
@@ -95,15 +103,34 @@ public class PluginLoader
                 );
             }
 
-            // 8. Call Initialize hook
+            // 8. Cast to IModule using dynamic to avoid type identity issues
+            IModule module;
+            try
+            {
+                module = (IModule)instance;
+            }
+            catch (InvalidCastException)
+            {
+                return new LoadResult(
+                    null,
+                    context,
+                    manifest,
+                    new InvalidOperationException(
+                        $"Type {moduleType.FullName} does not implement IModule correctly. " +
+                        $"This may be due to assembly loading issues."),
+                    false
+                );
+            }
+
+            // 9. Call Initialize hook
             module.InitializeAsync().GetAwaiter().GetResult();
 
-            // 9. Return success
+            // 10. Return success
             return new LoadResult(module, context, manifest, null, true);
         }
         catch (Exception ex)
         {
-            // 10. Wrap all errors in LoadResult (never throw, never silently skip)
+            // 11. Wrap all errors in LoadResult (never throw, never silently skip)
             return new LoadResult(null, null, null, ex, false);
         }
     }

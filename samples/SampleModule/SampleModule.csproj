@@ -7,7 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\OpenAnima.Contracts\OpenAnima.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\OpenAnima.Contracts\OpenAnima.Contracts.csproj">
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>
