@@ -34,9 +34,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Solution structure and Contracts assembly (IModule, IModuleMetadata, typed I/O interfaces)
-- [ ] 01-02-PLAN.md — Plugin loading infrastructure (PluginLoadContext, PluginLoader, manifest parsing, hot discovery)
-- [ ] 01-03-PLAN.md — Module registry, sample module, and end-to-end integration wiring
+- [x] 01-01-PLAN.md — Solution structure and Contracts assembly (IModule, IModuleMetadata, typed I/O interfaces)
+- [x] 01-02-PLAN.md — Plugin loading infrastructure (PluginLoadContext, PluginLoader, manifest parsing, hot discovery)
+- [x] 01-03-PLAN.md — Module registry, sample module, and end-to-end integration wiring
 
 ### Phase 2: Event Bus & Heartbeat Loop
 **Goal**: Modules can communicate via events and heartbeat runs at target performance
@@ -49,7 +49,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Event contracts (ModuleEvent, IEventBus, ITickable) and EventBus implementation with dynamic subscription
+- [x] 02-01-PLAN.md — Event contracts (ModuleEvent, IEventBus, ITickable) and EventBus implementation with dynamic subscription
 - [ ] 02-02-PLAN.md — HeartbeatLoop with PeriodicTimer, end-to-end wiring, and SampleModule event demo
 
 ### Phase 3: LLM Integration

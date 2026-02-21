@@ -5,38 +5,40 @@
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe
-**Current focus:** Phase 1 - Core Plugin System
+**Current focus:** Phase 2 - Event Bus & Heartbeat Loop
 
 ## Current Position
 
-Phase: 1 of 7 (Core Plugin System)
-Plan: 3 of 3 in current phase
-Status: Complete
-Last activity: 2026-02-21 - Completed quick task 1: 帮我在github上创建一个仓库并提交代码
+Phase: 2 of 7 (Event Bus & Heartbeat Loop)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-02-21 - Completed 02-01-PLAN.md (Event Bus Infrastructure)
 
-Progress: [████░░░░░░] 43%
+Progress: [████░░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 3.07 min
-- Total execution time: 0.15 hours
+- Total plans completed: 4
+- Average duration: 3.26 min
+- Total execution time: 0.22 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 3 | 9.19 min | 3.06 min |
+| 02 | 1 | 3.80 min | 3.80 min |
 
 **Recent Trend:**
-- Last 5 plans: 2.25, 2.35, 4.52
-- Trend: Increasing complexity
+- Last 5 plans: 2.25, 2.35, 4.52, 3.80
+- Trend: Stabilizing
 
 *Updated after each plan completion*
 | Phase 01 P01 | 2.25 | 2 tasks | 6 files |
 | Phase 01 P02 | 2.35 | 2 tasks | 4 files |
 | Phase 01 P03 | 271 | 2 tasks | 7 files |
+| Phase 02 P01 | 3.80 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -53,6 +55,10 @@ Recent decisions affecting current work:
 - [Phase 01]: 500ms debounce timer for FileSystemWatcher events
 - [Phase 01]: Exclude OpenAnima.Contracts from module publish to prevent type identity issues
 - [Phase 01]: Use name-based type discovery for cross-context compatibility
+- [Phase 02]: Use ConcurrentDictionary + ConcurrentBag for lock-free subscription storage
+- [Phase 02]: Lazy cleanup of disposed subscriptions every 100 publishes
+- [Phase 02]: Parallel handler dispatch with Task.WhenAll and individual error isolation
+- [Phase 02]: Contracts assembly remains dependency-free (no MediatR reference)
 
 ### Pending Todos
 
@@ -71,5 +77,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 01-03-PLAN.md
-Resume file: Phase 1 complete - ready for Phase 2
+Stopped at: Completed 02-01-PLAN.md
+Resume file: Phase 2 Plan 1 complete - ready for Plan 2 (Heartbeat Loop)

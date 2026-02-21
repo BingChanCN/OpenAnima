@@ -12,7 +12,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **MOD-01**: C# modules loaded as in-process assemblies via AssemblyLoadContext with isolation
 - [x] **MOD-02**: Typed module contracts with declared input/output interfaces
 - [x] **MOD-03**: Zero-config module installation — download package and load without manual setup
-- [ ] **MOD-04**: MediatR-based event bus for inter-module communication
+- [x] **MOD-04**: MediatR-based event bus for inter-module communication
 - [x] **MOD-05**: Module registry for discovering and managing loaded modules
 
 ### Agent Runtime
