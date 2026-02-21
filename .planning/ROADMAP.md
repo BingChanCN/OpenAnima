@@ -31,11 +31,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Module can be packaged and loaded without manual dependency setup
   3. Multiple modules load in isolation without interfering with each other
   4. Module registry displays all loaded modules with their capabilities
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Solution structure and Contracts assembly (IModule, IModuleMetadata, typed I/O interfaces)
+- [ ] 01-02-PLAN.md — Plugin loading infrastructure (PluginLoadContext, PluginLoader, manifest parsing, hot discovery)
+- [ ] 01-03-PLAN.md — Module registry, sample module, and end-to-end integration wiring
 
 ### Phase 2: Event Bus & Heartbeat Loop
 **Goal**: Modules can communicate via events and heartbeat runs at target performance
@@ -131,7 +132,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Plugin System | 0/TBD | Not started | - |
+| 1. Core Plugin System | 0/3 | Planned | - |
 | 2. Event Bus & Heartbeat Loop | 0/TBD | Not started | - |
 | 3. LLM Integration | 0/TBD | Not started | - |
 | 4. Tiered Thinking Loop | 0/TBD | Not started | - |
