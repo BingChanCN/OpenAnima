@@ -19,7 +19,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **RUN-01**: Agent lifecycle controls — start, stop, pause
 - [ ] **RUN-02**: Error handling with user-friendly messages and module fault isolation
-- [ ] **RUN-03**: Code-based heartbeat loop running at ≤100ms intervals
+- [x] **RUN-03**: Code-based heartbeat loop running at ≤100ms intervals
 - [ ] **RUN-04**: Fast LLM triage layer for quick decision-making (escalation from heartbeat)
 - [ ] **RUN-05**: Deep reasoning layer for complex tasks (invoked by triage)
 - [ ] **RUN-06**: Agent proactively initiates conversations and actions without user input
@@ -104,11 +104,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MOD-01 | Phase 1 | Complete |
 | MOD-02 | Phase 1 | Complete |
 | MOD-03 | Phase 1 | Complete |
-| MOD-04 | Phase 2 | Pending |
+| MOD-04 | Phase 2 | Complete |
 | MOD-05 | Phase 1 | Complete |
 | RUN-01 | Phase 7 | Pending |
 | RUN-02 | Phase 7 | Pending |
-| RUN-03 | Phase 2 | Pending |
+| RUN-03 | Phase 2 | Complete |
 | RUN-04 | Phase 4 | Pending |
 | RUN-05 | Phase 4 | Pending |
 | RUN-06 | Phase 4 | Pending |
