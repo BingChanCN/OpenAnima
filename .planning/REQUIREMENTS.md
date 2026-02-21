@@ -9,9 +9,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Module System
 
-- [ ] **MOD-01**: C# modules loaded as in-process assemblies via AssemblyLoadContext with isolation
+- [x] **MOD-01**: C# modules loaded as in-process assemblies via AssemblyLoadContext with isolation
 - [x] **MOD-02**: Typed module contracts with declared input/output interfaces
-- [ ] **MOD-03**: Zero-config module installation — download package and load without manual setup
+- [x] **MOD-03**: Zero-config module installation — download package and load without manual setup
 - [ ] **MOD-04**: MediatR-based event bus for inter-module communication
 - [ ] **MOD-05**: Module registry for discovering and managing loaded modules
 
@@ -101,9 +101,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MOD-01 | Phase 1 | Pending |
+| MOD-01 | Phase 1 | Complete |
 | MOD-02 | Phase 1 | Complete |
-| MOD-03 | Phase 1 | Pending |
+| MOD-03 | Phase 1 | Complete |
 | MOD-04 | Phase 2 | Pending |
 | MOD-05 | Phase 1 | Pending |
 | RUN-01 | Phase 7 | Pending |
