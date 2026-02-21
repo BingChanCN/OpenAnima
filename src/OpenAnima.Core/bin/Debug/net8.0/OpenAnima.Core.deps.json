@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "OpenAnima.Core/1.0.0": {
+        "dependencies": {
+          "OpenAnima.Contracts": "1.0.0"
+        },
+        "runtime": {
+          "OpenAnima.Core.dll": {}
+        }
+      },
+      "OpenAnima.Contracts/1.0.0": {
+        "runtime": {
+          "OpenAnima.Contracts.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "OpenAnima.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "OpenAnima.Contracts/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

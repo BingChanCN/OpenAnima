@@ -1,2 +1,5 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OpenAnima.Core/OpenAnima.Core.csproj" />
+  </Folder>
 </Solution>
