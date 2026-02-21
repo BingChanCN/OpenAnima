@@ -13,7 +13,7 @@ OpenAnima delivers a local-first AI agent platform where agents proactively thin
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Plugin System** - C# module loading with AssemblyLoadContext isolation and typed contracts (completed 2026-02-21)
-- [ ] **Phase 2: Event Bus & Heartbeat Loop** - MediatR messaging infrastructure and 100ms code heartbeat
+- [x] **Phase 2: Event Bus & Heartbeat Loop** - MediatR messaging infrastructure and 100ms code heartbeat (completed 2026-02-21)
 - [ ] **Phase 3: LLM Integration** - OpenAI-compatible API client with streaming and resilience
 - [ ] **Phase 4: Tiered Thinking Loop** - Fast triage and deep reasoning layers for proactive agent behavior
 - [ ] **Phase 5: Visual Editor** - Blazor Hybrid drag-drop node graph for module wiring
@@ -133,7 +133,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Plugin System | 1/3 | Complete    | 2026-02-21 |
-| 2. Event Bus & Heartbeat Loop | 0/2 | Not started | - |
+| 2. Event Bus & Heartbeat Loop | 0/2 | Complete    | 2026-02-21 |
 | 3. LLM Integration | 0/TBD | Not started | - |
 | 4. Tiered Thinking Loop | 0/TBD | Not started | - |
 | 5. Visual Editor | 0/TBD | Not started | - |
