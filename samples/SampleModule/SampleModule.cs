@@ -3,11 +3,36 @@ using OpenAnima.Contracts;
 namespace SampleModule;
 
 /// <summary>
-/// A sample module demonstrating the plugin system.
+/// A sample module demonstrating the plugin system with event bus and heartbeat.
 /// </summary>
-public class SampleModule : IModule
+public class SampleModule : IModule, ITickable
 {
     public IModuleMetadata Metadata { get; } = new SampleModuleMetadata();
+
+    private IEventBus? _eventBus;
+    private long _tickCount;
+    private IDisposable? _subscription;
+
+    // EventBus injected by host after loading
+    public IEventBus? EventBus
+    {
+        get => _eventBus;
+        set
+        {
+            _eventBus = value;
+            // Subscribe when EventBus is injected
+            if (_eventBus != null && _subscription == null)
+            {
+                _subscription = _eventBus.Subscribe<string>(
+                    "SampleHeartbeat",
+                    async (evt, ct) =>
+                    {
+                        Console.WriteLine($"[SampleModule] Received event: {evt.EventName} from {evt.SourceModuleId} - {evt.Payload}");
+                        await Task.CompletedTask;
+                    });
+            }
+        }
+    }
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -18,7 +43,33 @@ public class SampleModule : IModule
     public Task ShutdownAsync(CancellationToken cancellationToken = default)
     {
         Console.WriteLine("SampleModule shutting down");
+        _subscription?.Dispose();
         return Task.CompletedTask;
+    }
+
+    public async Task TickAsync(CancellationToken ct = default)
+    {
+        _tickCount++;
+
+        // Debug: show that tick is being called
+        if (_tickCount == 1 || _tickCount % 10 == 0)
+        {
+            Console.WriteLine($"[SampleModule] Tick #{_tickCount}");
+        }
+
+        // Publish heartbeat event every 10th tick to avoid spam
+        if (_tickCount % 10 == 0 && EventBus != null)
+        {
+            var evt = new ModuleEvent<string>
+            {
+                EventName = "SampleHeartbeat",
+                SourceModuleId = Metadata.Name,
+                Payload = $"Heartbeat #{_tickCount}"
+            };
+
+            await EventBus.PublishAsync(evt, ct);
+            Console.WriteLine($"[SampleModule] Published heartbeat event #{_tickCount}");
+        }
     }
 
     /// <summary>

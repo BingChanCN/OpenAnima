@@ -118,18 +118,14 @@ public class HeartbeatLoop : IDisposable
 
             foreach (var entry in modules)
             {
-                // Name-based type check for cross-context compatibility
+                // Duck-typing approach for cross-context compatibility
+                // Check if the module has a TickAsync(CancellationToken) method
                 var moduleType = entry.Module.GetType();
-                var isTickable = moduleType.GetInterfaces()
-                    .Any(i => i.Name == nameof(ITickable) || i.FullName == typeof(ITickable).FullName);
+                var tickMethod = moduleType.GetMethod("TickAsync", new[] { typeof(CancellationToken) });
 
-                if (isTickable)
+                if (tickMethod != null && tickMethod.ReturnType == typeof(Task))
                 {
-                    var tickMethod = moduleType.GetMethod(nameof(ITickable.TickAsync));
-                    if (tickMethod != null)
-                    {
-                        tickTasks.Add(InvokeTickSafely(entry.Module, tickMethod, ct));
-                    }
+                    tickTasks.Add(InvokeTickSafely(entry.Module, tickMethod, ct));
                 }
             }
 
