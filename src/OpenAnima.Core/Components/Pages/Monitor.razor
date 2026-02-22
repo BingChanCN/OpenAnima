@@ -1,0 +1,53 @@
+@page "/monitor"
+
+<h1 class="page-title">
+    Monitor
+    <span class="connection-dot @ConnectionClass"
+          title="@ConnectionTitle"></span>
+</h1>
+
+@if (connectionState == HubConnectionState.Reconnecting)
+{
+    <div class="reconnecting-banner">Reconnecting...</div>
+}
+
+<div class="monitor-grid">
+    <div class="metric-card card">
+        <div class="metric-header">
+            <span class="metric-label">Heartbeat</span>
+        </div>
+        <div class="metric-value status-text @(isRunning ? "running" : "stopped")">
+            @(isRunning ? "Running" : "Stopped")
+        </div>
+    </div>
+
+    <div class="metric-card card">
+        <div class="metric-header">
+            <span class="metric-label">Tick Count</span>
+        </div>
+        <div class="metric-value mono tick-value">
+            @tickCount.ToString("N0")
+        </div>
+    </div>
+
+    <div class="metric-card card">
+        <div class="metric-header">
+            <span class="metric-label">Tick Latency</span>
+        </div>
+        <div class="metric-value mono @LatencyClass">
+            @latencyMs.ToString("F1") ms
+        </div>
+    </div>
+
+    <div class="metric-card card trend-card">
+        <div class="metric-header">
+            <span class="metric-label">Latency Trend</span>
+            <span class="metric-sublabel">last @latencyHistory.Count points</span>
+        </div>
+        <div class="sparkline-container">
+            <Sparkline Values="@latencyHistory"
+                       Width="200" Height="60"
+                       BaselineValue="100" />
+        </div>
+    </div>
+</div>

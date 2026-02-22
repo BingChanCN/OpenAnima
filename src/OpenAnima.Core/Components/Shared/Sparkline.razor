@@ -1,0 +1,36 @@
+@if (Values.Count > 1)
+{
+    <svg class="sparkline" viewBox="0 0 @Width @Height" preserveAspectRatio="none">
+        @if (BaselineValue.HasValue && MaxValue > 0)
+        {
+            var baseY = Height - (BaselineValue.Value / MaxValue) * Height;
+            <line x1="0" y1="@F(baseY)" x2="@Width" y2="@F(baseY)"
+                  class="sparkline-baseline" />
+        }
+        <polyline points="@GetPoints()" class="sparkline-line" fill="none" />
+    </svg>
+}
+
+@code {
+    [Parameter] public List<double> Values { get; set; } = new();
+    [Parameter] public int Width { get; set; } = 120;
+    [Parameter] public int Height { get; set; } = 40;
+    [Parameter] public double? BaselineValue { get; set; }
+
+    private double MaxValue => Values.Count > 0
+        ? Math.Max(Values.Max(), BaselineValue ?? 0)
+        : 1;
+
+    private string GetPoints()
+    {
+        if (Values.Count < 2) return "";
+        var max = MaxValue;
+        if (max == 0) max = 1;
+        var step = (double)Width / (Values.Count - 1);
+        return string.Join(" ", Values.Select((v, i) =>
+            $"{F(i * step)},{F(Height - (v / max) * Height)}"));
+    }
+
+    private static string F(double value) =>
+        value.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+}

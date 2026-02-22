@@ -1,0 +1,123 @@
+.page-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.connection-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.connection-dot.connected {
+    background-color: var(--success-color);
+}
+
+.connection-dot.disconnected {
+    background-color: var(--error-color);
+}
+
+.connection-dot.reconnecting {
+    background-color: var(--warning-color);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.reconnecting-banner {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid var(--warning-color);
+    border-radius: 8px;
+    padding: 8px 16px;
+    margin-bottom: 16px;
+    color: var(--warning-color);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.monitor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.metric-card {
+    padding: 24px;
+}
+
+.metric-header {
+    margin-bottom: 12px;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+}
+
+.metric-sublabel {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-left: 8px;
+}
+
+.metric-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    transition: color 0.2s ease;
+}
+
+.tick-value {
+    font-variant-numeric: tabular-nums;
+}
+
+.status-text.running {
+    color: var(--success-color);
+}
+
+.status-text.stopped {
+    color: var(--error-color);
+}
+
+.latency-normal {
+    color: var(--success-color);
+}
+
+.latency-caution {
+    color: var(--warning-color);
+}
+
+.latency-warning {
+    color: var(--error-color);
+}
+
+.sparkline-container {
+    height: 60px;
+    margin-top: 8px;
+}
+
+.trend-card {
+    grid-column: span 2;
+}
+
+@media (max-width: 768px) {
+    .monitor-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .trend-card {
+        grid-column: span 1;
+    }
+}

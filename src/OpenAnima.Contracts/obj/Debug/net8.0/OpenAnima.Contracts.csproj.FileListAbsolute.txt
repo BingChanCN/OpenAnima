@@ -5,6 +5,7 @@
 /home/user/OpenAnima/src/OpenAnima.Contracts/obj/Debug/net8.0/OpenAnima.Contracts.AssemblyInfoInputs.cache
 /home/user/OpenAnima/src/OpenAnima.Contracts/obj/Debug/net8.0/OpenAnima.Contracts.AssemblyInfo.cs
 /home/user/OpenAnima/src/OpenAnima.Contracts/obj/Debug/net8.0/OpenAnima.Contracts.csproj.CoreCompileInputs.cache
+/home/user/OpenAnima/src/OpenAnima.Contracts/obj/Debug/net8.0/OpenAnima.Contracts.sourcelink.json
 /home/user/OpenAnima/src/OpenAnima.Contracts/obj/Debug/net8.0/OpenAnima.Contracts.dll
 /home/user/OpenAnima/src/OpenAnima.Contracts/obj/Debug/net8.0/refint/OpenAnima.Contracts.dll
 /home/user/OpenAnima/src/OpenAnima.Contracts/obj/Debug/net8.0/OpenAnima.Contracts.pdb

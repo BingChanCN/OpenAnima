@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("OpenAnima.Contracts")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f86fbab3d99a778dcde768c60bda60d12b2cd34d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+942929d31f10a77487c1ca3cd22381572eba938a")]
 [assembly: System.Reflection.AssemblyProductAttribute("OpenAnima.Contracts")]
 [assembly: System.Reflection.AssemblyTitleAttribute("OpenAnima.Contracts")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

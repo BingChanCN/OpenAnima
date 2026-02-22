@@ -1,0 +1,150 @@
+.page-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: var(--text-primary);
+}
+
+.modules-section {
+    margin-bottom: 32px;
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+}
+
+.module-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.module-item-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.module-item-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.module-item-version {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.module-card {
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.module-card:hover {
+    border-color: var(--accent-color);
+}
+
+.module-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.module-card-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.module-card-body {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.status-indicator.available {
+    color: var(--text-secondary);
+    background: rgba(139, 143, 163, 0.1);
+}
+
+.status-indicator.loaded {
+    color: var(--success-color);
+    background: rgba(74, 222, 128, 0.1);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-state-icon {
+    font-size: 2.5rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.empty-state-text {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+}
+
+.detail-value {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+    .module-grid {
+        grid-template-columns: 1fr;
+    }
+}

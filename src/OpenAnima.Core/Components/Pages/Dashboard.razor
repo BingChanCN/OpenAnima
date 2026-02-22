@@ -1,0 +1,34 @@
+@page "/"
+@using OpenAnima.Core.Services
+@inject IModuleService ModuleService
+@inject IHeartbeatService HeartbeatService
+
+<h1 class="page-title">Runtime Dashboard</h1>
+
+<div class="summary-grid">
+    <div class="summary-card card">
+        <span class="summary-icon">&#x25A8;</span>
+        <div class="summary-content">
+            <span class="summary-label">Modules</span>
+            <span class="summary-value">@ModuleService.Count</span>
+        </div>
+    </div>
+
+    <div class="summary-card card">
+        <span class="summary-icon">&#x25C9;</span>
+        <div class="summary-content">
+            <span class="summary-label">Heartbeat</span>
+            <span class="summary-value status-indicator @(HeartbeatService.IsRunning ? "running" : "stopped")">
+                @(HeartbeatService.IsRunning ? "Running" : "Stopped")
+            </span>
+        </div>
+    </div>
+
+    <div class="summary-card card">
+        <span class="summary-icon">&#x29D7;</span>
+        <div class="summary-content">
+            <span class="summary-label">Ticks</span>
+            <span class="summary-value mono">@HeartbeatService.TickCount</span>
+        </div>
+    </div>
+</div>

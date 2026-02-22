@@ -1,7 +1,10 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
 using OpenAnima.Core.Events;
+using OpenAnima.Core.Hubs;
 using OpenAnima.Core.Plugins;
 
 namespace OpenAnima.Core.Runtime;
@@ -16,6 +19,7 @@ public class HeartbeatLoop : IDisposable
     private readonly PluginRegistry _registry;
     private readonly TimeSpan _interval;
     private readonly ILogger<HeartbeatLoop>? _logger;
+    private readonly IHubContext<RuntimeHub, IRuntimeClient>? _hubContext;
 
     private PeriodicTimer? _timer;
     private readonly SemaphoreSlim _tickLock = new(1, 1);
@@ -24,21 +28,25 @@ public class HeartbeatLoop : IDisposable
 
     private long _tickCount;
     private long _skippedCount;
+    private double _lastTickLatencyMs;
 
     public long TickCount => Interlocked.Read(ref _tickCount);
     public long SkippedCount => Interlocked.Read(ref _skippedCount);
     public bool IsRunning => _cts != null && !_cts.Token.IsCancellationRequested;
+    public double LastTickLatencyMs => _lastTickLatencyMs;
 
     public HeartbeatLoop(
         IEventBus eventBus,
         PluginRegistry registry,
         TimeSpan? interval = null,
-        ILogger<HeartbeatLoop>? logger = null)
+        ILogger<HeartbeatLoop>? logger = null,
+        IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null)
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         _interval = interval ?? TimeSpan.FromMilliseconds(100);
         _logger = logger;
+        _hubContext = hubContext;
     }
 
     /// <summary>
@@ -57,6 +65,11 @@ public class HeartbeatLoop : IDisposable
         _logger?.LogInformation("Starting heartbeat loop with interval {Interval}ms", _interval.TotalMilliseconds);
 
         _loopTask = Task.Run(() => RunLoopAsync(_cts.Token), _cts.Token);
+
+        if (_hubContext != null)
+        {
+            _ = _hubContext.Clients.All.ReceiveHeartbeatStateChanged(true);
+        }
 
         return Task.CompletedTask;
     }
@@ -105,7 +118,7 @@ public class HeartbeatLoop : IDisposable
     /// </summary>
     private async Task ExecuteTickAsync(CancellationToken ct)
     {
-        var startTime = DateTime.UtcNow;
+        var sw = Stopwatch.StartNew();
         Interlocked.Increment(ref _tickCount);
 
         try
@@ -134,11 +147,19 @@ public class HeartbeatLoop : IDisposable
                 await Task.WhenAll(tickTasks);
             }
 
-            var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
-            if (duration > _interval.TotalMilliseconds * 0.8)
+            sw.Stop();
+            var latencyMs = sw.Elapsed.TotalMilliseconds;
+            _lastTickLatencyMs = latencyMs;
+
+            if (latencyMs > _interval.TotalMilliseconds * 0.8)
             {
                 _logger?.LogWarning("Tick {TickCount} took {Duration}ms (>{Threshold}ms threshold)",
-                    _tickCount, duration, _interval.TotalMilliseconds * 0.8);
+                    _tickCount, latencyMs, _interval.TotalMilliseconds * 0.8);
+            }
+
+            if (_hubContext != null)
+            {
+                _ = _hubContext.Clients.All.ReceiveHeartbeatTick(_tickCount, latencyMs);
             }
         }
         catch (Exception ex)
@@ -196,6 +217,11 @@ public class HeartbeatLoop : IDisposable
         _timer = null;
         _cts?.Dispose();
         _cts = null;
+
+        if (_hubContext != null)
+        {
+            _ = _hubContext.Clients.All.ReceiveHeartbeatStateChanged(false);
+        }
     }
 
     public void Dispose()

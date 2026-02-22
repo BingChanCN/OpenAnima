@@ -16,7 +16,7 @@ public class PluginLoadContext : AssemblyLoadContext
     /// Creates a new isolated load context for a plugin.
     /// </summary>
     /// <param name="pluginPath">Path to the plugin DLL (used for dependency resolution from .deps.json)</param>
-    public PluginLoadContext(string pluginPath) : base(isCollectible: false)
+    public PluginLoadContext(string pluginPath) : base(isCollectible: true)
     {
         _resolver = new AssemblyDependencyResolver(pluginPath);
     }

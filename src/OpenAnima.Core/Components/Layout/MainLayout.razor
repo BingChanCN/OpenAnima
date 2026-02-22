@@ -1,0 +1,78 @@
+@inherits LayoutComponentBase
+
+<div class="app-container">
+    <aside class="sidebar @(SidebarCollapsed ? "collapsed" : "") @(MobileMenuOpen ? "mobile-open" : "")">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <span class="logo-icon">&#x25C6;</span>
+                @if (!SidebarCollapsed)
+                {
+                    <span class="logo-text">OpenAnima</span>
+                }
+            </div>
+            <button class="sidebar-toggle"
+                    @onclick="ToggleSidebar"
+                    title="@(SidebarCollapsed ? "Expand" : "Collapse")"
+                    aria-label="Toggle sidebar">
+                @(SidebarCollapsed ? "\u25B6" : "\u25C0")
+            </button>
+        </div>
+        <nav class="sidebar-nav" role="navigation" aria-label="Main navigation">
+            <NavLink href="/" class="nav-item" Match="NavLinkMatch.All">
+                <span class="nav-icon">&#x25A3;</span>
+                @if (!SidebarCollapsed)
+                {
+                    <span class="nav-label">Dashboard</span>
+                }
+            </NavLink>
+            <NavLink href="/modules" class="nav-item">
+                <span class="nav-icon">&#x25A8;</span>
+                @if (!SidebarCollapsed)
+                {
+                    <span class="nav-label">Modules</span>
+                }
+            </NavLink>
+            <NavLink href="/heartbeat" class="nav-item">
+                <span class="nav-icon">&#x25C9;</span>
+                @if (!SidebarCollapsed)
+                {
+                    <span class="nav-label">Heartbeat</span>
+                }
+            </NavLink>
+            <NavLink href="/monitor" class="nav-item">
+                <span class="nav-icon">&#x25CE;</span>
+                @if (!SidebarCollapsed)
+                {
+                    <span class="nav-label">Monitor</span>
+                }
+            </NavLink>
+        </nav>
+    </aside>
+
+    @if (MobileMenuOpen)
+    {
+        <div class="sidebar-overlay" @onclick="ToggleMobileMenu"></div>
+    }
+
+    <main class="main-content" role="main">
+        <button class="hamburger-btn" @onclick="ToggleMobileMenu" aria-label="Toggle menu">
+            &#x2630;
+        </button>
+        @Body
+    </main>
+</div>
+
+@code {
+    private bool SidebarCollapsed { get; set; }
+    private bool MobileMenuOpen { get; set; }
+
+    private void ToggleSidebar()
+    {
+        SidebarCollapsed = !SidebarCollapsed;
+    }
+
+    private void ToggleMobileMenu()
+    {
+        MobileMenuOpen = !MobileMenuOpen;
+    }
+}

@@ -1,229 +1,318 @@
-# Domain Pitfalls
+# Pitfalls Research
 
-**Domain:** Local-first modular AI agent platform (Windows, C# core, Web UI)
-**Researched:** 2026-02-21
+**Domain:** Adding Blazor Server WebUI to Existing .NET 8 Modular Runtime
+**Researched:** 2026-02-22
+**Confidence:** MEDIUM
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites or major issues.
+### Pitfall 1: Cross-Thread UI Updates Without InvokeAsync
 
-### Pitfall 1: AssemblyLoadContext Memory Leaks
-
-**What goes wrong:** Modules loaded via AssemblyLoadContext don't unload, causing memory to grow unbounded. After 10-20 module reloads, application crashes with OutOfMemoryException.
-
-**Why it happens:**
-- Static event handlers in modules prevent GC collection
-- Module holds references to runtime objects (event bus, services)
-- `isCollectible: true` doesn't guarantee unloading if references exist
-- Finalizers in module code block unloading
-
-**Consequences:** Hot reload feature becomes unusable, users must restart application for module updates, memory leaks in production.
-
-**Prevention:**
-- Weak event pattern for module subscriptions
-- Explicit cleanup interface (IDisposable) for modules
-- Test unloading in CI: load/unload 100 times, assert memory returns to baseline
-- Document "no static state" rule for module developers
-
-**Detection:** Monitor `AssemblyLoadContext.Unload()` completion, track GC collections, alert if memory doesn't decrease after unload.
-
-### Pitfall 2: Blazor.Diagrams Maturity Unknown
-
-**What goes wrong:** Visual editor is core UX, but Blazor.Diagrams may not support required features (custom validation hooks, complex node rendering, performance with 50+ nodes).
+**What goes wrong:**
+Background services (like the existing PeriodicTimer heartbeat loop) directly update component state or call StateHasChanged() from non-UI threads, causing "The current thread is not associated with the Dispatcher" exceptions or silent failures where UI doesn't update.
 
 **Why it happens:**
-- Smaller community project (~2k GitHub stars)
-- Documentation may be incomplete
-- Edge cases not well-tested
-- Breaking changes between versions
+Blazor Server components run on a synchronization context tied to the SignalR circuit. When the existing heartbeat loop publishes events via MediatR, subscribers in Blazor components receive those events on the background thread, not the UI thread. Developers forget that every UI update must be marshaled through InvokeAsync().
 
-**Consequences:** Forced to build custom node-graph renderer (4-6 weeks), or migrate to Electron+React Flow (architecture change), delays MVP by months.
+**How to avoid:**
+- Wrap ALL StateHasChanged() calls in InvokeAsync(() => StateHasChanged())
+- When subscribing to MediatR events in components, always use InvokeAsync for state updates
+- Create a base component with SafeStateHasChanged() helper that wraps InvokeAsync
+- Never call component methods directly from background threads
 
-**Prevention:**
-- Prototype Blazor.Diagrams in Phase 1 (before committing to Blazor Hybrid)
-- Test specific requirements: custom nodes, connection validation, 100+ node performance
-- Have fallback plan: Electron + React Flow (mature, 20k+ stars)
-- Budget 2 weeks for evaluation spike
+**Warning signs:**
+- Intermittent "Dispatcher" exceptions in logs
+- UI not updating despite events firing (check with breakpoints)
+- Race conditions that only appear under load
+- Components showing stale data after events
 
-**Detection:** Prototype fails to meet requirements, performance <30fps with 50 nodes, missing validation hooks.
+**Phase to address:**
+Phase 1 (Blazor Integration) — establish pattern immediately, create base component with helpers
 
-### Pitfall 3: gRPC Overhead for High-Frequency Events
+---
 
-**What goes wrong:** Heartbeat loop fires every 100ms, if modules communicate via gRPC, serialization + IPC overhead breaks performance requirement.
+### Pitfall 2: Heartbeat Loop Blocking on UI Operations
 
-**Why it happens:**
-- gRPC has ~1-5ms latency per call (serialization + transport)
-- 10 module calls per heartbeat = 10-50ms overhead
-- Leaves only 50ms for actual logic
-- Protobuf serialization allocates memory, triggers GC
-
-**Consequences:** Heartbeat loop misses 100ms target, agent feels sluggish, proactive behavior delayed.
-
-**Prevention:**
-- C# modules use in-process calls (zero serialization)
-- gRPC only for non-C# modules (Python, JS)
-- Batch events: collect 10 events, send one gRPC call
-- Profile early: measure actual overhead before committing
-
-**Detection:** Heartbeat loop consistently >100ms, profiler shows serialization in hot path.
-
-### Pitfall 4: LLM API Rate Limits Kill Proactive Behavior
-
-**What goes wrong:** Agent hits OpenAI rate limit (3500 RPM for GPT-4), thinking loop stalls, agent appears frozen.
+**What goes wrong:**
+The existing 100ms PeriodicTimer heartbeat loop blocks waiting for UI operations to complete, causing the loop to miss ticks, snowball delays, or complete failure. The anti-snowball guard (skip if previous tick still running) triggers constantly.
 
 **Why it happens:**
-- Proactive agent makes more LLM calls than reactive agents
-- Triage layer (fast model) still counts against rate limit
-- Multiple agents on same API key compound the problem
-- No backoff strategy, just fails
+When heartbeat data is streamed to UI, developers await SignalR operations or InvokeAsync calls from within the heartbeat loop itself. SignalR can have network delays, and InvokeAsync queues work on the circuit's synchronization context which may be busy. The heartbeat loop should never wait for UI.
 
-**Consequences:** Agent stops working during peak usage, users think it's broken, bad UX.
+**How to avoid:**
+- Use fire-and-forget pattern: publish events without awaiting UI response
+- Heartbeat loop publishes to MediatR event bus (already exists), UI subscribes
+- UI components buffer/throttle updates (e.g., only update every 200ms even if events arrive faster)
+- Never await InvokeAsync from the heartbeat loop thread
+- Keep heartbeat loop completely decoupled from UI lifecycle
 
-**Prevention:**
-- Implement token bucket rate limiter client-side
-- Queue requests, process at sustainable rate
-- Polly retry with exponential backoff
-- Fallback to cached responses for triage layer
-- Document rate limit requirements in setup
+**Warning signs:**
+- Heartbeat tick count not incrementing at expected rate
+- Anti-snowball guard logging "skipped tick" frequently
+- Latency metrics showing >100ms when UI is connected
+- Heartbeat stops entirely when browser disconnects
 
-**Detection:** 429 errors in logs, thinking loop paused, user reports "agent stopped responding".
+**Phase to address:**
+Phase 1 (Blazor Integration) — architecture decision, must be correct from start
 
-## Moderate Pitfalls
+---
 
-### Pitfall 5: SQLite Write Contention
+### Pitfall 3: Scoped Service Lifetime Confusion
 
-**What goes wrong:** Multiple modules try to write conversation history simultaneously, SQLite locks, writes fail or timeout.
-
-**Why it happens:**
-- SQLite default mode allows only one writer
-- Event bus triggers parallel module execution
-- Each module logs to database
-- No write coordination
-
-**Prevention:**
-- Enable WAL mode (Write-Ahead Logging) for concurrent reads
-- Single writer pattern: queue writes, process serially
-- Batch writes: collect 10 events, write once
-- Use in-memory cache, flush periodically
-
-**Detection:** SQLite "database is locked" errors, write timeouts in logs.
-
-### Pitfall 6: Event Bus Memory Pressure
-
-**What goes wrong:** High-frequency events (heartbeat fires every 100ms) accumulate in event bus queue, memory grows, GC pauses increase.
+**What goes wrong:**
+Runtime services (ModuleRegistry, EventBus, HeartbeatLoop) registered as Singleton in console app, but Blazor Server creates per-circuit scopes. Developers accidentally register runtime services as Scoped, creating separate instances per user, breaking shared state. Or they inject Scoped services into Singletons, causing "Cannot consume scoped service from singleton" exceptions.
 
 **Why it happens:**
-- No event filtering, all events queued
-- Slow subscribers block queue processing
-- Events contain large payloads (full conversation history)
-- No backpressure mechanism
+Blazor Server's service lifetime model differs from console apps. Each SignalR circuit gets its own scope, and "Scoped" means "per circuit" (per user session), not "per request". The existing runtime expects singleton services shared across all modules. Mixing lifetimes causes either duplicate state or DI exceptions.
 
-**Prevention:**
-- Event filtering: subscribers declare interest, only receive relevant events
-- Async subscribers with timeout: slow subscriber gets dropped
-- Lightweight events: reference IDs, not full objects
-- Bounded queue: drop old events if queue full
+**How to avoid:**
+- Keep runtime services (ModuleRegistry, EventBus, HeartbeatLoop) as Singleton
+- UI-specific services (component state, user preferences) should be Scoped
+- Never inject Scoped services into Singleton services
+- Use IServiceProvider with CreateScope() if Singleton needs temporary Scoped access
+- Document lifetime for every service in DI registration
 
-**Detection:** Memory growth over time, GC pauses >50ms, event queue depth metric increasing.
+**Warning signs:**
+- "Cannot consume scoped service from singleton" exceptions
+- Multiple ModuleRegistry instances (check with logging in constructor)
+- Modules loaded in one browser tab not visible in another
+- Heartbeat state different per user
 
-### Pitfall 7: Module Version Conflicts
+**Phase to address:**
+Phase 1 (Blazor Integration) — DI configuration must be correct from start
 
-**What goes wrong:** Module A requires Newtonsoft.Json 12.0, Module B requires 13.0, runtime loads wrong version, one module crashes.
+---
 
-**Why it happens:**
-- AssemblyLoadContext doesn't fully isolate dependencies
-- Shared dependencies loaded in default context
-- No version conflict detection at load time
+### Pitfall 4: SignalR Circuit Disposal Not Cleaning Up Event Subscriptions
 
-**Prevention:**
-- Each module in separate AssemblyLoadContext with isolated dependencies
-- Use AssemblyDependencyResolver to load correct versions
-- Prefer System.Text.Json (built-in) over Newtonsoft.Json
-- Test: load two modules with conflicting dependencies, verify both work
-
-**Detection:** TypeLoadException, MissingMethodException at runtime, module fails to initialize.
-
-### Pitfall 8: WebView2 Not Installed
-
-**What goes wrong:** Blazor Hybrid requires WebView2 runtime, user's Windows 10 machine doesn't have it, application crashes on startup.
+**What goes wrong:**
+Blazor components subscribe to MediatR events in OnInitialized but don't unsubscribe in Dispose, causing memory leaks. The EventBus holds references to disposed components, preventing GC. Over time, memory grows and performance degrades as events are delivered to dead circuits.
 
 **Why it happens:**
-- WebView2 ships with Windows 11, but not all Windows 10 versions
-- Older Windows 10 installations need manual install
-- No graceful fallback
+The existing EventBus uses ConcurrentBag for subscribers with lazy cleanup. When Blazor circuits disconnect (user closes browser), components are disposed but subscriptions remain in the EventBus. The lazy cleanup (every 100 publishes) may not trigger frequently enough, and weak references aren't used.
 
-**Prevention:**
-- Bundle WebView2 runtime with installer (evergreen or fixed version)
-- Check for WebView2 at startup, show friendly error if missing
-- Installer downloads WebView2 automatically
-- Document minimum Windows version (10 1803+)
+**How to avoid:**
+- Implement IDisposable in all components that subscribe to events
+- Unsubscribe in Dispose() method
+- Consider weak references in EventBus for Blazor subscribers
+- Add circuit disposal logging to detect leaks early
+- Monitor memory growth during testing (connect/disconnect repeatedly)
 
-**Detection:** Application crashes on startup, event log shows WebView2 missing.
+**Warning signs:**
+- Memory usage grows with each browser connection/disconnection
+- Event handlers firing for disconnected users (check logs)
+- Performance degradation over time
+- GC not reclaiming component memory
 
-## Minor Pitfalls
+**Phase to address:**
+Phase 1 (Blazor Integration) — EventBus may need modification, component pattern must be established
 
-### Pitfall 9: Conversation History Grows Unbounded
+---
 
-**What goes wrong:** Agent runs for months, conversation history table grows to GB size, queries slow down, UI lags.
+### Pitfall 5: Module Loading/Unloading While UI Is Connected
 
-**Prevention:**
-- Implement retention policy: keep last 30 days, archive older
-- Pagination in UI: load 50 messages at a time
-- Index on timestamp column
-- Background job to prune old data
+**What goes wrong:**
+User triggers module unload from UI while that module is processing a heartbeat tick or handling an event. AssemblyLoadContext unloads the assembly, causing TypeLoadException, NullReferenceException, or crashes. UI shows stale module list or incorrect status.
 
-### Pitfall 10: Module Metadata Not Validated
+**Why it happens:**
+The existing runtime doesn't coordinate module lifecycle with active operations. When UI adds control operations (load/unload buttons), race conditions emerge: UI thread requests unload while heartbeat thread invokes module's Tick() method. AssemblyLoadContext.Unload() doesn't wait for in-flight operations.
 
-**What goes wrong:** Module declares InputType = string, but actually expects JSON object, runtime crashes when passing string.
+**How to avoid:**
+- Implement module lifecycle state machine (Loading → Loaded → Unloading → Unloaded)
+- Heartbeat loop checks module state before invoking Tick(), skips if Unloading
+- Unload operation waits for current tick to complete (timeout after 200ms)
+- UI disables unload button while module is active in heartbeat
+- Add CancellationToken to module operations for graceful shutdown
 
-**Prevention:**
-- Schema validation at module load time
-- Test harness: invoke module with declared types, verify it works
-- Reject modules that fail validation
-- Clear error message to module developer
+**Warning signs:**
+- TypeLoadException during module unload
+- Heartbeat loop crashes when modules change
+- UI shows "module loaded" but runtime shows "unloaded"
+- Race condition exceptions under rapid load/unload
 
-### Pitfall 11: No Timeout on Module Execution
+**Phase to address:**
+Phase 2 (Control Operations) — requires runtime changes before UI can safely trigger operations
 
-**What goes wrong:** Buggy module hangs forever, blocks thinking loop, agent appears frozen.
+---
 
-**Prevention:**
-- CancellationToken with timeout (default 30s)
-- Kill module process if IPC module doesn't respond
-- Log timeout, continue to next module
-- UI shows "Module X timed out"
+### Pitfall 6: Hosting Model Transition Breaking Existing Functionality
 
-### Pitfall 12: Hardcoded File Paths
+**What goes wrong:**
+Migrating from console app (Host.CreateDefaultBuilder) to web app (WebApplication.CreateBuilder) changes service registration order, configuration loading, logging setup, or hosted service lifecycle. The existing runtime fails to start, modules don't load, or heartbeat doesn't run.
 
-**What goes wrong:** Code assumes modules in `C:\OpenAnima\modules`, breaks on user's machine with different install location.
+**Why it happens:**
+WebApplicationBuilder has different defaults than HostBuilder. Middleware pipeline, Kestrel configuration, and hosted service startup order differ. The existing HeartbeatLoop as IHostedService may start before modules are loaded, or configuration files aren't found because working directory changes.
 
-**Prevention:**
-- Use `Environment.GetFolderPath(SpecialFolder.ApplicationData)`
-- Configuration file for custom paths
-- Relative paths from executable location
-- Test on different machines/users
+**How to avoid:**
+- Keep existing runtime initialization separate from web host setup
+- Use WebApplication.CreateBuilder but manually configure services to match console app
+- Start HeartbeatLoop explicitly after modules load, not via IHostedService auto-start
+- Test that all v1.0 functionality works before adding UI
+- Use integration tests to verify module loading, event bus, heartbeat in web host
 
-## Phase-Specific Warnings
+**Warning signs:**
+- Runtime starts but modules don't load
+- Configuration files not found (path issues)
+- Heartbeat doesn't start or starts before modules load
+- Logging output changes or disappears
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Plugin System (Phase 1) | AssemblyLoadContext memory leaks | Test unload 100 times, monitor memory |
-| Heartbeat Loop (Phase 2) | Timer drift, GC pauses break 100ms target | Use PeriodicTimer, profile with PerfView |
-| LLM Integration (Phase 3) | Rate limits, API costs spiral | Token bucket limiter, budget alerts |
-| Visual Editor (Phase 4) | Blazor.Diagrams maturity unknown | Prototype early, have Electron fallback |
-| gRPC Bridge (Phase 5) | IPC overhead breaks performance | Batch events, profile latency |
-| Persistence (Phase 6) | SQLite write contention | WAL mode, single writer pattern |
-| Example Modules (Phase 7) | Modules trigger each other in loops | Circuit breaker, max calls per minute |
+**Phase to address:**
+Phase 1 (Blazor Integration) — hosting transition is foundational, must work before UI
+
+---
+
+### Pitfall 7: SignalR Message Size Limits on Heartbeat Data Streaming
+
+**What goes wrong:**
+Streaming full module state, event history, or large heartbeat payloads exceeds SignalR's default 32KB message size limit. SignalR disconnects the circuit with "Maximum message size exceeded" error. UI shows connection lost, no data updates.
+
+**Why it happens:**
+Developers serialize entire ModuleRegistry state or full event history and push to UI every heartbeat tick. With many modules or verbose metadata, messages grow large. SignalR has conservative defaults to prevent DoS attacks. Streaming at 100ms intervals amplifies the problem.
+
+**How to avoid:**
+- Send deltas, not full state (only changed modules, incremental tick count)
+- Increase SignalR MaximumReceiveMessageSize if needed (but prefer smaller messages)
+- Throttle UI updates (update every 200-500ms, not every 100ms tick)
+- Paginate large data (module list, event history)
+- Use efficient serialization (System.Text.Json, not verbose formats)
+
+**Warning signs:**
+- "Maximum message size exceeded" in browser console
+- SignalR circuit disconnects under load
+- Network tab shows large WebSocket frames
+- UI updates stop after initial connection
+
+**Phase to address:**
+Phase 1 (Blazor Integration) — data streaming design must account for limits
+
+---
+
+### Pitfall 8: Browser Auto-Launch Timing Issues
+
+**What goes wrong:**
+Runtime launches browser before Kestrel finishes starting, resulting in "connection refused" error page. Or browser launches but SignalR circuit fails to establish because services aren't ready. User sees error instead of dashboard.
+
+**Why it happens:**
+Developers call Process.Start() to launch browser immediately after WebApplication.RunAsync(), but Kestrel startup is asynchronous. The browser request arrives before the server is listening. Or DI services (ModuleRegistry, HeartbeatLoop) aren't initialized when first circuit connects.
+
+**How to avoid:**
+- Use IHostApplicationLifetime.ApplicationStarted event to launch browser
+- Ensure all runtime services initialize before web host starts
+- Add health check endpoint, wait for it to respond before launching browser
+- Handle connection failures gracefully in UI (retry with exponential backoff)
+- Provide manual URL in console if auto-launch fails
+
+**Warning signs:**
+- Browser shows "connection refused" on first launch
+- Intermittent startup failures (race condition)
+- SignalR circuit fails to establish on first page load
+- Console shows "listening on http://..." after browser already opened
+
+**Phase to address:**
+Phase 3 (Background Service) — auto-launch is final integration step
+
+---
+
+## Technical Debt Patterns
+
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Polling UI for updates instead of push | Simpler implementation, no InvokeAsync complexity | Increased latency, wasted CPU, poor UX | Never — defeats purpose of Blazor Server real-time |
+| Singleton services for UI state | Avoids scoped lifetime confusion | Shared state across users, security risk | Never — breaks multi-user scenarios |
+| Disabling AssemblyLoadContext isolation for UI | Easier DI integration | Loses module isolation, version conflicts | Never — core architecture principle |
+| Blocking heartbeat loop to wait for UI | Simpler synchronous code | Heartbeat delays, missed ticks, poor performance | Never — violates 100ms requirement |
+| Global exception handler without circuit-specific handling | Catches all errors | Can't distinguish runtime vs UI errors, poor diagnostics | Acceptable for MVP, refine in Phase 2 |
+
+## Integration Gotchas
+
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| MediatR EventBus → Blazor | Subscribing in OnInitialized without unsubscribing in Dispose | Always implement IDisposable, unsubscribe in Dispose() |
+| PeriodicTimer → UI updates | Awaiting InvokeAsync from heartbeat loop | Fire-and-forget publish to EventBus, UI subscribes and updates independently |
+| AssemblyLoadContext → DI | Trying to inject module types directly into Blazor components | Use duck-typing or shared interfaces, never cross context boundaries |
+| ConcurrentDictionary → UI display | Enumerating during modification (race condition) | Snapshot to array before rendering: registry.ToArray() |
+| FileSystemWatcher → UI notifications | Flooding UI with file change events | Debounce events (e.g., 500ms delay), batch updates |
+
+## Performance Traps
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Updating UI every heartbeat tick (100ms) | High CPU, SignalR bandwidth saturation | Throttle to 200-500ms, send deltas only | >5 concurrent users |
+| Serializing full ModuleRegistry on every update | Large SignalR messages, slow rendering | Send changed modules only, use efficient serialization | >10 modules loaded |
+| Synchronous module operations in UI thread | UI freezes, poor responsiveness | Always use async/await, offload to background | Any CPU-intensive operation |
+| No pagination on module/event lists | Slow initial render, memory growth | Paginate or virtualize lists | >50 items |
+| Logging every heartbeat tick to console | I/O bottleneck, log file growth | Log at Debug level, use structured logging with sampling | Continuous operation |
+
+## Security Mistakes
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Exposing module file paths in UI | Information disclosure, path traversal | Show module name only, sanitize paths |
+| Allowing arbitrary module loading from UI | Code execution vulnerability | Whitelist allowed module directories, validate signatures |
+| No authentication on WebUI | Unauthorized access to runtime control | Add authentication (Windows auth for local, or simple token) |
+| Leaking exception details to UI | Information disclosure | Sanitize exceptions, log full details server-side only |
+| No rate limiting on control operations | DoS via rapid load/unload | Throttle operations, require confirmation for destructive actions |
+
+## UX Pitfalls
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|--------------------|
+| No loading state during module operations | User clicks button, nothing happens, clicks again | Show spinner, disable button, provide feedback |
+| Heartbeat stops but UI doesn't indicate | User thinks system is working when it's not | Show "heartbeat stopped" warning, last tick timestamp |
+| SignalR disconnect without reconnect UI | UI shows stale data, user doesn't know connection lost | Show connection status, auto-reconnect with visual feedback |
+| No confirmation for destructive operations | User accidentally unloads critical module | Require confirmation for unload, show impact (e.g., "3 modules depend on this") |
+| Overwhelming real-time updates | User can't read data, information overload | Throttle updates, allow pause/resume, highlight changes |
+
+## "Looks Done But Isn't" Checklist
+
+- [ ] **Real-time updates:** Often missing InvokeAsync wrapper — verify StateHasChanged() always wrapped
+- [ ] **Event subscriptions:** Often missing Dispose/unsubscribe — verify IDisposable implemented
+- [ ] **Module operations:** Often missing state coordination — verify heartbeat skips modules during unload
+- [ ] **SignalR reconnection:** Often missing reconnect UI — verify connection status shown, auto-reconnect works
+- [ ] **Error handling:** Often missing circuit-specific handling — verify errors don't crash other users' circuits
+- [ ] **Memory cleanup:** Often missing weak references or disposal — verify memory doesn't grow with connect/disconnect cycles
+- [ ] **Hosting transition:** Often missing service registration verification — verify all v1.0 features work in web host
+- [ ] **Browser auto-launch:** Often missing startup synchronization — verify browser opens after server ready
+
+## Recovery Strategies
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| Cross-thread UI updates | LOW | Add InvokeAsync wrappers, test thoroughly |
+| Heartbeat blocking | MEDIUM | Refactor to fire-and-forget, add buffering in UI |
+| Service lifetime issues | MEDIUM | Fix DI registrations, may require service refactoring |
+| Memory leaks from subscriptions | LOW | Add Dispose implementations, test with repeated connect/disconnect |
+| Module lifecycle races | HIGH | Implement state machine, add coordination logic, extensive testing |
+| Hosting model breaks runtime | MEDIUM | Revert to console app, incrementally migrate services |
+| SignalR message size exceeded | LOW | Implement delta updates, increase limits if needed |
+| Browser launch timing | LOW | Add health check wait, implement retry logic |
+
+## Pitfall-to-Phase Mapping
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| Cross-thread UI updates | Phase 1 | All UI updates use InvokeAsync, no Dispatcher exceptions in logs |
+| Heartbeat blocking | Phase 1 | Heartbeat maintains 100ms tick rate with UI connected |
+| Service lifetime confusion | Phase 1 | Single ModuleRegistry instance, no DI exceptions |
+| Event subscription leaks | Phase 1 | Memory stable after 100 connect/disconnect cycles |
+| Module lifecycle races | Phase 2 | Load/unload operations safe during heartbeat, no exceptions |
+| Hosting model transition | Phase 1 | All v1.0 features work: module loading, event bus, heartbeat |
+| SignalR message size | Phase 1 | No "message size exceeded" errors with 20 modules loaded |
+| Browser auto-launch | Phase 3 | Browser opens to working dashboard 100% of time |
 
 ## Sources
 
-- .NET AssemblyLoadContext documentation (known unloading issues)
-- SQLite concurrency patterns (WAL mode best practices)
-- gRPC performance characteristics (serialization overhead)
-- OpenAI API rate limits (documented limits)
-- Blazor Hybrid WebView2 requirements (official docs)
-- Training data on plugin architecture pitfalls (VS Code, Obsidian experiences)
+- [ASP.NET Core Blazor SignalR guidance](https://learn.microsoft.com/en-us/aspnet/core/blazor/fundamentals/signalr?view=aspnetcore-10.0)
+- [ASP.NET Core Blazor performance best practices](https://learn.microsoft.com/en-us/aspnet/core/blazor/performance/?view=aspnetcore-10.0)
+- [Background tasks with hosted services in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/host/hosted-services?view=aspnetcore-10.0)
+- [Thread safety using InvokeAsync - Blazor University](https://blazor-university.com/components/multi-threaded-rendering/invokeasync)
+- [Losing my mind: Blazor, SignalR and Service Lifetimes - Reddit](https://www.reddit.com/r/dotnet/comments/1egxo89/losing_my_mind_blazor_signalr_and_service/)
+- [StateHasChanged() vs InvokeAsync(StateHasChanged) in Blazor - Stack Overflow](https://stackoverflow.com/questions/65230621/statehaschanged-vs-invokeasyncstatehaschanged-in-blazor)
+- [Blazor Server-Side Memory Leak #18556 - GitHub](https://github.com/dotnet/aspnetcore/issues/18556)
+- [Background Service Communication with Blazor via SignalR - Medium](https://medium.com/it-dead-inside/lets-learn-blazor-background-service-communication-with-blazor-via-signalr-84abe2660fd6)
+- [Hosted service prevents app to start completely - GitHub](https://github.com/dotnet/aspnetcore/issues/38698)
+- [Issue with concurrent collections in blazor server app - Reddit](https://www.reddit.com/r/Blazor/comments/1ftyhbu/issue_with_concurrent_collections_in_blazor/)
 
 ---
-*Pitfall research for: OpenAnima*
-*Researched: 2026-02-21*
-*Note: Unable to verify current 2026 status of Blazor.Diagrams and other libraries due to tool restrictions. Recommendations based on training data through August 2025.*
+*Pitfalls research for: Adding Blazor Server WebUI to Existing .NET 8 Modular Runtime*
+*Researched: 2026-02-22*

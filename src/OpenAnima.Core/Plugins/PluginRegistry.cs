@@ -74,4 +74,23 @@ public class PluginRegistry
     {
         return _modules.ContainsKey(moduleId);
     }
+
+    /// <summary>
+    /// Unregisters a module, disposing it and unloading its assembly context.
+    /// </summary>
+    /// <param name="moduleId">The module identifier to unregister</param>
+    /// <returns>True if the module was found and unregistered, false otherwise</returns>
+    public bool Unregister(string moduleId)
+    {
+        if (_modules.TryRemove(moduleId, out var entry))
+        {
+            // Dispose module if it implements IDisposable
+            if (entry.Module is IDisposable disposable)
+                disposable.Dispose();
+            // Unload the assembly context to free memory
+            entry.Context.Unload();
+            return true;
+        }
+        return false;
+    }
 }

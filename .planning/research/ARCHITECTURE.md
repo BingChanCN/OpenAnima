@@ -1,582 +1,591 @@
-# Architecture Research
+# Architecture Research: Blazor Server WebUI Integration
 
-**Domain:** Modular AI Agent Platform (Local-first, C#)
-**Researched:** 2026-02-21
-**Confidence:** MEDIUM (based on training data - web search unavailable)
+**Domain:** Blazor Server WebUI for .NET 8 Runtime Monitoring
+**Researched:** 2026-02-22
+**Confidence:** HIGH
 
 ## Standard Architecture
 
 ### System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      Visual Editor (Web UI)                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ Node Graph   │  │ Module       │  │ Agent        │          │
-│  │ Editor       │  │ Browser      │  │ Inspector    │          │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
-│         │                  │                  │                  │
-│         └──────────────────┴──────────────────┘                  │
-│                            │ (WebSocket/HTTP)                    │
-├────────────────────────────┼─────────────────────────────────────┤
-│                    Core Runtime (C#)                             │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │              Thinking Loop Orchestrator                   │   │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐   │   │
-│  │  │Heartbeat │→ │  Triage  │→ │  Deep Reasoning      │   │   │
-│  │  │(100ms)   │  │ (Fast LLM)│  │  (Slow LLM)          │   │   │
-│  │  └──────────┘  └──────────┘  └──────────────────────┘   │   │
-│  └──────────────────────────────────────────────────────────┘   │
-├─────────────────────────────────────────────────────────────────┤
-│                      Event Bus / Message Router                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ Event Queue  │  │ Subscription │  │ Message      │          │
-│  │              │  │ Manager      │  │ Dispatcher   │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-├─────────────────────────────────────────────────────────────────┤
-│                      Module Host Layer                           │
-│  ┌──────────────────────┐  ┌──────────────────────────────┐    │
-│  │  C# Module Host      │  │  IPC Module Host             │    │
-│  │  (Assembly Loader)   │  │  (Process Manager)           │    │
-│  │  ┌────────────────┐  │  │  ┌────────────────────────┐  │    │
-│  │  │ Module A (.dll)│  │  │  │ Python Module (exe)    │  │    │
-│  │  │ Module B (.dll)│  │  │  │ Node Module (exe)      │  │    │
-│  │  └────────────────┘  │  │  └────────────────────────┘  │    │
-│  └──────────────────────┘  └──────────────────────────────┘    │
-├─────────────────────────────────────────────────────────────────┤
-│                      Service Layer                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ LLM          │  │ Permission   │  │ State        │          │
-│  │ Abstraction  │  │ Enforcer     │  │ Manager      │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-├─────────────────────────────────────────────────────────────────┤
-│                      Persistence Layer                           │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ Agent State  │  │ Conversation │  │ Module       │          │
-│  │ Store        │  │ History      │  │ Registry     │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    Browser (SignalR Client)                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │  Dashboard   │  │   Modules    │  │  Heartbeat   │       │
+│  │  Component   │  │  Component   │  │  Component   │       │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │
+│         │                 │                 │                │
+└─────────┼─────────────────┼─────────────────┼────────────────┘
+          │ SignalR         │ SignalR         │ SignalR
+          │ (WebSocket)     │ (WebSocket)     │ (WebSocket)
+┌─────────┼─────────────────┼─────────────────┼────────────────┐
+│         ↓                 ↓                 ↓                │
+│  ┌──────────────────────────────────────────────────┐        │
+│  │           ASP.NET Core + Blazor Server           │        │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐ │        │
+│  │  │ SignalR    │  │  Razor     │  │  Service   │ │        │
+│  │  │ Hub        │  │ Components │  │  Layer     │ │        │
+│  │  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘ │        │
+│  └────────┼───────────────┼───────────────┼────────┘        │
+├───────────┼───────────────┼───────────────┼─────────────────┤
+│           │               │               │                 │
+│  ┌────────┴───────────────┴───────────────┴────────┐        │
+│  │         Service Abstraction Layer                │        │
+│  │  ┌──────────────┐  ┌──────────────┐             │        │
+│  │  │  Runtime     │  │  Module      │             │        │
+│  │  │  Service     │  │  Service     │             │        │
+│  │  └──────┬───────┘  └──────┬───────┘             │        │
+│  └─────────┼──────────────────┼─────────────────────┘        │
+├────────────┼──────────────────┼──────────────────────────────┤
+│            │                  │                              │
+│  ┌─────────┴──────────────────┴─────────────────┐            │
+│  │      Existing OpenAnima Runtime              │            │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐   │            │
+│  │  │ Heartbeat│  │  Plugin  │  │ EventBus │   │            │
+│  │  │   Loop   │  │ Registry │  │          │   │            │
+│  │  └──────────┘  └──────────┘  └──────────┘   │            │
+│  └───────────────────────────────────────────────┘            │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Component Responsibilities
 
 | Component | Responsibility | Typical Implementation |
 |-----------|----------------|------------------------|
-| **Thinking Loop Orchestrator** | Manages tiered agent reasoning cycle | State machine with timer-based heartbeat, condition-based escalation |
-| **Event Bus** | Routes messages between modules | In-memory pub/sub with typed message contracts |
-| **Module Host (C#)** | Loads and manages C# modules | .NET Assembly.LoadFrom with AppDomain isolation |
-| **Module Host (IPC)** | Manages external process modules | Process spawner with stdin/stdout or named pipe communication |
-| **LLM Abstraction** | Unified interface to LLM providers | Adapter pattern with OpenAI-compatible API format |
-| **Permission Enforcer** | Controls module autonomy levels | Policy engine checking action requests against user-defined rules |
-| **State Manager** | Tracks agent memory, goals, tasks | In-memory cache with persistence hooks |
-| **Visual Editor** | Drag-drop module wiring interface | Web-based node graph (React Flow, Rete.js, or custom canvas) |
+| **Blazor Components** | UI rendering, user interaction, real-time display | .razor files with @code blocks, lifecycle hooks |
+| **SignalR Hub** | Real-time bidirectional communication | Hub class with methods for client-to-server calls |
+| **Service Layer** | Abstraction between UI and runtime, command/query handling | Scoped/Singleton services injected into components |
+| **Runtime Service** | Facade over HeartbeatLoop, exposes control operations | Singleton wrapping existing HeartbeatLoop |
+| **Module Service** | Facade over PluginRegistry, exposes module queries | Singleton wrapping existing PluginRegistry |
+| **Background Service** | Push runtime state changes to connected clients via IHubContext | IHostedService that monitors runtime and broadcasts |
+| **Existing Runtime** | Core agent platform (unchanged) | HeartbeatLoop, PluginRegistry, EventBus |
 
 ## Recommended Project Structure
 
 ```
-OpenAnima/
-├── src/
-│   ├── OpenAnima.Core/              # Core runtime library
-│   │   ├── Agent/                   # Agent lifecycle, state
-│   │   ├── ThinkingLoop/            # Heartbeat, triage, reasoning orchestration
-│   │   ├── EventBus/                # Message routing, pub/sub
-│   │   ├── Modules/                 # Module abstractions, interfaces
-│   │   │   ├── IModule.cs           # Base module interface
-│   │   │   ├── ModuleMetadata.cs    # Type info, inputs, outputs
-│   │   │   └── ModuleRegistry.cs    # Loaded module tracking
-│   │   ├── Services/                # Cross-cutting services
-│   │   │   ├── LLM/                 # LLM abstraction layer
-│   │   │   ├── Permissions/         # Autonomy level enforcement
-│   │   │   └── State/               # State management
-│   │   └── Persistence/             # Data storage abstractions
-│   │
-│   ├── OpenAnima.ModuleHost/        # Module loading and lifecycle
-│   │   ├── CSharp/                  # In-process C# module loader
-│   │   │   ├── AssemblyLoader.cs    # Dynamic assembly loading
-│   │   │   └── ModuleIsolation.cs   # AppDomain/AssemblyLoadContext
-│   │   └── IPC/                     # Cross-language module host
-│   │       ├── ProcessManager.cs    # Spawn/monitor external processes
-│   │       ├── Protocol/            # IPC message format (JSON-RPC, MessagePack)
-│   │       └── Transports/          # Stdin/stdout, named pipes, TCP
-│   │
-│   ├── OpenAnima.Runtime/           # Executable host process
-│   │   ├── Program.cs               # Entry point, DI container setup
-│   │   ├── Configuration/           # Settings, module paths
-│   │   └── WebServer/               # HTTP API for editor communication
-│   │
-│   ├── OpenAnima.Editor/            # Web-based visual editor
-│   │   ├── public/                  # Static assets
-│   │   ├── src/
-│   │   │   ├── components/          # React/Vue/Svelte components
-│   │   │   │   ├── NodeGraph/       # Visual module wiring
-│   │   │   │   ├── ModuleBrowser/   # Available modules list
-│   │   │   │   └── AgentInspector/  # Runtime state viewer
-│   │   │   ├── api/                 # Runtime communication layer
-│   │   │   └── serialization/       # Agent graph save/load
-│   │   └── package.json
-│   │
-│   └── OpenAnima.Modules/           # Built-in example modules
-│       ├── ChatInterface/           # User conversation module
-│       ├── ScheduledTasks/          # Timer-based triggers
-│       └── ProactiveInitiator/      # Autonomous conversation starter
-│
-├── modules/                         # External module packages (user-installed)
-│   └── .gitkeep
-│
-├── data/                            # Runtime data storage
-│   ├── agents/                      # Saved agent configurations
-│   ├── conversations/               # Chat history
-│   └── state/                       # Agent memory, goals
-│
-└── docs/
-    ├── module-protocol.md           # IPC specification
-    └── architecture.md              # This document
+src/
+├── OpenAnima.Contracts/       # Existing - no changes
+├── OpenAnima.Core/            # Existing - minimal changes
+│   ├── Events/
+│   ├── Plugins/
+│   ├── Runtime/
+│   └── Program.cs             # MODIFY: Replace with WebApplication host
+├── OpenAnima.WebUI/           # NEW PROJECT
+│   ├── Components/            # Blazor components
+│   │   ├── Pages/             # Routable pages
+│   │   │   ├── Dashboard.razor
+│   │   │   ├── Modules.razor
+│   │   │   └── Heartbeat.razor
+│   │   ├── Layout/            # Layout components
+│   │   │   ├── MainLayout.razor
+│   │   │   └── NavMenu.razor
+│   │   └── Shared/            # Reusable components
+│   │       ├── ModuleCard.razor
+│   │       └── HeartbeatMonitor.razor
+│   ├── Services/              # Service abstraction layer
+│   │   ├── IRuntimeService.cs
+│   │   ├── RuntimeService.cs
+│   │   ├── IModuleService.cs
+│   │   └── ModuleService.cs
+│   ├── Hubs/                  # SignalR hubs
+│   │   └── RuntimeHub.cs
+│   ├── BackgroundServices/    # Background workers
+│   │   └── RuntimeMonitorService.cs
+│   ├── Models/                # DTOs for UI
+│   │   ├── ModuleDto.cs
+│   │   ├── HeartbeatDto.cs
+│   │   └── RuntimeStatusDto.cs
+│   ├── wwwroot/               # Static assets
+│   │   ├── css/
+│   │   └── js/
+│   ├── Program.cs             # WebApplication entry point
+│   └── _Imports.razor         # Global using directives
 ```
 
 ### Structure Rationale
 
-- **OpenAnima.Core/:** Framework-agnostic business logic — no dependencies on hosting, UI, or specific module implementations
-- **OpenAnima.ModuleHost/:** Isolated from Core to enable future alternative hosting strategies (cloud, embedded)
-- **OpenAnima.Runtime/:** Thin composition layer — wires up DI, starts services, hosts web server
-- **OpenAnima.Editor/:** Separate web project enables independent deployment (Electron, Tauri, or browser-based)
-- **modules/:** User-space directory for downloaded modules — runtime scans this at startup
+- **OpenAnima.WebUI as separate project:** Clean separation between runtime and UI concerns, allows independent testing and deployment
+- **Services/ folder:** Abstraction layer prevents Blazor components from directly coupling to runtime internals, enables easier testing with mocks
+- **Hubs/ folder:** SignalR hubs for real-time communication, separate from components for clarity
+- **BackgroundServices/ folder:** IHostedService implementations that push data to clients, runs alongside Blazor Server
+- **Models/ folder:** DTOs prevent exposing internal runtime types to UI, allows versioning UI contracts independently
 
 ## Architectural Patterns
 
-### Pattern 1: Tiered Thinking Loop
+### Pattern 1: Service Facade
 
-**What:** Three-layer reasoning architecture that balances intelligence and performance
+**What:** Wrap existing runtime components (HeartbeatLoop, PluginRegistry) in service interfaces that expose only UI-relevant operations.
 
-**When to use:** Agent platforms where continuous background thinking is required without constant LLM costs
+**When to use:** When integrating UI with existing domain logic that wasn't designed for external consumption.
 
 **Trade-offs:**
-- **Pros:** Minimizes token usage, enables sub-second responsiveness, clear escalation path
-- **Cons:** Adds complexity, requires careful condition design to avoid missed escalations
+- **Pros:** Decouples UI from runtime internals, enables testing, prevents UI from breaking runtime invariants
+- **Cons:** Additional layer of indirection, DTOs require mapping
 
 **Example:**
 ```csharp
-public class ThinkingLoopOrchestrator
+// Service abstraction
+public interface IRuntimeService
 {
-    private readonly Timer _heartbeatTimer;
-    private readonly ITriageService _triage;
-    private readonly IReasoningService _reasoning;
+    Task<HeartbeatStatusDto> GetHeartbeatStatusAsync();
+    Task StartHeartbeatAsync();
+    Task StopHeartbeatAsync();
+    bool IsRunning { get; }
+}
 
-    public async Task StartAsync()
+public class RuntimeService : IRuntimeService
+{
+    private readonly HeartbeatLoop _heartbeat;
+
+    public RuntimeService(HeartbeatLoop heartbeat)
     {
-        // Layer 1: Code-based heartbeat (100ms, zero cost)
-        _heartbeatTimer = new Timer(async _ =>
-        {
-            var context = await GatherContext();
-
-            // Check deterministic conditions
-            if (ShouldEscalate(context))
-            {
-                await EscalateToTriage(context);
-            }
-        }, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(100));
+        _heartbeat = heartbeat;
     }
 
-    private async Task EscalateToTriage(AgentContext context)
+    public Task<HeartbeatStatusDto> GetHeartbeatStatusAsync()
     {
-        // Layer 2: Fast LLM triage (GPT-4o-mini, low cost)
-        var decision = await _triage.EvaluateAsync(context);
-
-        if (decision.RequiresDeepThinking)
+        return Task.FromResult(new HeartbeatStatusDto
         {
-            await EscalateToReasoning(context, decision);
+            IsRunning = _heartbeat.IsRunning,
+            TickCount = _heartbeat.TickCount,
+            SkippedCount = _heartbeat.SkippedCount
+        });
+    }
+
+    public Task StartHeartbeatAsync() => _heartbeat.StartAsync();
+    public Task StopHeartbeatAsync() => _heartbeat.StopAsync();
+    public bool IsRunning => _heartbeat.IsRunning;
+}
+```
+
+### Pattern 2: Background Service + IHubContext Push
+
+**What:** IHostedService monitors runtime state and pushes updates to all connected Blazor clients via IHubContext<THub>.
+
+**When to use:** When backend state changes need to be broadcast to all connected clients without client polling.
+
+**Trade-offs:**
+- **Pros:** True real-time updates, no polling overhead, server-initiated push
+- **Cons:** Requires careful lifetime management (singleton service accessing singleton hub context), potential memory leaks if not disposed properly
+
+**Example:**
+```csharp
+public class RuntimeMonitorService : BackgroundService
+{
+    private readonly IHubContext<RuntimeHub> _hubContext;
+    private readonly IRuntimeService _runtimeService;
+    private readonly ILogger<RuntimeMonitorService> _logger;
+
+    public RuntimeMonitorService(
+        IHubContext<RuntimeHub> hubContext,
+        IRuntimeService runtimeService,
+        ILogger<RuntimeMonitorService> logger)
+    {
+        _hubContext = hubContext;
+        _runtimeService = runtimeService;
+        _logger = logger;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
+
+        while (await timer.WaitForNextTickAsync(stoppingToken))
+        {
+            try
+            {
+                var status = await _runtimeService.GetHeartbeatStatusAsync();
+
+                // Broadcast to all connected clients
+                await _hubContext.Clients.All.SendAsync(
+                    "HeartbeatUpdate",
+                    status,
+                    stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error broadcasting heartbeat update");
+            }
         }
     }
-
-    private async Task EscalateToReasoning(AgentContext context, TriageDecision decision)
-    {
-        // Layer 3: Deep reasoning (GPT-4, Claude Opus, high cost)
-        var action = await _reasoning.ThinkAsync(context, decision.Focus);
-        await ExecuteAction(action);
-    }
 }
 ```
 
-### Pattern 2: Typed Module Interface with Dynamic Loading
+### Pattern 3: Component Lifecycle + SignalR Subscription
 
-**What:** Modules declare typed input/output contracts, loaded dynamically at runtime
+**What:** Blazor components subscribe to SignalR hub events in OnInitializedAsync and call StateHasChanged() to trigger re-render when updates arrive.
 
-**When to use:** Plugin systems where type safety matters but module set is unknown at compile time
+**When to use:** For real-time UI updates driven by server-side events.
 
 **Trade-offs:**
-- **Pros:** Type-safe connections, compile-time validation for C# modules, prevents wiring errors
-- **Cons:** Requires reflection/code generation, more complex than string-based messaging
+- **Pros:** Automatic UI updates, no manual polling, clean component code
+- **Cons:** Must properly dispose subscriptions to avoid memory leaks, StateHasChanged() must be called on UI thread
 
 **Example:**
 ```csharp
-// Module interface contract
-public interface IModule
-{
-    ModuleMetadata Metadata { get; }
-    Task<object> ExecuteAsync(object input, CancellationToken ct);
-}
+@page "/heartbeat"
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
 
-public class ModuleMetadata
-{
-    public string Name { get; init; }
-    public string Version { get; init; }
-    public Type InputType { get; init; }
-    public Type OutputType { get; init; }
-    public AutonomyLevel RequiredPermission { get; init; }
-}
+<h3>Heartbeat Monitor</h3>
+<p>Status: @(_status?.IsRunning == true ? "Running" : "Stopped")</p>
+<p>Ticks: @_status?.TickCount</p>
+<p>Skipped: @_status?.SkippedCount</p>
 
-// Example module implementation
-public class ChatModule : IModule
-{
-    public ModuleMetadata Metadata => new()
+@code {
+    private HubConnection? _hubConnection;
+    private HeartbeatStatusDto? _status;
+
+    protected override async Task OnInitializedAsync()
     {
-        Name = "Chat Interface",
-        Version = "1.0.0",
-        InputType = typeof(ChatRequest),
-        OutputType = typeof(ChatResponse),
-        RequiredPermission = AutonomyLevel.Manual
-    };
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/runtimeHub"))
+            .Build();
 
-    public async Task<object> ExecuteAsync(object input, CancellationToken ct)
-    {
-        var request = (ChatRequest)input;
-        // Process chat...
-        return new ChatResponse { Message = "..." };
-    }
-}
-
-// Dynamic loading
-public class CSharpModuleHost
-{
-    public IModule LoadModule(string assemblyPath)
-    {
-        var assembly = Assembly.LoadFrom(assemblyPath);
-        var moduleType = assembly.GetTypes()
-            .FirstOrDefault(t => typeof(IModule).IsAssignableFrom(t));
-
-        return (IModule)Activator.CreateInstance(moduleType);
-    }
-}
-```
-
-### Pattern 3: Event Bus with Typed Messages
-
-**What:** Central message router with strongly-typed event contracts
-
-**When to use:** Decoupling modules that need to react to events without direct dependencies
-
-**Trade-offs:**
-- **Pros:** Loose coupling, easy to add new subscribers, clear event contracts
-- **Cons:** Harder to trace message flow, potential for event storms, ordering challenges
-
-**Example:**
-```csharp
-public interface IEventBus
-{
-    void Publish<TEvent>(TEvent evt) where TEvent : IEvent;
-    IDisposable Subscribe<TEvent>(Action<TEvent> handler) where TEvent : IEvent;
-}
-
-// Event contracts
-public interface IEvent
-{
-    Guid EventId { get; }
-    DateTime Timestamp { get; }
-}
-
-public record UserMessageReceived(string Message, string UserId) : IEvent
-{
-    public Guid EventId { get; init; } = Guid.NewGuid();
-    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
-}
-
-// Usage in modules
-public class ProactiveInitiatorModule : IModule
-{
-    private readonly IEventBus _eventBus;
-
-    public ProactiveInitiatorModule(IEventBus eventBus)
-    {
-        _eventBus = eventBus;
-
-        // Subscribe to events
-        _eventBus.Subscribe<UserMessageReceived>(OnUserMessage);
-    }
-
-    private void OnUserMessage(UserMessageReceived evt)
-    {
-        // React to user activity...
-    }
-}
-```
-
-### Pattern 4: IPC Protocol for Cross-Language Modules
-
-**What:** JSON-RPC or MessagePack-based protocol over stdin/stdout or named pipes
-
-**When to use:** Supporting modules written in Python, Node.js, or other languages
-
-**Trade-offs:**
-- **Pros:** Language-agnostic, sandboxed (separate process), easier to package as executables
-- **Cons:** Higher latency than in-process, serialization overhead, process management complexity
-
-**Example:**
-```csharp
-// Protocol definition (JSON-RPC 2.0 style)
-public record ModuleRequest
-{
-    public string Jsonrpc => "2.0";
-    public string Method { get; init; }
-    public object Params { get; init; }
-    public string Id { get; init; }
-}
-
-public record ModuleResponse
-{
-    public string Jsonrpc => "2.0";
-    public object Result { get; init; }
-    public object Error { get; init; }
-    public string Id { get; init; }
-}
-
-// IPC module host
-public class IPCModuleHost
-{
-    public async Task<object> ExecuteAsync(string modulePath, object input)
-    {
-        var process = new Process
+        _hubConnection.On<HeartbeatStatusDto>("HeartbeatUpdate", status =>
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = modulePath,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                UseShellExecute = false
-            }
-        };
+            _status = status;
+            InvokeAsync(StateHasChanged); // Must invoke on UI thread
+        });
 
-        process.Start();
+        await _hubConnection.StartAsync();
+    }
 
-        var request = new ModuleRequest
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
         {
-            Method = "execute",
-            Params = input,
-            Id = Guid.NewGuid().ToString()
-        };
-
-        await process.StandardInput.WriteLineAsync(
-            JsonSerializer.Serialize(request)
-        );
-
-        var responseLine = await process.StandardOutput.ReadLineAsync();
-        var response = JsonSerializer.Deserialize<ModuleResponse>(responseLine);
-
-        return response.Result;
+            await _hubConnection.DisposeAsync();
+        }
     }
 }
+```
+
+### Pattern 4: Singleton Runtime + Scoped UI Services
+
+**What:** Runtime components (HeartbeatLoop, PluginRegistry, EventBus) registered as singletons, service facades also singleton, but Blazor components use scoped lifetime per circuit.
+
+**When to use:** When UI needs to interact with long-lived backend services.
+
+**Trade-offs:**
+- **Pros:** Single runtime instance shared across all users, efficient resource usage
+- **Cons:** Must be thread-safe, state changes affect all users (appropriate for single-user desktop app)
+
+**Example:**
+```csharp
+// Program.cs
+var builder = WebApplication.CreateBuilder(args);
+
+// Existing runtime components as singletons
+builder.Services.AddSingleton<EventBus>();
+builder.Services.AddSingleton<PluginRegistry>();
+builder.Services.AddSingleton<HeartbeatLoop>();
+
+// Service facades as singletons
+builder.Services.AddSingleton<IRuntimeService, RuntimeService>();
+builder.Services.AddSingleton<IModuleService, ModuleService>();
+
+// Background service
+builder.Services.AddHostedService<RuntimeMonitorService>();
+
+// Blazor Server
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+
+// SignalR (implicit with Blazor Server, but can configure)
+builder.Services.AddSignalR();
+
+var app = builder.Build();
+
+// Initialize runtime on startup
+var runtime = app.Services.GetRequiredService<IRuntimeService>();
+await runtime.StartHeartbeatAsync();
+
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
+app.MapHub<RuntimeHub>("/runtimeHub");
+
+app.Run();
 ```
 
 ## Data Flow
 
-### Agent Thinking Loop Flow
+### Request Flow (User Action → Runtime)
 
 ```
-[Heartbeat Timer (100ms)]
+[User clicks "Start Heartbeat"]
     ↓
-[Gather Context] → [Check Escalation Conditions]
-    ↓ (if conditions met)
-[Triage Service] → [Fast LLM Call] → [Decision: escalate or handle]
-    ↓ (if escalate)
-[Reasoning Service] → [Deep LLM Call] → [Action Plan]
+[Blazor Component] → @onclick handler
     ↓
-[Action Executor] → [Module Invocation] → [Event Bus Publish]
+[Inject IRuntimeService] → StartHeartbeatAsync()
     ↓
-[State Manager] → [Persist Changes]
+[RuntimeService] → _heartbeat.StartAsync()
+    ↓
+[HeartbeatLoop] → Starts PeriodicTimer
+    ↓
+[Background Service] → Detects state change
+    ↓
+[IHubContext] → Broadcasts to all clients
+    ↓
+[SignalR] → Pushes to browser
+    ↓
+[Component] → Receives event, calls StateHasChanged()
+    ↓
+[UI Updates] → Button changes to "Stop"
 ```
 
-### Module Execution Flow
+### Real-Time Update Flow (Runtime → UI)
 
 ```
-[Event Bus / Direct Call]
+[HeartbeatLoop] → Executes tick
     ↓
-[Permission Enforcer] → Check autonomy level
-    ↓ (if allowed)
-[Module Host] → Route to C# or IPC host
+[RuntimeMonitorService] → Polls status every 500ms
     ↓
-[Module Instance] → Execute logic
+[IHubContext<RuntimeHub>] → Clients.All.SendAsync("HeartbeatUpdate", status)
     ↓
-[Result] → [Event Bus Publish] → [State Update]
+[SignalR WebSocket] → Pushes to all connected browsers
+    ↓
+[HubConnection.On<T>] → Component receives event
+    ↓
+[InvokeAsync(StateHasChanged)] → Triggers re-render on UI thread
+    ↓
+[Blazor Renderer] → Diffs virtual DOM, sends updates to browser
+    ↓
+[Browser] → Updates displayed tick count
 ```
 
-### Visual Editor to Runtime Flow
+### Module Control Flow
 
 ```
-[User Wires Modules in Editor]
+[User clicks "Load Module"]
     ↓
-[Serialize Graph] → JSON representation
-    ↓ (WebSocket/HTTP)
-[Runtime API] → Validate connections (type compatibility)
+[Component] → Calls IModuleService.LoadModuleAsync(path)
     ↓
-[Agent Builder] → Instantiate modules, wire event subscriptions
+[ModuleService] → _loader.LoadModule(path)
     ↓
-[Thinking Loop] → Start agent execution
+[PluginLoader] → Creates AssemblyLoadContext, loads assembly
+    ↓
+[PluginRegistry] → Registers module
+    ↓
+[EventBus] → Property injection into module
+    ↓
+[ModuleService] → Returns ModuleDto
+    ↓
+[Component] → Updates module list
+    ↓
+[Background Service] → Detects registry change
+    ↓
+[SignalR] → Broadcasts "ModuleLoaded" event
+    ↓
+[All Clients] → Refresh module list
 ```
 
 ### Key Data Flows
 
-1. **Proactive Thinking:** Heartbeat → Triage → Reasoning → Action → State Update
-2. **User Interaction:** User Input → Event Bus → Module Handler → LLM Call → Response → Event Bus
-3. **Module Communication:** Module A publishes event → Event Bus → Module B subscribes → Module B executes
-4. **State Persistence:** Action Execution → State Manager → Persistence Layer → Disk/Database
+1. **Heartbeat monitoring:** Background service polls HeartbeatLoop every 500ms, broadcasts status via SignalR to all connected clients
+2. **Module operations:** User actions invoke service methods, which delegate to existing runtime, then broadcast changes to all clients
+3. **Event bus integration:** UI can subscribe to domain events via EventBus, display in real-time event log component
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| 1-10 agents | Single-process runtime, in-memory event bus, SQLite persistence |
-| 10-100 agents | Multi-threaded agent execution, connection pooling for LLM API, indexed database |
-| 100+ agents | Distributed runtime (multiple processes), external message queue (RabbitMQ), shared state store (Redis) |
+| Single user (v1.1) | Current architecture is perfect - singleton runtime, single browser window, localhost-only |
+| Multiple concurrent users | Not applicable - this is a desktop app, not a multi-tenant SaaS |
+| Multiple agents per user | Future consideration - would need per-agent runtime instances, scoped services per circuit |
 
 ### Scaling Priorities
 
-1. **First bottleneck:** LLM API rate limits
-   - **Fix:** Request batching, caching, local model fallback for triage layer
-
-2. **Second bottleneck:** Module execution blocking thinking loop
-   - **Fix:** Async module execution, timeout enforcement, separate thread pool for modules
-
-3. **Third bottleneck:** Event bus memory pressure with high message volume
-   - **Fix:** Event filtering, subscription scoping, external queue for durability
+1. **First bottleneck:** SignalR broadcast frequency - if pushing updates every 100ms (heartbeat interval), may cause UI jank. Mitigation: Throttle broadcasts to 500ms or use client-side interpolation.
+2. **Second bottleneck:** Module count - if 100+ modules loaded, registry queries may slow down. Mitigation: Cache module DTOs, only broadcast deltas instead of full list.
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: LLM-Improvised Module Connections
+### Anti-Pattern 1: Direct Runtime Access from Components
 
-**What people do:** Let LLM dynamically decide which modules to call and how to format inputs
+**What people do:** Inject HeartbeatLoop or PluginRegistry directly into Blazor components.
 
-**Why it's wrong:** Non-deterministic failures, type mismatches, security risks (LLM could invoke unintended modules)
+**Why it's wrong:**
+- Couples UI to runtime internals
+- Exposes dangerous operations (e.g., direct registry manipulation)
+- Makes testing difficult (can't mock concrete classes)
+- Breaks encapsulation
 
-**Do this instead:** Use typed interfaces with compile-time validation. LLM decides *when* to call modules, but connections are pre-wired and type-checked.
+**Do this instead:** Always use service facades (IRuntimeService, IModuleService) that expose only safe, UI-relevant operations.
 
-### Anti-Pattern 2: Synchronous Module Execution in Thinking Loop
+### Anti-Pattern 2: Polling from Components
 
-**What people do:** Block the heartbeat timer while waiting for module execution
+**What people do:** Use Timer or PeriodicTimer inside Blazor components to poll runtime state.
 
-**Why it's wrong:** Kills responsiveness, one slow module freezes entire agent
+**Why it's wrong:**
+- Each connected client creates its own timer (wasteful)
+- Polling interval must balance responsiveness vs overhead
+- Doesn't scale to multiple users
+- Misses updates between polls
 
-**Do this instead:** Fire-and-forget module execution with callbacks. Thinking loop continues, module results arrive via event bus.
+**Do this instead:** Use Background Service + IHubContext to push updates from server to all clients. Single timer, server-initiated push.
 
-### Anti-Pattern 3: Global Shared State Without Isolation
+### Anti-Pattern 3: Scoped Runtime Services
 
-**What people do:** All modules read/write to a single shared dictionary or database
+**What people do:** Register HeartbeatLoop or PluginRegistry as scoped services.
 
-**Why it's wrong:** Race conditions, unintended side effects, hard to debug
+**Why it's wrong:**
+- Creates new runtime instance per Blazor circuit (per browser tab)
+- Multiple heartbeat loops running simultaneously
+- Module registry not shared across tabs
+- Wastes resources, causes confusion
 
-**Do this instead:** Each module has a scoped state namespace. State Manager enforces isolation and provides explicit sharing mechanisms.
+**Do this instead:** Register runtime components as singletons. This is a single-user desktop app - one runtime instance for the entire application.
 
-### Anti-Pattern 4: Tight Coupling Between Editor and Runtime
+### Anti-Pattern 4: Forgetting StateHasChanged() in SignalR Callbacks
 
-**What people do:** Editor directly manipulates runtime objects via shared memory or tight API
+**What people do:** Update component state in SignalR event handler without calling StateHasChanged().
 
-**Why it's wrong:** Can't run runtime headless, hard to version independently, deployment complexity
+**Why it's wrong:**
+- UI doesn't update because Blazor doesn't know state changed
+- SignalR callbacks execute on background thread, not UI thread
+- Leads to "why isn't my UI updating?" debugging sessions
 
-**Do this instead:** Editor communicates via well-defined API (REST/WebSocket). Runtime can run without editor, editor can connect to remote runtimes.
+**Do this instead:** Always wrap state updates in InvokeAsync(StateHasChanged) to marshal to UI thread and trigger re-render.
+
+### Anti-Pattern 5: Browser Auto-Launch with Process.Start(url)
+
+**What people do:** Call Process.Start("http://localhost:5000") directly.
+
+**Why it's wrong:**
+- Throws PlatformNotSupportedException on Linux
+- Requires UseShellExecute = true on Windows
+- Doesn't handle default browser detection properly
+
+**Do this instead:** Use platform-specific launcher:
+```csharp
+private static void OpenBrowser(string url)
+{
+    try
+    {
+        Process.Start(url);
+    }
+    catch
+    {
+        // Workaround for .NET Core on Windows/Linux
+        if (OperatingSystem.IsWindows())
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            Process.Start("xdg-open", url);
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            Process.Start("open", url);
+        }
+    }
+}
+```
 
 ## Integration Points
 
-### External Services
+### Existing Runtime → WebUI
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| OpenAI API | HTTP client with retry/backoff | Use official SDK or custom HttpClient with rate limit handling |
-| Claude API | HTTP client via OpenAI-compatible proxy | Anthropic doesn't have native OpenAI format, use proxy like LiteLLM |
-| Local LLM (future) | HTTP to local server (llama.cpp, Ollama) | Same interface as cloud, just different endpoint |
+| Integration Point | Pattern | Notes |
+|-------------------|---------|-------|
+| HeartbeatLoop | Service Facade (RuntimeService) | Wrap in IRuntimeService, expose Start/Stop/Status only |
+| PluginRegistry | Service Facade (ModuleService) | Wrap in IModuleService, expose queries and load/unload operations |
+| EventBus | Direct Injection | Can inject into services for event subscription, display in UI event log |
+| PluginLoader | Via ModuleService | Don't expose directly, wrap load operations in service |
 
-### Internal Boundaries
+### WebUI → Browser
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Core ↔ ModuleHost | Direct method calls (in-process) | ModuleHost is a service registered in Core's DI container |
-| Core ↔ Editor | WebSocket for real-time, HTTP for commands | Editor is separate process, communicates over network |
-| C# Module ↔ Core | Direct interface implementation | Module implements IModule, called directly |
-| IPC Module ↔ Core | JSON-RPC over stdin/stdout or named pipes | Module is separate process, protocol-based communication |
-| Module ↔ Module | Event Bus only (no direct calls) | Enforces loose coupling, prevents circular dependencies |
+| Integration Point | Pattern | Notes |
+|-------------------|---------|-------|
+| Real-time updates | SignalR (built into Blazor Server) | Automatic WebSocket connection per circuit |
+| Component rendering | Blazor Server render mode | Server-side rendering with SignalR sync |
+| Static assets | wwwroot/ folder | CSS, JS, images served by ASP.NET Core static files middleware |
 
-## Build Order Implications
+### Background Service → SignalR
 
-### Phase 1: Core Foundation
-**Components:** Event Bus, Module Interface, State Manager, Basic Persistence
+| Integration Point | Pattern | Notes |
+|-------------------|---------|-------|
+| Broadcast to all clients | IHubContext<RuntimeHub> | Inject into IHostedService, call Clients.All.SendAsync() |
+| Targeted updates | IHubContext with connection ID | Can send to specific clients if needed (future) |
 
-**Why first:** Everything depends on these. Can't test modules without event bus, can't persist without state manager.
+### Hosting Model
 
-**Validation:** Create mock modules that publish/subscribe to events, verify state persists across restarts.
+| Component | Lifetime | Registration |
+|-----------|----------|--------------|
+| EventBus | Singleton | Shared across entire application |
+| PluginRegistry | Singleton | Shared across entire application |
+| HeartbeatLoop | Singleton | Single instance, started on app startup |
+| RuntimeService | Singleton | Facade over singleton runtime |
+| ModuleService | Singleton | Facade over singleton registry |
+| RuntimeMonitorService | Singleton (IHostedService) | Background worker, started automatically |
+| Blazor Components | Scoped (per circuit) | New instance per browser connection |
+| HubConnection (client-side) | Per component | Created in OnInitializedAsync, disposed in DisposeAsync |
 
-### Phase 2: Thinking Loop (Simplified)
-**Components:** Heartbeat timer, basic escalation logic (no LLM yet)
+## Build Order Considering Dependencies
 
-**Why second:** Proves the core loop works before adding expensive LLM calls.
+### Phase 1: Service Abstraction Layer (No UI Yet)
+1. Create OpenAnima.WebUI project
+2. Add Models/ folder with DTOs (ModuleDto, HeartbeatStatusDto, RuntimeStatusDto)
+3. Create Services/IRuntimeService.cs interface
+4. Implement Services/RuntimeService.cs wrapping HeartbeatLoop
+5. Create Services/IModuleService.cs interface
+6. Implement Services/ModuleService.cs wrapping PluginRegistry
+7. **Validation:** Unit test services with mock runtime components
 
-**Validation:** Heartbeat fires on schedule, escalation conditions trigger correctly.
+### Phase 2: ASP.NET Core Host (Console → Web)
+1. Modify OpenAnima.Core/Program.cs to use WebApplicationBuilder
+2. Register runtime components as singletons
+3. Register service facades as singletons
+4. Configure Kestrel to listen on localhost:5000
+5. Add browser auto-launch on startup
+6. **Validation:** App starts, browser opens, shows "Hello World" page
 
-### Phase 3: LLM Integration
-**Components:** LLM Abstraction, Triage Service, Reasoning Service
+### Phase 3: Basic Blazor UI (Static Display)
+1. Add Blazor Server packages to OpenAnima.WebUI
+2. Create Components/Layout/MainLayout.razor
+3. Create Components/Pages/Dashboard.razor (static, no real-time yet)
+4. Create Components/Pages/Modules.razor (static list)
+5. Create Components/Pages/Heartbeat.razor (static status)
+6. Configure routing and render modes
+7. **Validation:** Can navigate between pages, see static data
 
-**Why third:** Now add intelligence to the loop. Can test with real LLM calls.
+### Phase 4: SignalR Real-Time Updates
+1. Create Hubs/RuntimeHub.cs
+2. Create BackgroundServices/RuntimeMonitorService.cs
+3. Register IHostedService in Program.cs
+4. Update Dashboard.razor to subscribe to SignalR events
+5. Update Heartbeat.razor to receive real-time tick updates
+6. **Validation:** UI updates automatically when heartbeat ticks
 
-**Validation:** Triage correctly decides when to escalate, reasoning produces valid actions.
+### Phase 5: Control Operations
+1. Add Start/Stop buttons to Heartbeat.razor
+2. Wire buttons to IRuntimeService methods
+3. Add Load/Unload module UI to Modules.razor
+4. Wire module operations to IModuleService
+5. Broadcast operation results via SignalR
+6. **Validation:** Can control runtime from UI, all clients see updates
 
-### Phase 4: Module Host (C# first)
-**Components:** Assembly Loader, Module Registry, Example Modules
-
-**Why fourth:** Start with simpler in-process modules before tackling IPC complexity.
-
-**Validation:** Load module DLL, invoke methods, receive results via event bus.
-
-### Phase 5: Visual Editor (Basic)
-**Components:** Node graph UI, module browser, serialization
-
-**Why fifth:** Need working modules to wire together. Editor is useless without runtime.
-
-**Validation:** Wire two modules, save graph, reload, verify connections work.
-
-### Phase 6: IPC Module Host
-**Components:** Process Manager, IPC Protocol, Example Python/Node modules
-
-**Why sixth:** Most complex piece, requires working C# modules as reference implementation.
-
-**Validation:** Load external module, execute via IPC, verify same behavior as C# module.
-
-### Phase 7: Permission System
-**Components:** Permission Enforcer, Autonomy Level UI
-
-**Why seventh:** Needs working modules to enforce permissions on. Add after core functionality proven.
-
-**Validation:** Block module execution based on autonomy level, require user approval.
-
-### Dependencies
-
-```
-Event Bus ─┬─→ Module Interface ──→ Module Host (C#) ──→ Module Host (IPC)
-           │                              ↓                      ↓
-           └─→ Thinking Loop ─────────→ LLM Integration ────→ Visual Editor
-                    ↓
-              State Manager ──→ Persistence
-                    ↓
-              Permission System
-```
+### Phase 6: Polish & Error Handling
+1. Add loading states and spinners
+2. Add error toast notifications
+3. Add confirmation dialogs for destructive operations
+4. Style with CSS (minimal, functional)
+5. Add keyboard shortcuts (optional)
+6. **Validation:** Smooth UX, graceful error handling
 
 ## Sources
 
-**Note:** Web search tools were unavailable during research. This architecture is based on training data knowledge of:
-
-- .NET plugin architectures (MEF, AssemblyLoadContext patterns)
-- Agent framework patterns (LangChain, AutoGPT architectural approaches)
-- Event-driven architecture best practices
-- IPC protocol design (JSON-RPC, MessagePack standards)
-- Visual programming tool architectures (Node-RED, Unreal Blueprints)
-
-**Confidence level:** MEDIUM - Patterns are well-established but not verified against current 2026 implementations. Recommend validating specific technology choices (e.g., React Flow vs Rete.js for node graph) during implementation phases.
+- [ASP.NET Core Blazor hosting models](https://learn.microsoft.com/en-us/aspnet/core/blazor/hosting-models) (MEDIUM confidence - couldn't fetch, but standard Microsoft docs)
+- [Task Scheduling and Background Services in Blazor Server](https://blazorise.com/blog/task-scheduling-and-background-services-in-blazor-server) (MEDIUM confidence - couldn't fetch)
+- [How to Build Real-Time Dashboards with SignalR and Blazor](https://oneuptime.com/blog/post/2026-01-25-real-time-dashboards-signalr-blazor/view) (MEDIUM confidence - couldn't fetch, but recent 2026 article)
+- [Background Service Communication with Blazor via SignalR](https://medium.com/it-dead-inside/lets-learn-blazor-background-service-communication-with-blazor-via-signalr-84abe2660fd6) (MEDIUM confidence - from search results)
+- [Host ASP.NET Core SignalR in background services](https://learn.microsoft.com/en-us/aspnet/core/signalr/background-services) (HIGH confidence - official Microsoft pattern)
+- [Integrating Blazor with Existing .NET Web Apps](https://visualstudiomagazine.com/articles/2024/08/07/integrating-blazor-with-existing-,-d-,net-web-apps.aspx) (MEDIUM confidence - from search results)
+- [How do I host a WebApplication and a BackgroundService in the same application](https://stackoverflow.com/questions/74132325/how-do-i-host-a-webapplication-and-a-backgroundservice-in-the-same-application) (HIGH confidence - Stack Overflow pattern)
 
 ---
-*Architecture research for: OpenAnima - Modular AI Agent Platform*
-*Researched: 2026-02-21*
+*Architecture research for: Blazor Server WebUI integration with existing .NET 8 runtime*
+*Researched: 2026-02-22*

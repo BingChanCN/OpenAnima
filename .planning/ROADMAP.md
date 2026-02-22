@@ -2,115 +2,120 @@
 
 ## Milestones
 
-- ✅ **v1.0 Core Platform Foundation** — Phases 1-2 (shipped 2026-02-21)
-- 🚧 **v1.1** — Phases 3-7 (planned)
+- ✅ **v1.0 Core Platform Foundation** - Phases 1-2 (shipped 2026-02-21)
+- 🚧 **v1.1 WebUI Runtime Dashboard** - Phases 3-7 (in progress)
 
 ## Phases
 
 <details>
-<summary>✅ v1.0 Core Platform Foundation (Phases 1-2) — SHIPPED 2026-02-21</summary>
+<summary>✅ v1.0 Core Platform Foundation (Phases 1-2) - SHIPPED 2026-02-21</summary>
 
-- [x] Phase 1: Core Plugin System (3/3 plans) — completed 2026-02-21
-- [x] Phase 2: Event Bus & Heartbeat Loop (2/2 plans) — completed 2026-02-21
+- [x] Phase 1: Core Plugin System (3/3 plans) - completed 2026-02-21
+- [x] Phase 2: Event Bus & Heartbeat Loop (2/2 plans) - completed 2026-02-21
 
 See: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full details.
 
 </details>
 
-### 🚧 Next Milestone (Phases 3-7)
+### 🚧 v1.1 WebUI Runtime Dashboard (In Progress)
 
-- [ ] **Phase 3: LLM Integration** - OpenAI-compatible API client with streaming and resilience
-- [ ] **Phase 4: Tiered Thinking Loop** - Fast triage and deep reasoning layers for proactive agent behavior
-- [ ] **Phase 5: Visual Editor** - Blazor Hybrid drag-drop node graph for module wiring
-- [ ] **Phase 6: Data Persistence** - SQLite storage for agent state and conversation history
-- [ ] **Phase 7: Runtime Controls & Safety** - Agent lifecycle management and activity logging
+**Milestone Goal:** Real-time web-based monitoring and control panel for the OpenAnima runtime
+
+- [x] **Phase 3: Service Abstraction & Hosting** - Foundation for web-based runtime
+- [x] **Phase 4: Blazor UI with Static Display** - Module and heartbeat monitoring pages (completed 2026-02-21)
+- [ ] **Phase 5: SignalR Real-Time Updates** - Live tick counter and latency display
+- [ ] **Phase 6: Control Operations** - Load/unload modules, start/stop heartbeat
+- [ ] **Phase 7: Polish & Validation** - UX improvements and stability testing
 
 ## Phase Details
 
-### Phase 3: LLM Integration
-**Goal**: Agent can call LLM APIs with streaming responses and fault tolerance
+### Phase 3: Service Abstraction & Hosting
+**Goal**: Runtime launches as Blazor Server app with browser auto-launch
 **Depends on**: Phase 2
-**Requirements**: LLM-01, LLM-02, LLM-03
+**Requirements**: INFRA-01, INFRA-03
 **Success Criteria** (what must be TRUE):
-  1. Agent sends prompts to OpenAI-compatible API and receives streaming responses
-  2. API failures retry with exponential backoff without crashing agent
-  3. Token usage displays per-agent with cost tracking
-**Plans**: TBD
+  1. Runtime launches as web application serving on localhost
+  2. Browser automatically opens to dashboard URL on startup
+  3. All v1.0 functionality (module loading, event bus, heartbeat) works in web host
+  4. Service facades expose runtime operations without direct component coupling
+**Plans**: 2
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [x] 03-01: Service Facades & Web Host
+- [x] 03-02: Blazor Layout Shell & Browser Auto-Launch
 
-### Phase 4: Tiered Thinking Loop
-**Goal**: Agent proactively initiates actions using fast triage and deep reasoning
+### Phase 4: Blazor UI with Static Display
+**Goal**: User can view module and heartbeat status via web dashboard
 **Depends on**: Phase 3
-**Requirements**: RUN-04, RUN-05, RUN-06
+**Requirements**: MOD-06, MOD-07, UI-01
 **Success Criteria** (what must be TRUE):
-  1. Agent escalates from heartbeat to fast LLM triage based on conditions
-  2. Complex tasks trigger deep reasoning layer from triage
-  3. Agent initiates conversations and actions without user input
-  4. Thinking loop operates continuously with appropriate cost optimization
-**Plans**: TBD
+  1. User can view list of all loaded modules with status indicators
+  2. User can view each module's metadata (name, version, description, author)
+  3. User can view heartbeat running state (Running/Stopped)
+  4. Dashboard layout adapts to different screen sizes
+**Plans**: 2
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [x] 04-01-PLAN.md — Navigation expansion, Dashboard summary cards, responsive sidebar
+- [ ] 04-02-PLAN.md — Modules page with card grid and detail modal, Heartbeat status page
 
-### Phase 5: Visual Editor
-**Goal**: Non-technical users can wire modules into agents via drag-drop interface
+### Phase 5: SignalR Real-Time Updates
+**Goal**: Dashboard updates in real-time without manual refresh
 **Depends on**: Phase 4
-**Requirements**: VIS-01, VIS-02, VIS-03, VIS-04
+**Requirements**: INFRA-02, BEAT-01, BEAT-03, BEAT-04
 **Success Criteria** (what must be TRUE):
-  1. User drags modules onto canvas and connects them with visual edges
-  2. Editor prevents incompatible module connections based on type contracts
-  3. Agent configuration saves and loads from disk
-  4. Running modules display their current status in the editor
-**Plans**: TBD
+  1. Runtime state changes push to browser automatically via SignalR
+  2. User sees live tick counter updating in real-time
+  3. User sees per-tick latency with warning when exceeding 100ms target
+  4. Module list updates automatically when modules load/unload
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md — SignalR Hub infrastructure, latency tracking, server-to-client push
+- [ ] 05-02-PLAN.md — Real-time monitoring page with sparklines and connection status
 
-### Phase 6: Data Persistence
-**Goal**: Agent state and conversation history persist across restarts
+### Phase 6: Control Operations
+**Goal**: User can control runtime operations from dashboard
 **Depends on**: Phase 5
-**Requirements**: DAT-01, DAT-02
+**Requirements**: MOD-08, MOD-09, MOD-10, BEAT-02
 **Success Criteria** (what must be TRUE):
-  1. Agent state (goals, tasks, current state) saves to SQLite and restores on restart
-  2. Conversation history persists locally and displays in chronological order
-  3. Multiple agents maintain separate data without conflicts
-**Plans**: TBD
+  1. User can load a new module via file picker from dashboard
+  2. User can unload a loaded module via button click
+  3. User can start and stop the heartbeat loop from dashboard
+  4. User sees error message when a module operation fails
+**Plans**: 2 plans
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md — Backend control operations: Hub methods, module unload, available module discovery
+- [ ] 06-02-PLAN.md — Frontend control UI: module load/unload buttons, heartbeat toggle, loading states, error display
 
-### Phase 7: Runtime Controls & Safety
-**Goal**: Users can control agent lifecycle and monitor all agent activities
+### Phase 7: Polish & Validation
+**Goal**: Production-ready UX with validated stability
 **Depends on**: Phase 6
-**Requirements**: RUN-01, RUN-02, SAF-01
+**Requirements**: (polish phase - no new requirements)
 **Success Criteria** (what must be TRUE):
-  1. User can start, stop, and pause agents from UI
-  2. Module errors display user-friendly messages without crashing agent
-  3. Activity log shows real-time agent actions, events, and module invocations
-  4. Failed modules isolate without affecting other modules
-**Plans**: TBD
+  1. Loading states and spinners appear during async operations
+  2. Confirmation dialogs prevent accidental destructive operations
+  3. Connection status indicator shows SignalR circuit health
+  4. Memory leak testing passes (100 connect/disconnect cycles)
+  5. Performance validation passes (20+ modules, sustained operation)
+**Plans**: 2 plans
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
+- [ ] 07-01-PLAN.md — UX polish: ConfirmDialog for destructive operations, global ConnectionStatus indicator
+- [ ] 07-02-PLAN.md — Stability validation: xUnit test project with memory leak and performance tests
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 3 → 4 → 5 → 6 → 7
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Core Plugin System | v1.0 | 3/3 | Complete | 2026-02-21 |
 | 2. Event Bus & Heartbeat Loop | v1.0 | 2/2 | Complete | 2026-02-21 |
-| 3. LLM Integration | v1.1 | 0/TBD | Not started | - |
-| 4. Tiered Thinking Loop | v1.1 | 0/TBD | Not started | - |
-| 5. Visual Editor | v1.1 | 0/TBD | Not started | - |
-| 6. Data Persistence | v1.1 | 0/TBD | Not started | - |
-| 7. Runtime Controls & Safety | v1.1 | 0/TBD | Not started | - |
+| 3. Service Abstraction & Hosting | v1.1 | 2/2 | Complete | 2026-02-22 |
+| 4. Blazor UI with Static Display | v1.1 | Complete    | 2026-02-21 | - |
+| 5. SignalR Real-Time Updates | v1.1 | 0/2 | Not started | - |
+| 6. Control Operations | v1.1 | 0/2 | Not started | - |
+| 7. Polish & Validation | v1.1 | 0/2 | Not started | - |

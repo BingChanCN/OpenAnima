@@ -1,0 +1,93 @@
+# Requirements: OpenAnima
+
+**Defined:** 2026-02-22
+**Core Value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe
+
+## v1.1 Requirements
+
+Requirements for WebUI Runtime Dashboard milestone. Each maps to roadmap phases.
+
+### Infrastructure
+
+- [x] **INFRA-01**: Runtime launches as Blazor Server app serving a web-based monitoring dashboard
+- [ ] **INFRA-02**: Runtime state changes push to browser in real-time via SignalR without manual refresh
+- [x] **INFRA-03**: Runtime auto-launches default browser to dashboard URL on startup
+
+### Module Monitoring
+
+- [x] **MOD-06**: User can view a list of all loaded modules with status indicators (loaded/error)
+- [x] **MOD-07**: User can view each module's metadata (name, version, description, author)
+- [x] **MOD-08**: User can load a new module via file picker from the dashboard
+- [x] **MOD-09**: User can unload a loaded module via button click from the dashboard
+- [x] **MOD-10**: User sees error message when a module operation fails
+
+### Heartbeat Monitoring
+
+- [ ] **BEAT-01**: User can view heartbeat loop running state (Running/Stopped)
+- [x] **BEAT-02**: User can start and stop the heartbeat loop from the dashboard
+- [ ] **BEAT-03**: User can see a live tick counter updating in real-time
+- [ ] **BEAT-04**: User can see per-tick latency with warning when exceeding 100ms target
+
+### User Interface
+
+- [x] **UI-01**: Dashboard layout adapts to different screen sizes (responsive)
+
+## v1.2+ Requirements
+
+Deferred to future release. Tracked but not in current roadmap.
+
+### Advanced Monitoring
+
+- **EVNT-01**: User can view real-time event bus activity (event types, timestamps, source modules)
+- **EVNT-02**: User can view module dependency relationships as a tree/graph
+- **BEAT-05**: User can view heartbeat tick history as a line chart (last 100 ticks)
+- **MOD-11**: User can view module load/unload history timeline
+
+### Desktop Polish
+
+- **DESK-01**: Dark mode toggle with persisted preference
+- **DESK-02**: System tray integration with minimize-to-tray and context menu
+
+## Out of Scope
+
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| Module configuration editor | Each module has different config schema, generic editor is complex — use appsettings.json |
+| Real-time event payload inspection | Privacy concern, performance impact, UI clutter — show types/counts only |
+| Module code editor | Scope creep into IDE territory — use VS Code/Visual Studio |
+| Historical data persistence | Database complexity, storage growth — current session only |
+| Multi-runtime management | Networking complexity, authentication — single runtime only |
+| Module marketplace integration | Marketplace doesn't exist yet — manual file picker |
+| Custom dashboard layouts | Complexity explosion — fixed well-designed layout |
+| Alerting/notifications | Notification infrastructure complexity — user monitors actively |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| INFRA-01 | Phase 3 | Complete |
+| INFRA-02 | Phase 5 | Pending |
+| INFRA-03 | Phase 3 | Complete |
+| MOD-06 | Phase 4 | Complete |
+| MOD-07 | Phase 4 | Complete |
+| MOD-08 | Phase 6 | Complete |
+| MOD-09 | Phase 6 | Complete |
+| MOD-10 | Phase 6 | Complete |
+| BEAT-01 | Phase 5 | Pending |
+| BEAT-02 | Phase 6 | Complete |
+| BEAT-03 | Phase 5 | Pending |
+| BEAT-04 | Phase 5 | Pending |
+| UI-01 | Phase 4 | Complete |
+
+**Coverage:**
+- v1.1 requirements: 13 total
+- Mapped to phases: 13
+- Unmapped: 0 ✓
+
+---
+*Requirements defined: 2026-02-22*
+*Last updated: 2026-02-21 after Phase 4 Plan 01 completion*

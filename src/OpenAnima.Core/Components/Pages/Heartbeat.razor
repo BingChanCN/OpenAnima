@@ -1,0 +1,115 @@
+@page "/heartbeat"
+@using Microsoft.AspNetCore.SignalR.Client
+@inject IHeartbeatService HeartbeatService
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+<h1 class="page-title">Heartbeat</h1>
+
+<div class="heartbeat-container">
+    <div class="status-card-large">
+        <div class="status-label">Status</div>
+        <div class="status-value @(isRunning ? "running" : "stopped")">
+            @(isRunning ? "Running" : "Stopped")
+        </div>
+
+        <div class="control-section">
+            <button class="btn @(isRunning ? "btn-danger" : "btn-primary") @(isLoading ? "loading" : "")"
+                    disabled="@isLoading"
+                    @onclick="ToggleHeartbeat">
+                @if (isLoading) { <span class="spinner"></span> }
+                @(isRunning ? "Stop Heartbeat" : "Start Heartbeat")
+            </button>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="error-message">@errorMessage</div>
+            }
+        </div>
+    </div>
+
+    <div class="stats-container">
+        <div class="stat-card card">
+            <span class="stat-label">Tick Count</span>
+            <span class="stat-value mono">@tickCount</span>
+        </div>
+        <div class="stat-card card">
+            <span class="stat-label">Latency</span>
+            <span class="stat-value mono">@latencyMs.ToString("F2") ms</span>
+        </div>
+    </div>
+</div>
+
+@code {
+    private HubConnection? hubConnection;
+    private bool isLoading = false;
+    private string? errorMessage = null;
+    private bool isRunning;
+    private long tickCount;
+    private double latencyMs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/hubs/runtime"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.On<bool>("ReceiveHeartbeatStateChanged", (running) =>
+        {
+            isRunning = running;
+            errorMessage = null;
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.On<long, double>("ReceiveHeartbeatTick", (tick, latency) =>
+        {
+            tickCount = tick;
+            latencyMs = latency;
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+        isRunning = HeartbeatService.IsRunning;
+        tickCount = HeartbeatService.TickCount;
+    }
+
+    private async Task ToggleHeartbeat()
+    {
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            bool result;
+            if (isRunning)
+            {
+                result = await hubConnection!.InvokeAsync<bool>("StopHeartbeat");
+            }
+            else
+            {
+                result = await hubConnection!.InvokeAsync<bool>("StartHeartbeat");
+            }
+
+            if (!result)
+            {
+                errorMessage = "Operation failed. Please try again.";
+            }
+        }
+        catch
+        {
+            errorMessage = "Connection error. Please refresh.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+            await hubConnection.DisposeAsync();
+    }
+}

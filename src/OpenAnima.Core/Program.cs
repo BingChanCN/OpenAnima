@@ -1,139 +1,93 @@
-using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using OpenAnima.Contracts;
 using OpenAnima.Core.Events;
+using OpenAnima.Core.Hosting;
 using OpenAnima.Core.Plugins;
 using OpenAnima.Core.Runtime;
+using OpenAnima.Core.Hubs;
+using Microsoft.AspNetCore.SignalR;
+using OpenAnima.Core.Services;
 
-// OpenAnima Core Runtime — plugin system entry point
-Console.WriteLine("OpenAnima Core starting...");
+// OpenAnima Core Runtime — Blazor Server web host
 
-// 1. Create EventBus
-var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
-var eventBusLogger = loggerFactory.CreateLogger<EventBus>();
-var eventBus = new EventBus(eventBusLogger);
-Console.WriteLine("✓ EventBus created");
+var builder = WebApplication.CreateBuilder(args);
 
-// 2. Initialize plugin infrastructure
-var registry = new PluginRegistry();
-var loader = new PluginLoader();
+// --- Register core runtime components as singletons ---
+builder.Services.AddSingleton<PluginRegistry>();
+builder.Services.AddSingleton<PluginLoader>();
+builder.Services.AddSingleton<EventBus>();
+builder.Services.AddSingleton<IEventBus>(sp =>
+    sp.GetRequiredService<EventBus>());
+builder.Services.AddSingleton<HeartbeatLoop>(sp =>
+    new HeartbeatLoop(
+        sp.GetRequiredService<IEventBus>(),
+        sp.GetRequiredService<PluginRegistry>(),
+        TimeSpan.FromMilliseconds(100),
+        sp.GetRequiredService<ILogger<HeartbeatLoop>>(),
+        sp.GetRequiredService<IHubContext<RuntimeHub, IRuntimeClient>>()));
 
-// 3. Define modules directory
-var modulesPath = Path.Combine(AppContext.BaseDirectory, "modules");
-Console.WriteLine($"Scanning for modules in: {modulesPath}");
+// --- Register service facades ---
+builder.Services.AddSingleton<IModuleService, ModuleService>();
+builder.Services.AddSingleton<IHeartbeatService, HeartbeatService>();
+builder.Services.AddSingleton<IEventBusService, EventBusService>();
 
-// 4. Scan and load all modules
-if (Directory.Exists(modulesPath))
+// --- Register hosted service for runtime lifecycle ---
+builder.Services.AddHostedService<OpenAnimaHostedService>();
+
+// --- Add Blazor Server ---
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+
+// --- Add SignalR for real-time push ---
+builder.Services.AddSignalR();
+
+var app = builder.Build();
+
+// --- Configure middleware pipeline ---
+app.UseStaticFiles();
+app.UseAntiforgery();
+
+app.MapRazorComponents<OpenAnima.Core.Components.App>()
+    .AddInteractiveServerRenderMode();
+
+app.MapHub<RuntimeHub>("/hubs/runtime");
+
+// --- Browser auto-launch ---
+var noBrowser = args.Contains("--no-browser");
+var url = app.Urls.FirstOrDefault() ?? "http://localhost:5000";
+
+app.Lifetime.ApplicationStarted.Register(() =>
 {
-    var loadResults = loader.ScanDirectory(modulesPath);
+    // Resolve the actual URL after Kestrel binds
+    var addresses = app.Services
+        .GetRequiredService<IServer>()
+        .Features
+        .Get<IServerAddressesFeature>();
+    var listenUrl = addresses?.Addresses.FirstOrDefault() ?? url;
 
-    foreach (var result in loadResults)
-    {
-        if (result.Success && result.Module != null && result.Manifest != null)
-        {
-            try
-            {
-                registry.Register(result.Manifest.Name, result.Module, result.Context!, result.Manifest);
-                Console.WriteLine($"✓ Registered: {result.Manifest.Name} v{result.Manifest.Version}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"✗ Failed to register {result.Manifest?.Name ?? "unknown"}: {ex.Message}");
-            }
-        }
-        else
-        {
-            Console.WriteLine($"✗ Failed to load module: {result.Error?.Message ?? "Unknown error"}");
-        }
-    }
-}
-else
-{
-    Console.WriteLine($"Modules directory not found: {modulesPath}");
-}
+    Console.WriteLine();
+    Console.WriteLine($"  OpenAnima Dashboard: {listenUrl}");
+    Console.WriteLine("  Press Ctrl+C to stop.");
+    Console.WriteLine();
 
-// 5. Display registry summary
-Console.WriteLine($"\nLoaded {registry.Count} module(s):");
-foreach (var entry in registry.GetAllModules())
-{
-    var metadata = entry.Module.Metadata;
-    Console.WriteLine($"  - {metadata.Name} v{metadata.Version}: {metadata.Description}");
-}
-
-// 6. Inject EventBus into modules that need it
-foreach (var entry in registry.GetAllModules())
-{
-    var moduleType = entry.Module.GetType();
-    var eventBusProperty = moduleType.GetProperty("EventBus");
-    if (eventBusProperty != null && eventBusProperty.CanWrite)
-    {
-        eventBusProperty.SetValue(entry.Module, eventBus);
-        Console.WriteLine($"✓ Injected EventBus into {entry.Module.Metadata.Name}");
-    }
-}
-
-// 7. Start HeartbeatLoop
-var heartbeatLogger = loggerFactory.CreateLogger<HeartbeatLoop>();
-var heartbeat = new HeartbeatLoop(eventBus, registry, TimeSpan.FromMilliseconds(100), heartbeatLogger);
-await heartbeat.StartAsync();
-Console.WriteLine($"✓ Heartbeat started (100ms interval)\n");
-
-// 8. Start watching for new modules
-var watcher = new ModuleDirectoryWatcher(modulesPath, (path) =>
-{
-    Console.WriteLine($"\n[Watcher] New module detected: {path}");
-    var result = loader.LoadModule(path);
-
-    if (result.Success && result.Module != null && result.Manifest != null)
+    if (!noBrowser)
     {
         try
         {
-            registry.Register(result.Manifest.Name, result.Module, result.Context!, result.Manifest);
-
-            // Inject EventBus into hot-loaded module
-            var moduleType = result.Module.GetType();
-            var eventBusProperty = moduleType.GetProperty("EventBus");
-            if (eventBusProperty != null && eventBusProperty.CanWrite)
+            Process.Start(new ProcessStartInfo
             {
-                eventBusProperty.SetValue(result.Module, eventBus);
-            }
-
-            Console.WriteLine($"✓ Hot-loaded: {result.Manifest.Name} v{result.Manifest.Version}");
+                FileName = listenUrl,
+                UseShellExecute = true
+            });
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"✗ Failed to register {result.Manifest?.Name ?? "unknown"}: {ex.Message}");
+            Console.WriteLine(
+                $"  Could not open browser: {ex.Message}");
         }
-    }
-    else
-    {
-        Console.WriteLine($"✗ Failed to load module: {result.Error?.Message ?? "Unknown error"}");
     }
 });
 
-watcher.StartWatching();
-
-Console.WriteLine($"Watching for new modules in {modulesPath}... Press Enter to exit.\n");
-Console.ReadLine();
-
-// 9. Cleanup
-Console.WriteLine("\nShutting down...");
-await heartbeat.StopAsync();
-Console.WriteLine($"✓ Heartbeat stopped (Ticks: {heartbeat.TickCount}, Skipped: {heartbeat.SkippedCount})");
-
-watcher.Dispose();
-
-// Shutdown modules
-foreach (var entry in registry.GetAllModules())
-{
-    try
-    {
-        await entry.Module.ShutdownAsync();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"✗ Error shutting down {entry.Module.Metadata.Name}: {ex.Message}");
-    }
-}
-
-heartbeat.Dispose();
-loggerFactory.Dispose();
-Console.WriteLine("OpenAnima Core shut down cleanly.");
+app.Run();
