@@ -22,10 +22,10 @@ See: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full details.
 **Milestone Goal:** Real-time web-based monitoring and control panel for the OpenAnima runtime
 
 - [x] **Phase 3: Service Abstraction & Hosting** - Foundation for web-based runtime
-- [x] **Phase 4: Blazor UI with Static Display** - Module and heartbeat monitoring pages (completed 2026-02-21)
-- [ ] **Phase 5: SignalR Real-Time Updates** - Live tick counter and latency display
-- [ ] **Phase 6: Control Operations** - Load/unload modules, start/stop heartbeat
-- [ ] **Phase 7: Polish & Validation** - UX improvements and stability testing
+- [x] **Phase 4: Blazor UI with Static Display** - Module and heartbeat monitoring pages (completed 2026-02-22)
+- [x] **Phase 5: SignalR Real-Time Updates** - Live tick counter and latency display (completed 2026-02-22)
+- [x] **Phase 6: Control Operations** - Load/unload modules, start/stop heartbeat (completed 2026-02-22)
+- [ ] **Phase 7: Polish & Validation** - UX improvements and stability testing (in progress)
 
 ## Phase Details
 
@@ -57,7 +57,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — Navigation expansion, Dashboard summary cards, responsive sidebar
-- [ ] 04-02-PLAN.md — Modules page with card grid and detail modal, Heartbeat status page
+- [x] 04-02-PLAN.md — Modules page with card grid and detail modal, Heartbeat status page
 
 ### Phase 5: SignalR Real-Time Updates
 **Goal**: Dashboard updates in real-time without manual refresh
@@ -71,8 +71,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — SignalR Hub infrastructure, latency tracking, server-to-client push
-- [ ] 05-02-PLAN.md — Real-time monitoring page with sparklines and connection status
+- [x] 05-01-PLAN.md — SignalR Hub infrastructure, latency tracking, server-to-client push
+- [x] 05-02-PLAN.md — Real-time monitoring page with sparklines and connection status
 
 ### Phase 6: Control Operations
 **Goal**: User can control runtime operations from dashboard
@@ -86,8 +86,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Backend control operations: Hub methods, module unload, available module discovery
-- [ ] 06-02-PLAN.md — Frontend control UI: module load/unload buttons, heartbeat toggle, loading states, error display
+- [x] 06-01-PLAN.md — Backend control operations: Hub methods, module unload, available module discovery
+- [x] 06-02-PLAN.md — Frontend control UI: module load/unload buttons, heartbeat toggle, loading states, error display
 
 ### Phase 7: Polish & Validation
 **Goal**: Production-ready UX with validated stability
@@ -102,7 +102,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — UX polish: ConfirmDialog for destructive operations, global ConnectionStatus indicator
+- [x] 07-01-PLAN.md — UX polish: ConfirmDialog for destructive operations, global ConnectionStatus indicator
 - [ ] 07-02-PLAN.md — Stability validation: xUnit test project with memory leak and performance tests
 
 ## Progress
@@ -115,7 +115,7 @@ Phases execute in numeric order: 3 → 4 → 5 → 6 → 7
 | 1. Core Plugin System | v1.0 | 3/3 | Complete | 2026-02-21 |
 | 2. Event Bus & Heartbeat Loop | v1.0 | 2/2 | Complete | 2026-02-21 |
 | 3. Service Abstraction & Hosting | v1.1 | 2/2 | Complete | 2026-02-22 |
-| 4. Blazor UI with Static Display | v1.1 | Complete    | 2026-02-21 | - |
-| 5. SignalR Real-Time Updates | v1.1 | 0/2 | Not started | - |
-| 6. Control Operations | v1.1 | 0/2 | Not started | - |
-| 7. Polish & Validation | v1.1 | 0/2 | Not started | - |
+| 4. Blazor UI with Static Display | v1.1 | 2/2 | Complete | 2026-02-22 |
+| 5. SignalR Real-Time Updates | v1.1 | 2/2 | Complete | 2026-02-22 |
+| 6. Control Operations | v1.1 | 2/2 | Complete | 2026-02-22 |
+| 7. Polish & Validation | v1.1 | 1/2 | In Progress | - |
