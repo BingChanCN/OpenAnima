@@ -10,6 +10,10 @@
                     <span class="logo-text">OpenAnima</span>
                 }
             </div>
+            @if (!SidebarCollapsed)
+            {
+                <ConnectionStatus />
+            }
             <button class="sidebar-toggle"
                     @onclick="ToggleSidebar"
                     title="@(SidebarCollapsed ? "Expand" : "Collapse")"

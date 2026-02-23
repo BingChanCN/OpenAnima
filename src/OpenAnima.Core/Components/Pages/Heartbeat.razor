@@ -39,6 +39,14 @@
     </div>
 </div>
 
+<ConfirmDialog IsVisible="@showStopConfirm"
+               Title="Stop Heartbeat"
+               Message="Are you sure you want to stop the heartbeat loop?"
+               ConfirmText="Stop"
+               ConfirmButtonClass="btn-danger"
+               OnConfirm="@ConfirmStop"
+               OnCancel="@CancelStop" />
+
 @code {
     private HubConnection? hubConnection;
     private bool isLoading = false;
@@ -46,6 +54,7 @@
     private bool isRunning;
     private long tickCount;
     private double latencyMs;
+    private bool showStopConfirm = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -75,22 +84,21 @@
 
     private async Task ToggleHeartbeat()
     {
+        if (isRunning)
+        {
+            // Stop is destructive - show confirmation
+            showStopConfirm = true;
+            return;
+        }
+
+        // Start is not destructive - proceed immediately
         isLoading = true;
         errorMessage = null;
         StateHasChanged();
 
         try
         {
-            bool result;
-            if (isRunning)
-            {
-                result = await hubConnection!.InvokeAsync<bool>("StopHeartbeat");
-            }
-            else
-            {
-                result = await hubConnection!.InvokeAsync<bool>("StartHeartbeat");
-            }
-
+            var result = await hubConnection!.InvokeAsync<bool>("StartHeartbeat");
             if (!result)
             {
                 errorMessage = "Operation failed. Please try again.";
@@ -105,6 +113,37 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task ConfirmStop()
+    {
+        showStopConfirm = false;
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await hubConnection!.InvokeAsync<bool>("StopHeartbeat");
+            if (!result)
+            {
+                errorMessage = "Operation failed. Please try again.";
+            }
+        }
+        catch
+        {
+            errorMessage = "Connection error. Please refresh.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CancelStop()
+    {
+        showStopConfirm = false;
     }
 
     public async ValueTask DisposeAsync()

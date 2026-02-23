@@ -72,6 +72,15 @@
     }
 </div>
 
+<!-- Confirmation Dialog -->
+<ConfirmDialog IsVisible="@showUnloadConfirm"
+               Title="Unload Module"
+               Message="@($"Are you sure you want to unload {moduleToUnload}? This will stop all module operations.")"
+               ConfirmText="Unload"
+               ConfirmButtonClass="btn-danger"
+               OnConfirm="@ConfirmUnload"
+               OnCancel="@CancelUnload" />
+
 <!-- Keep existing ModuleDetailModal -->
 <ModuleDetailModal IsVisible="@showModal"
                    Title="@(selectedModule?.Module.Metadata.Name ?? "")"
@@ -107,6 +116,8 @@
     private Dictionary<string, string> moduleErrors = new();
     private PluginRegistryEntry? selectedModule;
     private bool showModal;
+    private bool showUnloadConfirm = false;
+    private string? moduleToUnload = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -161,6 +172,18 @@
 
     private async Task UnloadModule(string name)
     {
+        moduleToUnload = name;
+        showUnloadConfirm = true;
+    }
+
+    private async Task ConfirmUnload()
+    {
+        showUnloadConfirm = false;
+        if (moduleToUnload == null) return;
+
+        var name = moduleToUnload;
+        moduleToUnload = null;
+
         isOperating = true;
         operatingModule = name;
         moduleErrors.Remove(name);
@@ -185,6 +208,12 @@
             await RefreshAvailableModules();
             StateHasChanged();
         }
+    }
+
+    private void CancelUnload()
+    {
+        showUnloadConfirm = false;
+        moduleToUnload = null;
     }
 
     private void ShowDetails(PluginRegistryEntry entry)
