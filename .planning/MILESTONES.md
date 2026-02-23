@@ -21,3 +21,25 @@
 
 ---
 
+
+## v1.1 WebUI Runtime Dashboard (Shipped: 2026-02-23)
+
+**Phases:** 3-7 | **Plans:** 10 | **Tasks:** 8 | **LOC:** 3,741 C#/Razor/CSS (+2,951 from v1.0)
+**Git range:** 990c943..5db8eb4 | **Timeline:** 2026-02-22 → 2026-02-23
+
+**Delivered:** Real-time web-based monitoring and control dashboard for the OpenAnima runtime — Blazor Server with SignalR push, module management, heartbeat monitoring, and a complete desktop app experience.
+
+**Key accomplishments:**
+- Converted runtime to Blazor Server web host with service facades and browser auto-launch
+- Dark-themed responsive dashboard with collapsible sidebar, module list, and heartbeat status
+- SignalR real-time push with per-tick latency tracking and sparkline visualization
+- Control operations: load/unload modules, start/stop heartbeat from browser UI
+- UX polish: confirmation dialogs for destructive ops, connection status indicator
+- xUnit test suite with memory leak detection and performance validation
+
+**Tech debt (7 items):** See milestones/v1.1-MILESTONE-AUDIT.md
+
+**Archive:** [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) | [milestones/v1.1-REQUIREMENTS.md](milestones/v1.1-REQUIREMENTS.md)
+
+---
+

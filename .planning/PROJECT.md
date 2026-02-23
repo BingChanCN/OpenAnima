@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a Web-based visual editor for drag-and-drop agent assembly.
+A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based monitoring dashboard and real-time control panel, with a visual drag-and-drop editor planned for future milestones.
 
 ## Core Value
 
@@ -18,14 +18,17 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ MediatR-based event bus for inter-module communication (MOD-04) — v1.0
 - ✓ Module registry for discovering and managing loaded modules (MOD-05) — v1.0
 - ✓ Code-based heartbeat loop running at ≤100ms intervals (RUN-03) — v1.0
-- ✓ Blazor Server WebUI with real-time runtime monitoring dashboard — v1.1 Phase 3-5
-- ✓ Module status display: loaded modules list, metadata, running state — v1.1 Phase 4
-- ✓ Heartbeat monitoring: running state, tick count, latency, real-time updates — v1.1 Phase 4-5
-- ✓ Control operations: load/unload modules, start/stop heartbeat from UI (MOD-08, MOD-09, MOD-10, BEAT-02) — v1.1 Phase 6
+- ✓ Runtime launches as Blazor Server web app with browser auto-launch (INFRA-01, INFRA-03) — v1.1
+- ✓ Real-time state push via SignalR without manual refresh (INFRA-02) — v1.1
+- ✓ Module status display: loaded modules list, metadata, status indicators (MOD-06, MOD-07) — v1.1
+- ✓ Load/unload modules from dashboard with error display (MOD-08, MOD-09, MOD-10) — v1.1
+- ✓ Heartbeat monitoring: running state, tick count, per-tick latency, real-time updates (BEAT-01, BEAT-02, BEAT-03, BEAT-04) — v1.1
+- ✓ Responsive dashboard layout (UI-01) — v1.1
+- ✓ UX polish: confirmation dialogs, connection status indicator — v1.1
 
 ### Active
 
-- [ ] Runtime as background service with browser auto-launch (complete desktop app experience)
+(None — planning next milestone)
 
 ### Future
 
@@ -46,43 +49,42 @@ Agents that proactively think and act on their own, while module connections rem
 - Local model hosting (llama.cpp etc.) — v1 uses cloud LLM only, architecture allows future addition
 - Module marketplace backend/infrastructure — v1 supports loading local module packages only
 - Multi-agent orchestration — v1 focuses on single-agent experience
-
-## Current Milestone: v1.1 WebUI Runtime Dashboard
-
-**Goal:** Provide a real-time web-based monitoring and control panel for the OpenAnima runtime, delivering a complete desktop application experience.
-
-**Target features:**
-- Module status display with metadata and running state
-- Heartbeat monitoring with real-time tick/latency data
-- Control operations (load/unload modules, start/stop heartbeat)
-- Runtime as background service with browser auto-launch
+- Module configuration editor — each module has different config schema, use appsettings.json
+- Historical data persistence — database complexity, current session only
 
 ## Context
 
-Shipped v1.0 with 1,323 LOC C# across 17 source files.
-Tech stack: .NET 8.0, AssemblyLoadContext isolation, ConcurrentDictionary, PeriodicTimer, FileSystemWatcher.
-Core runtime loads modules in isolated contexts, communicates via typed event bus, and ticks at 100ms.
-v1.1 adds Blazor Server WebUI for runtime monitoring and control — the first user-facing interface.
+Shipped v1.1 with 3,741 LOC C#/Razor/CSS across ~50 source files.
+Tech stack: .NET 8.0, Blazor Server, SignalR, AssemblyLoadContext isolation, ConcurrentDictionary, PeriodicTimer, FileSystemWatcher.
+Core runtime loads modules in isolated contexts, communicates via typed event bus, ticks at 100ms, and serves a real-time web dashboard with module management and heartbeat monitoring.
+xUnit test suite covers memory leak detection and performance validation.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| C# core runtime | Strong Windows ecosystem, good performance, Unity/UE compatibility for future | ✓ Good — 1,323 LOC, clean architecture |
-| Tiered thinking loop (3 layers) | Balances intelligence and speed — code heartbeat is free, only deep reasoning costs tokens | — Pending (Phase 4) |
-| OpenAI-compatible API first | Covers most LLM providers with single interface, simplest path to working product | — Pending (Phase 3) |
-| Typed interfaces + visual graph | Safety from type system, accessibility from visual editor — serves both user groups | — Pending (Phase 5) |
+| C# core runtime | Strong Windows ecosystem, good performance, Unity/UE compatibility for future | ✓ Good — clean architecture, 3,741 LOC |
 | Dynamic assembly loading for C# modules | Enables "download and run" without separate processes, best performance for C# ecosystem | ✓ Good — AssemblyLoadContext isolation works |
-| IPC for non-C# modules | Language agnostic while keeping C# modules fast, packaged executables for zero-setup | — Pending |
-| Web-based UI (framework TBD) | Best ecosystem for visual editors (node graphs, drag-drop), cross-platform potential | ✓ Good — Blazor Server chosen for v1.1 dashboard |
-| V1 = core platform + proactive chat demo | Proves the core value (proactive agent) without overscoping into Unity/marketplace | — Pending |
 | .slnx format (XML-based solution) | .NET 10 SDK creates .slnx by default; compatible with all dotnet CLI commands | ✓ Good |
 | LoadResult record instead of exceptions | Enables caller to decide how to handle failures without try/catch boilerplate | ✓ Good |
 | Name-based type discovery | Cross-context type identity solved via interface.FullName comparison | ✓ Good — critical for plugin isolation |
 | Duck-typing for ITickable | Reflection-based method lookup solves cross-context type identity for heartbeat | ✓ Good |
 | Property injection for EventBus | EventBus injected via setter after module loading, subscription in setter | ✓ Good |
-| Blazor Server for WebUI | Pure C# full-stack, SignalR built-in for real-time push, seamless .NET runtime integration | — Pending |
 | Lock-free event bus | ConcurrentDictionary + ConcurrentBag with lazy cleanup every 100 publishes | ✓ Good |
+| Blazor Server for WebUI | Pure C# full-stack, SignalR built-in for real-time push, seamless .NET runtime integration | ✓ Good — single-project architecture works well |
+| Web SDK directly on Core project | No separate web project; OpenAnima.Core is the host | ✓ Good — simpler deployment |
+| Pure CSS dark theme (no component library) | Lightweight for monitoring shell, can add MudBlazor later if needed | ✓ Good — fast, no dependencies |
+| IHostedService for runtime lifecycle | Clean ASP.NET Core integration for startup/shutdown | ✓ Good |
+| Code-behind partial class for SignalR pages | Avoids Razor compiler issues with generic type parameters | ✓ Good — clean separation |
+| Throttled UI rendering (every 5th tick) | Prevents jank from 100ms tick frequency | ✓ Good — smooth UX |
+| Fire-and-forget Hub push | Avoids blocking the heartbeat tick loop | ✓ Good |
+| PluginLoadContext isCollectible: true | Enables assembly unloading for module lifecycle management | ✓ Good |
+| Serial operation execution (isOperating flag) | All buttons disable during any operation to prevent race conditions | ✓ Good |
+| ConfirmDialog only for destructive ops | Unload/stop get confirmation, load/start don't — reduces friction | ✓ Good |
+| Tiered thinking loop (3 layers) | Balances intelligence and speed — code heartbeat is free, only deep reasoning costs tokens | — Pending |
+| OpenAI-compatible API first | Covers most LLM providers with single interface, simplest path to working product | — Pending |
+| Typed interfaces + visual graph | Safety from type system, accessibility from visual editor — serves both user groups | — Pending |
+| IPC for non-C# modules | Language agnostic while keeping C# modules fast, packaged executables for zero-setup | — Pending |
 
 ## Constraints
 
@@ -93,4 +95,4 @@ v1.1 adds Blazor Server WebUI for runtime monitoring and control — the first u
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-02-22 after Phase 6 (v1.1 milestone complete)*
+*Last updated: 2026-02-24 after v1.1 milestone*
