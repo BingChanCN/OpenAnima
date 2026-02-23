@@ -1,0 +1,82 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+<div class="connection-status @ConnectionClass">
+    <span class="status-dot"></span>
+    <span class="status-text">@ConnectionTitle</span>
+</div>
+
+@code {
+    private HubConnection? hubConnection;
+    private HubConnectionState connectionState = HubConnectionState.Disconnected;
+    private bool _disposed;
+
+    private string ConnectionClass => connectionState switch
+    {
+        HubConnectionState.Connected => "connected",
+        HubConnectionState.Reconnecting => "reconnecting",
+        _ => "disconnected"
+    };
+
+    private string ConnectionTitle => connectionState switch
+    {
+        HubConnectionState.Connected => "Connected",
+        HubConnectionState.Reconnecting => "Reconnecting...",
+        HubConnectionState.Disconnected => "Disconnected",
+        _ => connectionState.ToString()
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/hubs/runtime"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.Reconnecting += OnReconnecting;
+        hubConnection.Reconnected += OnReconnected;
+        hubConnection.Closed += OnClosed;
+
+        try
+        {
+            await hubConnection.StartAsync();
+            connectionState = HubConnectionState.Connected;
+        }
+        catch
+        {
+            connectionState = HubConnectionState.Disconnected;
+        }
+    }
+
+    private Task OnReconnecting(Exception? error)
+    {
+        connectionState = HubConnectionState.Reconnecting;
+        if (!_disposed)
+            InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
+    }
+
+    private Task OnReconnected(string? connectionId)
+    {
+        connectionState = HubConnectionState.Connected;
+        if (!_disposed)
+            InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
+    }
+
+    private Task OnClosed(Exception? error)
+    {
+        connectionState = HubConnectionState.Disconnected;
+        if (!_disposed)
+            InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        if (hubConnection is not null)
+            await hubConnection.DisposeAsync();
+    }
+}
