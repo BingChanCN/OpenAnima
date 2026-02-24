@@ -1,591 +1,556 @@
-# Architecture Research: Blazor Server WebUI Integration
+# Architecture Research: LLM Integration
 
-**Domain:** Blazor Server WebUI for .NET 8 Runtime Monitoring
-**Researched:** 2026-02-22
+**Domain:** LLM API integration for agent platform
+**Researched:** 2026-02-24
 **Confidence:** HIGH
 
-## Standard Architecture
+## Integration Overview
 
-### System Overview
+LLM capabilities integrate into existing OpenAnima architecture through three new components that follow established patterns:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Browser (SignalR Client)                  │
+│                    Blazor UI Layer                           │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │  Dashboard   │  │   Modules    │  │  Heartbeat   │       │
-│  │  Component   │  │  Component   │  │  Component   │       │
+│  │   Monitor    │  │   Modules    │  │  Chat (NEW)  │       │
+│  │   Page       │  │   Page       │  │   Page       │       │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │
 │         │                 │                 │                │
-└─────────┼─────────────────┼─────────────────┼────────────────┘
-          │ SignalR         │ SignalR         │ SignalR
-          │ (WebSocket)     │ (WebSocket)     │ (WebSocket)
-┌─────────┼─────────────────┼─────────────────┼────────────────┐
-│         ↓                 ↓                 ↓                │
-│  ┌──────────────────────────────────────────────────┐        │
-│  │           ASP.NET Core + Blazor Server           │        │
-│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐ │        │
-│  │  │ SignalR    │  │  Razor     │  │  Service   │ │        │
-│  │  │ Hub        │  │ Components │  │  Layer     │ │        │
-│  │  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘ │        │
-│  └────────┼───────────────┼───────────────┼────────┘        │
-├───────────┼───────────────┼───────────────┼─────────────────┤
-│           │               │               │                 │
-│  ┌────────┴───────────────┴───────────────┴────────┐        │
-│  │         Service Abstraction Layer                │        │
-│  │  ┌──────────────┐  ┌──────────────┐             │        │
-│  │  │  Runtime     │  │  Module      │             │        │
-│  │  │  Service     │  │  Service     │             │        │
-│  │  └──────┬───────┘  └──────┬───────┘             │        │
-│  └─────────┼──────────────────┼─────────────────────┘        │
-├────────────┼──────────────────┼──────────────────────────────┤
-│            │                  │                              │
-│  ┌─────────┴──────────────────┴─────────────────┐            │
-│  │      Existing OpenAnima Runtime              │            │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐   │            │
-│  │  │ Heartbeat│  │  Plugin  │  │ EventBus │   │            │
-│  │  │   Loop   │  │ Registry │  │          │   │            │
-│  │  └──────────┘  └──────────┘  └──────────┘   │            │
-│  └───────────────────────────────────────────────┘            │
+├─────────┴─────────────────┴─────────────────┴────────────────┤
+│                    SignalR Hub Layer                         │
+│  ┌──────────────────────────────────────────────────────┐    │
+│  │  RuntimeHub (existing) + IChatClient (NEW)           │    │
+│  └──────────────────────────────────────────────────────┘    │
+├─────────────────────────────────────────────────────────────┤
+│                    Service Facade Layer                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │ ModuleService│  │HeartbeatSvc  │  │ ChatService  │       │
+│  │  (existing)  │  │  (existing)  │  │    (NEW)     │       │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │
+│         │                 │                 │                │
+├─────────┴─────────────────┴─────────────────┴────────────────┤
+│                    Core Runtime Layer                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │PluginRegistry│  │HeartbeatLoop │  │ConversationMgr│      │
+│  │  (existing)  │  │  (existing)  │  │    (NEW)     │       │
+│  └──────────────┘  └──────────────┘  └──────┬───────┘       │
+│                                              │                │
+│  ┌──────────────────────────────────────────┴───────┐        │
+│  │           LLM Client Abstraction (NEW)           │        │
+│  │  (OpenAI SDK wrapper with provider config)       │        │
+│  └──────────────────────────────────────────────────┘        │
 └─────────────────────────────────────────────────────────────┘
+                            ↓
+                    ┌───────────────┐
+                    │  OpenAI API   │
+                    │  (or compat)  │
+                    └───────────────┘
 ```
+
+## New Components
 
 ### Component Responsibilities
 
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| **Blazor Components** | UI rendering, user interaction, real-time display | .razor files with @code blocks, lifecycle hooks |
-| **SignalR Hub** | Real-time bidirectional communication | Hub class with methods for client-to-server calls |
-| **Service Layer** | Abstraction between UI and runtime, command/query handling | Scoped/Singleton services injected into components |
-| **Runtime Service** | Facade over HeartbeatLoop, exposes control operations | Singleton wrapping existing HeartbeatLoop |
-| **Module Service** | Facade over PluginRegistry, exposes module queries | Singleton wrapping existing PluginRegistry |
-| **Background Service** | Push runtime state changes to connected clients via IHubContext | IHostedService that monitors runtime and broadcasts |
-| **Existing Runtime** | Core agent platform (unchanged) | HeartbeatLoop, PluginRegistry, EventBus |
+| Component | Responsibility | Integration Point |
+|-----------|----------------|-------------------|
+| **LlmClient** | OpenAI API wrapper, request/response handling, streaming | Singleton service, injected into ChatService |
+| **ConversationManager** | In-memory conversation history, context window management, token counting | Singleton service, injected into ChatService |
+| **ChatService** | Service facade for UI, orchestrates LlmClient + ConversationManager | Registered in Program.cs DI container |
+| **Chat.razor** | Blazor page for chat UI, message display, input handling | New page in Components/Pages/ |
+| **Chat.razor.cs** | Code-behind with SignalR hub connection for real-time updates | Follows Monitor.razor.cs pattern |
+| **IChatClient** | SignalR typed client interface for server→client push | Extends existing hub pattern |
+
+## Existing Components (Modified)
+
+| Component | Modification | Reason |
+|-----------|--------------|--------|
+| **RuntimeHub** | Add chat-related server methods (SendMessage, ClearConversation) | Centralized SignalR hub for all real-time features |
+| **Program.cs** | Register LlmClient, ConversationManager, ChatService as singletons | Follow existing DI pattern |
+| **Navigation** | Add Chat link to main layout | Standard UI integration |
 
 ## Recommended Project Structure
 
 ```
-src/
-├── OpenAnima.Contracts/       # Existing - no changes
-├── OpenAnima.Core/            # Existing - minimal changes
-│   ├── Events/
-│   ├── Plugins/
-│   ├── Runtime/
-│   └── Program.cs             # MODIFY: Replace with WebApplication host
-├── OpenAnima.WebUI/           # NEW PROJECT
-│   ├── Components/            # Blazor components
-│   │   ├── Pages/             # Routable pages
-│   │   │   ├── Dashboard.razor
-│   │   │   ├── Modules.razor
-│   │   │   └── Heartbeat.razor
-│   │   ├── Layout/            # Layout components
-│   │   │   ├── MainLayout.razor
-│   │   │   └── NavMenu.razor
-│   │   └── Shared/            # Reusable components
-│   │       ├── ModuleCard.razor
-│   │       └── HeartbeatMonitor.razor
-│   ├── Services/              # Service abstraction layer
-│   │   ├── IRuntimeService.cs
-│   │   ├── RuntimeService.cs
-│   │   ├── IModuleService.cs
-│   │   └── ModuleService.cs
-│   ├── Hubs/                  # SignalR hubs
-│   │   └── RuntimeHub.cs
-│   ├── BackgroundServices/    # Background workers
-│   │   └── RuntimeMonitorService.cs
-│   ├── Models/                # DTOs for UI
-│   │   ├── ModuleDto.cs
-│   │   ├── HeartbeatDto.cs
-│   │   └── RuntimeStatusDto.cs
-│   ├── wwwroot/               # Static assets
-│   │   ├── css/
-│   │   └── js/
-│   ├── Program.cs             # WebApplication entry point
-│   └── _Imports.razor         # Global using directives
+src/OpenAnima.Core/
+├── Services/
+│   ├── IModuleService.cs          # Existing
+│   ├── ModuleService.cs           # Existing
+│   ├── IHeartbeatService.cs       # Existing
+│   ├── HeartbeatService.cs        # Existing
+│   ├── IChatService.cs            # NEW - facade interface
+│   └── ChatService.cs             # NEW - orchestrates LLM + conversation
+├── Llm/                           # NEW folder
+│   ├── ILlmClient.cs              # NEW - abstraction for LLM providers
+│   ├── OpenAiClient.cs            # NEW - OpenAI SDK wrapper
+│   ├── LlmOptions.cs              # NEW - configuration (API key, model, etc.)
+│   ├── IConversationManager.cs    # NEW - conversation history interface
+│   ├── ConversationManager.cs     # NEW - in-memory history + context window
+│   ├── ConversationMessage.cs     # NEW - message model (role, content, tokens)
+│   └── TokenCounter.cs            # NEW - token estimation utility
+├── Hubs/
+│   ├── RuntimeHub.cs              # MODIFIED - add chat methods
+│   ├── IRuntimeClient.cs          # Existing
+│   └── IChatClient.cs             # NEW - typed client for chat push
+├── Components/
+│   └── Pages/
+│       ├── Monitor.razor          # Existing
+│       ├── Modules.razor          # Existing
+│       ├── Chat.razor             # NEW - chat UI
+│       └── Chat.razor.cs          # NEW - code-behind with SignalR
+└── Program.cs                     # MODIFIED - register new services
 ```
 
 ### Structure Rationale
 
-- **OpenAnima.WebUI as separate project:** Clean separation between runtime and UI concerns, allows independent testing and deployment
-- **Services/ folder:** Abstraction layer prevents Blazor components from directly coupling to runtime internals, enables easier testing with mocks
-- **Hubs/ folder:** SignalR hubs for real-time communication, separate from components for clarity
-- **BackgroundServices/ folder:** IHostedService implementations that push data to clients, runs alongside Blazor Server
-- **Models/ folder:** DTOs prevent exposing internal runtime types to UI, allows versioning UI contracts independently
+- **Services/:** Service facades follow existing pattern (IModuleService, IHeartbeatService). ChatService fits naturally here.
+- **Llm/:** New folder isolates LLM-specific logic. Keeps core runtime clean. Easy to extend with new providers later.
+- **Hubs/:** RuntimeHub is the single SignalR hub. Adding chat methods keeps real-time communication centralized.
+- **Components/Pages/:** Chat.razor follows existing page pattern (Monitor.razor, Modules.razor).
 
 ## Architectural Patterns
 
-### Pattern 1: Service Facade
+### Pattern 1: Service Facade with DI
 
-**What:** Wrap existing runtime components (HeartbeatLoop, PluginRegistry) in service interfaces that expose only UI-relevant operations.
+**What:** Service layer abstracts business logic from UI. Blazor pages inject services, not direct dependencies.
 
-**When to use:** When integrating UI with existing domain logic that wasn't designed for external consumption.
+**When to use:** Already established in OpenAnima (ModuleService, HeartbeatService). ChatService follows same pattern.
 
 **Trade-offs:**
-- **Pros:** Decouples UI from runtime internals, enables testing, prevents UI from breaking runtime invariants
-- **Cons:** Additional layer of indirection, DTOs require mapping
+- Pro: Clean separation, testable, follows existing conventions
+- Pro: Easy to mock for testing
+- Con: Extra layer of indirection (acceptable for consistency)
 
 **Example:**
 ```csharp
-// Service abstraction
-public interface IRuntimeService
+// Services/IChatService.cs
+public interface IChatService
 {
-    Task<HeartbeatStatusDto> GetHeartbeatStatusAsync();
-    Task StartHeartbeatAsync();
-    Task StopHeartbeatAsync();
-    bool IsRunning { get; }
+    Task<string> SendMessageAsync(string userMessage, CancellationToken ct = default);
+    Task ClearConversationAsync();
+    IReadOnlyList<ConversationMessage> GetHistory();
 }
 
-public class RuntimeService : IRuntimeService
+// Services/ChatService.cs
+public class ChatService : IChatService
 {
-    private readonly HeartbeatLoop _heartbeat;
+    private readonly ILlmClient _llmClient;
+    private readonly IConversationManager _conversationManager;
+    private readonly ILogger<ChatService> _logger;
 
-    public RuntimeService(HeartbeatLoop heartbeat)
+    public ChatService(
+        ILlmClient llmClient,
+        IConversationManager conversationManager,
+        ILogger<ChatService> logger)
     {
-        _heartbeat = heartbeat;
-    }
-
-    public Task<HeartbeatStatusDto> GetHeartbeatStatusAsync()
-    {
-        return Task.FromResult(new HeartbeatStatusDto
-        {
-            IsRunning = _heartbeat.IsRunning,
-            TickCount = _heartbeat.TickCount,
-            SkippedCount = _heartbeat.SkippedCount
-        });
-    }
-
-    public Task StartHeartbeatAsync() => _heartbeat.StartAsync();
-    public Task StopHeartbeatAsync() => _heartbeat.StopAsync();
-    public bool IsRunning => _heartbeat.IsRunning;
-}
-```
-
-### Pattern 2: Background Service + IHubContext Push
-
-**What:** IHostedService monitors runtime state and pushes updates to all connected Blazor clients via IHubContext<THub>.
-
-**When to use:** When backend state changes need to be broadcast to all connected clients without client polling.
-
-**Trade-offs:**
-- **Pros:** True real-time updates, no polling overhead, server-initiated push
-- **Cons:** Requires careful lifetime management (singleton service accessing singleton hub context), potential memory leaks if not disposed properly
-
-**Example:**
-```csharp
-public class RuntimeMonitorService : BackgroundService
-{
-    private readonly IHubContext<RuntimeHub> _hubContext;
-    private readonly IRuntimeService _runtimeService;
-    private readonly ILogger<RuntimeMonitorService> _logger;
-
-    public RuntimeMonitorService(
-        IHubContext<RuntimeHub> hubContext,
-        IRuntimeService runtimeService,
-        ILogger<RuntimeMonitorService> logger)
-    {
-        _hubContext = hubContext;
-        _runtimeService = runtimeService;
+        _llmClient = llmClient;
+        _conversationManager = conversationManager;
         _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public async Task<string> SendMessageAsync(string userMessage, CancellationToken ct = default)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
+        _conversationManager.AddUserMessage(userMessage);
+        var messages = _conversationManager.GetMessagesForApi();
+        var response = await _llmClient.GetCompletionAsync(messages, ct);
+        _conversationManager.AddAssistantMessage(response);
+        return response;
+    }
+}
 
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+// Program.cs registration
+builder.Services.AddSingleton<IChatService, ChatService>();
+```
+
+### Pattern 2: SignalR Hub with Typed Clients
+
+**What:** RuntimeHub uses typed client interfaces (IRuntimeClient, IChatClient) for compile-time safety on server→client calls.
+
+**When to use:** Already used for heartbeat/module updates. Extend for chat real-time updates.
+
+**Trade-offs:**
+- Pro: Type-safe, IntelliSense support, compile-time errors
+- Pro: Consistent with existing RuntimeHub pattern
+- Con: Requires interface definition for each client method
+
+**Example:**
+```csharp
+// Hubs/IChatClient.cs
+public interface IChatClient
+{
+    Task ReceiveMessage(string role, string content, DateTime timestamp);
+    Task ReceiveConversationCleared();
+}
+
+// Hubs/RuntimeHub.cs (extended)
+public class RuntimeHub : Hub<IRuntimeClient>
+{
+    private readonly IChatService _chatService;
+    private readonly IHubContext<RuntimeHub, IChatClient> _chatHubContext;
+
+    public async Task SendChatMessage(string message)
+    {
+        var response = await _chatService.SendMessageAsync(message);
+        await Clients.All.ReceiveMessage("assistant", response, DateTime.UtcNow);
+    }
+}
+```
+
+### Pattern 3: In-Memory State with Singleton Lifetime
+
+**What:** ConversationManager holds conversation history in memory (ConcurrentDictionary or similar). Singleton lifetime means state persists across requests.
+
+**When to use:** v1.2 milestone explicitly scopes to in-memory, session-only. No database complexity.
+
+**Trade-offs:**
+- Pro: Simple, fast, no database setup
+- Pro: Matches existing PluginRegistry pattern (also in-memory singleton)
+- Con: State lost on restart (acceptable for v1.2)
+- Con: Not suitable for multi-user (v1.2 is single-user)
+
+**Example:**
+```csharp
+// Llm/ConversationManager.cs
+public class ConversationManager : IConversationManager
+{
+    private readonly List<ConversationMessage> _messages = new();
+    private readonly int _maxTokens;
+    private readonly SemaphoreSlim _lock = new(1, 1);
+
+    public void AddUserMessage(string content)
+    {
+        _lock.Wait();
+        try
         {
-            try
-            {
-                var status = await _runtimeService.GetHeartbeatStatusAsync();
+            _messages.Add(new ConversationMessage("user", content, EstimateTokens(content)));
+            TrimToContextWindow();
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
 
-                // Broadcast to all connected clients
-                await _hubContext.Clients.All.SendAsync(
-                    "HeartbeatUpdate",
-                    status,
-                    stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error broadcasting heartbeat update");
-            }
+    private void TrimToContextWindow()
+    {
+        // Keep system message, trim oldest user/assistant messages
+        while (GetTotalTokens() > _maxTokens && _messages.Count > 1)
+        {
+            _messages.RemoveAt(1); // Keep index 0 (system message)
         }
     }
 }
 ```
 
-### Pattern 3: Component Lifecycle + SignalR Subscription
+### Pattern 4: Provider Abstraction with OpenAI SDK
 
-**What:** Blazor components subscribe to SignalR hub events in OnInitializedAsync and call StateHasChanged() to trigger re-render when updates arrive.
+**What:** ILlmClient interface abstracts LLM provider. OpenAiClient implements using official OpenAI .NET SDK.
 
-**When to use:** For real-time UI updates driven by server-side events.
+**When to use:** v1.2 uses OpenAI-compatible APIs. Abstraction allows future providers (Anthropic, local models) without changing ChatService.
 
 **Trade-offs:**
-- **Pros:** Automatic UI updates, no manual polling, clean component code
-- **Cons:** Must properly dispose subscriptions to avoid memory leaks, StateHasChanged() must be called on UI thread
+- Pro: Decouples business logic from provider specifics
+- Pro: Easy to add new providers later
+- Con: Slight overhead (acceptable for flexibility)
 
 **Example:**
 ```csharp
-@page "/heartbeat"
-@inject NavigationManager Navigation
-@implements IAsyncDisposable
+// Llm/ILlmClient.cs
+public interface ILlmClient
+{
+    Task<string> GetCompletionAsync(
+        IEnumerable<ConversationMessage> messages,
+        CancellationToken ct = default);
 
-<h3>Heartbeat Monitor</h3>
-<p>Status: @(_status?.IsRunning == true ? "Running" : "Stopped")</p>
-<p>Ticks: @_status?.TickCount</p>
-<p>Skipped: @_status?.SkippedCount</p>
+    IAsyncEnumerable<string> GetCompletionStreamAsync(
+        IEnumerable<ConversationMessage> messages,
+        CancellationToken ct = default);
+}
 
-@code {
-    private HubConnection? _hubConnection;
-    private HeartbeatStatusDto? _status;
+// Llm/OpenAiClient.cs
+public class OpenAiClient : ILlmClient
+{
+    private readonly OpenAI.Chat.ChatClient _client;
 
-    protected override async Task OnInitializedAsync()
+    public OpenAiClient(IOptions<LlmOptions> options)
     {
-        _hubConnection = new HubConnectionBuilder()
-            .WithUrl(Navigation.ToAbsoluteUri("/runtimeHub"))
-            .Build();
-
-        _hubConnection.On<HeartbeatStatusDto>("HeartbeatUpdate", status =>
-        {
-            _status = status;
-            InvokeAsync(StateHasChanged); // Must invoke on UI thread
-        });
-
-        await _hubConnection.StartAsync();
+        var apiKey = options.Value.ApiKey;
+        var model = options.Value.Model;
+        _client = new OpenAI.Chat.ChatClient(model, apiKey);
     }
 
-    public async ValueTask DisposeAsync()
+    public async Task<string> GetCompletionAsync(
+        IEnumerable<ConversationMessage> messages,
+        CancellationToken ct = default)
     {
-        if (_hubConnection is not null)
-        {
-            await _hubConnection.DisposeAsync();
-        }
+        var chatMessages = messages.Select(m =>
+            new OpenAI.Chat.ChatMessage(m.Role, m.Content)).ToList();
+
+        var completion = await _client.CompleteChatAsync(chatMessages, ct);
+        return completion.Content[0].Text;
     }
 }
-```
-
-### Pattern 4: Singleton Runtime + Scoped UI Services
-
-**What:** Runtime components (HeartbeatLoop, PluginRegistry, EventBus) registered as singletons, service facades also singleton, but Blazor components use scoped lifetime per circuit.
-
-**When to use:** When UI needs to interact with long-lived backend services.
-
-**Trade-offs:**
-- **Pros:** Single runtime instance shared across all users, efficient resource usage
-- **Cons:** Must be thread-safe, state changes affect all users (appropriate for single-user desktop app)
-
-**Example:**
-```csharp
-// Program.cs
-var builder = WebApplication.CreateBuilder(args);
-
-// Existing runtime components as singletons
-builder.Services.AddSingleton<EventBus>();
-builder.Services.AddSingleton<PluginRegistry>();
-builder.Services.AddSingleton<HeartbeatLoop>();
-
-// Service facades as singletons
-builder.Services.AddSingleton<IRuntimeService, RuntimeService>();
-builder.Services.AddSingleton<IModuleService, ModuleService>();
-
-// Background service
-builder.Services.AddHostedService<RuntimeMonitorService>();
-
-// Blazor Server
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
-
-// SignalR (implicit with Blazor Server, but can configure)
-builder.Services.AddSignalR();
-
-var app = builder.Build();
-
-// Initialize runtime on startup
-var runtime = app.Services.GetRequiredService<IRuntimeService>();
-await runtime.StartHeartbeatAsync();
-
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
-app.MapHub<RuntimeHub>("/runtimeHub");
-
-app.Run();
 ```
 
 ## Data Flow
 
-### Request Flow (User Action → Runtime)
+### Chat Message Flow
 
 ```
-[User clicks "Start Heartbeat"]
+User types message in Chat.razor
     ↓
-[Blazor Component] → @onclick handler
+Chat.razor.cs calls hubConnection.InvokeAsync("SendChatMessage", message)
     ↓
-[Inject IRuntimeService] → StartHeartbeatAsync()
+RuntimeHub.SendChatMessage() receives message
     ↓
-[RuntimeService] → _heartbeat.StartAsync()
+ChatService.SendMessageAsync() orchestrates:
+    ├─→ ConversationManager.AddUserMessage()
+    ├─→ ConversationManager.GetMessagesForApi() (with context window trim)
+    ├─→ LlmClient.GetCompletionAsync() → OpenAI API
+    └─→ ConversationManager.AddAssistantMessage(response)
     ↓
-[HeartbeatLoop] → Starts PeriodicTimer
+RuntimeHub pushes via Clients.All.ReceiveMessage()
     ↓
-[Background Service] → Detects state change
+Chat.razor.cs receives via hubConnection.On<string, string, DateTime>("ReceiveMessage")
     ↓
-[IHubContext] → Broadcasts to all clients
-    ↓
-[SignalR] → Pushes to browser
-    ↓
-[Component] → Receives event, calls StateHasChanged()
-    ↓
-[UI Updates] → Button changes to "Stop"
+Chat.razor updates UI with new message
 ```
 
-### Real-Time Update Flow (Runtime → UI)
+### Context Window Management Flow
 
 ```
-[HeartbeatLoop] → Executes tick
-    ↓
-[RuntimeMonitorService] → Polls status every 500ms
-    ↓
-[IHubContext<RuntimeHub>] → Clients.All.SendAsync("HeartbeatUpdate", status)
-    ↓
-[SignalR WebSocket] → Pushes to all connected browsers
-    ↓
-[HubConnection.On<T>] → Component receives event
-    ↓
-[InvokeAsync(StateHasChanged)] → Triggers re-render on UI thread
-    ↓
-[Blazor Renderer] → Diffs virtual DOM, sends updates to browser
-    ↓
-[Browser] → Updates displayed tick count
+ConversationManager maintains:
+├─→ List<ConversationMessage> _messages (in-memory)
+├─→ int _maxTokens (from config, e.g., 4000 for GPT-3.5)
+└─→ TrimToContextWindow() called after each AddUserMessage/AddAssistantMessage
+
+TrimToContextWindow logic:
+1. Calculate total tokens: Sum(_messages.Select(m => m.Tokens))
+2. If total > _maxTokens:
+   - Keep system message (index 0)
+   - Remove oldest user/assistant messages (FIFO)
+   - Repeat until total <= _maxTokens
+3. Return trimmed list for API call
 ```
 
-### Module Control Flow
+### Configuration Flow
 
 ```
-[User clicks "Load Module"]
+appsettings.json
     ↓
-[Component] → Calls IModuleService.LoadModuleAsync(path)
+LlmOptions bound via IOptions<LlmOptions>
     ↓
-[ModuleService] → _loader.LoadModule(path)
+Injected into OpenAiClient constructor
     ↓
-[PluginLoader] → Creates AssemblyLoadContext, loads assembly
-    ↓
-[PluginRegistry] → Registers module
-    ↓
-[EventBus] → Property injection into module
-    ↓
-[ModuleService] → Returns ModuleDto
-    ↓
-[Component] → Updates module list
-    ↓
-[Background Service] → Detects registry change
-    ↓
-[SignalR] → Broadcasts "ModuleLoaded" event
-    ↓
-[All Clients] → Refresh module list
+Used to initialize OpenAI.Chat.ChatClient
+
+LlmOptions properties:
+- ApiKey: string (from env var or appsettings)
+- BaseUrl: string (default: https://api.openai.com/v1)
+- Model: string (default: gpt-3.5-turbo)
+- MaxTokens: int (default: 4000)
+- Temperature: double (default: 0.7)
 ```
 
-### Key Data Flows
+## Integration Points
 
-1. **Heartbeat monitoring:** Background service polls HeartbeatLoop every 500ms, broadcasts status via SignalR to all connected clients
-2. **Module operations:** User actions invoke service methods, which delegate to existing runtime, then broadcast changes to all clients
-3. **Event bus integration:** UI can subscribe to domain events via EventBus, display in real-time event log component
+### New Service Registration (Program.cs)
+
+```csharp
+// Add LLM configuration
+builder.Services.Configure<LlmOptions>(
+    builder.Configuration.GetSection("Llm"));
+
+// Register LLM services as singletons
+builder.Services.AddSingleton<ILlmClient, OpenAiClient>();
+builder.Services.AddSingleton<IConversationManager, ConversationManager>();
+builder.Services.AddSingleton<IChatService, ChatService>();
+```
+
+### RuntimeHub Extension
+
+```csharp
+// Hubs/RuntimeHub.cs
+public class RuntimeHub : Hub<IRuntimeClient> // Keep existing interface
+{
+    private readonly IModuleService _moduleService;
+    private readonly IHeartbeatService _heartbeatService;
+    private readonly IChatService _chatService; // NEW
+    private readonly IHubContext<RuntimeHub, IChatClient> _chatHubContext; // NEW
+
+    // Existing methods: LoadModule, UnloadModule, StartHeartbeat, StopHeartbeat
+
+    // NEW chat methods
+    public async Task SendChatMessage(string message)
+    {
+        var response = await _chatService.SendMessageAsync(message);
+        await _chatHubContext.Clients.All.ReceiveMessage(
+            "assistant", response, DateTime.UtcNow);
+    }
+
+    public async Task ClearConversation()
+    {
+        await _chatService.ClearConversationAsync();
+        await _chatHubContext.Clients.All.ReceiveConversationCleared();
+    }
+}
+```
+
+### Chat Page Integration
+
+```csharp
+// Components/Pages/Chat.razor.cs
+public partial class Chat : IAsyncDisposable
+{
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private IChatService ChatService { get; set; } = default!;
+
+    private HubConnection? hubConnection;
+    private List<ConversationMessage> messages = new();
+    private string currentMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load existing history from service
+        messages = ChatService.GetHistory().ToList();
+
+        // Connect to SignalR hub
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/hubs/runtime"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.On<string, string, DateTime>("ReceiveMessage",
+            (role, content, timestamp) =>
+            {
+                messages.Add(new ConversationMessage(role, content, timestamp));
+                InvokeAsync(StateHasChanged);
+            });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(currentMessage)) return;
+
+        await hubConnection!.InvokeAsync("SendChatMessage", currentMessage);
+        currentMessage = "";
+    }
+}
+```
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| Single user (v1.1) | Current architecture is perfect - singleton runtime, single browser window, localhost-only |
-| Multiple concurrent users | Not applicable - this is a desktop app, not a multi-tenant SaaS |
-| Multiple agents per user | Future consideration - would need per-agent runtime instances, scoped services per circuit |
+| Single user (v1.2) | In-memory singleton ConversationManager. No persistence. Simple and fast. |
+| Multi-user (future) | Replace singleton with scoped service. Add user ID to conversation keys. Consider Redis for shared state. |
+| Persistent history (future) | Add database layer (SQLite/PostgreSQL). ConversationManager becomes repository pattern. |
+| High throughput (future) | Add message queue (RabbitMQ/Azure Service Bus) for async LLM calls. Prevents blocking SignalR hub. |
 
 ### Scaling Priorities
 
-1. **First bottleneck:** SignalR broadcast frequency - if pushing updates every 100ms (heartbeat interval), may cause UI jank. Mitigation: Throttle broadcasts to 500ms or use client-side interpolation.
-2. **Second bottleneck:** Module count - if 100+ modules loaded, registry queries may slow down. Mitigation: Cache module DTOs, only broadcast deltas instead of full list.
+1. **First bottleneck:** LLM API latency blocks SignalR hub thread
+   - **Fix:** Move LLM calls to background task queue. Return immediately, push response when ready.
+
+2. **Second bottleneck:** In-memory state doesn't survive restarts
+   - **Fix:** Add SQLite database for conversation persistence. Minimal complexity, local-first.
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Direct Runtime Access from Components
+### Anti-Pattern 1: Blocking SignalR Hub with Long-Running LLM Calls
 
-**What people do:** Inject HeartbeatLoop or PluginRegistry directly into Blazor components.
+**What people do:** Call `await _llmClient.GetCompletionAsync()` directly in hub method, blocking the hub thread for 2-10 seconds.
 
-**Why it's wrong:**
-- Couples UI to runtime internals
-- Exposes dangerous operations (e.g., direct registry manipulation)
-- Makes testing difficult (can't mock concrete classes)
-- Breaks encapsulation
+**Why it's wrong:** SignalR hub methods should return quickly. Long-running operations block the hub thread pool, degrading responsiveness for all clients.
 
-**Do this instead:** Always use service facades (IRuntimeService, IModuleService) that expose only safe, UI-relevant operations.
+**Do this instead:** For v1.2 (single user), acceptable to block since only one user. For future multi-user, use background task queue (IHostedService with Channel<T>) to process LLM calls asynchronously.
 
-### Anti-Pattern 2: Polling from Components
+### Anti-Pattern 2: Storing API Keys in appsettings.json Committed to Git
 
-**What people do:** Use Timer or PeriodicTimer inside Blazor components to poll runtime state.
+**What people do:** Put OpenAI API key directly in appsettings.json and commit to repository.
 
-**Why it's wrong:**
-- Each connected client creates its own timer (wasteful)
-- Polling interval must balance responsiveness vs overhead
-- Doesn't scale to multiple users
-- Misses updates between polls
+**Why it's wrong:** Exposes secrets in version control. Security risk.
 
-**Do this instead:** Use Background Service + IHubContext to push updates from server to all clients. Single timer, server-initiated push.
-
-### Anti-Pattern 3: Scoped Runtime Services
-
-**What people do:** Register HeartbeatLoop or PluginRegistry as scoped services.
-
-**Why it's wrong:**
-- Creates new runtime instance per Blazor circuit (per browser tab)
-- Multiple heartbeat loops running simultaneously
-- Module registry not shared across tabs
-- Wastes resources, causes confusion
-
-**Do this instead:** Register runtime components as singletons. This is a single-user desktop app - one runtime instance for the entire application.
-
-### Anti-Pattern 4: Forgetting StateHasChanged() in SignalR Callbacks
-
-**What people do:** Update component state in SignalR event handler without calling StateHasChanged().
-
-**Why it's wrong:**
-- UI doesn't update because Blazor doesn't know state changed
-- SignalR callbacks execute on background thread, not UI thread
-- Leads to "why isn't my UI updating?" debugging sessions
-
-**Do this instead:** Always wrap state updates in InvokeAsync(StateHasChanged) to marshal to UI thread and trigger re-render.
-
-### Anti-Pattern 5: Browser Auto-Launch with Process.Start(url)
-
-**What people do:** Call Process.Start("http://localhost:5000") directly.
-
-**Why it's wrong:**
-- Throws PlatformNotSupportedException on Linux
-- Requires UseShellExecute = true on Windows
-- Doesn't handle default browser detection properly
-
-**Do this instead:** Use platform-specific launcher:
+**Do this instead:** Use environment variables or User Secrets for development. For production, use Azure Key Vault or similar. Example:
 ```csharp
-private static void OpenBrowser(string url)
-{
-    try
-    {
-        Process.Start(url);
-    }
-    catch
-    {
-        // Workaround for .NET Core on Windows/Linux
-        if (OperatingSystem.IsWindows())
-        {
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-        }
-        else if (OperatingSystem.IsLinux())
-        {
-            Process.Start("xdg-open", url);
-        }
-        else if (OperatingSystem.IsMacOS())
-        {
-            Process.Start("open", url);
-        }
-    }
+// appsettings.json
+"Llm": {
+  "ApiKey": "", // Empty, set via env var
+  "Model": "gpt-3.5-turbo"
 }
+
+// Environment variable: LLM__APIKEY=sk-...
+// Or User Secrets: dotnet user-secrets set "Llm:ApiKey" "sk-..."
 ```
 
-## Integration Points
+### Anti-Pattern 3: No Token Counting Before API Call
 
-### Existing Runtime → WebUI
+**What people do:** Send entire conversation history to API without checking token count. Hits API limit, gets error.
 
-| Integration Point | Pattern | Notes |
-|-------------------|---------|-------|
-| HeartbeatLoop | Service Facade (RuntimeService) | Wrap in IRuntimeService, expose Start/Stop/Status only |
-| PluginRegistry | Service Facade (ModuleService) | Wrap in IModuleService, expose queries and load/unload operations |
-| EventBus | Direct Injection | Can inject into services for event subscription, display in UI event log |
-| PluginLoader | Via ModuleService | Don't expose directly, wrap load operations in service |
+**Why it's wrong:** OpenAI API has token limits (e.g., 4096 for gpt-3.5-turbo). Exceeding limit causes 400 error.
 
-### WebUI → Browser
+**Do this instead:** Implement token counting in ConversationManager. Trim oldest messages to stay under limit. Use tiktoken library or rough estimation (1 token ≈ 4 characters for English).
 
-| Integration Point | Pattern | Notes |
-|-------------------|---------|-------|
-| Real-time updates | SignalR (built into Blazor Server) | Automatic WebSocket connection per circuit |
-| Component rendering | Blazor Server render mode | Server-side rendering with SignalR sync |
-| Static assets | wwwroot/ folder | CSS, JS, images served by ASP.NET Core static files middleware |
+### Anti-Pattern 4: Mixing Business Logic in Blazor Code-Behind
 
-### Background Service → SignalR
+**What people do:** Put LLM call logic directly in Chat.razor.cs.
 
-| Integration Point | Pattern | Notes |
-|-------------------|---------|-------|
-| Broadcast to all clients | IHubContext<RuntimeHub> | Inject into IHostedService, call Clients.All.SendAsync() |
-| Targeted updates | IHubContext with connection ID | Can send to specific clients if needed (future) |
+**Why it's wrong:** Violates separation of concerns. Hard to test. Doesn't follow existing service facade pattern.
 
-### Hosting Model
+**Do this instead:** Keep Chat.razor.cs thin. Only handle UI state and SignalR events. Business logic goes in ChatService.
 
-| Component | Lifetime | Registration |
-|-----------|----------|--------------|
-| EventBus | Singleton | Shared across entire application |
-| PluginRegistry | Singleton | Shared across entire application |
-| HeartbeatLoop | Singleton | Single instance, started on app startup |
-| RuntimeService | Singleton | Facade over singleton runtime |
-| ModuleService | Singleton | Facade over singleton registry |
-| RuntimeMonitorService | Singleton (IHostedService) | Background worker, started automatically |
-| Blazor Components | Scoped (per circuit) | New instance per browser connection |
-| HubConnection (client-side) | Per component | Created in OnInitializedAsync, disposed in DisposeAsync |
+## Build Order
 
-## Build Order Considering Dependencies
+Recommended implementation sequence based on dependencies:
 
-### Phase 1: Service Abstraction Layer (No UI Yet)
-1. Create OpenAnima.WebUI project
-2. Add Models/ folder with DTOs (ModuleDto, HeartbeatStatusDto, RuntimeStatusDto)
-3. Create Services/IRuntimeService.cs interface
-4. Implement Services/RuntimeService.cs wrapping HeartbeatLoop
-5. Create Services/IModuleService.cs interface
-6. Implement Services/ModuleService.cs wrapping PluginRegistry
-7. **Validation:** Unit test services with mock runtime components
+### Phase 1: Core LLM Infrastructure
+1. **LlmOptions.cs** - Configuration model (no dependencies)
+2. **ILlmClient.cs** - Interface definition (no dependencies)
+3. **OpenAiClient.cs** - Implementation using OpenAI SDK (depends on: LlmOptions)
+4. **ConversationMessage.cs** - Data model (no dependencies)
+5. **TokenCounter.cs** - Utility for token estimation (no dependencies)
 
-### Phase 2: ASP.NET Core Host (Console → Web)
-1. Modify OpenAnima.Core/Program.cs to use WebApplicationBuilder
-2. Register runtime components as singletons
-3. Register service facades as singletons
-4. Configure Kestrel to listen on localhost:5000
-5. Add browser auto-launch on startup
-6. **Validation:** App starts, browser opens, shows "Hello World" page
+### Phase 2: Conversation Management
+6. **IConversationManager.cs** - Interface definition (depends on: ConversationMessage)
+7. **ConversationManager.cs** - Implementation (depends on: ConversationMessage, TokenCounter)
 
-### Phase 3: Basic Blazor UI (Static Display)
-1. Add Blazor Server packages to OpenAnima.WebUI
-2. Create Components/Layout/MainLayout.razor
-3. Create Components/Pages/Dashboard.razor (static, no real-time yet)
-4. Create Components/Pages/Modules.razor (static list)
-5. Create Components/Pages/Heartbeat.razor (static status)
-6. Configure routing and render modes
-7. **Validation:** Can navigate between pages, see static data
+### Phase 3: Service Layer
+8. **IChatService.cs** - Interface definition (depends on: ConversationMessage)
+9. **ChatService.cs** - Implementation (depends on: ILlmClient, IConversationManager)
 
-### Phase 4: SignalR Real-Time Updates
-1. Create Hubs/RuntimeHub.cs
-2. Create BackgroundServices/RuntimeMonitorService.cs
-3. Register IHostedService in Program.cs
-4. Update Dashboard.razor to subscribe to SignalR events
-5. Update Heartbeat.razor to receive real-time tick updates
-6. **Validation:** UI updates automatically when heartbeat ticks
+### Phase 4: SignalR Integration
+10. **IChatClient.cs** - Typed client interface (no dependencies)
+11. **RuntimeHub.cs** - Extend with chat methods (depends on: IChatService, IChatClient)
 
-### Phase 5: Control Operations
-1. Add Start/Stop buttons to Heartbeat.razor
-2. Wire buttons to IRuntimeService methods
-3. Add Load/Unload module UI to Modules.razor
-4. Wire module operations to IModuleService
-5. Broadcast operation results via SignalR
-6. **Validation:** Can control runtime from UI, all clients see updates
+### Phase 5: UI Layer
+12. **Chat.razor** - UI markup (no dependencies)
+13. **Chat.razor.cs** - Code-behind (depends on: IChatService, RuntimeHub, ConversationMessage)
+14. **Navigation** - Add Chat link to main layout
 
-### Phase 6: Polish & Error Handling
-1. Add loading states and spinners
-2. Add error toast notifications
-3. Add confirmation dialogs for destructive operations
-4. Style with CSS (minimal, functional)
-5. Add keyboard shortcuts (optional)
-6. **Validation:** Smooth UX, graceful error handling
+### Phase 6: Configuration & Registration
+15. **appsettings.json** - Add Llm section
+16. **Program.cs** - Register services in DI container
+
+### Dependency Graph
+```
+LlmOptions ─→ OpenAiClient ─→ ILlmClient ─┐
+                                          ├─→ ChatService ─→ RuntimeHub ─→ Chat.razor.cs
+ConversationMessage ─→ ConversationManager ─┘
+TokenCounter ─────────┘
+```
 
 ## Sources
 
-- [ASP.NET Core Blazor hosting models](https://learn.microsoft.com/en-us/aspnet/core/blazor/hosting-models) (MEDIUM confidence - couldn't fetch, but standard Microsoft docs)
-- [Task Scheduling and Background Services in Blazor Server](https://blazorise.com/blog/task-scheduling-and-background-services-in-blazor-server) (MEDIUM confidence - couldn't fetch)
-- [How to Build Real-Time Dashboards with SignalR and Blazor](https://oneuptime.com/blog/post/2026-01-25-real-time-dashboards-signalr-blazor/view) (MEDIUM confidence - couldn't fetch, but recent 2026 article)
-- [Background Service Communication with Blazor via SignalR](https://medium.com/it-dead-inside/lets-learn-blazor-background-service-communication-with-blazor-via-signalr-84abe2660fd6) (MEDIUM confidence - from search results)
-- [Host ASP.NET Core SignalR in background services](https://learn.microsoft.com/en-us/aspnet/core/signalr/background-services) (HIGH confidence - official Microsoft pattern)
-- [Integrating Blazor with Existing .NET Web Apps](https://visualstudiomagazine.com/articles/2024/08/07/integrating-blazor-with-existing-,-d-,net-web-apps.aspx) (MEDIUM confidence - from search results)
-- [How do I host a WebApplication and a BackgroundService in the same application](https://stackoverflow.com/questions/74132325/how-do-i-host-a-webapplication-and-a-backgroundservice-in-the-same-application) (HIGH confidence - Stack Overflow pattern)
+- [Building a Real-Time Chat Application with Blazor Server](https://medium.com/@andryhadj/building-a-real-time-chat-application-with-blazor-server-a-deep-dive-into-event-driven-f881ed4332f4)
+- [How to Build Real-Time Apps with SignalR in .NET](https://oneuptime.com/blog/post/2026-01-29-realtime-apps-signalr-dotnet/view)
+- [Use ASP.NET Core SignalR with Blazor - Microsoft Learn](https://learn.microsoft.com/en-us/aspnet/core/blazor/tutorials/signalr-blazor?view=aspnetcore-10.0)
+- [ASP.NET Core Blazor dependency injection - Microsoft Learn](https://learn.microsoft.com/en-us/aspnet/core/blazor/fundamentals/dependency-injection?view=aspnetcore-10.0)
+- [The official .NET library for the OpenAI API - GitHub](https://github.com/openai/openai-dotnet)
+- [Azure OpenAI client library for .NET - Microsoft Learn](https://learn.microsoft.com/en-us/dotnet/api/overview/azure/ai.openai-readme?view=azure-dotnet)
+- [Managing Context and Memory for OpenAI API Chat Applications](https://alvincrespo.hashnode.dev/managing-context-and-memory-for-openai-api-chat-applications)
+- [Context Window Overflow in 2026: Fix LLM Errors Fast - Redis](https://redis.io/blog/context-window-overflow/)
 
 ---
-*Architecture research for: Blazor Server WebUI integration with existing .NET 8 runtime*
-*Researched: 2026-02-22*
+*Architecture research for: OpenAnima LLM Integration*
+*Researched: 2026-02-24*

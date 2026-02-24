@@ -1,215 +1,213 @@
 # Pitfalls Research
 
-**Domain:** Adding Blazor Server WebUI to Existing .NET 8 Modular Runtime
-**Researched:** 2026-02-22
+**Domain:** LLM Integration in .NET 8 Blazor Server Agent Platform
+**Researched:** 2026-02-24
 **Confidence:** MEDIUM
 
 ## Critical Pitfalls
 
-### Pitfall 1: Cross-Thread UI Updates Without InvokeAsync
+### Pitfall 1: SignalR Circuit Timeout During Long LLM Calls
 
 **What goes wrong:**
-Background services (like the existing PeriodicTimer heartbeat loop) directly update component state or call StateHasChanged() from non-UI threads, causing "The current thread is not associated with the Dispatcher" exceptions or silent failures where UI doesn't update.
+Blazor Server SignalR circuits disconnect during long-running LLM API calls (30+ seconds), causing the UI to freeze or show "Reconnecting..." indefinitely. User loses conversation state and must refresh the page.
 
 **Why it happens:**
-Blazor Server components run on a synchronization context tied to the SignalR circuit. When the existing heartbeat loop publishes events via MediatR, subscribers in Blazor components receive those events on the background thread, not the UI thread. Developers forget that every UI update must be marshaled through InvokeAsync().
+Default SignalR circuit timeout is 30 seconds. LLM API calls (especially with streaming disabled or complex prompts) can exceed this. Developers forget that Blazor Server maintains a persistent WebSocket connection that times out independently of HttpClient timeout.
 
 **How to avoid:**
-- Wrap ALL StateHasChanged() calls in InvokeAsync(() => StateHasChanged())
-- When subscribing to MediatR events in components, always use InvokeAsync for state updates
-- Create a base component with SafeStateHasChanged() helper that wraps InvokeAsync
-- Never call component methods directly from background threads
+- Configure `CircuitOptions.DisconnectedCircuitMaxRetained` and `DisconnectedCircuitRetentionPeriod` in Program.cs
+- Set `HubOptions.ClientTimeoutInterval` to at least 60 seconds for LLM workloads
+- Use streaming responses to keep the circuit alive with incremental updates
+- Implement keep-alive pings during long operations
 
 **Warning signs:**
-- Intermittent "Dispatcher" exceptions in logs
-- UI not updating despite events firing (check with breakpoints)
-- Race conditions that only appear under load
-- Components showing stale data after events
+- "Reconnecting..." message appears during LLM calls
+- Users report "page freezes" after asking questions
+- SignalR connection logs show frequent disconnects
+- Circuit disposal logs correlate with LLM API timing
 
 **Phase to address:**
-Phase 1 (Blazor Integration) — establish pattern immediately, create base component with helpers
+Phase 1 (API Client Setup) — Configure timeouts before first LLM call
 
 ---
 
-### Pitfall 2: Heartbeat Loop Blocking on UI Operations
+### Pitfall 2: UI Thread Deadlock with StateHasChanged in Async Streaming
 
 **What goes wrong:**
-The existing 100ms PeriodicTimer heartbeat loop blocks waiting for UI operations to complete, causing the loop to miss ticks, snowball delays, or complete failure. The anti-snowball guard (skip if previous tick still running) triggers constantly.
+Streaming LLM responses freeze the UI completely. The chat interface becomes unresponsive, and the browser tab may show "Page Unresponsive". Partial responses don't appear incrementally as expected.
 
 **Why it happens:**
-When heartbeat data is streamed to UI, developers await SignalR operations or InvokeAsync calls from within the heartbeat loop itself. SignalR can have network delays, and InvokeAsync queues work on the circuit's synchronization context which may be busy. The heartbeat loop should never wait for UI.
+Developers call `StateHasChanged()` synchronously from within an async streaming loop without wrapping in `InvokeAsync()`. Blazor Server requires all UI updates to be marshaled through the synchronization context. Calling StateHasChanged from the streaming thread (which is not the UI thread) causes deadlock or silent failure.
 
 **How to avoid:**
-- Use fire-and-forget pattern: publish events without awaiting UI response
-- Heartbeat loop publishes to MediatR event bus (already exists), UI subscribes
-- UI components buffer/throttle updates (e.g., only update every 200ms even if events arrive faster)
-- Never await InvokeAsync from the heartbeat loop thread
-- Keep heartbeat loop completely decoupled from UI lifecycle
+- Always wrap StateHasChanged in `await InvokeAsync(StateHasChanged)` when streaming
+- Use `await InvokeAsync(async () => { /* update state */ StateHasChanged(); })` pattern
+- Consider throttling UI updates (e.g., every 50ms) instead of every token
+- Test streaming with slow network conditions to expose timing issues
 
 **Warning signs:**
-- Heartbeat tick count not incrementing at expected rate
-- Anti-snowball guard logging "skipped tick" frequently
-- Latency metrics showing >100ms when UI is connected
-- Heartbeat stops entirely when browser disconnects
+- UI freezes during streaming responses
+- Partial responses don't appear until stream completes
+- Browser console shows "Dispatcher" or synchronization context errors
+- Streaming works in console app but fails in Blazor
 
 **Phase to address:**
-Phase 1 (Blazor Integration) — architecture decision, must be correct from start
+Phase 2 (Chat UI with Streaming) — Must be correct from first streaming implementation
 
 ---
 
-### Pitfall 3: Scoped Service Lifetime Confusion
+### Pitfall 3: HttpClient Timeout Mismatch with Streaming
 
 **What goes wrong:**
-Runtime services (ModuleRegistry, EventBus, HeartbeatLoop) registered as Singleton in console app, but Blazor Server creates per-circuit scopes. Developers accidentally register runtime services as Scoped, creating separate instances per user, breaking shared state. Or they inject Scoped services into Singletons, causing "Cannot consume scoped service from singleton" exceptions.
+Streaming LLM responses fail with "The request was canceled due to the configured HttpClient.Timeout" error after 100 seconds, even though the stream is actively receiving data. User sees partial response then error.
 
 **Why it happens:**
-Blazor Server's service lifetime model differs from console apps. Each SignalR circuit gets its own scope, and "Scoped" means "per circuit" (per user session), not "per request". The existing runtime expects singleton services shared across all modules. Mixing lifetimes causes either duplicate state or DI exceptions.
+Default HttpClient timeout is 100 seconds. For streaming responses, this timeout applies to the entire stream duration, not individual chunks. A long conversation response (200+ tokens at 20 tokens/sec = 10+ seconds) can exceed this. Developers configure OpenAI client timeout but forget HttpClient has its own timeout.
 
 **How to avoid:**
-- Keep runtime services (ModuleRegistry, EventBus, HeartbeatLoop) as Singleton
-- UI-specific services (component state, user preferences) should be Scoped
-- Never inject Scoped services into Singleton services
-- Use IServiceProvider with CreateScope() if Singleton needs temporary Scoped access
-- Document lifetime for every service in DI registration
+- Set HttpClient.Timeout to `Timeout.InfiniteTimeSpan` for streaming clients
+- Use CancellationToken for user-initiated cancellation instead of timeout
+- Configure separate HttpClient instances: one for streaming (no timeout), one for non-streaming (with timeout)
+- Implement application-level timeout logic (e.g., 5 minutes max conversation)
 
 **Warning signs:**
-- "Cannot consume scoped service from singleton" exceptions
-- Multiple ModuleRegistry instances (check with logging in constructor)
-- Modules loaded in one browser tab not visible in another
-- Heartbeat state different per user
+- "HttpClient.Timeout" exceptions during streaming
+- Streams fail consistently around 100 seconds
+- Short responses work, long responses fail
+- Timeout occurs even when data is actively streaming
 
 **Phase to address:**
-Phase 1 (Blazor Integration) — DI configuration must be correct from start
+Phase 1 (API Client Setup) — Configure HttpClient correctly before streaming implementation
 
 ---
 
-### Pitfall 4: SignalR Circuit Disposal Not Cleaning Up Event Subscriptions
+### Pitfall 4: Context Window Overflow Without Token Counting
 
 **What goes wrong:**
-Blazor components subscribe to MediatR events in OnInitialized but don't unsubscribe in Dispose, causing memory leaks. The EventBus holds references to disposed components, preventing GC. Over time, memory grows and performance degrades as events are delivered to dead circuits.
+LLM API calls fail with "This model's maximum context length is 128000 tokens" error after several conversation turns. User loses conversation history and must start over. Error appears suddenly without warning.
 
 **Why it happens:**
-The existing EventBus uses ConcurrentBag for subscribers with lazy cleanup. When Blazor circuits disconnect (user closes browser), components are disposed but subscriptions remain in the EventBus. The lazy cleanup (every 100 publishes) may not trigger frequently enough, and weak references aren't used.
+Developers append messages to conversation history without tracking token count. Each turn adds system prompt + user message + assistant response. After 10-20 turns, total tokens exceed model's context window. Character count estimation (divide by 4) is inaccurate for code, special characters, or non-English text.
 
 **How to avoid:**
-- Implement IDisposable in all components that subscribe to events
-- Unsubscribe in Dispose() method
-- Consider weak references in EventBus for Blazor subscribers
-- Add circuit disposal logging to detect leaks early
-- Monitor memory growth during testing (connect/disconnect repeatedly)
+- Use tiktoken library (.NET port: `SharpToken` or `TiktokenSharp`) for accurate token counting
+- Track running token count for conversation history
+- Implement sliding window: keep system prompt + recent N messages that fit in context
+- Reserve tokens for response (e.g., use 75% of context for history, 25% for response)
+- Warn user when approaching limit (e.g., "90% of context used")
 
 **Warning signs:**
-- Memory usage grows with each browser connection/disconnection
-- Event handlers firing for disconnected users (check logs)
-- Performance degradation over time
-- GC not reclaiming component memory
+- "maximum context length" errors after multiple conversation turns
+- Errors occur inconsistently (depends on response length)
+- Long user messages cause immediate failures
+- Error rate increases with conversation length
 
 **Phase to address:**
-Phase 1 (Blazor Integration) — EventBus may need modification, component pattern must be established
+Phase 3 (Context Management) — Must implement before multi-turn conversations
 
 ---
 
-### Pitfall 5: Module Loading/Unloading While UI Is Connected
+### Pitfall 5: In-Memory Conversation History Memory Leak
 
 **What goes wrong:**
-User triggers module unload from UI while that module is processing a heartbeat tick or handling an event. AssemblyLoadContext unloads the assembly, causing TypeLoadException, NullReferenceException, or crashes. UI shows stale module list or incorrect status.
+Application memory grows continuously as users have conversations. After hours of operation, memory usage reaches gigabytes. Eventually causes OutOfMemoryException or system slowdown.
 
 **Why it happens:**
-The existing runtime doesn't coordinate module lifecycle with active operations. When UI adds control operations (load/unload buttons), race conditions emerge: UI thread requests unload while heartbeat thread invokes module's Tick() method. AssemblyLoadContext.Unload() doesn't wait for in-flight operations.
+Conversation history stored in memory without cleanup strategy. Each user session (SignalR circuit) maintains full conversation history. When circuits disconnect (user closes browser), history isn't cleaned up. Scoped services holding conversation state aren't disposed properly.
 
 **How to avoid:**
-- Implement module lifecycle state machine (Loading → Loaded → Unloading → Unloaded)
-- Heartbeat loop checks module state before invoking Tick(), skips if Unloading
-- Unload operation waits for current tick to complete (timeout after 200ms)
-- UI disables unload button while module is active in heartbeat
-- Add CancellationToken to module operations for graceful shutdown
+- Implement conversation history as Scoped service (per-circuit lifetime)
+- Ensure proper Dispose implementation to clean up on circuit disconnect
+- Set maximum conversation length (e.g., 50 messages, then trim oldest)
+- Monitor memory usage in tests (connect/disconnect cycles)
+- Consider LRU cache with size limit for conversation storage
 
 **Warning signs:**
-- TypeLoadException during module unload
-- Heartbeat loop crashes when modules change
-- UI shows "module loaded" but runtime shows "unloaded"
-- Race condition exceptions under rapid load/unload
+- Memory usage grows steadily over time
+- Memory doesn't decrease when users disconnect
+- GC collections don't reclaim memory
+- Memory growth correlates with number of conversations
 
 **Phase to address:**
-Phase 2 (Control Operations) — requires runtime changes before UI can safely trigger operations
+Phase 3 (Context Management) — Implement cleanup strategy from start
 
 ---
 
-### Pitfall 6: Hosting Model Transition Breaking Existing Functionality
+### Pitfall 6: Rate Limiting Without Retry Strategy
 
 **What goes wrong:**
-Migrating from console app (Host.CreateDefaultBuilder) to web app (WebApplication.CreateBuilder) changes service registration order, configuration loading, logging setup, or hosted service lifecycle. The existing runtime fails to start, modules don't load, or heartbeat doesn't run.
+LLM API calls fail with 429 "Rate limit exceeded" errors during normal usage. User sees error message, loses their input, and must retry manually. Errors increase during peak usage.
 
 **Why it happens:**
-WebApplicationBuilder has different defaults than HostBuilder. Middleware pipeline, Kestrel configuration, and hosted service startup order differ. The existing HeartbeatLoop as IHostedService may start before modules are loaded, or configuration files aren't found because working directory changes.
+OpenAI and compatible APIs have rate limits (requests per minute, tokens per minute). Developers don't implement exponential backoff retry logic. Multiple concurrent users or rapid-fire requests (e.g., user clicks send multiple times) trigger rate limits. The official OpenAI .NET SDK doesn't automatically retry 429 errors.
 
 **How to avoid:**
-- Keep existing runtime initialization separate from web host setup
-- Use WebApplication.CreateBuilder but manually configure services to match console app
-- Start HeartbeatLoop explicitly after modules load, not via IHostedService auto-start
-- Test that all v1.0 functionality works before adding UI
-- Use integration tests to verify module loading, event bus, heartbeat in web host
+- Implement exponential backoff with jitter for 429 errors
+- Use Polly library for retry policies: `WaitAndRetryAsync` with exponential backoff
+- Respect `Retry-After` header in 429 responses
+- Implement request queuing to prevent concurrent request spikes
+- Show "Sending..." state to prevent duplicate submissions
 
 **Warning signs:**
-- Runtime starts but modules don't load
-- Configuration files not found (path issues)
-- Heartbeat doesn't start or starts before modules load
-- Logging output changes or disappears
+- 429 errors in logs
+- Errors occur during peak usage or rapid requests
+- Users report "rate limit" errors
+- Errors disappear after waiting a few seconds
 
 **Phase to address:**
-Phase 1 (Blazor Integration) — hosting transition is foundational, must work before UI
+Phase 1 (API Client Setup) — Build retry logic into API client from start
 
 ---
 
-### Pitfall 7: SignalR Message Size Limits on Heartbeat Data Streaming
+### Pitfall 7: Streaming Response Cancellation Not Cleaning Up
 
 **What goes wrong:**
-Streaming full module state, event history, or large heartbeat payloads exceeds SignalR's default 32KB message size limit. SignalR disconnects the circuit with "Maximum message size exceeded" error. UI shows connection lost, no data updates.
+User cancels LLM response (closes chat, navigates away, or clicks stop), but HTTP request continues in background. Resources aren't released, and rate limits are consumed by abandoned requests. Memory leaks from unclosed streams.
 
 **Why it happens:**
-Developers serialize entire ModuleRegistry state or full event history and push to UI every heartbeat tick. With many modules or verbose metadata, messages grow large. SignalR has conservative defaults to prevent DoS attacks. Streaming at 100ms intervals amplifies the problem.
+Developers don't pass CancellationToken through the entire streaming pipeline. When SignalR circuit disconnects or user cancels, the streaming loop continues. HttpClient request isn't cancelled, and stream isn't disposed. Background task holds references preventing GC.
 
 **How to avoid:**
-- Send deltas, not full state (only changed modules, incremental tick count)
-- Increase SignalR MaximumReceiveMessageSize if needed (but prefer smaller messages)
-- Throttle UI updates (update every 200-500ms, not every 100ms tick)
-- Paginate large data (module list, event history)
-- Use efficient serialization (System.Text.Json, not verbose formats)
+- Pass CancellationToken from circuit lifetime through to HttpClient
+- Link user cancellation token with circuit disconnection token
+- Wrap streaming in try/finally to ensure disposal
+- Use `await using` for IAsyncEnumerable streams
+- Test cancellation scenarios (disconnect during streaming)
 
 **Warning signs:**
-- "Maximum message size exceeded" in browser console
-- SignalR circuit disconnects under load
-- Network tab shows large WebSocket frames
-- UI updates stop after initial connection
+- HTTP requests continue after user disconnects
+- Memory usage doesn't decrease after cancellation
+- Rate limit consumption higher than expected
+- Logs show streaming loops running after circuit disposal
 
 **Phase to address:**
-Phase 1 (Blazor Integration) — data streaming design must account for limits
+Phase 2 (Chat UI with Streaming) — Implement cancellation from first streaming implementation
 
 ---
 
-### Pitfall 8: Browser Auto-Launch Timing Issues
+### Pitfall 8: Event Bus Integration Blocking LLM Calls
 
 **What goes wrong:**
-Runtime launches browser before Kestrel finishes starting, resulting in "connection refused" error page. Or browser launches but SignalR circuit fails to establish because services aren't ready. User sees error instead of dashboard.
+LLM API calls block the existing MediatR event bus, causing heartbeat delays or module communication failures. The 100ms heartbeat requirement is violated. System becomes unresponsive during LLM calls.
 
 **Why it happens:**
-Developers call Process.Start() to launch browser immediately after WebApplication.RunAsync(), but Kestrel startup is asynchronous. The browser request arrives before the server is listening. Or DI services (ModuleRegistry, HeartbeatLoop) aren't initialized when first circuit connects.
+Developers publish LLM request/response events through the existing synchronous event bus. LLM calls take seconds, blocking event handlers. Other modules waiting for events experience delays. The event bus wasn't designed for long-running operations.
 
 **How to avoid:**
-- Use IHostApplicationLifetime.ApplicationStarted event to launch browser
-- Ensure all runtime services initialize before web host starts
-- Add health check endpoint, wait for it to respond before launching browser
-- Handle connection failures gracefully in UI (retry with exponential backoff)
-- Provide manual URL in console if auto-launch fails
+- Use fire-and-forget pattern for LLM calls: publish "LLM request started" event immediately, publish "LLM response received" event when complete
+- Don't await LLM calls from within event handlers
+- Consider separate async event bus for long-running operations
+- LLM module should handle calls independently, not block event bus
+- Monitor event bus latency to detect blocking
 
 **Warning signs:**
-- Browser shows "connection refused" on first launch
-- Intermittent startup failures (race condition)
-- SignalR circuit fails to establish on first page load
-- Console shows "listening on http://..." after browser already opened
+- Heartbeat tick latency increases during LLM calls
+- Event bus logs show delays correlating with LLM timing
+- Modules report timeout waiting for events
+- System becomes unresponsive during conversations
 
 **Phase to address:**
-Phase 3 (Background Service) — auto-launch is final integration step
+Phase 1 (API Client Setup) — Design integration pattern before implementing
 
 ---
 
@@ -217,102 +215,122 @@ Phase 3 (Background Service) — auto-launch is final integration step
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Polling UI for updates instead of push | Simpler implementation, no InvokeAsync complexity | Increased latency, wasted CPU, poor UX | Never — defeats purpose of Blazor Server real-time |
-| Singleton services for UI state | Avoids scoped lifetime confusion | Shared state across users, security risk | Never — breaks multi-user scenarios |
-| Disabling AssemblyLoadContext isolation for UI | Easier DI integration | Loses module isolation, version conflicts | Never — core architecture principle |
-| Blocking heartbeat loop to wait for UI | Simpler synchronous code | Heartbeat delays, missed ticks, poor performance | Never — violates 100ms requirement |
-| Global exception handler without circuit-specific handling | Catches all errors | Can't distinguish runtime vs UI errors, poor diagnostics | Acceptable for MVP, refine in Phase 2 |
+| Character count ÷ 4 for token estimation | No external library needed | Inaccurate, causes context overflow | Never — use tiktoken |
+| Unlimited conversation history | Simpler implementation | Memory leak, performance degradation | Never — implement limits from start |
+| No retry logic for API calls | Faster initial implementation | Poor reliability, user frustration | Never — rate limits are common |
+| Synchronous LLM calls in event handlers | Simpler code flow | Blocks event bus, violates performance requirements | Never — breaks existing architecture |
+| Global conversation state (Singleton) | Avoids per-user complexity | Shared state across users, security risk | Never — use Scoped services |
+| Hardcoded API keys in code | Quick testing | Security vulnerability, can't change without rebuild | Only for local development, never commit |
+| No streaming, wait for full response | Simpler UI implementation | Poor UX, long wait times, circuit timeouts | Acceptable for MVP if responses < 10 seconds |
+| Storing full conversation in memory | Fast access, no database | Memory leak, lost on restart | Acceptable for v1.2, add persistence in v1.3 |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| MediatR EventBus → Blazor | Subscribing in OnInitialized without unsubscribing in Dispose | Always implement IDisposable, unsubscribe in Dispose() |
-| PeriodicTimer → UI updates | Awaiting InvokeAsync from heartbeat loop | Fire-and-forget publish to EventBus, UI subscribes and updates independently |
-| AssemblyLoadContext → DI | Trying to inject module types directly into Blazor components | Use duck-typing or shared interfaces, never cross context boundaries |
-| ConcurrentDictionary → UI display | Enumerating during modification (race condition) | Snapshot to array before rendering: registry.ToArray() |
-| FileSystemWatcher → UI notifications | Flooding UI with file change events | Debounce events (e.g., 500ms delay), batch updates |
+| OpenAI SDK → Blazor Server | Not configuring HttpClient timeout for streaming | Set Timeout.InfiniteTimeSpan for streaming client |
+| Streaming → UI updates | Calling StateHasChanged without InvokeAsync | Always wrap in `await InvokeAsync(StateHasChanged)` |
+| Conversation history → Context window | Appending messages without token counting | Use tiktoken to count tokens, implement sliding window |
+| LLM calls → Event bus | Awaiting LLM calls in event handlers | Fire-and-forget pattern, publish completion event |
+| User cancellation → HTTP request | Not passing CancellationToken to HttpClient | Link circuit token with request cancellation |
+| Rate limiting → Retry | Failing immediately on 429 errors | Implement exponential backoff with Polly |
+| API keys → Configuration | Hardcoding keys in code | Use appsettings.json with user secrets for development |
+| Multiple providers → Client config | Single HttpClient for all providers | Separate clients per provider with different configs |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Updating UI every heartbeat tick (100ms) | High CPU, SignalR bandwidth saturation | Throttle to 200-500ms, send deltas only | >5 concurrent users |
-| Serializing full ModuleRegistry on every update | Large SignalR messages, slow rendering | Send changed modules only, use efficient serialization | >10 modules loaded |
-| Synchronous module operations in UI thread | UI freezes, poor responsiveness | Always use async/await, offload to background | Any CPU-intensive operation |
-| No pagination on module/event lists | Slow initial render, memory growth | Paginate or virtualize lists | >50 items |
-| Logging every heartbeat tick to console | I/O bottleneck, log file growth | Log at Debug level, use structured logging with sampling | Continuous operation |
+| Updating UI for every streaming token | High CPU, UI jank, poor responsiveness | Throttle updates (every 50ms or every 5 tokens) | Streaming responses > 100 tokens |
+| No conversation history limit | Memory growth, GC pressure, slowdown | Implement sliding window (e.g., 50 messages max) | After 20+ conversation turns |
+| Synchronous token counting on every message | UI freezes during send | Cache token counts, count asynchronously | Messages > 1000 tokens |
+| Serializing full conversation to SignalR | Large messages, bandwidth saturation | Send only new messages, use deltas | Conversations > 10 messages |
+| No request queuing | Rate limit errors, failed requests | Queue requests, process sequentially | > 3 concurrent users |
+| Logging full LLM responses | I/O bottleneck, large log files | Log summary only (token count, timing), full response at Debug level | Continuous operation |
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Exposing module file paths in UI | Information disclosure, path traversal | Show module name only, sanitize paths |
-| Allowing arbitrary module loading from UI | Code execution vulnerability | Whitelist allowed module directories, validate signatures |
-| No authentication on WebUI | Unauthorized access to runtime control | Add authentication (Windows auth for local, or simple token) |
-| Leaking exception details to UI | Information disclosure | Sanitize exceptions, log full details server-side only |
-| No rate limiting on control operations | DoS via rapid load/unload | Throttle operations, require confirmation for destructive actions |
+| Exposing API keys in client-side code | Key theft, unauthorized usage, cost | Keep keys server-side only, never send to browser |
+| No input validation on user messages | Prompt injection, jailbreak attempts | Validate length, sanitize input, implement content filtering |
+| Logging API keys in error messages | Key exposure in logs | Sanitize logs, use [REDACTED] for sensitive data |
+| No rate limiting per user | DoS, cost explosion | Implement per-user rate limits (e.g., 10 requests/minute) |
+| Trusting LLM output without validation | XSS, code injection if rendered as HTML | Sanitize LLM responses, escape HTML, validate code |
+| No cost monitoring | Unexpected API bills | Track token usage, set budget alerts, implement usage caps |
+| Storing conversation history without encryption | Data breach risk | Encrypt sensitive conversations (future: add persistence) |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
-|---------|-------------|--------------------|
-| No loading state during module operations | User clicks button, nothing happens, clicks again | Show spinner, disable button, provide feedback |
-| Heartbeat stops but UI doesn't indicate | User thinks system is working when it's not | Show "heartbeat stopped" warning, last tick timestamp |
-| SignalR disconnect without reconnect UI | UI shows stale data, user doesn't know connection lost | Show connection status, auto-reconnect with visual feedback |
-| No confirmation for destructive operations | User accidentally unloads critical module | Require confirmation for unload, show impact (e.g., "3 modules depend on this") |
-| Overwhelming real-time updates | User can't read data, information overload | Throttle updates, allow pause/resume, highlight changes |
+|---------|-------------|-----------------|
+| No loading indicator during LLM call | User thinks app is frozen, clicks multiple times | Show "Thinking..." or typing indicator immediately |
+| Streaming without incremental display | Long wait, no feedback | Display tokens as they arrive, show progress |
+| No error recovery | User loses input on error, must retype | Preserve input on error, allow retry |
+| No cancellation option | User stuck waiting for long response | Provide "Stop" button, cancel on navigation |
+| Context limit error without explanation | Cryptic error, user doesn't understand | Explain "conversation too long", offer to start new |
+| No conversation history UI | User can't review previous messages | Show scrollable message history |
+| Overwhelming system prompts in UI | User sees internal prompts, confusing | Hide system messages, show only user/assistant |
+| No indication of streaming vs complete | User doesn't know if response is done | Show "..." while streaming, checkmark when complete |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Real-time updates:** Often missing InvokeAsync wrapper — verify StateHasChanged() always wrapped
-- [ ] **Event subscriptions:** Often missing Dispose/unsubscribe — verify IDisposable implemented
-- [ ] **Module operations:** Often missing state coordination — verify heartbeat skips modules during unload
-- [ ] **SignalR reconnection:** Often missing reconnect UI — verify connection status shown, auto-reconnect works
-- [ ] **Error handling:** Often missing circuit-specific handling — verify errors don't crash other users' circuits
-- [ ] **Memory cleanup:** Often missing weak references or disposal — verify memory doesn't grow with connect/disconnect cycles
-- [ ] **Hosting transition:** Often missing service registration verification — verify all v1.0 features work in web host
-- [ ] **Browser auto-launch:** Often missing startup synchronization — verify browser opens after server ready
+- [ ] **Streaming responses:** Often missing InvokeAsync wrapper — verify UI updates don't freeze
+- [ ] **Token counting:** Often using character estimation — verify tiktoken library integrated
+- [ ] **Context window management:** Often missing token tracking — verify sliding window implemented
+- [ ] **Cancellation:** Often missing CancellationToken propagation — verify requests cancel on disconnect
+- [ ] **Rate limiting:** Often missing retry logic — verify 429 errors handled with backoff
+- [ ] **Memory cleanup:** Often missing Dispose on conversation history — verify memory stable over time
+- [ ] **HttpClient timeout:** Often using default 100s — verify Timeout.InfiniteTimeSpan for streaming
+- [ ] **Event bus integration:** Often blocking on LLM calls — verify heartbeat maintains 100ms during conversations
+- [ ] **Error handling:** Often showing raw API errors — verify user-friendly error messages
+- [ ] **API key security:** Often hardcoded or logged — verify keys in config, not in code/logs
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Cross-thread UI updates | LOW | Add InvokeAsync wrappers, test thoroughly |
-| Heartbeat blocking | MEDIUM | Refactor to fire-and-forget, add buffering in UI |
-| Service lifetime issues | MEDIUM | Fix DI registrations, may require service refactoring |
-| Memory leaks from subscriptions | LOW | Add Dispose implementations, test with repeated connect/disconnect |
-| Module lifecycle races | HIGH | Implement state machine, add coordination logic, extensive testing |
-| Hosting model breaks runtime | MEDIUM | Revert to console app, incrementally migrate services |
-| SignalR message size exceeded | LOW | Implement delta updates, increase limits if needed |
-| Browser launch timing | LOW | Add health check wait, implement retry logic |
+| Circuit timeout during LLM calls | LOW | Increase timeout config, implement streaming |
+| UI deadlock with StateHasChanged | LOW | Add InvokeAsync wrappers, test thoroughly |
+| HttpClient timeout on streaming | LOW | Change timeout to InfiniteTimeSpan, redeploy |
+| Context window overflow | MEDIUM | Implement token counting, add sliding window logic |
+| Memory leak from conversation history | MEDIUM | Add Dispose implementation, implement cleanup strategy |
+| No retry logic for rate limits | LOW | Add Polly retry policy, configure exponential backoff |
+| Streaming cancellation not working | MEDIUM | Add CancellationToken propagation, test cancellation scenarios |
+| Event bus blocking | HIGH | Refactor integration pattern, separate async operations |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Cross-thread UI updates | Phase 1 | All UI updates use InvokeAsync, no Dispatcher exceptions in logs |
-| Heartbeat blocking | Phase 1 | Heartbeat maintains 100ms tick rate with UI connected |
-| Service lifetime confusion | Phase 1 | Single ModuleRegistry instance, no DI exceptions |
-| Event subscription leaks | Phase 1 | Memory stable after 100 connect/disconnect cycles |
-| Module lifecycle races | Phase 2 | Load/unload operations safe during heartbeat, no exceptions |
-| Hosting model transition | Phase 1 | All v1.0 features work: module loading, event bus, heartbeat |
-| SignalR message size | Phase 1 | No "message size exceeded" errors with 20 modules loaded |
-| Browser auto-launch | Phase 3 | Browser opens to working dashboard 100% of time |
+| Circuit timeout during LLM calls | Phase 1 | LLM calls complete without circuit disconnect, timeout config verified |
+| UI deadlock with streaming | Phase 2 | Streaming responses display incrementally without freezing |
+| HttpClient timeout mismatch | Phase 1 | Long streaming responses (> 100s) complete successfully |
+| Context window overflow | Phase 3 | Multi-turn conversations (20+ messages) work without errors |
+| Memory leak from history | Phase 3 | Memory stable after 100 conversation cycles |
+| Rate limiting without retry | Phase 1 | 429 errors automatically retried, no user-visible failures |
+| Streaming cancellation | Phase 2 | User can cancel streaming, resources cleaned up |
+| Event bus blocking | Phase 1 | Heartbeat maintains 100ms tick rate during LLM calls |
 
 ## Sources
 
-- [ASP.NET Core Blazor SignalR guidance](https://learn.microsoft.com/en-us/aspnet/core/blazor/fundamentals/signalr?view=aspnetcore-10.0)
-- [ASP.NET Core Blazor performance best practices](https://learn.microsoft.com/en-us/aspnet/core/blazor/performance/?view=aspnetcore-10.0)
-- [Background tasks with hosted services in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/host/hosted-services?view=aspnetcore-10.0)
-- [Thread safety using InvokeAsync - Blazor University](https://blazor-university.com/components/multi-threaded-rendering/invokeasync)
-- [Losing my mind: Blazor, SignalR and Service Lifetimes - Reddit](https://www.reddit.com/r/dotnet/comments/1egxo89/losing_my_mind_blazor_signalr_and_service/)
-- [StateHasChanged() vs InvokeAsync(StateHasChanged) in Blazor - Stack Overflow](https://stackoverflow.com/questions/65230621/statehaschanged-vs-invokeasyncstatehaschanged-in-blazor)
-- [Blazor Server-Side Memory Leak #18556 - GitHub](https://github.com/dotnet/aspnetcore/issues/18556)
-- [Background Service Communication with Blazor via SignalR - Medium](https://medium.com/it-dead-inside/lets-learn-blazor-background-service-communication-with-blazor-via-signalr-84abe2660fd6)
-- [Hosted service prevents app to start completely - GitHub](https://github.com/dotnet/aspnetcore/issues/38698)
-- [Issue with concurrent collections in blazor server app - Reddit](https://www.reddit.com/r/Blazor/comments/1ftyhbu/issue_with_concurrent_collections_in_blazor/)
+- [How to display an AI response stream in Blazor Server - Reddit](https://www.reddit.com/r/Blazor/comments/1c998h7/how_to_display_an_ai_response_stream_in_blazor/)
+- [LLM Context Window Management and Long-Context Strategies 2026 - Zylos AI](https://zylos.ai/research/2026-01-19-llm-context-management)
+- [Context Window Overflow in 2026: Fix LLM Errors Fast - Redis](https://redis.io/blog/context-window-overflow/)
+- [Blazor app doesn't refresh UI after StateHasChanged in async operation - Stack Overflow](https://stackoverflow.com/questions/76976391/blazor-app-doesnt-refresh-ui-after-statehaschanged-in-async-operation)
+- [Explain Blazor SignalR / Circuit Timeouts in Detail - Stack Overflow](https://stackoverflow.com/questions/75150784/explain-blazor-signalr-circuit-timeouts-in-detail-please)
+- [The Day My Blazor App Froze Mid-Demo - Medium](https://medium.com/careerbytecode/the-day-my-blazor-app-froze-mid-demo-and-what-i-learned-about-signalr-674ec8cb976d)
+- [HttpClient.Timeout Error in C# OpenAI library - Stack Overflow](https://stackoverflow.com/questions/76491056/i-get-httpclient-timeout-error-in-c-sharp-openai-library)
+- [Request Timeout for Azure OpenAI when Streaming - Microsoft Learn](https://learn.microsoft.com/en-us/answers/questions/1465402/request-timeout-for-azure-openai-when-streaming)
+- [Rate limits - OpenAI API](https://developers.openai.com/api/docs/guides/rate-limits/)
+- [How to handle rate limits - OpenAI for developers](https://developers.openai.com/cookbook/examples/how_to_handle_rate_limits/)
+- [How to count tokens with Tiktoken - OpenAI for developers](https://developers.openai.com/cookbook/examples/how_to_count_tokens_with_tiktoken/)
+- [Counting tokens - OpenAI API](https://developers.openai.com/api/docs/guides/token-counting)
+- [Async/Await at Scale — Avoiding Hidden Deadlocks in .NET 8 - Medium](https://blog.stackademic.com/async-await-at-scale-avoiding-hidden-deadlocks-in-net-8-9c41ff53a4ae)
+- [Hunting Down Memory Leaks in .NET: The Ultimate Developer's Guide - Medium](https://medium.com/@vikpoca/hunting-down-memory-leaks-in-net-the-ultimate-developers-guide-b9c81d990d63)
+- [OpenAI .NET SDK - GitHub](https://github.com/openai/openai-dotnet)
+- [Streaming API responses - OpenAI for developers](https://developers.openai.com/api/docs/guides/streaming-responses/)
 
 ---
-*Pitfalls research for: Adding Blazor Server WebUI to Existing .NET 8 Modular Runtime*
-*Researched: 2026-02-22*
+*Pitfalls research for: LLM Integration in .NET 8 Blazor Server Agent Platform*
+*Researched: 2026-02-24*

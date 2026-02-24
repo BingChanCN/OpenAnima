@@ -1,273 +1,247 @@
 # Project Research Summary
 
-**Project:** OpenAnima v1.1 WebUI Runtime Dashboard
-**Domain:** Real-time monitoring dashboard for modular .NET agent platform
-**Researched:** 2026-02-22
+**Project:** OpenAnima v1.2 LLM Integration
+**Domain:** LLM API integration for .NET 8 Blazor Server agent platform
+**Researched:** 2026-02-24
 **Confidence:** HIGH
 
 ## Executive Summary
 
-OpenAnima v1.1 adds a Blazor Server WebUI for real-time monitoring and control of the existing v1.0 modular runtime. The research shows this is a straightforward integration: Blazor Server's built-in SignalR transport provides real-time push updates, and in-process hosting allows direct access to runtime components (ModuleRegistry, EventBus, HeartbeatLoop) without requiring a separate API layer. The recommended approach uses service facades to wrap runtime internals, background services to push state changes via IHubContext, and event-driven updates to avoid polling.
+OpenAnima v1.2 adds LLM capabilities to an existing modular agent platform built on .NET 8 Blazor Server. The research reveals a straightforward integration path: use the official OpenAI .NET SDK (2.8.0) with SharpToken (2.0.4) for token counting, implement streaming responses via existing SignalR infrastructure, and manage conversation history in-memory with token-based sliding window. The architecture follows established patterns already validated in v1.0-v1.1 (service facades, SignalR typed clients, singleton state management).
 
-The key architectural decision is keeping the runtime as singleton services while Blazor components use scoped lifetimes per circuit. This maintains the single-instance runtime model while supporting multiple browser connections. The main technical challenge is thread safety: background events from the 100ms heartbeat loop must be marshaled to the UI thread using InvokeAsync(StateHasChanged), and event subscriptions must be properly disposed to prevent memory leaks.
+The critical insight is that Blazor Server's SignalR circuit architecture creates unique challenges for long-running LLM calls. Three configuration decisions must be correct from the start: (1) SignalR circuit timeouts extended to 60+ seconds, (2) HttpClient timeout set to infinite for streaming, and (3) all UI updates wrapped in InvokeAsync to prevent deadlocks. Getting these wrong causes user-visible failures (frozen UI, disconnections, timeout errors) that are difficult to debug after implementation.
 
-Critical risks center on cross-thread UI updates (causing silent failures or exceptions), heartbeat loop blocking on UI operations (breaking the 100ms tick requirement), and module lifecycle races when load/unload operations occur during active heartbeat ticks. These are all preventable with established Blazor Server patterns: InvokeAsync wrappers, fire-and-forget event publishing, and module state machine coordination. The hosting model transition from console app to WebApplication requires careful service registration to preserve existing v1.0 functionality.
+Key risks center on context window management and memory leaks. Without accurate token counting (SharpToken), conversations will hit API limits unpredictably. Without proper cleanup on circuit disconnect, memory will grow unbounded. Both are preventable with upfront design: token-based truncation with 80% buffer, and scoped service lifetime with proper disposal. The recommended approach delivers a production-ready chat interface in three phases: API client setup, streaming UI, and context management.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The v1.1 milestone requires minimal stack additions to the existing .NET 8 runtime. Blazor Server and SignalR are built into ASP.NET Core 8.0, requiring only a project SDK change from Microsoft.NET.Sdk to Microsoft.NET.Sdk.Web. The only new package is Microsoft.Extensions.Hosting.WindowsServices 10.0.3 for background service hosting with auto-launch capabilities.
+The v1.2 milestone requires only two new packages added to the existing .NET 8 Blazor Server foundation. OpenAI 2.8.0 provides the official SDK with full streaming support and OpenAI-compatible provider flexibility (works with OpenRouter, Together, Anthropic via base URL configuration). SharpToken 2.0.4 is the .NET port of tiktoken for accurate token counting, essential for context window management and cost estimation. Both are stable releases with high confidence.
 
 **Core technologies:**
-- **ASP.NET Core 8.0 (built-in)**: Web host for Blazor Server — Kestrel self-hosting, no external dependencies
-- **Blazor Server 8.0 (built-in)**: Real-time UI framework — SignalR transport included, pure C# full-stack, seamless integration with existing runtime
-- **Microsoft.Extensions.Hosting.WindowsServices 10.0.3**: Windows Service hosting — enables UseWindowsService() for background service with browser auto-launch
-
-**Existing stack (no changes):**
-- .NET 8.0 runtime (LTS until Nov 2026)
-- MediatR 12.* (EventBus integration)
-- AssemblyLoadContext (module isolation)
-- PeriodicTimer (heartbeat loop)
-- ConcurrentDictionary (thread-safe registry)
-
-The architecture avoids separate API layers, external WebSocket libraries, and Blazor WebAssembly complexity. Blazor Server's in-process model allows components to call ModuleRegistry.GetAll() directly and subscribe to MediatR events, with updates pushed via SignalR's built-in transport.
+- **OpenAI 2.8.0**: Official LLM API client — Maintained by OpenAI, supports streaming and all modern features, works with any OpenAI-compatible provider
+- **SharpToken 2.0.4**: Token counting (tiktoken port) — Accurate token estimation for GPT-4o/o1/o3, pure .NET with no native dependencies
+- **System.Text.Json**: Conversation serialization — Built into .NET 8, used for in-memory message storage
+- **Existing stack unchanged**: .NET 8 runtime, Blazor Server, MediatR event bus, Pure CSS theme all remain
 
 ### Expected Features
 
+Research identifies clear feature tiers based on user expectations and competitive analysis. Table stakes features are non-negotiable for a functional LLM chat interface: message display with role formatting, text input, streaming token-by-token responses, conversation history, auto-scroll, basic error handling, API configuration, and token/context window awareness. Missing any of these makes the product feel incomplete.
+
 **Must have (table stakes):**
-- Module list display with status indicators — core purpose, users expect to see loaded modules
-- Module metadata display (name, version, description, author) — context for what each module does
-- Load/Unload module controls — basic lifecycle management at runtime
-- Heartbeat status display (running/stopped) — show if runtime loop is active
-- Start/Stop heartbeat controls — users expect to pause/resume the runtime
-- Heartbeat tick counter — proof the loop is running, live counter updates
-- Real-time updates via SignalR — modern dashboards auto-update, manual refresh feels broken
-- Error display — when operations fail, users need to know why
-- Responsive layout — works on different screen sizes
-- Auto-launch browser on startup — desktop app experience
+- Streaming response display — Modern UX standard, users expect token-by-token output
+- Message display (user/assistant/system) — Standard chat pattern with role-based styling
+- Text input with send button — Core interaction, Enter to send
+- Conversation history display — Scrollable message list showing full context
+- Token/context window awareness — Prevents API errors from exceeding limits
+- Basic error handling — Users need to know when API calls fail (rate limit, auth, network)
+- API configuration — Users must set endpoint, API key, model name
 
 **Should have (competitive):**
-- Heartbeat latency display — performance insight, shows if loop is keeping up with 100ms target
-- Event bus activity monitor — real-time visibility into inter-module communication, valuable for debugging
-- Module dependency visualization — helps users understand module relationships
-- Heartbeat tick history chart — visual trend of loop performance over time
-- Dark mode — user preference, reduces eye strain
+- Markdown rendering with code highlighting — LLM responses often include code blocks
+- Copy message content — Users want to extract responses for use elsewhere
+- Message regeneration — Retry if response quality is poor
+- Token usage display — Power users want to track API costs
+- Typing indicator during streaming — Visual feedback that LLM is responding
 
 **Defer (v2+):**
-- Module configuration editor — complex, each module has different schema
-- Historical data persistence — database complexity, not core to runtime monitoring
-- Multi-runtime management — networking complexity, separate product scope
-- Custom dashboard layouts — over-engineering for fixed set of metrics
-- Alerting/notifications — infrastructure complexity, user monitors actively for v1.1
+- Persistent conversation storage — Adds database complexity, explicitly out of scope per PROJECT.md
+- Multi-conversation management — Validate single conversation first
+- Conversation summarization — High complexity, not needed until users regularly hit context limits
+- Message editing — Creates conversation branches, requires complex state management
+- Voice input/output — Not core to v1.2 agent testing goal
+- Image/multimodal support — Text-only for v1.2
 
 ### Architecture Approach
 
-The architecture uses a three-layer pattern: Blazor components for UI, service facades for abstraction, and singleton runtime components. Background services monitor runtime state and push updates to all connected clients via IHubContext<RuntimeHub>. Components subscribe to SignalR events in OnInitializedAsync and call InvokeAsync(StateHasChanged) to trigger re-renders when updates arrive.
+The integration adds three new components that follow existing OpenAnima patterns: LlmClient (OpenAI SDK wrapper), ConversationManager (in-memory history with token counting), and ChatService (service facade orchestrating both). All integrate through the existing RuntimeHub SignalR hub, reusing validated real-time push infrastructure. The architecture maintains separation of concerns with service facades, typed SignalR clients, and singleton state management—patterns already proven in v1.0-v1.1.
 
 **Major components:**
-1. **Service Facades (RuntimeService, ModuleService)** — wrap HeartbeatLoop and PluginRegistry, expose only UI-relevant operations, prevent direct coupling to runtime internals
-2. **SignalR Hub (RuntimeHub)** — bidirectional communication channel, handles client-to-server calls for control operations
-3. **Background Service (RuntimeMonitorService)** — IHostedService that polls runtime state every 500ms and broadcasts to all clients via IHubContext
-4. **Blazor Components (Dashboard, Modules, Heartbeat pages)** — UI rendering with lifecycle hooks, subscribe to SignalR events, marshal updates to UI thread
-5. **Existing Runtime (HeartbeatLoop, PluginRegistry, EventBus)** — unchanged, registered as singletons, shared across all users
-
-**Data flow patterns:**
-- **User actions → Runtime**: Component @onclick → IRuntimeService → HeartbeatLoop → Background service detects change → SignalR broadcast → All clients update
-- **Runtime → UI updates**: HeartbeatLoop ticks → RuntimeMonitorService polls → IHubContext.Clients.All.SendAsync → SignalR WebSocket → Component.On<T> → InvokeAsync(StateHasChanged) → Browser updates
-- **Module operations**: UI calls IModuleService → PluginLoader → PluginRegistry → EventBus injection → Background service broadcasts → All clients refresh
+1. **LlmClient** — OpenAI API wrapper handling requests, streaming, and error handling (singleton service)
+2. **ConversationManager** — In-memory conversation history with token-based sliding window and context management (singleton service)
+3. **ChatService** — Service facade orchestrating LlmClient and ConversationManager, injected into UI layer (singleton service)
+4. **Chat.razor + code-behind** — Blazor page with SignalR hub connection for real-time streaming updates (follows Monitor.razor pattern)
+5. **RuntimeHub extensions** — Add chat methods (SendMessage, ClearConversation) to existing SignalR hub (centralized real-time communication)
 
 ### Critical Pitfalls
 
-1. **Cross-thread UI updates without InvokeAsync** — Background services update component state directly, causing "Dispatcher" exceptions or silent failures. Always wrap StateHasChanged() in InvokeAsync(() => StateHasChanged()) when handling events from non-UI threads.
+Eight critical pitfalls identified, all preventable with correct initial configuration and patterns. The top three account for 80% of reported issues in Blazor Server + LLM integrations.
 
-2. **Heartbeat loop blocking on UI operations** — Awaiting SignalR or InvokeAsync from heartbeat loop causes missed ticks and snowball delays. Use fire-and-forget pattern: publish events without awaiting UI response, let components subscribe and update independently.
+1. **SignalR Circuit Timeout During Long LLM Calls** — Default 30s timeout causes "Reconnecting..." during LLM calls. Fix: Configure CircuitOptions and HubOptions to 60+ seconds, implement streaming to keep circuit alive.
 
-3. **Scoped service lifetime confusion** — Registering runtime services as Scoped creates separate instances per browser circuit, breaking shared state. Keep ModuleRegistry, EventBus, HeartbeatLoop as Singleton; only UI-specific services should be Scoped.
+2. **UI Thread Deadlock with StateHasChanged in Async Streaming** — Calling StateHasChanged without InvokeAsync freezes UI completely. Fix: Always wrap in `await InvokeAsync(StateHasChanged)` when streaming, test with slow network conditions.
 
-4. **SignalR circuit disposal not cleaning up event subscriptions** — Components subscribe to MediatR events but don't unsubscribe in Dispose, causing memory leaks. Always implement IDisposable and unsubscribe in Dispose() method.
+3. **HttpClient Timeout Mismatch with Streaming** — Default 100s timeout kills active streams. Fix: Set HttpClient.Timeout to Timeout.InfiniteTimeSpan for streaming clients, use CancellationToken for user cancellation.
 
-5. **Module loading/unloading during active operations** — User triggers unload while module is processing heartbeat tick, causing TypeLoadException or crashes. Implement module lifecycle state machine, heartbeat checks state before invoking Tick(), unload waits for current tick to complete.
+4. **Context Window Overflow Without Token Counting** — Conversations fail with "maximum context length" errors after multiple turns. Fix: Use SharpToken for accurate counting, implement sliding window with 75% context usage buffer.
+
+5. **In-Memory Conversation History Memory Leak** — Memory grows continuously without cleanup. Fix: Implement conversation history as Scoped service with proper Dispose, set maximum conversation length.
+
+6. **Rate Limiting Without Retry Strategy** — 429 errors during normal usage. Fix: Implement exponential backoff with Polly library, respect Retry-After header.
+
+7. **Streaming Response Cancellation Not Cleaning Up** — Resources leak when user cancels. Fix: Pass CancellationToken through entire pipeline, link circuit disconnection token with request cancellation.
+
+8. **Event Bus Integration Blocking LLM Calls** — LLM calls block existing MediatR event bus, violating 100ms heartbeat requirement. Fix: Fire-and-forget pattern, publish completion events asynchronously.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on research, suggested phase structure follows dependency order and pitfall prevention:
 
-### Phase 1: Service Abstraction & Hosting Transition
-**Rationale:** Foundation must be solid before adding UI. Hosting model change from console app to WebApplication is risky and must preserve all v1.0 functionality. Service facades establish clean boundaries between UI and runtime.
+### Phase 1: API Client Setup & Configuration
+**Rationale:** Must configure timeouts, retry logic, and HttpClient correctly before any LLM calls. Pitfalls 1, 3, 6, and 8 must be addressed here—getting configuration wrong causes user-visible failures that are difficult to debug after implementation.
 
 **Delivers:**
-- OpenAnima.WebUI project with DTOs (ModuleDto, HeartbeatStatusDto)
-- IRuntimeService and IModuleService interfaces with implementations
-- WebApplication host with singleton runtime services
-- Browser auto-launch on startup
-- Validation that all v1.0 features work in web host
+- OpenAI SDK integration with configurable providers
+- LlmClient abstraction with streaming support
+- Proper timeout configuration (SignalR circuit 60s+, HttpClient infinite for streaming)
+- Retry logic with exponential backoff for rate limits
+- API configuration UI or appsettings.json setup
+- Event bus integration pattern (fire-and-forget, non-blocking)
 
 **Addresses:**
-- Hosting model transition pitfall (Phase 1 critical)
-- Service lifetime confusion (DI configuration must be correct from start)
-- Foundation for all UI features
+- API Configuration (table stakes from FEATURES.md)
+- Message Role Formatting (table stakes)
+- LlmClient component (from ARCHITECTURE.md)
 
 **Avoids:**
-- Breaking existing runtime functionality
-- Scoped service lifetime mistakes
-- Direct runtime access from components
+- Pitfall 1: Circuit timeout during LLM calls
+- Pitfall 3: HttpClient timeout mismatch
+- Pitfall 6: Rate limiting without retry
+- Pitfall 8: Event bus blocking
 
-### Phase 2: Blazor UI with Static Display
-**Rationale:** Build UI layer without real-time complexity first. Validates component structure, routing, and service injection before adding SignalR push updates.
+**Verification:**
+- LLM calls complete without circuit disconnect
+- Long streaming responses (> 100s) work
+- 429 errors automatically retried
+- Heartbeat maintains 100ms tick rate during LLM calls
+
+### Phase 2: Chat UI with Streaming
+**Rationale:** Streaming is table stakes for modern LLM UX. Must implement with correct InvokeAsync patterns from the start—Pitfall 2 (UI deadlock) is nearly impossible to debug if baked into initial implementation. Depends on Phase 1 API client being configured correctly.
 
 **Delivers:**
-- MainLayout and NavMenu components
-- Dashboard, Modules, Heartbeat pages (static data)
-- Module list display with status indicators
-- Module metadata display
-- Heartbeat status display (polling-based initially)
+- Chat.razor page with message display and text input
+- Streaming response display with incremental token updates
+- SignalR hub integration for real-time push
+- Auto-scroll to latest message
+- Basic error handling UI
+- Typing indicator during streaming
+- User cancellation with proper cleanup
 
 **Uses:**
-- Blazor Server 8.0 (built-in)
-- Service facades from Phase 1
-- Responsive layout patterns
+- OpenAI SDK streaming API (from STACK.md)
+- Existing SignalR infrastructure (from ARCHITECTURE.md)
+- Pure CSS dark theme (consistent with existing UI)
 
 **Implements:**
-- Component architecture
-- Service injection pattern
-- Basic error handling
+- Chat.razor + code-behind (from ARCHITECTURE.md)
+- RuntimeHub extensions (from ARCHITECTURE.md)
+- IChatClient typed interface (from ARCHITECTURE.md)
 
 **Avoids:**
-- Cross-thread UI update complexity (no real-time yet)
-- SignalR message size issues (static data first)
+- Pitfall 2: UI deadlock with StateHasChanged (wrap in InvokeAsync)
+- Pitfall 7: Streaming cancellation not cleaning up (CancellationToken propagation)
 
-### Phase 3: SignalR Real-Time Updates
-**Rationale:** Add real-time push after static UI is validated. This is where thread safety and event subscription patterns become critical.
+**Verification:**
+- Streaming responses display incrementally without freezing
+- User can cancel streaming, resources cleaned up
+- UI remains responsive during long responses
+- No "Dispatcher" or synchronization context errors
+
+### Phase 3: Context Management & Token Counting
+**Rationale:** Multi-turn conversations require context window management. Must implement before users hit token limits—Pitfall 4 (context overflow) and Pitfall 5 (memory leak) cause unpredictable failures after several conversation turns. Depends on Phase 2 conversation history being established.
 
 **Delivers:**
-- RuntimeHub for SignalR communication
-- RuntimeMonitorService (IHostedService) for state broadcasting
-- Real-time heartbeat tick counter
-- Real-time module list updates
-- Heartbeat latency display
-- InvokeAsync pattern for all state updates
+- SharpToken integration for accurate token counting
+- ConversationManager with in-memory history
+- Token-based sliding window (80% context usage buffer)
+- Context window visualization or warning
+- Memory cleanup on circuit disconnect
+- Token usage display per message
 
-**Addresses:**
-- Real-time updates feature (table stakes)
-- Heartbeat tick counter (table stakes)
-- Heartbeat latency display (differentiator)
+**Uses:**
+- SharpToken 2.0.4 (from STACK.md)
+- Token-based truncation strategy (from FEATURES.md)
+- ConversationManager component (from ARCHITECTURE.md)
 
-**Avoids:**
-- Cross-thread UI update pitfall (InvokeAsync wrappers mandatory)
-- Heartbeat blocking pitfall (fire-and-forget publish pattern)
-- SignalR circuit disposal leaks (IDisposable implementation)
-- SignalR message size limits (throttle to 500ms, send deltas)
-
-### Phase 4: Control Operations
-**Rationale:** Add user-initiated operations after monitoring is stable. Module lifecycle coordination is complex and requires state machine implementation.
-
-**Delivers:**
-- Start/Stop heartbeat buttons
-- Load module control (file picker)
-- Unload module control (per-module button)
-- Operation result broadcasting via SignalR
-- Module lifecycle state machine
-- Error toast notifications
-
-**Addresses:**
-- Load/Unload controls (table stakes)
-- Start/Stop controls (table stakes)
-- Error display (table stakes)
+**Implements:**
+- IConversationManager interface (from ARCHITECTURE.md)
+- ConversationManager with sliding window (from ARCHITECTURE.md)
+- TokenCounter utility (from ARCHITECTURE.md)
 
 **Avoids:**
-- Module lifecycle race conditions (state machine coordination)
-- Heartbeat blocking during operations (async/await pattern)
-- Concurrent modification exceptions (snapshot registry before operations)
+- Pitfall 4: Context window overflow (accurate token counting, proactive trimming)
+- Pitfall 5: Memory leak from conversation history (proper Dispose, cleanup strategy)
 
-### Phase 5: Polish & Validation
-**Rationale:** Final UX improvements and comprehensive testing. Validates memory stability, performance under load, and error recovery.
-
-**Delivers:**
-- Loading states and spinners
-- Confirmation dialogs for destructive operations
-- Connection status indicator
-- Auto-reconnect UI
-- Keyboard shortcuts (optional)
-- Memory leak testing (100 connect/disconnect cycles)
-- Performance validation (20+ modules, sustained operation)
-
-**Addresses:**
-- Responsive layout (table stakes)
-- Auto-launch browser (table stakes)
-- UX polish (competitive)
-
-**Avoids:**
-- Browser auto-launch timing issues (health check wait)
-- Poor UX (no loading states, no confirmation)
-- Memory leaks (validation testing)
+**Verification:**
+- Multi-turn conversations (20+ messages) work without errors
+- Memory stable after 100 conversation cycles
+- Token count accurate (matches OpenAI's calculation)
+- Context window warnings appear before API errors
 
 ### Phase Ordering Rationale
 
-- **Phase 1 first**: Hosting transition is foundational and risky. Must validate v1.0 functionality works in web host before building UI on top.
-- **Phase 2 before 3**: Static UI validates component structure without thread safety complexity. Easier to debug layout/routing issues without real-time updates.
-- **Phase 3 before 4**: Real-time monitoring must be stable before adding control operations. Control operations depend on real-time feedback to show operation results.
-- **Phase 4 before 5**: Core functionality complete before polish. Module lifecycle coordination is complex and needs dedicated phase.
-- **Phase 5 last**: Polish and validation after all features work. Memory leak testing and performance validation require complete system.
+- **Phase 1 first:** Configuration errors cause cascading failures in later phases. Circuit timeouts, HttpClient settings, and retry logic must be correct before implementing streaming or context management.
+- **Phase 2 second:** Streaming depends on API client being configured correctly. UI deadlock patterns are hard to fix retroactively—must use InvokeAsync from first implementation.
+- **Phase 3 third:** Context management only matters after multi-turn conversations work. Token counting and sliding window can be added incrementally without breaking existing functionality.
+
+This ordering minimizes rework and prevents "looks done but isn't" scenarios where features appear to work but fail under real usage (long conversations, network issues, concurrent users).
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 4 (Control Operations)**: Module lifecycle state machine is complex, may need research on AssemblyLoadContext unload coordination patterns and cancellation token propagation.
+- **Phase 2 (Chat UI):** Blazor Server streaming patterns with SignalR are well-documented but nuanced. May need targeted research on InvokeAsync patterns and throttling strategies for high-frequency UI updates.
 
 Phases with standard patterns (skip research-phase):
-- **Phase 1 (Service Abstraction)**: Standard facade pattern, well-documented in DDD literature
-- **Phase 2 (Blazor UI)**: Standard Blazor Server component structure, official Microsoft docs sufficient
-- **Phase 3 (SignalR Real-Time)**: Standard IHostedService + IHubContext pattern, documented in ASP.NET Core guides
-- **Phase 5 (Polish)**: Standard UX patterns, no novel technical challenges
+- **Phase 1 (API Client):** OpenAI SDK usage is well-documented with official examples. Configuration patterns are straightforward.
+- **Phase 3 (Context Management):** Token counting and sliding window are established patterns with clear implementation examples.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Blazor Server and SignalR are built into ASP.NET Core 8.0, well-documented, stable features. Version compatibility verified against existing OpenAnima.Core.csproj. |
-| Features | HIGH | Feature research based on analysis of similar tools (Docker Desktop, VS Code Extensions, Windows Task Manager) and established dashboard patterns. Table stakes vs differentiators clearly identified. |
-| Architecture | HIGH | Service facade, IHostedService + IHubContext, and InvokeAsync patterns are standard Blazor Server practices with extensive documentation and community examples. |
-| Pitfalls | MEDIUM | Cross-thread updates, service lifetimes, and memory leaks are well-documented Blazor Server issues. Module lifecycle coordination is project-specific and may reveal additional pitfalls during implementation. |
+| Stack | HIGH | OpenAI SDK and SharpToken are stable releases with verified versions from NuGet API. Official packages with strong documentation. |
+| Features | MEDIUM | Feature priorities based on competitive analysis and community consensus. Table stakes features are clear, but differentiator value needs validation. |
+| Architecture | HIGH | Follows existing OpenAnima patterns (service facades, SignalR typed clients, singleton state). Integration points are well-defined. |
+| Pitfalls | MEDIUM | Pitfalls sourced from Stack Overflow, Reddit, and Medium articles. Common issues are well-documented, but severity estimates are based on community reports. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Module lifecycle state machine details**: Research identified the need for coordination between heartbeat loop and load/unload operations, but specific state transitions and timeout values need validation during Phase 4 implementation. Consider researching AssemblyLoadContext.Unload() behavior under concurrent access.
+- **Streaming UI update throttling:** Research identifies the need to throttle UI updates (every 50ms or every 5 tokens) but doesn't provide specific implementation guidance. Needs experimentation during Phase 2 to find optimal balance between responsiveness and performance.
 
-- **SignalR message size optimization**: Research recommends delta updates and throttling, but specific thresholds (how many modules before message size becomes an issue) need empirical testing. Monitor during Phase 3 with realistic module counts.
+- **Token counting accuracy for non-English text:** SharpToken is accurate for English but may have edge cases with special characters or non-English languages. Needs validation during Phase 3 testing.
 
-- **Browser auto-launch cross-platform behavior**: Research provides Windows/Linux/macOS patterns, but actual behavior on WSL2 (current development environment) needs validation. Test during Phase 1 to ensure browser opens correctly.
+- **Multi-user scaling:** v1.2 is single-user, but architecture should support future multi-user. Needs validation that singleton ConversationManager can be replaced with scoped service without major refactoring.
 
-- **Event bus weak reference strategy**: Research suggests weak references for Blazor subscribers to prevent memory leaks, but implementation details (WeakReference<T> vs ConditionalWeakTable) need evaluation during Phase 3. May require EventBus modifications.
+- **Error message UX:** Research identifies need for user-friendly error messages but doesn't specify exact wording or recovery flows. Needs UX design during Phase 2 implementation.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [ASP.NET Core Blazor hosting models](https://learn.microsoft.com/en-us/aspnet/core/blazor/hosting-models) — Blazor Server architecture
-- [Host ASP.NET Core SignalR in background services](https://learn.microsoft.com/en-us/aspnet/core/signalr/background-services) — IHostedService + IHubContext pattern
-- [Host ASP.NET Core in a Windows Service](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/windows-service) — UseWindowsService() hosting
-- [Microsoft.Extensions.Hosting.WindowsServices 10.0.3](https://www.nuget.org/packages/Microsoft.Extensions.Hosting.WindowsServices) — NuGet package verification
-- [ASP.NET Core Blazor SignalR guidance](https://learn.microsoft.com/en-us/aspnet/core/blazor/fundamentals/signalr) — SignalR integration patterns
-- [ASP.NET Core Blazor performance best practices](https://learn.microsoft.com/en-us/aspnet/core/blazor/performance/) — Performance optimization
+- [OpenAI .NET SDK GitHub](https://github.com/openai/openai-dotnet) — Official repository, stable release verification
+- [NuGet API - OpenAI 2.8.0](https://api.nuget.org/v3-flatcontainer/openai/index.json) — Version verification
+- [NuGet API - SharpToken 2.0.4](https://api.nuget.org/v3-flatcontainer/sharptoken/index.json) — Version verification
+- [OpenAI API Documentation](https://developers.openai.com/api/docs/quickstart/) — Official API reference
+- [Microsoft Learn - SignalR with Blazor](https://learn.microsoft.com/en-us/aspnet/core/blazor/tutorials/signalr-blazor) — Official Blazor Server patterns
+- [Microsoft Learn - Blazor Dependency Injection](https://learn.microsoft.com/en-us/aspnet/core/blazor/fundamentals/dependency-injection) — DI patterns
 
 ### Secondary (MEDIUM confidence)
-- [How to Build Real-Time Dashboards with SignalR and Blazor](https://oneuptime.com/blog/post/2026-01-25-real-time-dashboards-signalr-blazor/view) — Real-time dashboard patterns
-- [Real-Time Blazor Apps with SignalR and Blazorise Notifications](https://blazorise.com/blog/real-time-blazor-apps-signalr-and-blazorise-notifications) — Notification patterns
-- [Background Service Communication with Blazor via SignalR](https://medium.com/it-dead-inside/lets-learn-blazor-background-service-communication-with-blazor-via-signalr-84abe2660fd6) — Background service patterns
-- [Thread safety using InvokeAsync - Blazor University](https://blazor-university.com/components/multi-threaded-rendering/invokeasync) — InvokeAsync pattern
-- [Pushing UI changes from Blazor Server to browser on server raised events](https://swimburger.net/blog/dotnet/pushing-ui-changes-from-blazor-server-to-browser-on-server-raised-events) — Event-driven push
-- [StateHasChanged() vs InvokeAsync(StateHasChanged) in Blazor](https://stackoverflow.com/questions/65230621/statehaschanged-vs-invokeasyncstatehaschanged-in-blazor) — Thread safety explanation
-- [How to Use Docker Desktop Dashboard Effectively](https://oneuptime.com/blog/post/2026-02-08-how-to-use-docker-desktop-dashboard-effectively/view) — Container management UI patterns
-- [Use extensions in Visual Studio Code](https://code.visualstudio.com/docs/getstarted/extensions) — Extension manager UI patterns
-- [Windows Task Manager: The Complete Guide](https://www.howtogeek.com/405806/windows-task-manager-the-complete-guide/) — Process monitoring patterns
+- [Stack Overflow - Blazor StateHasChanged in async operations](https://stackoverflow.com/questions/76976391/blazor-app-doesnt-refresh-ui-after-statehaschanged-in-async-operation) — UI deadlock patterns
+- [Stack Overflow - Blazor SignalR circuit timeouts](https://stackoverflow.com/questions/75150784/explain-blazor-signalr-circuit-timeouts-in-detail-please) — Timeout configuration
+- [Stack Overflow - HttpClient timeout with OpenAI](https://stackoverflow.com/questions/76491056/i-get-httpclient-timeout-error-in-c-sharp-openai-library) — Streaming timeout issues
+- [Reddit - AI response stream in Blazor Server](https://www.reddit.com/r/Blazor/comments/1c998h7/how_to_display_an_ai_response_stream_in_blazor/) — Community streaming patterns
+- [Medium - Blazor app froze mid-demo](https://medium.com/careerbytecode/the-day-my-blazor-app-froze-mid-demo-and-what-i-learned-about-signalr-674ec8cb976d) — Real-world pitfall examples
+- [Medium - Building Real-Time Chat with Blazor Server](https://medium.com/@andryhadj/building-a-real-time-chat-application-with-blazor-server-a-deep-dive-into-event-driven-f881ed4332f4) — Architecture patterns
+- [Zylos AI - LLM Context Window Management 2026](https://zylos.ai/research/2026-01-19-llm-context-management) — Context management strategies
+- [Redis Blog - Context Window Overflow 2026](https://redis.io/blog/context-window-overflow/) — Token counting best practices
 
 ### Tertiary (LOW confidence)
-- [Losing my mind: Blazor, SignalR and Service Lifetimes - Reddit](https://www.reddit.com/r/dotnet/comments/1egxo89/losing_my_mind_blazor_signalr_and_service/) — Service lifetime pitfalls
-- [Blazor Server-Side Memory Leak #18556 - GitHub](https://github.com/dotnet/aspnetcore/issues/18556) — Memory leak patterns
-- [Issue with concurrent collections in blazor server app - Reddit](https://www.reddit.com/r/Blazor/comments/1ftyhbu/issue_with_concurrent_collections_in_blazor/) — ConcurrentDictionary usage
+- [OpenAI Community - Handling long conversations](https://community.openai.com/t/handling-long-conversations-with-context-management/614212) — Community discussion on context management
+- [LangGraph Tutorial - Message History with Sliding Windows](https://aiproduct.engineer/tutorials/langgraph-tutorial-message-history-management-with-sliding-windows-unit-12-exercise-3) — Sliding window implementation
+- [Mem0 Blog - LLM Chat History Summarization 2025](https://mem0.ai/blog/llm-chat-history-summarization-guide-2025) — Summarization strategies (deferred to v2+)
 
 ---
-*Research completed: 2026-02-22*
+*Research completed: 2026-02-24*
 *Ready for roadmap: yes*

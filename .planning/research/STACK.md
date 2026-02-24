@@ -1,20 +1,20 @@
 # Stack Research
 
-**Domain:** Blazor Server WebUI Runtime Monitoring Dashboard (v1.1 milestone additions)
-**Researched:** 2026-02-22
+**Domain:** LLM Integration for .NET Agent Platform (v1.2 milestone additions)
+**Researched:** 2026-02-24
 **Confidence:** HIGH
 
 ## Context
 
-This research focuses ONLY on stack additions needed for v1.1 WebUI dashboard milestone. The existing v1.0 runtime already has:
+This research focuses ONLY on stack additions needed for v1.2 LLM Integration milestone. The existing platform already has:
 - .NET 8.0 runtime ✓
+- Blazor Server with SignalR ✓
 - AssemblyLoadContext module isolation ✓
-- ConcurrentDictionary-based module registry ✓
 - MediatR event bus ✓
 - PeriodicTimer heartbeat loop ✓
-- FileSystemWatcher module discovery ✓
+- Pure CSS dark theme dashboard ✓
 
-**What's NEW in v1.1:** Blazor Server WebUI for real-time runtime monitoring and control.
+**What's NEW in v1.2:** OpenAI-compatible API calling, chat UI, in-memory conversation history management.
 
 ## Recommended Stack Additions
 
@@ -22,187 +22,283 @@ This research focuses ONLY on stack additions needed for v1.1 WebUI dashboard mi
 
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| ASP.NET Core Web SDK | 8.0 (built-in) | Web host for Blazor Server | Already in .NET 8 runtime, change project SDK to Microsoft.NET.Sdk.Web, Kestrel built-in for self-hosting |
-| Blazor Server | 8.0 (built-in) | Real-time UI framework | SignalR built-in for push updates, pure C# full-stack, seamless integration with existing runtime, no separate API layer needed |
-| Microsoft.Extensions.Hosting.WindowsServices | 10.0.3 | Windows Service hosting | Enables background service with UseWindowsService(), compatible with .NET 8 runtime, forward-compatible packages |
+| OpenAI | 2.8.0 | Official OpenAI API client | Official SDK from OpenAI, stable release with full API coverage including streaming, function calling, and all modern features. Built on System.ClientModel for consistency with Azure SDK patterns. Supports custom endpoints for OpenAI-compatible providers. |
+| SharpToken | 2.0.4 | Token counting (tiktoken port) | .NET port of OpenAI's tiktoken library for accurate token counting. Essential for context window management and cost estimation. Supports all OpenAI models including GPT-4o, o1, o3. Pure .NET implementation with no native dependencies. |
 
 ### Supporting Libraries (NEW)
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| (none required) | - | Blazor Server includes SignalR | All real-time push capabilities built-in to ASP.NET Core 8.0 |
+| System.Text.Json | Built-in (.NET 8.0) | JSON serialization for conversation history | Already included. Use for serializing/deserializing conversation messages in memory. |
+| System.Collections.Concurrent | Built-in (.NET 8.0) | Thread-safe conversation storage | Already included. Use ConcurrentDictionary for multi-user conversation management if needed. |
 
 ### Existing Stack (NO CHANGES)
 
 | Technology | Version | Status |
 |------------|---------|--------|
 | .NET Runtime | 8.0 | ✓ Keep (LTS until Nov 2026) |
-| MediatR | 12.* | ✓ Keep (already integrated with EventBus) |
-| Microsoft.Extensions.Logging | 10.0.3 | ✓ Keep (already in use) |
-| AssemblyLoadContext | Built-in | ✓ Keep (module isolation working) |
-| PeriodicTimer | Built-in | ✓ Keep (heartbeat loop working) |
-| FileSystemWatcher | Built-in | ✓ Keep (module discovery working) |
+| Blazor Server | 8.0 | ✓ Keep (chat UI will use existing SignalR) |
+| MediatR | 12.* | ✓ Keep (LLM events via existing EventBus) |
+| Pure CSS | - | ✓ Keep (chat UI styled with existing theme) |
+
+## Installation
+
+```bash
+# Core LLM client
+dotnet add src/OpenAnima.Core/OpenAnima.Core.csproj package OpenAI --version 2.8.0
+
+# Token counting for context management
+dotnet add src/OpenAnima.Core/OpenAnima.Core.csproj package SharpToken --version 2.0.4
+
+# No other packages needed - everything else is built into .NET 8.0
+```
 
 ## Integration Points
 
 | Component | Integration Method | Notes |
 |-----------|-------------------|-------|
-| Existing ModuleRegistry | Direct reference from Blazor components | ConcurrentDictionary is thread-safe, read directly from UI thread |
-| Existing EventBus | Subscribe in Blazor component lifecycle | Use InvokeAsync(StateHasChanged) to push updates to browser |
-| Existing HeartbeatLoop | Expose tick events via EventBus | Publish HeartbeatTickEvent, subscribe in dashboard component |
-| Browser auto-launch | Process.Start with UseShellExecute=true | Launch default browser on service start, cross-platform pattern |
+| Module interface | Create ILLMModule contract in OpenAnima.Contracts | Follows existing typed module pattern (MOD-02) |
+| Event bus | Publish LLMResponseReceived events via MediatR | Consistent with existing inter-module communication (MOD-04) |
+| Configuration | Add LLMSettings section to appsettings.json | Matches existing module configuration pattern |
+| Dashboard UI | Add Chat.razor component to existing Pages/ | Reuses SignalR infrastructure (INFRA-02) |
+| Real-time updates | Stream LLM responses via existing SignalR hub | Leverages validated 100ms heartbeat + SignalR push (RUN-03, INFRA-02) |
 
-## Installation
+### Configuration Structure
 
-```bash
-# 1. Change OpenAnima.Core project SDK (edit .csproj)
-# FROM: <Project Sdk="Microsoft.NET.Sdk">
-# TO:   <Project Sdk="Microsoft.NET.Sdk.Web">
-
-# 2. Add Windows Service hosting to OpenAnima.Core
-dotnet add src/OpenAnima.Core/OpenAnima.Core.csproj package Microsoft.Extensions.Hosting.WindowsServices --version 10.0.3
-
-# 3. No other packages needed - Blazor Server is built into ASP.NET Core 8.0
+```json
+{
+  "LLMSettings": {
+    "Provider": "OpenAI",
+    "BaseUrl": "https://api.openai.com/v1",
+    "ApiKey": "sk-...",
+    "Model": "gpt-4o",
+    "MaxTokens": 4096,
+    "Temperature": 0.7,
+    "ContextWindowSize": 128000
+  }
+}
 ```
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|-------------------------|
-| Blazor Server | Blazor WebAssembly | If offline-first or static hosting required (not needed for local runtime dashboard) |
-| Blazor Server | ASP.NET Core MVC + SignalR | If team unfamiliar with Blazor (adds complexity, separate API layer needed) |
-| Built-in SignalR | External WebSocket library | Never for Blazor Server (SignalR is the native transport) |
-| Windows Service | Console app | Development only (service provides proper background hosting) |
-| Process.Start | Electron/WebView2 | If embedded browser required (adds 100+ MB, unnecessary for dashboard) |
-| In-process hosting | Separate WebUI process | If runtime crashes shouldn't affect UI (adds IPC complexity, not needed for v1.1) |
+| OpenAI 2.8.0 | Microsoft.SemanticKernel 1.72.0 | Use Semantic Kernel if you need: (1) multi-provider abstraction layer, (2) prompt templating engine, (3) plugin orchestration, (4) memory connectors. For OpenAnima's direct API calling needs, the official SDK is simpler and more transparent. |
+| OpenAI 2.8.0 | Betalgo.OpenAI 8.7.2+ | Community library with faster updates but unofficial. Use if you need bleeding-edge API features before official SDK support. Not recommended for production stability. |
+| SharpToken 2.0.4 | TiktokenSharp 1.0.8 | Older alternative. SharpToken has better performance and more recent updates. |
+| In-memory List<Message> | LangChain.NET | Use LangChain if you need: (1) vector store integration, (2) document loaders, (3) complex chain orchestration. For simple conversation history, in-memory storage is sufficient and faster. |
+| Pure CSS chat UI | MudBlazor components | Use MudBlazor if future milestones need rich UI components (file upload, markdown rendering, code highlighting). Not recommended for v1.2 — adds 500KB+ dependency for minimal benefit. |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| Blazor WebAssembly | Requires separate API layer, no direct access to runtime objects, larger payload | Blazor Server (direct C# access to ModuleRegistry/EventBus) |
-| SignalR client library | Already included in Blazor Server, redundant | Built-in Blazor Server SignalR transport |
-| IHostedService for web host | Mixing concerns, complicates lifecycle | Separate WebApplication.CreateBuilder() with UseWindowsService() |
-| Timer-based polling | Inefficient, 100ms heartbeat would spam browser | Event-driven push via InvokeAsync(StateHasChanged) |
-| Third-party real-time libraries (Socket.IO, etc.) | Incompatible with Blazor Server transport | Built-in SignalR (automatic reconnection, backpressure) |
-| Separate API project | Unnecessary serialization, latency, complexity | Direct method calls from Blazor components to runtime services |
-| .NET 9 upgrade | Unnecessary risk, .NET 8 LTS supported until Nov 2026 | Stay on .NET 8 (validated, stable) |
+| Azure.AI.OpenAI | Azure-specific SDK | OpenAI 2.8.0 — supports both OpenAI and Azure endpoints via configuration, more flexible for multi-provider support |
+| Semantic Kernel for simple API calls | Over-engineered for direct LLM calling | OpenAI SDK directly — simpler, less abstraction overhead, easier to debug |
+| HttpClient manual implementation | Reinventing the wheel, missing features like retry logic, streaming, function calling | OpenAI SDK — handles all protocol details, retries, rate limiting |
+| String concatenation for prompts | Error-prone, no token counting | Structured message objects with SharpToken for accurate token management |
+| Fixed message count limits | Causes context overflow or wastes tokens | Token-based sliding window with SharpToken counting |
+| Database for conversation history | Out of scope for v1.2, adds complexity | In-memory List<ChatMessage> for current session only |
 
 ## Stack Patterns by Variant
 
-**For real-time updates from background services:**
-- Subscribe to EventBus in Blazor component OnInitializedAsync
-- Use InvokeAsync(StateHasChanged) to marshal updates to UI thread
-- Unsubscribe in IDisposable.Dispose to prevent memory leaks
-- Because Blazor components run on SignalR circuit thread, background events need marshaling
+**For OpenAI-compatible providers (OpenRouter, Together, Anthropic, etc.):**
+- Use OpenAI SDK with custom base URL
+- Configure via: `new OpenAIClient(apiKey, new OpenAIClientOptions { Endpoint = new Uri("https://...") })`
+- Because: OpenAI SDK supports custom endpoints, maintains same API surface
 
-**For module control operations:**
-- Call ModuleRegistry methods directly from button click handlers
-- No async needed if operations are synchronous (ConcurrentDictionary is thread-safe)
-- Return operation results immediately to UI
-- Because Blazor Server runs in-process, no API layer or serialization needed
+**For conversation context management:**
+- Use `List<ChatMessage>` in memory
+- Implement sliding window with SharpToken counting
+- Keep system message, trim oldest user/assistant pairs
+- Because: Simple, fast, no database overhead for session-only storage
 
-**For Windows Service hosting:**
-- Use WebApplication.CreateBuilder() not Host.CreateDefaultBuilder()
-- Call builder.Services.AddWindowsService() before Build()
-- Launch browser after app.RunAsync() starts (non-blocking)
-- Because ASP.NET Core 8.0 uses WebApplicationBuilder pattern, not generic host
+**For multi-user chat (if needed):**
+- Use `ConcurrentDictionary<string, List<ChatMessage>>` keyed by SignalR connection ID
+- Because: Thread-safe, already in .NET, matches existing SignalR connection patterns
 
-**For browser auto-launch:**
-```csharp
-var psi = new ProcessStartInfo
-{
-    FileName = "http://localhost:5000",
-    UseShellExecute = true
-};
-Process.Start(psi);
+**For streaming LLM responses:**
+- Use OpenAI SDK's streaming API
+- Push chunks via SignalR InvokeAsync(StateHasChanged)
+- Because: Matches existing real-time push pattern, provides responsive UX
+
+## Chat UI Patterns for Blazor Server
+
+### Recommended Approach: Pure CSS + SignalR (Consistent with Existing)
+
+**Components needed:**
+- Chat message list (scrollable div with CSS)
+- Input box with send button
+- Streaming indicator for LLM responses
+- Token count display
+
+**Why this approach:**
+- Matches existing pure CSS dark theme (no component library)
+- Reuses validated SignalR real-time push
+- Minimal dependencies
+- Fast rendering
+
+**Implementation pattern:**
+```razor
+@* Chat.razor *@
+<div class="chat-container">
+    <div class="messages">
+        @foreach (var msg in Messages)
+        {
+            <div class="message @msg.Role">
+                <span class="role">@msg.Role:</span>
+                <span class="content">@msg.Content</span>
+            </div>
+        }
+    </div>
+    <div class="input-area">
+        <input @bind="userInput" @onkeypress="HandleKeyPress" />
+        <button @onclick="SendMessage" disabled="@isStreaming">Send</button>
+        <span class="token-count">@tokenCount tokens</span>
+    </div>
+</div>
 ```
-- UseShellExecute=true launches default browser
-- Works cross-platform (Windows, Linux, macOS)
-- Non-blocking, fire-and-forget
+
+**CSS integration:**
+- Extend existing dark theme variables
+- Match existing dashboard card styling
+- Use existing button/input styles
+
+## Conversation History Management
+
+### Recommended Pattern: In-Memory Sliding Window
+
+```csharp
+public class ConversationManager
+{
+    private readonly List<ChatMessage> _messages = new();
+    private readonly GptEncoding _encoding = GptEncoding.GetEncoding("o200k_base"); // GPT-4o
+    private const int MaxTokens = 120000; // Leave buffer for response
+
+    public void AddMessage(ChatMessage message)
+    {
+        _messages.Add(message);
+        TrimToContextWindow();
+    }
+
+    private void TrimToContextWindow()
+    {
+        // Keep system message (index 0), trim oldest user/assistant pairs
+        while (CountTokens() > MaxTokens && _messages.Count > 1)
+        {
+            _messages.RemoveAt(1); // Remove oldest after system message
+        }
+    }
+
+    private int CountTokens()
+    {
+        return _messages.Sum(m => _encoding.CountTokens(m.Content));
+    }
+
+    public IReadOnlyList<ChatMessage> GetMessages() => _messages.AsReadOnly();
+}
+```
+
+**Why this pattern:**
+- Simple, no database complexity
+- Matches "current session only" constraint (PROJECT.md line 63)
+- Fast token counting with SharpToken
+- Automatic context window management
+- Preserves system message for consistent behavior
+
+**What NOT to do:**
+- Don't store full conversation in database (out of scope for v1.2)
+- Don't use fixed message count limits (use token counting instead)
+- Don't keep all messages forever (causes context overflow)
+- Don't remove system message (breaks conversation context)
 
 ## Version Compatibility
 
 | Package | Compatible With | Notes |
 |---------|-----------------|-------|
-| ASP.NET Core 8.0 | .NET 8.0 runtime | Already present, no additional install |
-| Microsoft.Extensions.Hosting.WindowsServices 10.0.3 | .NET 8.0 | Forward-compatible, uses .NET 10 packages but targets netstandard2.1 |
-| MediatR 12.* | ASP.NET Core 8.0 DI | Already in use, compatible with Blazor Server DI |
-| Blazor Server 8.0 | SignalR 8.0 | Both built into ASP.NET Core 8.0, version-matched |
+| OpenAI 2.8.0 | .NET 8.0+ | Requires System.ClientModel 1.1.0+ (auto-installed as dependency) |
+| SharpToken 2.0.4 | .NET 8.0+ | No dependencies, pure .NET implementation |
+| OpenAI 2.8.0 | Azure OpenAI | Set custom endpoint, use Azure API key format |
+| OpenAI 2.8.0 | OpenRouter, Together, etc. | Set custom base URL, use provider's API key |
 
 ## Architecture Notes
 
-### Why Blazor Server (not WebAssembly)
+### Why OpenAI SDK (not Semantic Kernel)
 
-1. **Direct runtime access**: Components can reference ModuleRegistry/EventBus directly, no API layer
-2. **Real-time push built-in**: SignalR transport handles reconnection, backpressure automatically
-3. **Zero serialization**: C# objects stay in memory, no JSON marshaling for every update
-4. **Smaller payload**: ~500KB initial load vs 2-3MB for WebAssembly
-5. **Instant updates**: StateHasChanged pushes DOM diffs over SignalR, no polling
+1. **Simplicity**: Direct API calls without abstraction layers
+2. **Transparency**: Clear request/response flow, easier to debug
+3. **Flexibility**: Works with any OpenAI-compatible provider via base URL
+4. **Minimal dependencies**: Single package vs Semantic Kernel's multiple packages
+5. **Official support**: Maintained by OpenAI, guaranteed API compatibility
 
-### Why NOT separate API layer
+### Why NOT Semantic Kernel for v1.2
 
-- Blazor Server runs in same process as runtime
-- Components can call ModuleRegistry.GetAll() directly
-- EventBus subscriptions push updates via InvokeAsync(StateHasChanged)
-- Adding REST/gRPC API adds latency, serialization overhead, complexity
-- Only needed if: remote access required (not in v1.1 scope)
+- Semantic Kernel is designed for complex multi-step agent workflows
+- OpenAnima v1.2 needs simple request/response LLM calling
+- SK adds abstraction overhead (IKernel, plugins, planners) not needed yet
+- Can add SK later if future milestones need orchestration features
+- Official SDK is sufficient for chat and basic LLM integration
 
 ### Integration Pattern
 
 ```
-HeartbeatLoop (PeriodicTimer)
-  └─> Publishes HeartbeatTickEvent via EventBus
-       └─> Dashboard.razor subscribes in OnInitializedAsync
-            └─> Calls InvokeAsync(StateHasChanged) on event
-                 └─> SignalR pushes DOM diff to browser
+User Input (Chat.razor)
+  └─> ConversationManager.AddMessage(user message)
+       └─> OpenAI SDK streaming call
+            └─> Chunks pushed via SignalR InvokeAsync(StateHasChanged)
+                 └─> Browser updates in real-time
+                      └─> ConversationManager.AddMessage(assistant message)
 ```
 
-No polling, no timers in UI, event-driven push from 100ms heartbeat.
+Event-driven streaming, no polling, matches existing SignalR push pattern.
 
 ### Project Structure
 
 ```
 OpenAnima.Core/
-  ├─ Program.cs (add WebApplication setup)
-  ├─ Pages/ (Blazor components)
-  │   ├─ Dashboard.razor
-  │   ├─ Modules.razor
-  │   └─ Heartbeat.razor
-  ├─ wwwroot/ (static assets)
-  └─ _Imports.razor (Blazor using statements)
+  ├─ Services/
+  │   ├─ LLMService.cs (OpenAI SDK wrapper)
+  │   └─ ConversationManager.cs (history + token management)
+  ├─ Pages/
+  │   └─ Chat.razor (NEW - chat UI component)
+  ├─ wwwroot/css/
+  │   └─ chat.css (NEW - chat-specific styles)
+  └─ appsettings.json (add LLMSettings section)
 ```
 
-Single project, no separate WebUI project needed. Blazor Server runs in same process as runtime.
+Single project, no separate services project needed. LLM services run in same process as runtime.
 
 ## Performance Considerations
 
 | Concern | Solution | Rationale |
 |---------|----------|-----------|
-| SignalR circuit memory | Dispose subscriptions in IDisposable.Dispose | Prevents memory leaks when browser disconnects |
-| Heartbeat spam | Only call StateHasChanged when data changes | SignalR has built-in backpressure, but avoid unnecessary renders |
-| Module list updates | Use @key directive in @foreach loops | Blazor diffs by key, avoids re-rendering unchanged items |
-| Browser reconnection | Built-in SignalR reconnection UI | No custom code needed, automatic reconnection after network issues |
+| Token counting overhead | Cache encoding instance, count only on add | SharpToken is fast but no need to re-encode on every read |
+| Context window overflow | Proactive trimming with buffer | Trim at 120K tokens for 128K window, leaves room for response |
+| Streaming latency | Push chunks immediately via SignalR | Provides responsive UX, matches existing real-time pattern |
+| Memory leaks | Clear conversation on disconnect | Dispose SignalR circuit subscriptions properly |
+| API rate limits | Use OpenAI SDK's built-in retry logic | SDK handles 429 responses automatically |
 
 ## Sources
 
-- [Use ASP.NET Core SignalR with Blazor](https://learn.microsoft.com/en-us/aspnet/core/blazor/tutorials/signalr-blazor?view=aspnetcore-10.0) — Blazor Server SignalR integration patterns (MEDIUM confidence, WebFetch blocked but URL verified)
-- [Host ASP.NET Core in a Windows Service](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/windows-service?view=aspnetcore-10.0) — Windows Service hosting with UseWindowsService() (MEDIUM confidence, WebFetch blocked but URL verified)
-- [Microsoft.Extensions.Hosting.WindowsServices 10.0.3](https://www.nuget.org/packages/Microsoft.Extensions.Hosting.WindowsServices) — NuGet package page (HIGH confidence, official source)
-- [Thread safety using InvokeAsync](https://blazor-university.com/components/multi-threaded-rendering/invokeasync) — InvokeAsync pattern for background thread updates (MEDIUM confidence, community resource)
-- [Pushing UI changes from Blazor Server to browser on server raised events](https://swimburger.net/blog/dotnet/pushing-ui-changes-from-blazor-server-to-browser-on-server-raised-events) — Event-driven push pattern (MEDIUM confidence, blog post)
-- [StateHasChanged() vs InvokeAsync(StateHasChanged) in Blazor](https://stackoverflow.com/questions/65230621/statehaschanged-vs-invokeasyncstatehaschanged-in-blazor) — Thread safety explanation (MEDIUM confidence, Stack Overflow)
-- [Process.Start for URLs on .NET Core](https://brockallen.com/2016/09/24/process-start-for-urls-on-net-core/) — Cross-platform browser launch pattern (MEDIUM confidence, blog post)
-- Training data on .NET 8 Blazor Server architecture — Built-in SignalR, component lifecycle, Windows Service hosting (HIGH confidence, core .NET features)
+- [OpenAI .NET SDK GitHub](https://github.com/openai/openai-dotnet) — Official repository, verified stable release (HIGH confidence)
+- [NuGet API - OpenAI](https://api.nuget.org/v3-flatcontainer/openai/index.json) — Verified version 2.8.0 latest stable (HIGH confidence)
+- [NuGet API - SharpToken](https://api.nuget.org/v3-flatcontainer/sharptoken/index.json) — Verified version 2.0.4 latest (HIGH confidence)
+- [NuGet API - Semantic Kernel](https://api.nuget.org/v3-flatcontainer/microsoft.semantickernel/index.json) — Verified version 1.72.0 for comparison (HIGH confidence)
+- [Microsoft .NET Blog - Generative AI with LLMs](https://devblogs.microsoft.com/dotnet/generative-ai-with-large-language-models-in-dotnet-and-csharp/) — .NET LLM integration patterns (MEDIUM confidence, WebFetch blocked but URL verified)
+- [Blazor Server Chat Patterns](https://medium.com/@andryhadj/building-a-real-time-chat-application-with-blazor-server-a-deep-dive-into-event-driven-f881ed4332f4) — Real-time chat architecture (MEDIUM confidence, community article)
+- [OpenAI Context Management](https://community.openai.com/t/handling-long-conversations-with-context-management/614212) — Context window best practices (MEDIUM confidence, community discussion)
+- [SharpToken GitHub](https://github.com/dmitry-brazhenko/SharpToken) — Token counting library documentation (MEDIUM confidence, official repo)
+- [OpenAI API Documentation](https://developers.openai.com/api/docs/quickstart/) — Official API reference (HIGH confidence, official docs)
+- Training data on .NET 8 OpenAI SDK usage patterns — Streaming, configuration, error handling (HIGH confidence, core SDK features)
 
 **Confidence assessment:**
-- Blazor Server integration: HIGH (core ASP.NET Core 8.0 feature, well-documented)
-- Windows Service hosting: HIGH (standard .NET pattern, official package)
-- InvokeAsync pattern: HIGH (documented Blazor thread safety requirement)
-- Browser auto-launch: MEDIUM (community pattern, works but not officially documented)
-- Version numbers: HIGH (verified against existing OpenAnima.Core.csproj, NuGet.org)
+- OpenAI SDK integration: HIGH (official package, stable release, verified version)
+- SharpToken usage: HIGH (verified version, well-documented, pure .NET)
+- Conversation management pattern: HIGH (standard .NET collections, proven pattern)
+- Blazor chat UI: HIGH (extends existing validated Blazor Server + SignalR)
+- Version numbers: HIGH (verified against NuGet API, current stable releases)
 
 ---
-*Stack research for: OpenAnima v1.1 WebUI Runtime Monitoring Dashboard*
-*Researched: 2026-02-22*
-*Focus: Minimal additions to existing .NET 8 runtime for Blazor Server dashboard*
+*Stack research for: OpenAnima v1.2 LLM Integration*
+*Researched: 2026-02-24*
+*Focus: Minimal additions to existing .NET 8 Blazor Server platform for LLM calling and chat UI*
