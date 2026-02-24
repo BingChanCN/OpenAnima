@@ -34,7 +34,7 @@ See: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full details.
 <details open>
 <summary>🚧 v1.2 LLM Integration (Phases 8-10) — IN PROGRESS</summary>
 
-- [ ] **Phase 8: API Client Setup & Configuration** - LLM API integration with streaming, error handling, and retry logic
+- [x] **Phase 8: API Client Setup & Configuration** - LLM API integration with streaming, error handling, and retry logic
 - [ ] **Phase 9: Chat UI with Streaming** - Real-time chat interface with streaming responses and conversation history
 - [ ] **Phase 10: Context Management & Token Counting** - Token tracking and automatic context window management
 
@@ -52,10 +52,10 @@ See: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full details.
   3. User sees streaming tokens appear in real-time during LLM response
   4. User sees clear error messages when API calls fail (auth, rate limit, network errors)
   5. User observes automatic retry on transient failures without manual intervention
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 Plans:
-- [ ] 08-01-PLAN.md — Configuration model, appsettings.json, ILLMService interface, LLMService with error handling
-- [ ] 08-02-PLAN.md — Streaming implementation, DI registration, SignalR timeout configuration
+- [x] 08-01-PLAN.md — Configuration model, appsettings.json, ILLMService interface, LLMService with error handling
+- [x] 08-02-PLAN.md — Streaming implementation, DI registration, SignalR timeout configuration
 
 ### Phase 9: Chat UI with Streaming
 **Goal**: Users can have real-time conversations with streaming LLM responses
@@ -93,6 +93,6 @@ Plans:
 | 5. SignalR Real-Time Updates | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 6. Control Operations | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 7. Polish & Validation | v1.1 | 2/2 | Complete | 2026-02-23 |
-| 8. API Client Setup & Configuration | 1/2 | In Progress|  | - |
+| 8. API Client Setup & Configuration | v1.2 | 2/2 | Complete | 2026-02-24 |
 | 9. Chat UI with Streaming | v1.2 | 0/? | Not started | - |
 | 10. Context Management & Token Counting | v1.2 | 0/? | Not started | - |
