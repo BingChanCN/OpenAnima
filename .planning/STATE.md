@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe
-**Current focus:** Planning next milestone
+**Current focus:** v1.2 LLM Integration
 
 ## Current Position
 
-Phase: None (between milestones)
-Plan: N/A
-Status: v1.1 shipped, planning next milestone
-Last activity: 2026-02-24 - Completed v1.1 milestone archival
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-24 — Milestone v1.2 started
 
 Progress: [██████████] 100% (15/15 plans complete across v1.0 + v1.1)
 

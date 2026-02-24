@@ -28,7 +28,18 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Active
 
-(None — planning next milestone)
+- [ ] LLM API client via OpenAI-compatible endpoint (configurable provider/model/key)
+- [ ] Chat module in dashboard for testing LLM calls
+- [ ] In-memory conversation history with context window management
+
+## Current Milestone: v1.2 LLM Integration
+
+**Goal:** Give agents the ability to call LLMs and hold conversations — the first step toward intelligent behavior.
+
+**Target features:**
+- OpenAI-compatible API calling layer (supports any compatible provider)
+- Chat panel in dashboard as conversation/test interface
+- In-memory conversation history and context window management
 
 ### Future
 
@@ -38,8 +49,7 @@ Agents that proactively think and act on their own, while module connections rem
 - C# modules loaded as in-process assemblies; other-language modules as packaged executables via IPC
 - Visual drag-and-drop editor for non-technical users to wire modules into agents
 - Permission system with autonomy levels (manual / assist / auto)
-- LLM integration via OpenAI-compatible API (cloud-first, local models later)
-- Agent memory and conversation history persistence
+- Agent memory and conversation history persistence (beyond session)
 - Example modules: chat interface, scheduled tasks, proactive conversation initiator
 
 ### Out of Scope
@@ -95,4 +105,4 @@ xUnit test suite covers memory leak detection and performance validation.
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-02-24 after v1.1 milestone*
+*Last updated: 2026-02-24 after v1.2 milestone started*
