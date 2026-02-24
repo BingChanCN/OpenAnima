@@ -14,7 +14,7 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 **Status:** In Progress
 **Last activity:** 2026-02-24 — Completed 08-01-PLAN.md
 
-**Progress:** [█████░░░░░] 50%
+**Progress:** [██████████] 100%
 
 ### Phase 8 Goal
 Runtime can call LLM APIs with proper configuration, error handling, and retry logic
@@ -54,6 +54,7 @@ Execute Plan 02 to implement streaming LLM responses and DI registration
 - v1.1 shipped 2026-02-23 (Phases 3-7, 10 plans, 3,741 LOC)
 - v1.2 in progress (Phases 8-10, 1 plan)
 | Phase 08 P01 | 2m 49s | 2 tasks | 5 files |
+| Phase 08 P02 | 173 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,8 @@ All v1.0 and v1.1 decisions archived — see PROJECT.md for full table.
 - SignalR circuit timeout configuration (research recommends 60+ seconds)
 - [Phase 08]: Used OpenAI SDK 2.8.0 for API client (per research recommendation)
 - [Phase 08]: Created SDK-agnostic interface using ChatMessageInput records
+- [Phase 08]: Error handling in streaming: Yield inline error tokens instead of throwing exceptions
+- [Phase 08]: SignalR timeout configuration: 60s client timeout, 15s keepalive, 3-minute circuit retention
 
 ### Pending Todos
 

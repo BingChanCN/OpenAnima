@@ -11,7 +11,7 @@ Requirements for LLM Integration milestone. Each maps to roadmap phases.
 
 - [x] **LLM-01**: User can configure LLM endpoint, API key, and model name via appsettings.json
 - [x] **LLM-02**: Runtime can call OpenAI-compatible chat completion API with system/user/assistant messages
-- [ ] **LLM-03**: Runtime can receive streaming responses token-by-token from LLM API
+- [x] **LLM-03**: Runtime can receive streaming responses token-by-token from LLM API
 - [x] **LLM-04**: User sees meaningful error messages when API calls fail (auth, rate limit, network, model errors)
 - [x] **LLM-05**: Runtime retries transient API failures with exponential backoff
 
@@ -77,7 +77,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | LLM-01 | Phase 8 | Complete |
 | LLM-02 | Phase 8 | Complete |
-| LLM-03 | Phase 8 | Pending |
+| LLM-03 | Phase 8 | Complete |
 | LLM-04 | Phase 8 | Complete |
 | LLM-05 | Phase 8 | Complete |
 | CHAT-01 | Phase 9 | Pending |
