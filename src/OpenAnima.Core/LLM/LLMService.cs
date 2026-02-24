@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
 using System.ClientModel;
+using System.Runtime.CompilerServices;
 
 namespace OpenAnima.Core.LLM;
 
@@ -19,20 +20,7 @@ public class LLMService : ILLMService
     {
         try
         {
-            // Map ChatMessageInput to OpenAI SDK ChatMessage types
-            var chatMessages = new List<ChatMessage>();
-            foreach (var msg in messages)
-            {
-                ChatMessage chatMessage = msg.Role.ToLowerInvariant() switch
-                {
-                    "system" => new SystemChatMessage(msg.Content),
-                    "user" => new UserChatMessage(msg.Content),
-                    "assistant" => new AssistantChatMessage(msg.Content),
-                    _ => throw new ArgumentException($"Unknown role: {msg.Role}")
-                };
-                chatMessages.Add(chatMessage);
-            }
-
+            var chatMessages = MapMessages(messages);
             var completion = await _client.CompleteChatAsync(chatMessages, cancellationToken: ct);
             return new LLMResult(true, completion.Value.Content[0].Text, null);
         }
@@ -80,8 +68,71 @@ public class LLMService : ILLMService
         }
     }
 
-    public IAsyncEnumerable<string> StreamAsync(IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+    public async IAsyncEnumerable<string> StreamAsync(IReadOnlyList<ChatMessageInput> messages, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        throw new NotImplementedException("Streaming implemented in Plan 02");
+        var chatMessages = MapMessages(messages);
+
+        AsyncCollectionResult<StreamingChatCompletionUpdate>? streamingUpdates = null;
+
+        // Try to initiate streaming - handle errors by yielding error tokens
+        string? initError = null;
+        try
+        {
+            streamingUpdates = _client.CompleteChatStreamingAsync(chatMessages, cancellationToken: ct);
+        }
+        catch (ClientResultException ex)
+        {
+            initError = MapClientError(ex);
+            _logger.LogError(ex, initError);
+        }
+        catch (HttpRequestException ex)
+        {
+            initError = $"Network error - {ex.Message}";
+            _logger.LogError(ex, initError);
+        }
+
+        if (initError != null)
+        {
+            yield return $"\n\n[Error: {initError}]";
+            yield break;
+        }
+
+        // Stream tokens
+        await foreach (var update in streamingUpdates!.WithCancellation(ct))
+        {
+            if (update.ContentUpdate.Count > 0)
+            {
+                yield return update.ContentUpdate[0].Text;
+            }
+        }
+    }
+
+    private List<ChatMessage> MapMessages(IReadOnlyList<ChatMessageInput> messages)
+    {
+        var chatMessages = new List<ChatMessage>();
+        foreach (var msg in messages)
+        {
+            ChatMessage chatMessage = msg.Role.ToLowerInvariant() switch
+            {
+                "system" => new SystemChatMessage(msg.Content),
+                "user" => new UserChatMessage(msg.Content),
+                "assistant" => new AssistantChatMessage(msg.Content),
+                _ => new UserChatMessage(msg.Content) // Safe fallback
+            };
+            chatMessages.Add(chatMessage);
+        }
+        return chatMessages;
+    }
+
+    private string MapClientError(ClientResultException ex)
+    {
+        return ex.Status switch
+        {
+            401 => "Invalid API key. Check your LLM configuration.",
+            429 => "Rate limit exceeded. Please wait and try again.",
+            404 => "Model not found. Check your model name in configuration.",
+            >= 500 => "LLM service error. Please try again later.",
+            _ => $"API error: {ex.Message}"
+        };
     }
 }
