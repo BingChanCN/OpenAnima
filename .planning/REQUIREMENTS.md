@@ -53,6 +53,7 @@ Deferred to future milestones. Tracked but not in current roadmap.
 - **ICTX-01**: Runtime summarizes old messages to compress context when approaching limit
 - **ICTX-02**: User sees visual context window indicator (progress bar with color coding)
 
+
 ## Out of Scope
 
 Explicitly excluded. Documented to prevent scope creep.
@@ -74,28 +75,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LLM-01 | — | Pending |
-| LLM-02 | — | Pending |
-| LLM-03 | — | Pending |
-| LLM-04 | — | Pending |
-| LLM-05 | — | Pending |
-| CHAT-01 | — | Pending |
-| CHAT-02 | — | Pending |
-| CHAT-03 | — | Pending |
-| CHAT-04 | — | Pending |
-| CHAT-05 | — | Pending |
-| CHAT-06 | — | Pending |
-| CHAT-07 | — | Pending |
-| CTX-01 | — | Pending |
-| CTX-02 | — | Pending |
-| CTX-03 | — | Pending |
-| CTX-04 | — | Pending |
+| LLM-01 | Phase 8 | Pending |
+| LLM-02 | Phase 8 | Pending |
+| LLM-03 | Phase 8 | Pending |
+| LLM-04 | Phase 8 | Pending |
+| LLM-05 | Phase 8 | Pending |
+| CHAT-01 | Phase 9 | Pending |
+| CHAT-02 | Phase 9 | Pending |
+| CHAT-03 | Phase 9 | Pending |
+| CHAT-04 | Phase 9 | Pending |
+| CHAT-05 | Phase 9 | Pending |
+| CHAT-06 | Phase 9 | Pending |
+| CHAT-07 | Phase 9 | Pending |
+| CTX-01 | Phase 10 | Pending |
+| CTX-02 | Phase 10 | Pending |
+| CTX-03 | Phase 10 | Pending |
+| CTX-04 | Phase 10 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after initial definition*
+*Last updated: 2026-02-24 after roadmap creation*

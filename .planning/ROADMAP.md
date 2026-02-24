@@ -4,6 +4,7 @@
 
 - ✅ **v1.0 Core Platform Foundation** — Phases 1-2 (shipped 2026-02-21)
 - ✅ **v1.1 WebUI Runtime Dashboard** — Phases 3-7 (shipped 2026-02-23)
+- 🚧 **v1.2 LLM Integration** — Phases 8-10 (in progress)
 
 ## Phases
 
@@ -30,6 +31,54 @@ See: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full details.
 
 </details>
 
+<details open>
+<summary>🚧 v1.2 LLM Integration (Phases 8-10) — IN PROGRESS</summary>
+
+- [ ] **Phase 8: API Client Setup & Configuration** - LLM API integration with streaming, error handling, and retry logic
+- [ ] **Phase 9: Chat UI with Streaming** - Real-time chat interface with streaming responses and conversation history
+- [ ] **Phase 10: Context Management & Token Counting** - Token tracking and automatic context window management
+
+</details>
+
+## Phase Details
+
+### Phase 8: API Client Setup & Configuration
+**Goal**: Runtime can call LLM APIs with proper configuration, error handling, and retry logic
+**Depends on**: Nothing (first phase of v1.2)
+**Requirements**: LLM-01, LLM-02, LLM-03, LLM-04, LLM-05
+**Success Criteria** (what must be TRUE):
+  1. User can configure LLM endpoint, API key, and model via appsettings.json and see successful connection
+  2. User can send a message and receive a complete LLM response
+  3. User sees streaming tokens appear in real-time during LLM response
+  4. User sees clear error messages when API calls fail (auth, rate limit, network errors)
+  5. User observes automatic retry on transient failures without manual intervention
+**Plans**: TBD
+
+### Phase 9: Chat UI with Streaming
+**Goal**: Users can have real-time conversations with streaming LLM responses
+**Depends on**: Phase 8
+**Requirements**: CHAT-01, CHAT-02, CHAT-03, CHAT-04, CHAT-05, CHAT-06, CHAT-07
+**Success Criteria** (what must be TRUE):
+  1. User can type and send messages from chat panel in dashboard
+  2. User sees conversation history with user messages on right, assistant on left
+  3. User sees LLM responses stream token-by-token in real-time
+  4. Chat auto-scrolls to latest message unless user has scrolled up
+  5. User can copy any message content to clipboard
+  6. User can regenerate the last assistant response
+  7. User sees Markdown-formatted responses with syntax-highlighted code blocks
+**Plans**: TBD
+
+### Phase 10: Context Management & Token Counting
+**Goal**: Conversations stay within context limits with accurate token tracking
+**Depends on**: Phase 9
+**Requirements**: CTX-01, CTX-02, CTX-03, CTX-04
+**Success Criteria** (what must be TRUE):
+  1. User can see current token count and remaining context capacity
+  2. User can have multi-turn conversations (20+ messages) without hitting context limit errors
+  3. User observes oldest messages automatically removed when approaching context limit
+  4. User sees chat events published to EventBus (visible in module logs or future modules)
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -41,3 +90,6 @@ See: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full details.
 | 5. SignalR Real-Time Updates | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 6. Control Operations | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 7. Polish & Validation | v1.1 | 2/2 | Complete | 2026-02-23 |
+| 8. API Client Setup & Configuration | v1.2 | 0/? | Not started | - |
+| 9. Chat UI with Streaming | v1.2 | 0/? | Not started | - |
+| 10. Context Management & Token Counting | v1.2 | 0/? | Not started | - |

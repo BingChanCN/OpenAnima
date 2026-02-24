@@ -5,21 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe
-**Current focus:** v1.2 LLM Integration
+**Current focus:** v1.2 LLM Integration — Give agents the ability to call LLMs and hold conversations
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-24 — Milestone v1.2 started
+**Phase:** 8 - API Client Setup & Configuration
+**Plan:** Not started
+**Status:** Planning
+**Last activity:** 2026-02-24 — Roadmap created for v1.2
 
-Progress: [██████████] 100% (15/15 plans complete across v1.0 + v1.1)
+**Progress:** ░░░░░░░░░░░░░░░░░░░░ 0% (0/3 phases complete in v1.2)
+
+### Phase 8 Goal
+Runtime can call LLM APIs with proper configuration, error handling, and retry logic
+
+### Phase 8 Requirements
+- LLM-01: User can configure LLM endpoint, API key, and model name via appsettings.json
+- LLM-02: Runtime can call OpenAI-compatible chat completion API with system/user/assistant messages
+- LLM-03: Runtime can receive streaming responses token-by-token from LLM API
+- LLM-04: User sees meaningful error messages when API calls fail (auth, rate limit, network, model errors)
+- LLM-05: Runtime retries transient API failures with exponential backoff
+
+### Next Action
+Run `/gsd:plan-phase 8` to create execution plans for Phase 8
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
+- Total plans completed: 15 (v1.0 + v1.1)
 - Average duration: ~4.0 min
 - Total execution time: ~1.0 hours
 
@@ -36,8 +49,10 @@ Progress: [██████████] 100% (15/15 plans complete across v1.
 | 07 | 2 | 8.15 min | 4.08 min |
 
 **Milestones:**
-- v1.0 shipped 2026-02-21 (Phases 1-2, 5 plans)
-- v1.1 shipped 2026-02-23 (Phases 3-7, 10 plans)
+- v1.0 shipped 2026-02-21 (Phases 1-2, 5 plans, 1,323 LOC)
+- v1.1 shipped 2026-02-23 (Phases 3-7, 10 plans, 3,741 LOC)
+- v1.2 in progress (Phases 8-10, 0 plans)
+
 
 ## Accumulated Context
 
@@ -46,13 +61,24 @@ Progress: [██████████] 100% (15/15 plans complete across v1.
 Decisions are logged in PROJECT.md Key Decisions table.
 All v1.0 and v1.1 decisions archived — see PROJECT.md for full table.
 
+**v1.2 decisions pending:**
+- OpenAI SDK vs custom HTTP client (research recommends OpenAI 2.8.0)
+- Token counting library (research recommends SharpToken 2.0.4)
+- SignalR circuit timeout configuration (research recommends 60+ seconds)
+
 ### Pending Todos
 
 None.
 
 ### Blockers/Concerns
 
-- Blazor.Diagrams maturity unknown, needs early prototype validation with fallback to Electron + React Flow if needed (future visual editor concern)
+**Critical configuration requirements (from research):**
+1. SignalR circuit timeout must be 60+ seconds to prevent disconnects during LLM calls
+2. HttpClient timeout must be infinite for streaming responses
+3. All UI updates during streaming must use InvokeAsync to prevent deadlocks
+4. Token counting must be accurate to prevent context window overflow
+
+These must be addressed in Phase 8 planning to avoid cascading failures.
 
 ### Quick Tasks Completed
 
@@ -64,5 +90,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: v1.1 milestone archived, ready for next milestone
+Stopped at: v1.2 roadmap created, ready for Phase 8 planning
 Resume file: None
