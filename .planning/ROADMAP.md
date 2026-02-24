@@ -52,7 +52,10 @@ See: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full details.
   3. User sees streaming tokens appear in real-time during LLM response
   4. User sees clear error messages when API calls fail (auth, rate limit, network errors)
   5. User observes automatic retry on transient failures without manual intervention
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 08-01-PLAN.md — Configuration model, appsettings.json, ILLMService interface, LLMService with error handling
+- [ ] 08-02-PLAN.md — Streaming implementation, DI registration, SignalR timeout configuration
 
 ### Phase 9: Chat UI with Streaming
 **Goal**: Users can have real-time conversations with streaming LLM responses
@@ -90,6 +93,6 @@ See: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full details.
 | 5. SignalR Real-Time Updates | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 6. Control Operations | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 7. Polish & Validation | v1.1 | 2/2 | Complete | 2026-02-23 |
-| 8. API Client Setup & Configuration | v1.2 | 0/? | Not started | - |
+| 8. API Client Setup & Configuration | v1.2 | 0/2 | Planning | - |
 | 9. Chat UI with Streaming | v1.2 | 0/? | Not started | - |
 | 10. Context Management & Token Counting | v1.2 | 0/? | Not started | - |
