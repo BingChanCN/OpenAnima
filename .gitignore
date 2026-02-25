@@ -52,3 +52,12 @@ project.lock.json
 
 ## User-specific files
 *.DotSettings.user
+
+## Secrets / config with keys
+appsettings.json
+
+## Build output
+dist/
+
+## Modules output
+modules/

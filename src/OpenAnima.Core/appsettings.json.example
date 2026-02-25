@@ -1,8 +1,8 @@
 {
   "LLM": {
-    "Endpoint": "https://coultra.blueshirtmap.com/v1",
+    "Endpoint": "https://api.example.com/v1",
     "ApiKey": "your-api-key-here",
-    "Model": "gpt-5-chat",
+    "Model": "your-model-name",
     "MaxRetries": 3,
     "TimeoutSeconds": 120,
     "MaxContextTokens": 128000
