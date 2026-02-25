@@ -1,213 +1,286 @@
 # Pitfalls Research
 
-**Domain:** LLM Integration in .NET 8 Blazor Server Agent Platform
-**Researched:** 2026-02-24
+**Domain:** Visual node/wiring editor + port-based module system in Blazor Server
+**Researched:** 2026-02-25
 **Confidence:** MEDIUM
 
 ## Critical Pitfalls
 
-### Pitfall 1: SignalR Circuit Timeout During Long LLM Calls
+### Pitfall 1: Circular Dependency Deadlock
 
 **What goes wrong:**
-Blazor Server SignalR circuits disconnect during long-running LLM API calls (30+ seconds), causing the UI to freeze or show "Reconnecting..." indefinitely. User loses conversation state and must refresh the page.
+Modules wired in a circular pattern (A → B → C → A) cause execution to hang or infinite loop. The wiring engine attempts to execute modules in dependency order but cannot resolve cycles, leading to runtime deadlock or stack overflow.
 
 **Why it happens:**
-Default SignalR circuit timeout is 30 seconds. LLM API calls (especially with streaming disabled or complex prompts) can exceed this. Developers forget that Blazor Server maintains a persistent WebSocket connection that times out independently of HttpClient timeout.
+Visual editors make it trivially easy to create cycles by dragging connections. Users don't think in terms of directed acyclic graphs (DAGs) — they think "chat output should trigger LLM, LLM output should show in chat" without realizing this creates a cycle. The UI doesn't prevent invalid topologies at wire-time.
 
 **How to avoid:**
-- Configure `CircuitOptions.DisconnectedCircuitMaxRetained` and `DisconnectedCircuitRetentionPeriod` in Program.cs
-- Set `HubOptions.ClientTimeoutInterval` to at least 60 seconds for LLM workloads
-- Use streaming responses to keep the circuit alive with incremental updates
-- Implement keep-alive pings during long operations
+- Implement topological sort validation before saving wiring configuration
+- Detect cycles using depth-first search during connection creation
+- Block invalid connections in the UI with clear error messages
+- Add visual feedback (red highlight) when hovering over a port that would create a cycle
+- Consider allowing cycles but requiring explicit "cycle breaker" nodes
 
 **Warning signs:**
-- "Reconnecting..." message appears during LLM calls
-- Users report "page freezes" after asking questions
-- SignalR connection logs show frequent disconnects
-- Circuit disposal logs correlate with LLM API timing
+- Wiring configuration saves successfully but execution hangs on first run
+- Stack overflow exceptions during module execution
+- Modules execute in unexpected order or not at all
+- Debugger shows same module being entered repeatedly
 
 **Phase to address:**
-Phase 1 (API Client Setup) — Configure timeouts before first LLM call
+Phase 2 (Wiring Engine) — validation must be built into the connection logic, not added later
 
 ---
 
-### Pitfall 2: UI Thread Deadlock with StateHasChanged in Async Streaming
+### Pitfall 2: SignalR Rendering Bottleneck from Frequent Graph Updates
 
 **What goes wrong:**
-Streaming LLM responses freeze the UI completely. The chat interface becomes unresponsive, and the browser tab may show "Page Unresponsive". Partial responses don't appear incrementally as expected.
+Every node position change, connection drag, or property edit triggers StateHasChanged, causing full component re-renders. With 10+ modules on canvas, dragging becomes laggy (200ms+ delay). SignalR circuit bandwidth saturates with render diffs, causing UI freezes or circuit disconnects.
 
 **Why it happens:**
-Developers call `StateHasChanged()` synchronously from within an async streaming loop without wrapping in `InvokeAsync()`. Blazor Server requires all UI updates to be marshaled through the synchronization context. Calling StateHasChanged from the streaming thread (which is not the UI thread) causes deadlock or silent failure.
+Blazor Server sends render diffs over SignalR for every StateHasChanged call. Visual editors generate hundreds of state changes per second during drag operations (mousemove events at 60fps). Default Blazor rendering is synchronous and blocks the UI thread. Developers treat Blazor components like WPF/WinForms without considering the network round-trip cost.
 
 **How to avoid:**
-- Always wrap StateHasChanged in `await InvokeAsync(StateHasChanged)` when streaming
-- Use `await InvokeAsync(async () => { /* update state */ StateHasChanged(); })` pattern
-- Consider throttling UI updates (e.g., every 50ms) instead of every token
-- Test streaming with slow network conditions to expose timing issues
+- Throttle StateHasChanged during drag operations (update every 50-100ms, not every mousemove)
+- Use JavaScript interop for drag rendering, sync to Blazor state only on drop
+- Implement ShouldRender() to prevent unnecessary re-renders of unchanged components
+- Use @key directives on node components to prevent full tree diffs
+- Consider canvas-based rendering (HTML5 Canvas or SVG) with JS interop instead of Blazor components for node positions
+- Batch multiple state changes into single render cycle
 
 **Warning signs:**
-- UI freezes during streaming responses
-- Partial responses don't appear until stream completes
-- Browser console shows "Dispatcher" or synchronization context errors
-- Streaming works in console app but fails in Blazor
+- Mouse cursor lags behind during drag operations
+- Browser DevTools shows SignalR messages queuing up
+- Circuit reconnection messages in browser console
+- CPU usage spikes on server during simple drag operations
+- Users report "sluggish" or "unresponsive" editor
 
 **Phase to address:**
-Phase 2 (Chat UI with Streaming) — Must be correct from first streaming implementation
+Phase 3 (Visual Editor) — must be architected for performance from the start, retrofitting is expensive
 
 ---
 
-### Pitfall 3: HttpClient Timeout Mismatch with Streaming
+### Pitfall 3: Breaking Existing Features During Modularization
 
 **What goes wrong:**
-Streaming LLM responses fail with "The request was canceled due to the configured HttpClient.Timeout" error after 100 seconds, even though the stream is actively receiving data. User sees partial response then error.
+Refactoring hardcoded LLM/chat/heartbeat into modules breaks existing functionality. Chat stops working, heartbeat doesn't tick, or LLM calls fail silently. Users who upgraded from v1.2 lose working features. Rollback is difficult because database schema or config format changed.
 
 **Why it happens:**
-Default HttpClient timeout is 100 seconds. For streaming responses, this timeout applies to the entire stream duration, not individual chunks. A long conversation response (200+ tokens at 20 tokens/sec = 10+ seconds) can exceed this. Developers configure OpenAI client timeout but forget HttpClient has its own timeout.
+Hardcoded features have implicit dependencies and execution order guarantees that aren't obvious until removed. EventBus message ordering changes when moving from direct calls to async pub/sub. Timing assumptions break (e.g., "heartbeat always runs before LLM check"). Initialization order changes when modules load dynamically instead of at startup. Developers focus on "making modules work" without comprehensive regression testing of existing workflows.
 
 **How to avoid:**
-- Set HttpClient.Timeout to `Timeout.InfiniteTimeSpan` for streaming clients
-- Use CancellationToken for user-initiated cancellation instead of timeout
-- Configure separate HttpClient instances: one for streaming (no timeout), one for non-streaming (with timeout)
-- Implement application-level timeout logic (e.g., 5 minutes max conversation)
+- Create integration tests for existing workflows BEFORE refactoring (chat end-to-end, heartbeat ticking, LLM streaming)
+- Implement feature flags to toggle between old hardcoded path and new modular path
+- Keep old code paths intact until new modules are fully validated
+- Document all implicit dependencies and timing assumptions before refactoring
+- Test with actual v1.2 configuration files to ensure migration path works
+- Maintain backward compatibility for at least one version
 
 **Warning signs:**
-- "HttpClient.Timeout" exceptions during streaming
-- Streams fail consistently around 100 seconds
-- Short responses work, long responses fail
-- Timeout occurs even when data is actively streaming
+- Tests pass but manual testing reveals broken workflows
+- Features work in isolation but fail when combined
+- Timing-sensitive operations become unreliable
+- Error messages that were clear become generic or missing
+- Configuration that worked in v1.2 causes errors in v1.3
 
 **Phase to address:**
-Phase 1 (API Client Setup) — Configure HttpClient correctly before streaming implementation
+Phase 1 (Port System) — establish testing infrastructure and compatibility strategy before touching existing code
 
 ---
 
-### Pitfall 4: Context Window Overflow Without Token Counting
+### Pitfall 4: Type System Too Rigid or Too Loose
 
 **What goes wrong:**
-LLM API calls fail with "This model's maximum context length is 128000 tokens" error after several conversation turns. User loses conversation history and must start over. Error appears suddenly without warning.
+Port type system either prevents valid connections (too rigid) or allows invalid connections that fail at runtime (too loose). Users frustrated by "why can't I connect these?" or surprised by runtime type errors after successful wiring.
 
 **Why it happens:**
-Developers append messages to conversation history without tracking token count. Each turn adds system prompt + user message + assistant response. After 10-20 turns, total tokens exceed model's context window. Character count estimation (divide by 4) is inaccurate for code, special characters, or non-English text.
+Designing type systems requires balancing safety vs. flexibility. Starting with only "Text" and "Trigger" seems simple but real-world data has nuances (plain text vs. JSON vs. Markdown, one-shot trigger vs. continuous stream). Developers either over-engineer with too many types upfront or under-engineer and add types later, breaking existing wiring configs.
 
 **How to avoid:**
-- Use tiktoken library (.NET port: `SharpToken` or `TiktokenSharp`) for accurate token counting
-- Track running token count for conversation history
-- Implement sliding window: keep system prompt + recent N messages that fit in context
-- Reserve tokens for response (e.g., use 75% of context for history, 25% for response)
-- Warn user when approaching limit (e.g., "90% of context used")
+- Start with minimal types (Text, Trigger) and explicit conversion nodes for edge cases
+- Design type system to be extensible without breaking existing configs
+- Use structural typing (duck typing) where possible instead of nominal typing
+- Provide clear error messages when type mismatch occurs, suggesting conversion nodes
+- Version the type system and support migration of old wiring configs
+- Consider "any" type for prototyping with runtime validation
 
 **Warning signs:**
-- "maximum context length" errors after multiple conversation turns
-- Errors occur inconsistently (depends on response length)
-- Long user messages cause immediate failures
-- Error rate increases with conversation length
+- Users frequently request "why can't I connect X to Y?"
+- Many modules need multiple output ports with same data in different types
+- Type conversion nodes proliferate in every wiring config
+- Runtime errors about type mismatches despite successful wiring
+- Frequent type system refactors that break existing configs
 
 **Phase to address:**
-Phase 3 (Context Management) — Must implement before multi-turn conversations
+Phase 1 (Port System) — type system design is foundational, changing it later breaks everything
 
 ---
 
-### Pitfall 5: In-Memory Conversation History Memory Leak
+### Pitfall 5: EventBus Ordering Guarantees Lost
 
 **What goes wrong:**
-Application memory grows continuously as users have conversations. After hours of operation, memory usage reaches gigabytes. Eventually causes OutOfMemoryException or system slowdown.
+Existing code assumes EventBus messages arrive in publish order, but modular execution breaks this assumption. Chat messages arrive out of order, LLM responses interleave, or heartbeat events skip. Race conditions appear that never existed in hardcoded version.
 
 **Why it happens:**
-Conversation history stored in memory without cleanup strategy. Each user session (SignalR circuit) maintains full conversation history. When circuits disconnect (user closes browser), history isn't cleaned up. Scoped services holding conversation state aren't disposed properly.
+Current EventBus uses ConcurrentBag which doesn't guarantee ordering. Hardcoded features had implicit ordering from call stack. Moving to port-based wiring introduces async execution and parallel module processing. Multiple modules publishing to same port create race conditions. Developers assume "wiring order = execution order" but runtime uses topological sort which may differ.
 
 **How to avoid:**
-- Implement conversation history as Scoped service (per-circuit lifetime)
-- Ensure proper Dispose implementation to clean up on circuit disconnect
-- Set maximum conversation length (e.g., 50 messages, then trim oldest)
-- Monitor memory usage in tests (connect/disconnect cycles)
-- Consider LRU cache with size limit for conversation storage
+- Document EventBus ordering guarantees (or lack thereof) explicitly
+- Add sequence numbers to messages if ordering matters
+- Implement execution barriers or synchronization points in wiring engine
+- Use queue-based ports for ordered message streams vs. signal-based ports for unordered events
+- Test with artificial delays to expose race conditions during development
+- Consider single-threaded execution mode for deterministic debugging
 
 **Warning signs:**
-- Memory usage grows steadily over time
-- Memory doesn't decrease when users disconnect
-- GC collections don't reclaim memory
-- Memory growth correlates with number of conversations
+- Intermittent failures that don't reproduce consistently
+- Messages arrive in different order on different runs
+- Chat UI shows responses before questions
+- Heartbeat tick count jumps or goes backward
+- Modules process stale data from previous execution cycle
 
 **Phase to address:**
-Phase 3 (Context Management) — Implement cleanup strategy from start
+Phase 2 (Wiring Engine) — execution semantics must be defined before modules depend on them
 
 ---
 
-### Pitfall 6: Rate Limiting Without Retry Strategy
+### Pitfall 6: Wiring Config Deserialization Failures
 
 **What goes wrong:**
-LLM API calls fail with 429 "Rate limit exceeded" errors during normal usage. User sees error message, loses their input, and must retry manually. Errors increase during peak usage.
+Saved wiring configurations fail to load after module updates, type changes, or port renames. Users lose their carefully constructed agent wiring. Error messages are cryptic ("port not found") without indicating which module or version caused the issue.
 
 **Why it happens:**
-OpenAI and compatible APIs have rate limits (requests per minute, tokens per minute). Developers don't implement exponential backoff retry logic. Multiple concurrent users or rapid-fire requests (e.g., user clicks send multiple times) trigger rate limits. The official OpenAI .NET SDK doesn't automatically retry 429 errors.
+Wiring configs reference modules by name/ID and ports by string identifiers. Module developers rename ports, change types, or remove features without considering backward compatibility. No versioning strategy for wiring configs. Deserialization code assumes all referenced modules are loaded and ports exist. Partial loading (some modules missing) not handled gracefully.
 
 **How to avoid:**
-- Implement exponential backoff with jitter for 429 errors
-- Use Polly library for retry policies: `WaitAndRetryAsync` with exponential backoff
-- Respect `Retry-After` header in 429 responses
-- Implement request queuing to prevent concurrent request spikes
-- Show "Sending..." state to prevent duplicate submissions
+- Version wiring config format and support migration
+- Store module version in wiring config and validate on load
+- Implement graceful degradation (load what's possible, mark missing modules)
+- Provide clear error messages with module name, expected port, and available ports
+- Add config validation tool that checks before loading
+- Consider port aliasing to support renames without breaking configs
 
 **Warning signs:**
-- 429 errors in logs
-- Errors occur during peak usage or rapid requests
-- Users report "rate limit" errors
-- Errors disappear after waiting a few seconds
+- Wiring configs that worked yesterday fail to load today
+- Errors mention port names that don't exist in current module versions
+- Users report "lost all my wiring" after module update
+- No way to inspect or repair broken configs
+- Config files grow stale and become unloadable
 
 **Phase to address:**
-Phase 1 (API Client Setup) — Build retry logic into API client from start
+Phase 4 (Config Persistence) — versioning and migration must be designed upfront, not patched later
 
 ---
 
-### Pitfall 7: Streaming Response Cancellation Not Cleaning Up
+### Pitfall 7: Module Initialization Order Dependencies
 
 **What goes wrong:**
-User cancels LLM response (closes chat, navigates away, or clicks stop), but HTTP request continues in background. Resources aren't released, and rate limits are consumed by abandoned requests. Memory leaks from unclosed streams.
+Modules fail to initialize because they depend on other modules being loaded first. LLM module needs EventBus injected, chat module needs LLM module registered, heartbeat module needs all others ready. Initialization order is non-deterministic when loading from wiring config, causing intermittent startup failures.
 
 **Why it happens:**
-Developers don't pass CancellationToken through the entire streaming pipeline. When SignalR circuit disconnects or user cancels, the streaming loop continues. HttpClient request isn't cancelled, and stream isn't disposed. Background task holds references preventing GC.
+Current system uses property injection for EventBus after module load. Moving to port-based wiring adds more dependencies (port registry, wiring engine, other modules). No explicit dependency declaration in module manifest. Initialization happens in file system order or wiring config order, not dependency order. Circular initialization dependencies possible (A needs B, B needs A).
 
 **How to avoid:**
-- Pass CancellationToken from circuit lifetime through to HttpClient
-- Link user cancellation token with circuit disconnection token
-- Wrap streaming in try/finally to ensure disposal
-- Use `await using` for IAsyncEnumerable streams
-- Test cancellation scenarios (disconnect during streaming)
+- Implement two-phase initialization (construct all modules, then wire all ports)
+- Add explicit dependency declaration in module manifest
+- Use dependency injection container with proper lifetime management
+- Validate initialization order before starting runtime
+- Provide clear error messages when initialization fails with dependency chain
+- Consider lazy initialization (modules initialize on first use, not at load)
 
 **Warning signs:**
-- HTTP requests continue after user disconnects
-- Memory usage doesn't decrease after cancellation
-- Rate limit consumption higher than expected
-- Logs show streaming loops running after circuit disposal
+- Modules work when loaded manually in specific order but fail from wiring config
+- NullReferenceException during module initialization
+- Some modules initialize, others don't, no clear pattern
+- Startup time increases as more modules added
+- Intermittent "module not ready" errors
 
 **Phase to address:**
-Phase 2 (Chat UI with Streaming) — Implement cancellation from first streaming implementation
+Phase 1 (Port System) — initialization strategy must be defined before building modules
 
 ---
 
-### Pitfall 8: Event Bus Integration Blocking LLM Calls
+### Pitfall 8: No Undo/Redo in Visual Editor
 
 **What goes wrong:**
-LLM API calls block the existing MediatR event bus, causing heartbeat delays or module communication failures. The 100ms heartbeat requirement is violated. System becomes unresponsive during LLM calls.
+Users accidentally delete connections or move nodes, no way to undo. Must manually recreate complex wiring from memory. Frustration leads to abandoning visual editor in favor of manual config editing. Users afraid to experiment because mistakes are permanent.
 
 **Why it happens:**
-Developers publish LLM request/response events through the existing synchronous event bus. LLM calls take seconds, blocking event handlers. Other modules waiting for events experience delays. The event bus wasn't designed for long-running operations.
+Undo/redo seems like "nice to have" feature, gets deprioritized. Implementing undo after editor is built requires refactoring all state mutations. Command pattern or memento pattern not designed in from start. Blazor state management doesn't provide built-in undo. Developers underestimate how often users make mistakes in visual editors.
 
 **How to avoid:**
-- Use fire-and-forget pattern for LLM calls: publish "LLM request started" event immediately, publish "LLM response received" event when complete
-- Don't await LLM calls from within event handlers
-- Consider separate async event bus for long-running operations
-- LLM module should handle calls independently, not block event bus
-- Monitor event bus latency to detect blocking
+- Design state management with undo in mind from Phase 3 start
+- Use command pattern for all editor operations (add node, delete connection, move node)
+- Implement undo stack with reasonable depth (20-50 operations)
+- Provide keyboard shortcuts (Ctrl+Z, Ctrl+Y) that users expect
+- Show undo/redo availability in UI (grayed out when unavailable)
+- Consider auto-save with version history as alternative
 
 **Warning signs:**
-- Heartbeat tick latency increases during LLM calls
-- Event bus logs show delays correlating with LLM timing
-- Modules report timeout waiting for events
-- System becomes unresponsive during conversations
+- User feedback requests undo feature repeatedly
+- Users manually save config before every change "just in case"
+- Support requests about "how to restore deleted connection"
+- Users avoid visual editor for complex wiring
+- High rate of config file corruption from manual editing
 
 **Phase to address:**
-Phase 1 (API Client Setup) — Design integration pattern before implementing
+Phase 3 (Visual Editor) — must be architected from start, retrofitting is major refactor
+
+---
+
+### Pitfall 9: Port Data Serialization Assumptions
+
+**What goes wrong:**
+Modules assume port data is specific .NET types (string, int, custom classes) but wiring engine serializes everything to JSON for persistence/transmission. Type information lost, deserialization fails, or data corruption occurs. Custom types from module assemblies can't be deserialized in core runtime.
+
+**Why it happens:**
+Port system needs to persist data for debugging, logging, or cross-process communication. JSON is obvious choice but loses type fidelity. Modules developed in isolation assume direct object passing. No contract for what types are allowed on ports. Developers use complex types without considering serialization.
+
+**How to avoid:**
+- Restrict port data to primitive types and simple DTOs
+- Document serialization contract in port type system
+- Validate data serializability when module registers ports
+- Use schema validation (JSON Schema) for complex port types
+- Provide serialization testing utilities for module developers
+- Consider protobuf or MessagePack for better type preservation
+
+**Warning signs:**
+- Runtime errors about "cannot deserialize type X"
+- Data looks correct in debugger but wrong after passing through port
+- Custom module types cause crashes in core runtime
+- Polymorphic types lose derived type information
+- Circular references cause serialization to hang
+
+**Phase to address:**
+Phase 1 (Port System) — serialization contract must be defined before modules are built
+
+---
+
+### Pitfall 10: Visual Editor State Diverges from Runtime State
+
+**What goes wrong:**
+Visual editor shows modules connected and running, but runtime has different wiring. User changes wiring in editor, sees visual update, but runtime still uses old configuration. Debugging becomes impossible because what you see isn't what's executing.
+
+**Why it happens:**
+Editor state (Blazor component state) and runtime state (wiring engine) are separate. No synchronization mechanism or it's unreliable. Changes in editor don't trigger runtime reload, or reload fails silently. SignalR updates from runtime don't update editor UI. Users assume "save" applies changes immediately but runtime requires restart.
+
+**How to avoid:**
+- Single source of truth for wiring state (runtime owns it, editor is view)
+- Editor changes immediately reflected in runtime (hot reload) or clearly marked as "pending"
+- Visual indicators for state: "saved", "running", "modified", "error"
+- Validation that editor state matches runtime state on load
+- Automatic sync or clear "apply changes" button with feedback
+- Prevent editing while runtime is executing (or support hot reload properly)
+
+**Warning signs:**
+- Users report "I changed the wiring but nothing happened"
+- Debugging shows different connections than editor displays
+- Restart required after every wiring change
+- No feedback when changes applied or failed
+- Editor shows success but runtime logs errors
+
+**Phase to address:**
+Phase 3 (Visual Editor) — synchronization architecture must be designed upfront
 
 ---
 
@@ -215,122 +288,116 @@ Phase 1 (API Client Setup) — Design integration pattern before implementing
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Character count ÷ 4 for token estimation | No external library needed | Inaccurate, causes context overflow | Never — use tiktoken |
-| Unlimited conversation history | Simpler implementation | Memory leak, performance degradation | Never — implement limits from start |
-| No retry logic for API calls | Faster initial implementation | Poor reliability, user frustration | Never — rate limits are common |
-| Synchronous LLM calls in event handlers | Simpler code flow | Blocks event bus, violates performance requirements | Never — breaks existing architecture |
-| Global conversation state (Singleton) | Avoids per-user complexity | Shared state across users, security risk | Never — use Scoped services |
-| Hardcoded API keys in code | Quick testing | Security vulnerability, can't change without rebuild | Only for local development, never commit |
-| No streaming, wait for full response | Simpler UI implementation | Poor UX, long wait times, circuit timeouts | Acceptable for MVP if responses < 10 seconds |
-| Storing full conversation in memory | Fast access, no database | Memory leak, lost on restart | Acceptable for v1.2, add persistence in v1.3 |
+| Skip undo/redo in editor | Faster Phase 3 delivery | Users afraid to experiment, high support burden | Never — users expect this |
+| Allow any .NET type on ports | Modules easier to write | Serialization failures, cross-version incompatibility | Only for internal modules in v1.3 MVP |
+| Manual JSON config instead of visual editor | No editor complexity | Non-technical users can't use platform | Only for developer preview |
+| Single-threaded wiring execution | Simpler engine, deterministic | Can't utilize multi-core, slow for large graphs | Acceptable until >20 modules |
+| No wiring config versioning | Simpler persistence | Breaking changes lose user work | Never — users will lose data |
+| Hardcode port types (Text, Trigger) | Fast to implement | Can't extend without breaking changes | Acceptable for v1.3, must refactor by v1.4 |
+| Skip cycle detection | Faster wiring engine | Runtime hangs, bad UX | Never — causes support nightmares |
+| No module dependency declaration | Simpler module API | Initialization order bugs | Only if initialization is two-phase |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| OpenAI SDK → Blazor Server | Not configuring HttpClient timeout for streaming | Set Timeout.InfiniteTimeSpan for streaming client |
-| Streaming → UI updates | Calling StateHasChanged without InvokeAsync | Always wrap in `await InvokeAsync(StateHasChanged)` |
-| Conversation history → Context window | Appending messages without token counting | Use tiktoken to count tokens, implement sliding window |
-| LLM calls → Event bus | Awaiting LLM calls in event handlers | Fire-and-forget pattern, publish completion event |
-| User cancellation → HTTP request | Not passing CancellationToken to HttpClient | Link circuit token with request cancellation |
-| Rate limiting → Retry | Failing immediately on 429 errors | Implement exponential backoff with Polly |
-| API keys → Configuration | Hardcoding keys in code | Use appsettings.json with user secrets for development |
-| Multiple providers → Client config | Single HttpClient for all providers | Separate clients per provider with different configs |
+| Blazor + Canvas drag/drop | Using Blazor events for mousemove (too slow) | JS interop for drag, sync to Blazor on drop only |
+| EventBus + Wiring Engine | Assuming message order matches wiring order | Add sequence numbers or use ordered queues |
+| AssemblyLoadContext + Ports | Passing module types directly across contexts | Use interface name matching, not type identity |
+| SignalR + Visual Editor | Pushing every state change to client | Throttle updates, batch changes, use ShouldRender |
+| Module Loading + DI | Injecting dependencies before module loaded | Two-phase init: load all, then inject all |
+| JSON Config + Module Versions | No version in config file | Store module version, validate on load |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Updating UI for every streaming token | High CPU, UI jank, poor responsiveness | Throttle updates (every 50ms or every 5 tokens) | Streaming responses > 100 tokens |
-| No conversation history limit | Memory growth, GC pressure, slowdown | Implement sliding window (e.g., 50 messages max) | After 20+ conversation turns |
-| Synchronous token counting on every message | UI freezes during send | Cache token counts, count asynchronously | Messages > 1000 tokens |
-| Serializing full conversation to SignalR | Large messages, bandwidth saturation | Send only new messages, use deltas | Conversations > 10 messages |
-| No request queuing | Rate limit errors, failed requests | Queue requests, process sequentially | > 3 concurrent users |
-| Logging full LLM responses | I/O bottleneck, large log files | Log summary only (token count, timing), full response at Debug level | Continuous operation |
+| StateHasChanged on every mousemove | Laggy drag, high CPU | Throttle to 50-100ms, use JS interop | >5 modules on canvas |
+| Full component tree re-render | Entire editor flickers on change | Use @key, ShouldRender, localized state | >10 modules |
+| Synchronous wiring execution | UI freezes during execution | Async execution with progress feedback | Execution >100ms |
+| No render batching | SignalR bandwidth saturation | Batch multiple changes, throttle updates | >20 state changes/sec |
+| Deep object cloning for undo | Memory pressure, GC pauses | Immutable state, structural sharing | >50 undo operations |
+| Linear search for port lookup | Slow connection validation | Dictionary/hash-based lookup | >50 ports total |
+| Eager module initialization | Slow startup | Lazy initialization on first use | >10 modules |
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Exposing API keys in client-side code | Key theft, unauthorized usage, cost | Keep keys server-side only, never send to browser |
-| No input validation on user messages | Prompt injection, jailbreak attempts | Validate length, sanitize input, implement content filtering |
-| Logging API keys in error messages | Key exposure in logs | Sanitize logs, use [REDACTED] for sensitive data |
-| No rate limiting per user | DoS, cost explosion | Implement per-user rate limits (e.g., 10 requests/minute) |
-| Trusting LLM output without validation | XSS, code injection if rendered as HTML | Sanitize LLM responses, escape HTML, validate code |
-| No cost monitoring | Unexpected API bills | Track token usage, set budget alerts, implement usage caps |
-| Storing conversation history without encryption | Data breach risk | Encrypt sensitive conversations (future: add persistence) |
+| Executing untrusted module code without sandbox | Malicious modules access file system, network | AssemblyLoadContext isolation, permission system |
+| Storing LLM API keys in wiring config | Keys leaked in config files shared/committed | Separate secrets management, reference by ID |
+| No validation of port data | Injection attacks via crafted port messages | Schema validation, input sanitization |
+| Allowing modules to load arbitrary assemblies | Privilege escalation, sandbox escape | Whitelist allowed assemblies, code signing |
+| Exposing internal runtime APIs to modules | Modules bypass port system, break isolation | Minimal public API surface, internal types |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| No loading indicator during LLM call | User thinks app is frozen, clicks multiple times | Show "Thinking..." or typing indicator immediately |
-| Streaming without incremental display | Long wait, no feedback | Display tokens as they arrive, show progress |
-| No error recovery | User loses input on error, must retype | Preserve input on error, allow retry |
-| No cancellation option | User stuck waiting for long response | Provide "Stop" button, cancel on navigation |
-| Context limit error without explanation | Cryptic error, user doesn't understand | Explain "conversation too long", offer to start new |
-| No conversation history UI | User can't review previous messages | Show scrollable message history |
-| Overwhelming system prompts in UI | User sees internal prompts, confusing | Hide system messages, show only user/assistant |
-| No indication of streaming vs complete | User doesn't know if response is done | Show "..." while streaming, checkmark when complete |
+| No visual feedback during drag | Unclear where connection will land | Show preview line, highlight valid targets |
+| Cryptic error messages ("port not found") | Users don't know how to fix | "Module 'LLM' port 'Output' not found. Available ports: Response, Error" |
+| No indication of execution flow | Can't debug why agent behaves wrong | Highlight active modules, show data flow animation |
+| Wiring changes require restart | Frustrating iteration cycle | Hot reload or clear "apply" button with feedback |
+| Can't zoom/pan large graphs | Unusable with >20 modules | Canvas zoom, minimap, search/filter |
+| No templates or examples | Blank canvas intimidating | Provide "Chat Agent" template, example configs |
+| Accidental deletions | Lost work, frustration | Confirmation dialogs, undo/redo |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Streaming responses:** Often missing InvokeAsync wrapper — verify UI updates don't freeze
-- [ ] **Token counting:** Often using character estimation — verify tiktoken library integrated
-- [ ] **Context window management:** Often missing token tracking — verify sliding window implemented
-- [ ] **Cancellation:** Often missing CancellationToken propagation — verify requests cancel on disconnect
-- [ ] **Rate limiting:** Often missing retry logic — verify 429 errors handled with backoff
-- [ ] **Memory cleanup:** Often missing Dispose on conversation history — verify memory stable over time
-- [ ] **HttpClient timeout:** Often using default 100s — verify Timeout.InfiniteTimeSpan for streaming
-- [ ] **Event bus integration:** Often blocking on LLM calls — verify heartbeat maintains 100ms during conversations
-- [ ] **Error handling:** Often showing raw API errors — verify user-friendly error messages
-- [ ] **API key security:** Often hardcoded or logged — verify keys in config, not in code/logs
+- [ ] **Visual Editor:** Often missing zoom/pan — verify usable with 20+ modules on canvas
+- [ ] **Wiring Engine:** Often missing cycle detection — verify rejects circular dependencies
+- [ ] **Port System:** Often missing serialization validation — verify all port types survive JSON round-trip
+- [ ] **Module Refactor:** Often missing regression tests — verify existing chat/LLM/heartbeat workflows still work
+- [ ] **Config Persistence:** Often missing version migration — verify v1.2 configs load in v1.3
+- [ ] **Error Handling:** Often missing user-friendly messages — verify errors explain what's wrong and how to fix
+- [ ] **Performance:** Often missing throttling — verify smooth drag with 10+ modules
+- [ ] **State Sync:** Often missing runtime-editor sync — verify editor shows actual runtime state
+- [ ] **Undo/Redo:** Often missing entirely — verify Ctrl+Z works for all operations
+- [ ] **Type Safety:** Often missing runtime validation — verify type mismatches caught at wire-time, not runtime
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Circuit timeout during LLM calls | LOW | Increase timeout config, implement streaming |
-| UI deadlock with StateHasChanged | LOW | Add InvokeAsync wrappers, test thoroughly |
-| HttpClient timeout on streaming | LOW | Change timeout to InfiniteTimeSpan, redeploy |
-| Context window overflow | MEDIUM | Implement token counting, add sliding window logic |
-| Memory leak from conversation history | MEDIUM | Add Dispose implementation, implement cleanup strategy |
-| No retry logic for rate limits | LOW | Add Polly retry policy, configure exponential backoff |
-| Streaming cancellation not working | MEDIUM | Add CancellationToken propagation, test cancellation scenarios |
-| Event bus blocking | HIGH | Refactor integration pattern, separate async operations |
+| Circular dependency deadlock | LOW | Add cycle detection to wiring engine, validate existing configs, provide fix tool |
+| SignalR rendering bottleneck | MEDIUM | Refactor drag to JS interop, add throttling, implement ShouldRender |
+| Breaking existing features | HIGH | Rollback to v1.2, add integration tests, re-implement with feature flags |
+| Type system too rigid/loose | HIGH | Design new type system, implement migration, support both during transition |
+| EventBus ordering lost | MEDIUM | Add sequence numbers to messages, document ordering guarantees, fix race conditions |
+| Wiring config deserialization | LOW | Add version field, implement migration, provide repair tool |
+| Module initialization order | MEDIUM | Implement two-phase init, add dependency declaration, validate order |
+| No undo/redo | HIGH | Refactor state management to command pattern, implement undo stack |
+| Port data serialization | MEDIUM | Define serialization contract, validate existing modules, provide migration guide |
+| Editor/runtime state divergence | MEDIUM | Implement sync mechanism, add state validation, provide clear feedback |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Circuit timeout during LLM calls | Phase 1 | LLM calls complete without circuit disconnect, timeout config verified |
-| UI deadlock with streaming | Phase 2 | Streaming responses display incrementally without freezing |
-| HttpClient timeout mismatch | Phase 1 | Long streaming responses (> 100s) complete successfully |
-| Context window overflow | Phase 3 | Multi-turn conversations (20+ messages) work without errors |
-| Memory leak from history | Phase 3 | Memory stable after 100 conversation cycles |
-| Rate limiting without retry | Phase 1 | 429 errors automatically retried, no user-visible failures |
-| Streaming cancellation | Phase 2 | User can cancel streaming, resources cleaned up |
-| Event bus blocking | Phase 1 | Heartbeat maintains 100ms tick rate during LLM calls |
+| Circular dependency deadlock | Phase 2 (Wiring Engine) | Unit test with circular config, verify rejection with clear error |
+| SignalR rendering bottleneck | Phase 3 (Visual Editor) | Performance test: drag 10 modules at 60fps without lag |
+| Breaking existing features | Phase 1 (Port System) | Integration tests: v1.2 chat workflow passes in v1.3 |
+| Type system too rigid/loose | Phase 1 (Port System) | Test matrix: all valid connections allowed, invalid rejected |
+| EventBus ordering lost | Phase 2 (Wiring Engine) | Stress test: 1000 messages arrive in publish order |
+| Wiring config deserialization | Phase 4 (Config Persistence) | Load v1.3.0 config in v1.3.1, verify migration |
+| Module initialization order | Phase 1 (Port System) | Load modules in random order, verify deterministic init |
+| No undo/redo | Phase 3 (Visual Editor) | Manual test: Ctrl+Z after delete, verify restoration |
+| Port data serialization | Phase 1 (Port System) | Round-trip test: all port types serialize/deserialize correctly |
+| Editor/runtime state divergence | Phase 3 (Visual Editor) | Change wiring, verify runtime reflects change immediately |
 
 ## Sources
 
-- [How to display an AI response stream in Blazor Server - Reddit](https://www.reddit.com/r/Blazor/comments/1c998h7/how_to_display_an_ai_response_stream_in_blazor/)
-- [LLM Context Window Management and Long-Context Strategies 2026 - Zylos AI](https://zylos.ai/research/2026-01-19-llm-context-management)
-- [Context Window Overflow in 2026: Fix LLM Errors Fast - Redis](https://redis.io/blog/context-window-overflow/)
-- [Blazor app doesn't refresh UI after StateHasChanged in async operation - Stack Overflow](https://stackoverflow.com/questions/76976391/blazor-app-doesnt-refresh-ui-after-statehaschanged-in-async-operation)
-- [Explain Blazor SignalR / Circuit Timeouts in Detail - Stack Overflow](https://stackoverflow.com/questions/75150784/explain-blazor-signalr-circuit-timeouts-in-detail-please)
-- [The Day My Blazor App Froze Mid-Demo - Medium](https://medium.com/careerbytecode/the-day-my-blazor-app-froze-mid-demo-and-what-i-learned-about-signalr-674ec8cb976d)
-- [HttpClient.Timeout Error in C# OpenAI library - Stack Overflow](https://stackoverflow.com/questions/76491056/i-get-httpclient-timeout-error-in-c-sharp-openai-library)
-- [Request Timeout for Azure OpenAI when Streaming - Microsoft Learn](https://learn.microsoft.com/en-us/answers/questions/1465402/request-timeout-for-azure-openai-when-streaming)
-- [Rate limits - OpenAI API](https://developers.openai.com/api/docs/guides/rate-limits/)
-- [How to handle rate limits - OpenAI for developers](https://developers.openai.com/cookbook/examples/how_to_handle_rate_limits/)
-- [How to count tokens with Tiktoken - OpenAI for developers](https://developers.openai.com/cookbook/examples/how_to_count_tokens_with_tiktoken/)
-- [Counting tokens - OpenAI API](https://developers.openai.com/api/docs/guides/token-counting)
-- [Async/Await at Scale — Avoiding Hidden Deadlocks in .NET 8 - Medium](https://blog.stackademic.com/async-await-at-scale-avoiding-hidden-deadlocks-in-net-8-9c41ff53a4ae)
-- [Hunting Down Memory Leaks in .NET: The Ultimate Developer's Guide - Medium](https://medium.com/@vikpoca/hunting-down-memory-leaks-in-net-the-ultimate-developers-guide-b9c81d990d63)
-- [OpenAI .NET SDK - GitHub](https://github.com/openai/openai-dotnet)
-- [Streaming API responses - OpenAI for developers](https://developers.openai.com/api/docs/guides/streaming-responses/)
+- [Blazor WASM Drag and Drop Performance Issues - Reddit](https://www.reddit.com/r/Blazor/comments/1i0n9js/blazor_wasm_drag_and_drop_performance_issues/)
+- [.Net6 Blazor SignalR Hub Connection causing high CPU](https://github.com/dotnet/aspnetcore/issues/39482)
+- [Really poor performance and latency of controls with multiple](https://github.com/dotnet/aspnetcore/issues/19739)
+- [Refactoring Module Dependencies - Martin Fowler](https://martinfowler.com/articles/refactoring-dependencies.html)
+- [7 Costly Mistakes to Avoid When Architecting a Multi-Module Mobile App](https://medium.com/@sharmapraveen91/7-costly-mistakes-to-avoid-when-architecting-a-multi-module-mobile-app-8ca8a7293963)
+- [Topological Sort - Neo4j Graph Data Science](https://neo4j.com/docs/graph-data-science/current/algorithms/dag/topological-sort/)
+- [Detect cycle in Directed Graph using Topological Sort](https://www.geeksforgeeks.org/dsa/detect-cycle-in-directed-graph-using-topological-sort/)
+- [Blazor Webassembly SVG Drag And Drop](https://medium.com/codex/blazor-webassembly-svg-drag-and-drop-e680769ac682)
+- [SVG Performance - Perf issues with thousands of path elements](https://www.reddit.com/r/learnjavascript/comments/3l2odo/svg_performance_perf_issues_with_thousands_of/)
+- OpenAnima project context and existing architecture decisions
 
 ---
-*Pitfalls research for: LLM Integration in .NET 8 Blazor Server Agent Platform*
-*Researched: 2026-02-24*
+*Pitfalls research for: Visual node/wiring editor + port-based module system in Blazor Server*
+*Researched: 2026-02-25*
