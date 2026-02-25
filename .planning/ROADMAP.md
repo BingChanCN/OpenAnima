@@ -69,6 +69,7 @@ Plans:
   5. User can copy any message content to clipboard
   6. User can regenerate the last assistant response
   7. User sees Markdown-formatted responses with syntax-highlighted code blocks
+**Gap Closure:** Closes CHAT-01 through CHAT-07 from v1.2 audit
 **Plans**: TBD
 
 ### Phase 10: Context Management & Token Counting
@@ -80,6 +81,7 @@ Plans:
   2. User can have multi-turn conversations (20+ messages) without hitting context limit errors
   3. User observes oldest messages automatically removed when approaching context limit
   4. User sees chat events published to EventBus (visible in module logs or future modules)
+**Gap Closure:** Closes CTX-01 through CTX-04 from v1.2 audit
 **Plans**: TBD
 
 ## Progress
@@ -94,5 +96,5 @@ Plans:
 | 6. Control Operations | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 7. Polish & Validation | v1.1 | 2/2 | Complete | 2026-02-23 |
 | 8. API Client Setup & Configuration | v1.2 | Complete    | 2026-02-24 | 2026-02-24 |
-| 9. Chat UI with Streaming | v1.2 | 0/? | Not started | - |
-| 10. Context Management & Token Counting | v1.2 | 0/? | Not started | - |
+| 9. Chat UI with Streaming | v1.2 | 0/? | Gap closure — ready to plan | - |
+| 10. Context Management & Token Counting | v1.2 | 0/? | Gap closure — ready to plan | - |
