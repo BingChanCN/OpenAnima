@@ -21,9 +21,9 @@ Requirements for LLM Integration milestone. Each maps to roadmap phases.
 - [x] **CHAT-02**: User sees conversation history with role-based styling (user right, assistant left)
 - [x] **CHAT-03**: User sees streaming LLM responses appear token-by-token in real time
 - [x] **CHAT-04**: Chat auto-scrolls to latest message unless user has scrolled up manually
-- [ ] **CHAT-05**: User can copy any message content to clipboard
-- [ ] **CHAT-06**: User can regenerate the last assistant response
-- [ ] **CHAT-07**: User sees Markdown-formatted responses with code block syntax highlighting
+- [x] **CHAT-05**: User can copy any message content to clipboard
+- [x] **CHAT-06**: User can regenerate the last assistant response
+- [x] **CHAT-07**: User sees Markdown-formatted responses with code block syntax highlighting
 
 ### Context Management
 
@@ -84,9 +84,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAT-02 | Phase 9 | Complete |
 | CHAT-03 | Phase 9 | Complete |
 | CHAT-04 | Phase 9 | Complete |
-| CHAT-05 | Phase 9 | Pending |
-| CHAT-06 | Phase 9 | Pending |
-| CHAT-07 | Phase 9 | Pending |
+| CHAT-05 | Phase 9 | Complete |
+| CHAT-06 | Phase 9 | Complete |
+| CHAT-07 | Phase 9 | Complete |
 | CTX-01 | Phase 10 | Pending |
 | CTX-02 | Phase 10 | Pending |
 | CTX-03 | Phase 10 | Pending |
@@ -96,7 +96,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1.2 requirements: 16 total
 - Mapped to phases: 16
 - Unmapped: 0 ✓
+- Complete: 12 (75%)
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after roadmap creation*
+*Last updated: 2026-02-25 after Phase 9 completion*

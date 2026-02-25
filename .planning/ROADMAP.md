@@ -35,7 +35,7 @@ See: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full details.
 <summary>🚧 v1.2 LLM Integration (Phases 8-10) — IN PROGRESS</summary>
 
 - [x] **Phase 8: API Client Setup & Configuration** - LLM API integration with streaming, error handling, and retry logic
-- [ ] **Phase 9: Chat UI with Streaming** - Real-time chat interface with streaming responses and conversation history
+- [x] **Phase 9: Chat UI with Streaming** - Real-time chat interface with streaming responses and conversation history
 - [ ] **Phase 10: Context Management & Token Counting** - Token tracking and automatic context window management
 
 </details>
@@ -70,10 +70,10 @@ Plans:
   6. User can regenerate the last assistant response
   7. User sees Markdown-formatted responses with syntax-highlighted code blocks
 **Gap Closure:** Closes CHAT-01 through CHAT-07 from v1.2 audit
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 09-01-PLAN.md — Core chat UI with streaming (ChatPanel, ChatMessage, ChatInput, JS helpers, Dashboard integration)
-- [ ] 09-02-PLAN.md — Markdown rendering, copy-to-clipboard, regenerate, human verification
+- [x] 09-01-PLAN.md — Core chat UI with streaming (ChatPanel, ChatMessage, ChatInput, JS helpers, Dashboard integration)
+- [x] 09-02-PLAN.md — Markdown rendering, copy-to-clipboard, regenerate, human verification
 
 ### Phase 10: Context Management & Token Counting
 **Goal**: Conversations stay within context limits with accurate token tracking
@@ -98,6 +98,6 @@ Plans:
 | 5. SignalR Real-Time Updates | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 6. Control Operations | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 7. Polish & Validation | v1.1 | 2/2 | Complete | 2026-02-23 |
-| 8. API Client Setup & Configuration | v1.2 | Complete    | 2026-02-24 | 2026-02-24 |
-| 9. Chat UI with Streaming | v1.2 | 0/2 | Planned | - |
+| 8. API Client Setup & Configuration | v1.2 | 2/2 | Complete | 2026-02-24 |
+| 9. Chat UI with Streaming | v1.2 | 2/2 | Complete | 2026-02-25 |
 | 10. Context Management & Token Counting | v1.2 | 0/? | Gap closure — ready to plan | - |
