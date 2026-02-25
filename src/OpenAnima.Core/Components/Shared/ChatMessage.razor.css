@@ -4,6 +4,7 @@
     padding: 0.75rem;
     border-radius: 8px;
     word-wrap: break-word;
+    position: relative;
 }
 
 .message.user {
@@ -39,6 +40,98 @@
     white-space: pre-wrap;
 }
 
+/* Markdown content styles */
+.message-content h1, .message-content h2, .message-content h3,
+.message-content h4, .message-content h5, .message-content h6 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.message-content h1 { font-size: 1.5rem; }
+.message-content h2 { font-size: 1.3rem; }
+.message-content h3 { font-size: 1.1rem; }
+
+.message-content ul, .message-content ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.message-content li {
+    margin: 0.25rem 0;
+}
+
+.message-content blockquote {
+    border-left: 3px solid #6366f1;
+    padding-left: 1rem;
+    margin: 0.5rem 0;
+    color: #b0b0b0;
+}
+
+.message-content table {
+    border-collapse: collapse;
+    margin: 0.5rem 0;
+    width: 100%;
+}
+
+.message-content th, .message-content td {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.5rem;
+    text-align: left;
+}
+
+.message-content th {
+    background: rgba(255, 255, 255, 0.05);
+    font-weight: 600;
+}
+
+/* Code blocks */
+.message-content pre {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+}
+
+.message-content code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.message-content p code {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+}
+
+/* Copy button */
+.copy-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s;
+    font-size: 1rem;
+}
+
+.message:hover .copy-btn {
+    opacity: 1;
+}
+
+.copy-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.copied-feedback {
+    color: #4ade80;
+}
+
 .typing-cursor {
     animation: blink 1s infinite;
     margin-left: 2px;
@@ -48,3 +141,5 @@
     0%, 49% { opacity: 1; }
     50%, 100% { opacity: 0; }
 }
+
+

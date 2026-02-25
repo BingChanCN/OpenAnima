@@ -1,3 +1,7 @@
+@using Markdig
+@using Markdown.ColorCode
+@inject IJSRuntime JS
+
 @if (Role == "user")
 {
     <div class="message user">
@@ -8,6 +12,16 @@
                 <span class="typing-cursor">|</span>
             }
         </div>
+        <button class="copy-btn" @onclick="CopyToClipboard" title="Copy to clipboard">
+            @if (_copied)
+            {
+                <span class="copied-feedback">✓</span>
+            }
+            else
+            {
+                <span>📋</span>
+            }
+        </button>
     </div>
 }
 else
@@ -15,16 +29,34 @@ else
     <div class="message assistant">
         <span class="ai-icon">◆</span>
         <div class="message-content">
-            @Content
+            @RenderContent()
             @if (IsStreaming)
             {
                 <span class="typing-cursor">|</span>
             }
         </div>
+        <button class="copy-btn" @onclick="CopyToClipboard" title="Copy to clipboard">
+            @if (_copied)
+            {
+                <span class="copied-feedback">✓</span>
+            }
+            else
+            {
+                <span>📋</span>
+            }
+        </button>
     </div>
 }
 
 @code {
+    private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .DisableHtml() // XSS prevention
+        .UseColorCode(HtmlFormatterType.Style)
+        .Build();
+
+    private bool _copied = false;
+
     [Parameter]
     public string Role { get; set; } = "";
 
@@ -33,4 +65,28 @@ else
 
     [Parameter]
     public bool IsStreaming { get; set; }
+
+    private MarkupString RenderContent()
+    {
+        if (Role == "assistant")
+        {
+            var html = Markdig.Markdown.ToHtml(Content, _pipeline);
+            return (MarkupString)html;
+        }
+        return (MarkupString)Content;
+    }
+
+    private async Task CopyToClipboard()
+    {
+        var success = await JS.InvokeAsync<bool>("chatHelpers.copyToClipboard", Content);
+        if (success)
+        {
+            _copied = true;
+            StateHasChanged();
+            await Task.Delay(2000);
+            _copied = false;
+            StateHasChanged();
+        }
+    }
 }
+

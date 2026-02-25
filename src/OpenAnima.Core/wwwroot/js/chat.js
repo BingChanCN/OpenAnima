@@ -27,5 +27,14 @@ window.chatHelpers = {
         const textarea = document.getElementById(textareaId);
         if (!textarea) return;
         // Handled via event in Blazor side
+    },
+    copyToClipboard: async function(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (err) {
+            console.error('Copy failed:', err);
+            return false;
+        }
     }
 };
