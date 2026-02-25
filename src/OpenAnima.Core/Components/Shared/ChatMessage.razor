@@ -1,0 +1,36 @@
+@if (Role == "user")
+{
+    <div class="message user">
+        <div class="message-content">
+            @Content
+            @if (IsStreaming)
+            {
+                <span class="typing-cursor">|</span>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="message assistant">
+        <span class="ai-icon">◆</span>
+        <div class="message-content">
+            @Content
+            @if (IsStreaming)
+            {
+                <span class="typing-cursor">|</span>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Role { get; set; } = "";
+
+    [Parameter]
+    public string Content { get; set; } = "";
+
+    [Parameter]
+    public bool IsStreaming { get; set; }
+}

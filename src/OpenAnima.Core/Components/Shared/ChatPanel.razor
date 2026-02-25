@@ -1,0 +1,137 @@
+@using OpenAnima.Core.LLM
+@using System.Text
+@using System.Diagnostics
+@implements IAsyncDisposable
+@inject ILLMService _llmService
+@inject IJSRuntime JS
+
+<div class="chat-panel">
+    <div class="chat-messages" id="chat-messages">
+        @if (_messages.Count == 0)
+        {
+            <div class="empty-state">
+                <span class="empty-icon">💬</span>
+                <p>Start a conversation</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var message in _messages)
+            {
+                <ChatMessage Role="@message.Role" Content="@message.Content" IsStreaming="@message.IsStreaming" />
+            }
+        }
+    </div>
+    <ChatInput OnSend="SendMessage" IsDisabled="_isGenerating" />
+</div>
+
+@code {
+    private List<ChatMessageModel> _messages = new();
+    private bool _isGenerating = false;
+    private CancellationTokenSource _cts = new();
+
+    private async Task SendMessage(string userMessage)
+    {
+        if (string.IsNullOrWhiteSpace(userMessage))
+            return;
+
+        // Add user message
+        _messages.Add(new ChatMessageModel
+        {
+            Role = "user",
+            Content = userMessage,
+            IsStreaming = false
+        });
+
+        // Create assistant message placeholder
+        var assistantMessage = new ChatMessageModel
+        {
+            Role = "assistant",
+            Content = "",
+            IsStreaming = true
+        };
+        _messages.Add(assistantMessage);
+
+        _isGenerating = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            // Build conversation history
+            var history = _messages
+                .Where(m => !m.IsStreaming)
+                .Select(m => new ChatMessageInput(m.Role, m.Content))
+                .ToList();
+
+            // Stream response
+            var contentBuilder = new StringBuilder();
+            var stopwatch = Stopwatch.StartNew();
+            var lastUpdateTime = 0L;
+            const int updateIntervalMs = 50;
+            const int updateIntervalChars = 100;
+            var charsSinceLastUpdate = 0;
+
+            await foreach (var token in _llmService.StreamAsync(history, _cts.Token))
+            {
+                contentBuilder.Append(token);
+                charsSinceLastUpdate += token.Length;
+
+                // Batch updates: every 50ms or 100 chars
+                if (stopwatch.ElapsedMilliseconds - lastUpdateTime >= updateIntervalMs || charsSinceLastUpdate >= updateIntervalChars)
+                {
+                    assistantMessage.Content = contentBuilder.ToString();
+                    await InvokeAsync(StateHasChanged);
+
+                    // Auto-scroll if user hasn't scrolled up
+                    var shouldScroll = await JS.InvokeAsync<bool>("chatHelpers.shouldAutoScroll", "chat-messages");
+                    if (shouldScroll)
+                    {
+                        await JS.InvokeVoidAsync("chatHelpers.scrollToBottom", "chat-messages");
+                    }
+
+                    lastUpdateTime = stopwatch.ElapsedMilliseconds;
+                    charsSinceLastUpdate = 0;
+                }
+            }
+
+            // Final update
+            assistantMessage.Content = contentBuilder.ToString();
+            assistantMessage.IsStreaming = false;
+            await InvokeAsync(StateHasChanged);
+
+            // Final scroll
+            var shouldScrollFinal = await JS.InvokeAsync<bool>("chatHelpers.shouldAutoScroll", "chat-messages");
+            if (shouldScrollFinal)
+            {
+                await JS.InvokeVoidAsync("chatHelpers.scrollToBottom", "chat-messages");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // User cancelled - gracefully handle
+            assistantMessage.Content += "\n\n[Cancelled]";
+            assistantMessage.IsStreaming = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        finally
+        {
+            _isGenerating = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+
+    private class ChatMessageModel
+    {
+        public string Role { get; set; } = "";
+        public string Content { get; set; } = "";
+        public bool IsStreaming { get; set; }
+    }
+}
+
+

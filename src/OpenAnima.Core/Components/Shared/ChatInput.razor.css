@@ -1,0 +1,60 @@
+.chat-input-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #1a1b2e;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+textarea {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    resize: none;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: #6366f1;
+}
+
+textarea:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.send-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #6366f1;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+
+.send-btn:hover:not(:disabled) {
+    background: #4f46e5;
+}
+
+.send-btn:disabled {
+    background: rgba(99, 102, 241, 0.3);
+    cursor: not-allowed;
+}
