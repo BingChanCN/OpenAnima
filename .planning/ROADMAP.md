@@ -47,7 +47,7 @@ See: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 <summary>🚧 v1.3 True Modularization & Visual Wiring (Phases 11-14) — IN PROGRESS</summary>
 
 - [x] **Phase 11: Port Type System & Testing Foundation** - Establish port types, validation, and integration tests (completed 2026-02-25)
-- [ ] **Phase 12: Wiring Engine & Execution Orchestration** - Topological execution with cycle detection
+- [x] **Phase 12: Wiring Engine & Execution Orchestration** - Topological execution with cycle detection (completed 2026-02-25)
 - [ ] **Phase 13: Visual Drag-and-Drop Editor** - HTML5/SVG canvas with pan/zoom and connection preview
 - [ ] **Phase 14: Module Refactoring & Runtime Integration** - Refactor LLM/chat/heartbeat into port-based modules
 
@@ -77,7 +77,7 @@ Plans:
   2. User creates circular connection (A→B→C→A) and receives clear error message preventing save
   3. Data sent to output port arrives at all connected input ports during execution
   4. Wiring configuration can be saved to JSON and loaded back with full topology restoration
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 12-01-PLAN.md — ConnectionGraph with topological sort and cycle detection (TDD)
 - [ ] 12-02-PLAN.md — WiringConfiguration schema and ConfigurationLoader with strict validation
@@ -127,7 +127,7 @@ Plans:
 | 9. Chat UI with Streaming | v1.2 | 2/2 | Complete | 2026-02-25 |
 | 10. Context Management & Token Counting | v1.2 | 2/2 | Complete | 2026-02-25 |
 | 11. Port Type System & Testing Foundation | 3/3 | Complete    | 2026-02-25 | - |
-| 12. Wiring Engine & Execution Orchestration | 2/3 | In Progress|  | - |
+| 12. Wiring Engine & Execution Orchestration | 3/3 | Complete   | 2026-02-25 | - |
 | 13. Visual Drag-and-Drop Editor | v1.3 | 0/? | Not started | - |
 | 14. Module Refactoring & Runtime Integration | v1.3 | 0/? | Not started | - |
 
