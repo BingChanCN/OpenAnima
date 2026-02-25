@@ -107,6 +107,62 @@ public class LLMService : ILLMService
         }
     }
 
+    public async IAsyncEnumerable<StreamingResult> StreamWithUsageAsync(IReadOnlyList<ChatMessageInput> messages, [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var chatMessages = MapMessages(messages);
+
+        int? inputTokens = null;
+        int? outputTokens = null;
+
+        AsyncCollectionResult<StreamingChatCompletionUpdate>? streamingUpdates = null;
+
+        // Try to initiate streaming - handle errors by yielding error tokens
+        string? initError = null;
+        try
+        {
+            streamingUpdates = _client.CompleteChatStreamingAsync(chatMessages, cancellationToken: ct);
+        }
+        catch (ClientResultException ex)
+        {
+            initError = MapClientError(ex);
+            _logger.LogError(ex, initError);
+        }
+        catch (HttpRequestException ex)
+        {
+            initError = $"Network error - {ex.Message}";
+            _logger.LogError(ex, initError);
+        }
+
+        if (initError != null)
+        {
+            yield return new StreamingResult($"\n\n[Error: {initError}]", null, null);
+            yield break;
+        }
+
+        // Stream tokens and capture usage
+        await foreach (var update in streamingUpdates!.WithCancellation(ct))
+        {
+            // Capture usage data if available
+            if (update.Usage != null)
+            {
+                inputTokens = update.Usage.InputTokenCount;
+                outputTokens = update.Usage.OutputTokenCount;
+            }
+
+            // Yield content tokens
+            if (update.ContentUpdate.Count > 0)
+            {
+                yield return new StreamingResult(update.ContentUpdate[0].Text, null, null);
+            }
+        }
+
+        // Yield final result with usage data
+        if (inputTokens.HasValue || outputTokens.HasValue)
+        {
+            yield return new StreamingResult("", inputTokens, outputTokens);
+        }
+    }
+
     private List<ChatMessage> MapMessages(IReadOnlyList<ChatMessageInput> messages)
     {
         var chatMessages = new List<ChatMessage>();

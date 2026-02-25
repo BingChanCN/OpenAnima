@@ -59,6 +59,15 @@ builder.Services.AddSingleton<ChatClient>(sp =>
 
 builder.Services.AddSingleton<ILLMService, LLMService>();
 
+// --- Register token counting and context management ---
+builder.Services.AddSingleton<TokenCounter>(sp =>
+{
+    var options = sp.GetRequiredService<IOptions<LLMOptions>>().Value;
+    return new TokenCounter(options.Model);
+});
+
+builder.Services.AddSingleton<ChatContextManager>();
+
 // --- Register hosted service for runtime lifecycle ---
 builder.Services.AddHostedService<OpenAnimaHostedService>();
 
