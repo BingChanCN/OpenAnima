@@ -9,10 +9,10 @@ Requirements for v1.3 True Modularization & Visual Wiring. Each maps to roadmap 
 
 ### Port System (端口类型系统)
 
-- [ ] **PORT-01**: User can see port type categories (Text, Trigger) on module ports with visual color distinction
-- [ ] **PORT-02**: User cannot connect ports of different types — editor rejects with visual feedback
-- [ ] **PORT-03**: User can connect one output port to multiple input ports (fan-out)
-- [ ] **PORT-04**: Modules declare input/output ports via typed interface, discoverable at load time
+- [x] **PORT-01**: User can see port type categories (Text, Trigger) on module ports with visual color distinction
+- [x] **PORT-02**: User cannot connect ports of different types — editor rejects with visual feedback
+- [x] **PORT-03**: User can connect one output port to multiple input ports (fan-out)
+- [x] **PORT-04**: Modules declare input/output ports via typed interface, discoverable at load time
 
 ### Wiring Engine (连线引擎)
 
@@ -89,10 +89,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PORT-01 | Phase 11 | Pending |
-| PORT-02 | Phase 11 | Pending |
-| PORT-03 | Phase 11 | Pending |
-| PORT-04 | Phase 11 | Pending |
+| PORT-01 | Phase 11 | Complete |
+| PORT-02 | Phase 11 | Complete |
+| PORT-03 | Phase 11 | Complete |
+| PORT-04 | Phase 11 | Complete |
 | WIRE-01 | Phase 12 | Pending |
 | WIRE-02 | Phase 12 | Pending |
 | WIRE-03 | Phase 12 | Pending |
