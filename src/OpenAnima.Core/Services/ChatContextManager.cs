@@ -116,4 +116,12 @@ public class ChatContextManager
             return (double)CurrentContextTokens / MaxContextTokens * 100.0;
         }
     }
+
+    /// <summary>
+    /// Counts tokens in a text string.
+    /// </summary>
+    public int CountTokens(string text)
+    {
+        return _tokenCounter.CountTokens(text);
+    }
 }

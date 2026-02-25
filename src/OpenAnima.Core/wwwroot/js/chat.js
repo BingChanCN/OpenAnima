@@ -53,5 +53,9 @@ window.chatHelpers = {
             console.error('Copy failed:', err);
             return false;
         }
+    },
+    showContextLimitModal: function(currentTokens, maxTokens) {
+        const percentage = ((currentTokens / maxTokens) * 100).toFixed(1);
+        alert(`Context limit reached.\n\nCurrent: ${currentTokens} tokens / Max: ${maxTokens} tokens (${percentage}%).\n\nPlease start a new conversation.`);
     }
 };

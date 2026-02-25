@@ -1,8 +1,13 @@
 @using OpenAnima.Core.LLM
+@using OpenAnima.Core.Services
+@using OpenAnima.Core.Events
+@using OpenAnima.Contracts
 @using System.Text
 @using System.Diagnostics
 @implements IAsyncDisposable
 @inject ILLMService _llmService
+@inject ChatContextManager _contextManager
+@inject IEventBus _eventBus
 @inject IJSRuntime JS
 
 <div class="chat-panel">
@@ -28,7 +33,12 @@
             }
         }
     </div>
-    <ChatInput OnSend="SendMessage" IsDisabled="_isGenerating" />
+    <TokenUsageDisplay
+        InputTokens="@_contextManager.TotalInputTokens"
+        OutputTokens="@_contextManager.TotalOutputTokens"
+        CurrentContextTokens="@_contextManager.CurrentContextTokens"
+        MaxContextTokens="@_contextManager.MaxContextTokens" />
+    <ChatInput OnSend="SendMessage" IsDisabled="@(_isGenerating || IsContextLimitReached())" />
 </div>
 
 @code {
@@ -36,10 +46,44 @@
     private bool _isGenerating = false;
     private CancellationTokenSource _cts = new();
 
+    protected override void OnInitialized()
+    {
+        _contextManager.OnStateChanged += () => InvokeAsync(StateHasChanged);
+    }
+
+    private bool IsContextLimitReached()
+    {
+        var utilization = _contextManager.GetContextUtilization();
+        return _contextManager.GetContextStatus() == ContextStatus.Danger && utilization >= 90.0;
+    }
+
     private async Task SendMessage(string userMessage)
     {
         if (string.IsNullOrWhiteSpace(userMessage))
             return;
+
+        // Build conversation history for context check
+        var history = _messages
+            .Where(m => !m.IsStreaming)
+            .Select(m => new ChatMessageInput(m.Role, m.Content))
+            .ToList();
+
+        // Check context limit BEFORE sending
+        if (!_contextManager.CanSendMessage(history, userMessage))
+        {
+            var currentTokens = _contextManager.CurrentContextTokens;
+            var maxTokens = _contextManager.MaxContextTokens;
+            var utilization = _contextManager.GetContextUtilization();
+
+            await JS.InvokeVoidAsync("chatHelpers.showContextLimitModal", currentTokens, maxTokens);
+            await _eventBus.PublishAsync(new ModuleEvent<ContextLimitReachedPayload>
+            {
+                EventName = "ContextLimitReached",
+                SourceModuleId = "OpenAnima.Core",
+                Payload = new ContextLimitReachedPayload(currentTokens, maxTokens, utilization)
+            });
+            return;
+        }
 
         // Add user message
         _messages.Add(new ChatMessageModel
@@ -47,6 +91,16 @@
             Role = "user",
             Content = userMessage,
             IsStreaming = false
+        });
+
+        // Update context manager after send
+        var messageTokenCount = _contextManager.CountTokens(userMessage);
+        _contextManager.UpdateAfterSend(messageTokenCount);
+        await _eventBus.PublishAsync(new ModuleEvent<MessageSentPayload>
+        {
+            EventName = "MessageSent",
+            SourceModuleId = "OpenAnima.Core",
+            Payload = new MessageSentPayload(userMessage, messageTokenCount, DateTime.UtcNow)
         });
 
         // Create assistant message placeholder
@@ -64,23 +118,31 @@
         try
         {
             // Build conversation history
-            var history = _messages
+            history = _messages
                 .Where(m => !m.IsStreaming)
                 .Select(m => new ChatMessageInput(m.Role, m.Content))
                 .ToList();
 
-            // Stream response
+            // Stream response with usage tracking
             var contentBuilder = new StringBuilder();
             var stopwatch = Stopwatch.StartNew();
             var lastUpdateTime = 0L;
             const int updateIntervalMs = 50;
             const int updateIntervalChars = 100;
             var charsSinceLastUpdate = 0;
+            int? finalInputTokens = null;
+            int? finalOutputTokens = null;
 
-            await foreach (var token in _llmService.StreamAsync(history, _cts.Token))
+            await foreach (var result in _llmService.StreamWithUsageAsync(history, _cts.Token))
             {
-                contentBuilder.Append(token);
-                charsSinceLastUpdate += token.Length;
+                contentBuilder.Append(result.Token);
+                charsSinceLastUpdate += result.Token.Length;
+
+                // Capture usage data when available
+                if (result.InputTokens.HasValue)
+                    finalInputTokens = result.InputTokens.Value;
+                if (result.OutputTokens.HasValue)
+                    finalOutputTokens = result.OutputTokens.Value;
 
                 // Batch updates: every 50ms or 100 chars
                 if (stopwatch.ElapsedMilliseconds - lastUpdateTime >= updateIntervalMs || charsSinceLastUpdate >= updateIntervalChars)
@@ -103,6 +165,24 @@
             // Final update
             assistantMessage.Content = contentBuilder.ToString();
             assistantMessage.IsStreaming = false;
+
+            // Update context manager with API-returned usage
+            if (finalInputTokens.HasValue && finalOutputTokens.HasValue)
+            {
+                var responseTokenCount = _contextManager.CountTokens(assistantMessage.Content);
+                _contextManager.UpdateAfterResponse(finalInputTokens.Value, finalOutputTokens.Value, responseTokenCount);
+                await _eventBus.PublishAsync(new ModuleEvent<ResponseReceivedPayload>
+                {
+                    EventName = "ResponseReceived",
+                    SourceModuleId = "OpenAnima.Core",
+                    Payload = new ResponseReceivedPayload(
+                        assistantMessage.Content,
+                        finalInputTokens.Value,
+                        finalOutputTokens.Value,
+                        DateTime.UtcNow)
+                });
+            }
+
             await InvokeAsync(StateHasChanged);
 
             // Final scroll
@@ -155,18 +235,26 @@
                 .Select(m => new ChatMessageInput(m.Role, m.Content))
                 .ToList();
 
-            // Stream response
+            // Stream response with usage tracking
             var contentBuilder = new StringBuilder();
             var stopwatch = Stopwatch.StartNew();
             var lastUpdateTime = 0L;
             const int updateIntervalMs = 50;
             const int updateIntervalChars = 100;
             var charsSinceLastUpdate = 0;
+            int? finalInputTokens = null;
+            int? finalOutputTokens = null;
 
-            await foreach (var token in _llmService.StreamAsync(history, _cts.Token))
+            await foreach (var result in _llmService.StreamWithUsageAsync(history, _cts.Token))
             {
-                contentBuilder.Append(token);
-                charsSinceLastUpdate += token.Length;
+                contentBuilder.Append(result.Token);
+                charsSinceLastUpdate += result.Token.Length;
+
+                // Capture usage data when available
+                if (result.InputTokens.HasValue)
+                    finalInputTokens = result.InputTokens.Value;
+                if (result.OutputTokens.HasValue)
+                    finalOutputTokens = result.OutputTokens.Value;
 
                 // Batch updates: every 50ms or 100 chars
                 if (stopwatch.ElapsedMilliseconds - lastUpdateTime >= updateIntervalMs || charsSinceLastUpdate >= updateIntervalChars)
@@ -189,6 +277,24 @@
             // Final update
             assistantMessage.Content = contentBuilder.ToString();
             assistantMessage.IsStreaming = false;
+
+            // Update context manager with API-returned usage
+            if (finalInputTokens.HasValue && finalOutputTokens.HasValue)
+            {
+                var responseTokenCount = _contextManager.CountTokens(assistantMessage.Content);
+                _contextManager.UpdateAfterResponse(finalInputTokens.Value, finalOutputTokens.Value, responseTokenCount);
+                await _eventBus.PublishAsync(new ModuleEvent<ResponseReceivedPayload>
+                {
+                    EventName = "ResponseReceived",
+                    SourceModuleId = "OpenAnima.Core",
+                    Payload = new ResponseReceivedPayload(
+                        assistantMessage.Content,
+                        finalInputTokens.Value,
+                        finalOutputTokens.Value,
+                        DateTime.UtcNow)
+                });
+            }
+
             await InvokeAsync(StateHasChanged);
 
             // Final scroll

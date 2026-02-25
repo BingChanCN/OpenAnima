@@ -1,0 +1,37 @@
+<div class="token-usage-display">
+    <div class="token-section">
+        <span class="label">Tokens:</span>
+        <span>Input: @InputTokens | Output: @OutputTokens | Total: @TotalTokens</span>
+    </div>
+    <div class="context-section">
+        <span class="label">Context:</span>
+        <span class="@GetStatusClass()">@CurrentContextTokens / @MaxContextTokens (@Percentage.ToString("F1")%)</span>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int InputTokens { get; set; }
+
+    [Parameter]
+    public int OutputTokens { get; set; }
+
+    [Parameter]
+    public int CurrentContextTokens { get; set; }
+
+    [Parameter]
+    public int MaxContextTokens { get; set; }
+
+    private int TotalTokens => InputTokens + OutputTokens;
+
+    private double Percentage => MaxContextTokens > 0 ? (double)CurrentContextTokens / MaxContextTokens * 100.0 : 0.0;
+
+    private string GetStatusClass()
+    {
+        if (Percentage >= 85.0)
+            return "status-danger";
+        if (Percentage >= 70.0)
+            return "status-warning";
+        return "status-normal";
+    }
+}
