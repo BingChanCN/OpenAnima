@@ -92,29 +92,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-01 | Phase 11 | Complete |
 | PORT-02 | Phase 11 | Complete |
 | PORT-03 | Phase 11 | Complete |
-| PORT-04 | Phase 11 | Complete |
-| WIRE-01 | Phase 12 | Complete |
-| WIRE-02 | Phase 12 | Complete |
-| WIRE-03 | Phase 12 | Complete |
+| PORT-04 | Phase 11, Phase 12.5 (runtime fix) | Complete (test), Pending (runtime) |
+| WIRE-01 | Phase 12, Phase 12.5 (DI fix) | Complete (test), Pending (runtime) |
+| WIRE-02 | Phase 12, Phase 12.5 (DI fix) | Complete (test), Pending (runtime) |
+| WIRE-03 | Phase 12, Phase 12.5 (DI fix) | Complete (test), Pending (runtime) |
 | EDIT-01 | Phase 13 | Pending |
 | EDIT-02 | Phase 13 | Pending |
-| EDIT-03 | Phase 13 | Pending |
+| EDIT-03 | Phase 13 (depends on Phase 12.5) | Pending |
 | EDIT-04 | Phase 13 | Pending |
-| EDIT-05 | Phase 13 | Pending |
-| EDIT-06 | Phase 13 | Pending |
+| EDIT-05 | Phase 13 (depends on Phase 12.5) | Pending |
+| EDIT-06 | Phase 13 (depends on Phase 12.5) | Pending |
 | RMOD-01 | Phase 14 | Pending |
 | RMOD-02 | Phase 14 | Pending |
 | RMOD-03 | Phase 14 | Pending |
 | RMOD-04 | Phase 14 | Pending |
 | RTIM-01 | Phase 14 | Pending |
 | RTIM-02 | Phase 14 | Pending |
-| E2E-01 | Phase 14 | Pending |
+| E2E-01 | Phase 14 (depends on Phase 12.5) | Pending |
 
 **Coverage:**
-- v1.3 requirements: 17 total
-- Mapped to phases: 17
+- v1.3 requirements: 20 total (17 functional + 3 runtime integration fixes)
+- Mapped to phases: 20
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 after roadmap creation*
+*Last updated: 2026-02-26 after gap closure phase creation*

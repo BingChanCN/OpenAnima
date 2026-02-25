@@ -5,7 +5,7 @@
 - ✅ **v1.0 Core Platform Foundation** — Phases 1-2 (shipped 2026-02-21)
 - ✅ **v1.1 WebUI Runtime Dashboard** — Phases 3-7 (shipped 2026-02-23)
 - ✅ **v1.2 LLM Integration** — Phases 8-10 (shipped 2026-02-25)
-- 🚧 **v1.3 True Modularization & Visual Wiring** — Phases 11-14 (in progress)
+- 🚧 **v1.3 True Modularization & Visual Wiring** — Phases 11-14 + 12.5 (in progress)
 
 ## Phases
 
@@ -48,6 +48,7 @@ See: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 
 - [x] **Phase 11: Port Type System & Testing Foundation** - Establish port types, validation, and integration tests (completed 2026-02-25)
 - [x] **Phase 12: Wiring Engine & Execution Orchestration** - Topological execution with cycle detection (completed 2026-02-25)
+- [ ] **Phase 12.5: Runtime DI Integration & Tech Debt Fix** - Register core services in DI, persist port discovery
 - [ ] **Phase 13: Visual Drag-and-Drop Editor** - HTML5/SVG canvas with pan/zoom and connection preview
 - [ ] **Phase 14: Module Refactoring & Runtime Integration** - Refactor LLM/chat/heartbeat into port-based modules
 
@@ -83,9 +84,22 @@ Plans:
 - [ ] 12-02-PLAN.md — WiringConfiguration schema and ConfigurationLoader with strict validation
 - [ ] 12-03-PLAN.md — WiringEngine orchestration with level-parallel execution and data routing
 
+### Phase 12.5: Runtime DI Integration & Tech Debt Fix
+**Goal**: Register WiringEngine, ConfigurationLoader, and PortRegistry in DI container; persist port discovery results at runtime
+**Depends on**: Phase 12
+**Requirements**: Unblocks PORT-04 (runtime), WIRE-01, WIRE-02, WIRE-03, EDIT-03, EDIT-05, EDIT-06, E2E-01
+**Gap Closure**: Closes 3 integration gaps and 2 broken flows from audit
+**Success Criteria** (what must be TRUE):
+  1. WiringEngine is registered in DI and injectable in Blazor components and services
+  2. ConfigurationLoader is registered in DI and can save/load wiring configurations at runtime
+  3. PortRegistry is populated during module load and persists port metadata beyond discovery
+  4. Module Load → Port Registration flow works end-to-end at runtime (not just in tests)
+  5. Configuration Save/Load → Execution flow works end-to-end at runtime
+**Plans**: TBD
+
 ### Phase 13: Visual Drag-and-Drop Editor
 **Goal**: Provide web-based visual editor for creating and managing module connections
-**Depends on**: Phase 12
+**Depends on**: Phase 12.5
 **Requirements**: EDIT-01, EDIT-02, EDIT-03, EDIT-04, EDIT-05, EDIT-06
 **Success Criteria** (what must be TRUE):
   1. User can drag modules from palette onto canvas and they appear at drop location
@@ -128,8 +142,9 @@ Plans:
 | 10. Context Management & Token Counting | v1.2 | 2/2 | Complete | 2026-02-25 |
 | 11. Port Type System & Testing Foundation | 3/3 | Complete    | 2026-02-25 | - |
 | 12. Wiring Engine & Execution Orchestration | 3/3 | Complete    | 2026-02-25 | - |
+| 12.5. Runtime DI Integration & Tech Debt Fix | v1.3 | 0/? | Not started | - |
 | 13. Visual Drag-and-Drop Editor | v1.3 | 0/? | Not started | - |
 | 14. Module Refactoring & Runtime Integration | v1.3 | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-02-25 after v1.3 roadmap creation*
+*Last updated: 2026-02-26 after gap closure phase creation*
