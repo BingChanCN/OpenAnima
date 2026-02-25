@@ -9,34 +9,33 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 ## Current Position
 
-**Phase:** 9 - Chat UI with Streaming
-**Plan:** 2 of 2
-**Status:** Completed
-**Last activity:** 2026-02-25 — Completed 09-02-PLAN.md
+**Phase:** 10 - Context Management and Token Counting
+**Plan:** 1 of 2
+**Status:** In Progress
+**Last activity:** 2026-02-25 — Completed 10-01-PLAN.md
 
-**Progress:** [██████████] 100%
+**Progress:** [████████░░] 83%
 
-### Phase 9 Goal
-Users can interact with LLM agents through a real-time chat interface with streaming responses
+### Phase 10 Goal
+Track token usage, enforce context limits, and provide real-time feedback to prevent context window overflow
 
-### Phase 9 Requirements
-- CHAT-01: User can type a message and send it from the chat panel ✓
-- CHAT-02: User sees conversation history with user messages right-aligned and assistant messages left-aligned ✓
-- CHAT-03: User sees LLM responses stream token-by-token in real time ✓
-- CHAT-04: Chat auto-scrolls to latest message unless user has scrolled up ✓
-- CHAT-05: Chat messages render Markdown with syntax-highlighted code blocks ✓
-- CHAT-06: User can copy any message content to clipboard ✓
-- CHAT-07: User can regenerate the last assistant response ✓
+### Phase 10 Requirements
+- CTX-01: System accurately counts tokens using SharpToken for any text input ✓
+- CTX-02: System tracks cumulative input/output tokens across conversations ✓
+- CTX-03: User sees real-time token counter in chat UI showing current usage
+- CTX-04: System captures API-returned usage from streaming responses ✓
+- CTX-05: User sees visual warning when approaching context limit (70% threshold)
+- CTX-06: System blocks message sending when context limit reached (90% threshold)
 
 ### Next Action
-Phase 9 complete. Ready to proceed to Phase 10.
+Phase 10 Plan 01 complete. Ready to proceed to Plan 02 (UI layer).
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18 (v1.0 + v1.1 + v1.2)
+- Total plans completed: 19 (v1.0 + v1.1 + v1.2)
 - Average duration: ~5.5 min
-- Total execution time: ~1.95 hours
+- Total execution time: ~2.0 hours
 
 **By Phase:**
 
@@ -55,12 +54,13 @@ Phase 9 complete. Ready to proceed to Phase 10.
 **Milestones:**
 - v1.0 shipped 2026-02-21 (Phases 1-2, 5 plans, 1,323 LOC)
 - v1.1 shipped 2026-02-23 (Phases 3-7, 10 plans, 3,741 LOC)
-- v1.2 in progress (Phases 8-10, 4 plans)
+- v1.2 in progress (Phases 8-10, 5 plans)
 
 | Phase 08 P01 | 2m 49s | 2 tasks | 5 files |
 | Phase 08 P02 | 2m 53s | 2 tasks | 2 files |
 | Phase 09 P01 | 7m 3s | 2 tasks | 10 files |
 | Phase 09 P02 | 46m 21s | 2 tasks | 7 files |
+| Phase 10 P01 | 4m 22s | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -78,6 +78,9 @@ All v1.0 and v1.1 decisions archived — see PROJECT.md for full table.
 - [Phase 09]: Batched StateHasChanged (50ms/100 chars) for smooth streaming without UI lag
 - [Phase 09]: Used Markdig with DisableHtml() for XSS prevention in Markdown rendering
 - [Phase 09]: Downgraded SignalR.Client to 8.0.* to fix .NET 8 compatibility (critical bug fix)
+- [Phase 10]: SharpToken 2.0.4 for accurate token counting with cl100k_base fallback for unknown models
+- [Phase 10]: Context thresholds: 70% warning, 85% danger, 90% block
+- [Phase 10]: Usage capture via StreamingChatCompletionUpdate.Usage (no StreamOptions needed in OpenAI SDK 2.8.0)
 
 ### Pending Todos
 
