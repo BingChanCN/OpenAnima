@@ -85,7 +85,10 @@ Plans:
   3. User observes oldest messages automatically removed when approaching context limit
   4. User sees chat events published to EventBus (visible in module logs or future modules)
 **Gap Closure:** Closes CTX-01 through CTX-04 from v1.2 audit
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 10-01-PLAN.md — Backend services: TokenCounter, ChatContextManager, ChatEvents, LLMService usage capture
+- [ ] 10-02-PLAN.md — UI integration: TokenUsageDisplay, ChatPanel context management, send blocking, EventBus publishing
 
 ## Progress
 
