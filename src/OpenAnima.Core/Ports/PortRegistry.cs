@@ -6,7 +6,7 @@ namespace OpenAnima.Core.Ports;
 /// <summary>
 /// Thread-safe registry for storing and retrieving port metadata by module name.
 /// </summary>
-public class PortRegistry
+public class PortRegistry : IPortRegistry
 {
     private readonly ConcurrentDictionary<string, List<PortMetadata>> _portsByModule = new();
 

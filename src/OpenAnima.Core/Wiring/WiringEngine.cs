@@ -8,10 +8,10 @@ namespace OpenAnima.Core.Wiring;
 /// Central orchestrator for level-parallel module execution with EventBus-based data routing.
 /// Manages configuration loading, cycle detection, subscription setup, and execution order.
 /// </summary>
-public class WiringEngine
+public class WiringEngine : IWiringEngine
 {
     private readonly IEventBus _eventBus;
-    private readonly PortRegistry _portRegistry;
+    private readonly IPortRegistry _portRegistry;
     private readonly ILogger<WiringEngine> _logger;
 
     private ConnectionGraph? _graph;
@@ -21,7 +21,7 @@ public class WiringEngine
 
     public WiringEngine(
         IEventBus eventBus,
-        PortRegistry portRegistry,
+        IPortRegistry portRegistry,
         ILogger<WiringEngine> logger)
     {
         _eventBus = eventBus;

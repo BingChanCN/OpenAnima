@@ -6,10 +6,10 @@ namespace OpenAnima.Core.Wiring;
 /// <summary>
 /// Async save/load/validate/list operations for wiring configurations.
 /// </summary>
-public class ConfigurationLoader
+public class ConfigurationLoader : IConfigurationLoader
 {
     private readonly string _configDirectory;
-    private readonly PortRegistry _portRegistry;
+    private readonly IPortRegistry _portRegistry;
     private readonly PortTypeValidator _portTypeValidator;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -20,7 +20,7 @@ public class ConfigurationLoader
 
     public ConfigurationLoader(
         string configDirectory,
-        PortRegistry portRegistry,
+        IPortRegistry portRegistry,
         PortTypeValidator portTypeValidator)
     {
         _configDirectory = configDirectory;
