@@ -41,6 +41,10 @@ public class ConfigurationLoader : IConfigurationLoader
         var filePath = Path.Combine(_configDirectory, $"{config.Name}.json");
         await using var stream = File.Create(filePath);
         await JsonSerializer.SerializeAsync(stream, config, JsonOptions, ct);
+
+        // Track last saved config for auto-load on next startup
+        var lastConfigPath = Path.Combine(_configDirectory, ".lastconfig");
+        await File.WriteAllTextAsync(lastConfigPath, config.Name, ct);
     }
 
     /// <summary>

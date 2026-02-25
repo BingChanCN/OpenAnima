@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
+using OpenAnima.Core.Hosting;
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Wiring;
 
@@ -43,6 +44,9 @@ public static class WiringServiceExtensions
             sp.GetRequiredService<IEventBus>(),
             sp.GetRequiredService<IPortRegistry>(),
             sp.GetRequiredService<ILogger<WiringEngine>>()));
+
+        // Register hosted service for auto-load on startup
+        services.AddHostedService<WiringInitializationService>();
 
         return services;
     }
