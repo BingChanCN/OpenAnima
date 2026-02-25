@@ -16,4 +16,6 @@ public class LLMOptions
     public int MaxRetries { get; set; } = 3;
 
     public int TimeoutSeconds { get; set; } = 120;
+
+    public int MaxContextTokens { get; set; } = 128000;
 }
