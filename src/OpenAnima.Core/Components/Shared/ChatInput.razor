@@ -1,14 +1,14 @@
+@implements IDisposable
+
 <div class="chat-input-container">
     <textarea
         id="chat-input"
         rows="1"
         placeholder="Type a message..."
-        value="@_inputText"
         @oninput="OnInput"
-        @onkeydown="OnKeyDown"
         disabled="@IsDisabled">
     </textarea>
-    <button class="send-btn" @onclick="SendMessage" disabled="@(string.IsNullOrWhiteSpace(_inputText) || IsDisabled)">
+    <button class="send-btn" @onclick="OnClickSend" disabled="@(_isEmpty || IsDisabled)">
         ▶
     </button>
 </div>
@@ -23,31 +23,49 @@
     [Parameter]
     public bool IsDisabled { get; set; }
 
-    private string _inputText = "";
+    private bool _isEmpty = true;
+    private DotNetObjectReference<ChatInput>? _dotNetRef;
 
-    private async Task OnInput(ChangeEventArgs e)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        _inputText = e.Value?.ToString() ?? "";
-        await JS.InvokeVoidAsync("chatHelpers.autoExpand", "chat-input");
-    }
-
-    private async Task OnKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter" && !e.ShiftKey)
+        if (firstRender)
         {
-            await SendMessage();
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("chatHelpers.setupEnterHandler", "chat-input", _dotNetRef);
         }
     }
 
-    private async Task SendMessage()
+    private void OnInput(ChangeEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(_inputText) || IsDisabled)
-            return;
+        _isEmpty = string.IsNullOrWhiteSpace(e.Value?.ToString());
+    }
 
-        var message = _inputText;
-        _inputText = "";
+    [JSInvokable]
+    public async Task SendFromJs()
+    {
+        await DoSend();
+    }
+
+    private async Task OnClickSend()
+    {
+        await DoSend();
+    }
+
+    private async Task DoSend()
+    {
+        if (IsDisabled) return;
+
+        var text = await JS.InvokeAsync<string>("chatHelpers.getTextareaValue", "chat-input");
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        _isEmpty = true;
         await JS.InvokeVoidAsync("chatHelpers.resetTextarea", "chat-input");
-        await OnSend.InvokeAsync(message);
+        StateHasChanged();
+        await OnSend.InvokeAsync(text.Trim());
+    }
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
     }
 }
-

@@ -22,11 +22,28 @@ window.chatHelpers = {
         textarea.style.height = 'auto';
         textarea.value = '';
     },
-    preventEnterNewline: function(textareaId) {
-        // Called from Blazor to prevent default Enter behavior
+    setupEnterHandler: function(textareaId, dotNetRef) {
         const textarea = document.getElementById(textareaId);
         if (!textarea) return;
-        // Handled via event in Blazor side
+        // Remove any previous listener
+        if (textarea._enterHandler) {
+            textarea.removeEventListener('keydown', textarea._enterHandler);
+        }
+        textarea._enterHandler = function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                dotNetRef.invokeMethodAsync('SendFromJs');
+            }
+        };
+        textarea.addEventListener('keydown', textarea._enterHandler);
+    },
+    getTextareaValue: function(textareaId) {
+        const textarea = document.getElementById(textareaId);
+        return textarea ? textarea.value : '';
+    },
+    setTextareaValue: function(textareaId, value) {
+        const textarea = document.getElementById(textareaId);
+        if (textarea) textarea.value = value;
     },
     copyToClipboard: async function(text) {
         try {
