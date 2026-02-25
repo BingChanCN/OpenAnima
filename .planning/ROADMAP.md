@@ -95,7 +95,11 @@ Plans:
   3. PortRegistry is populated during module load and persists port metadata beyond discovery
   4. Module Load → Port Registration flow works end-to-end at runtime (not just in tests)
   5. Configuration Save/Load → Execution flow works end-to-end at runtime
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 12.5-01-PLAN.md — Interface extraction and DI registration (Wave 1)
+- [ ] 12.5-02-PLAN.md — Port registration integration and config auto-load (Wave 2)
+- [ ] 12.5-03-PLAN.md — Integration tests for runtime DI (Wave 2)
 
 ### Phase 13: Visual Drag-and-Drop Editor
 **Goal**: Provide web-based visual editor for creating and managing module connections
@@ -142,7 +146,7 @@ Plans:
 | 10. Context Management & Token Counting | v1.2 | 2/2 | Complete | 2026-02-25 |
 | 11. Port Type System & Testing Foundation | 3/3 | Complete    | 2026-02-25 | - |
 | 12. Wiring Engine & Execution Orchestration | 3/3 | Complete    | 2026-02-25 | - |
-| 12.5. Runtime DI Integration & Tech Debt Fix | v1.3 | 0/? | Not started | - |
+| 12.5. Runtime DI Integration & Tech Debt Fix | v1.3 | 0/3 | Not started | - |
 | 13. Visual Drag-and-Drop Editor | v1.3 | 0/? | Not started | - |
 | 14. Module Refactoring & Runtime Integration | v1.3 | 0/? | Not started | - |
 
