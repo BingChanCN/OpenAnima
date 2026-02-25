@@ -70,7 +70,10 @@ Plans:
   6. User can regenerate the last assistant response
   7. User sees Markdown-formatted responses with syntax-highlighted code blocks
 **Gap Closure:** Closes CHAT-01 through CHAT-07 from v1.2 audit
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 09-01-PLAN.md — Core chat UI with streaming (ChatPanel, ChatMessage, ChatInput, JS helpers, Dashboard integration)
+- [ ] 09-02-PLAN.md — Markdown rendering, copy-to-clipboard, regenerate, human verification
 
 ### Phase 10: Context Management & Token Counting
 **Goal**: Conversations stay within context limits with accurate token tracking
@@ -96,5 +99,5 @@ Plans:
 | 6. Control Operations | v1.1 | 2/2 | Complete | 2026-02-22 |
 | 7. Polish & Validation | v1.1 | 2/2 | Complete | 2026-02-23 |
 | 8. API Client Setup & Configuration | v1.2 | Complete    | 2026-02-24 | 2026-02-24 |
-| 9. Chat UI with Streaming | v1.2 | 0/? | Gap closure — ready to plan | - |
+| 9. Chat UI with Streaming | v1.2 | 0/2 | Planned | - |
 | 10. Context Management & Token Counting | v1.2 | 0/? | Gap closure — ready to plan | - |
