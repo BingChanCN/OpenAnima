@@ -62,7 +62,10 @@ See: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
   3. User can connect one output port to multiple input ports and data flows to all connected inputs
   4. Modules declare ports via typed interface and ports are discoverable when module loads
   5. Existing v1.2 chat workflow (send message → LLM response → display) continues working without regression
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 11-01-PLAN.md — Port type system foundation (contracts + core services + unit tests via TDD)
+- [ ] 11-02-PLAN.md — Integration tests (v1.2 regression protection + port system integration)
 
 ### Phase 12: Wiring Engine & Execution Orchestration
 **Goal**: Execute modules in topological order based on port connections with cycle detection
@@ -118,7 +121,7 @@ See: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 | 8. API Client Setup & Configuration | v1.2 | 2/2 | Complete | 2026-02-24 |
 | 9. Chat UI with Streaming | v1.2 | 2/2 | Complete | 2026-02-25 |
 | 10. Context Management & Token Counting | v1.2 | 2/2 | Complete | 2026-02-25 |
-| 11. Port Type System & Testing Foundation | v1.3 | 0/? | Not started | - |
+| 11. Port Type System & Testing Foundation | v1.3 | 0/2 | Planned | - |
 | 12. Wiring Engine & Execution Orchestration | v1.3 | 0/? | Not started | - |
 | 13. Visual Drag-and-Drop Editor | v1.3 | 0/? | Not started | - |
 | 14. Module Refactoring & Runtime Integration | v1.3 | 0/? | Not started | - |
