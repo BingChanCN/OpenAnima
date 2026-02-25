@@ -29,7 +29,7 @@ Requirements for LLM Integration milestone. Each maps to roadmap phases.
 
 - [x] **CTX-01**: Runtime counts tokens per message using tiktoken-compatible library
 - [x] **CTX-02**: Runtime automatically truncates oldest messages when approaching context window limit (preserving system message)
-- [ ] **CTX-03**: User can see current token usage and remaining context capacity
+- [x] **CTX-03**: User can see current token usage and remaining context capacity
 - [x] **CTX-04**: Chat events (message sent, response received) are published to EventBus for module integration
 
 ## Future Requirements
@@ -89,7 +89,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHAT-07 | Phase 9 | Complete |
 | CTX-01 | Phase 10 | Complete |
 | CTX-02 | Phase 10 | Complete |
-| CTX-03 | Phase 10 | Pending |
+| CTX-03 | Phase 10 | Complete |
 | CTX-04 | Phase 10 | Complete |
 
 **Coverage:**
