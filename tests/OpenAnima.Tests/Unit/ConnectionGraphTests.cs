@@ -140,11 +140,14 @@ public class ConnectionGraphTests
         var levels = graph.GetExecutionLevels();
 
         // Assert
-        Assert.Equal(3, levels.Count);
+        Assert.Equal(2, levels.Count);
         Assert.Equal(3, levels[0].Count);
         Assert.Contains("A", levels[0]);
         Assert.Contains("C", levels[0]);
         Assert.Contains("E", levels[0]);
+        Assert.Equal(2, levels[1].Count);
+        Assert.Contains("B", levels[1]);
+        Assert.Contains("D", levels[1]);
     }
 
     [Fact]
@@ -191,7 +194,8 @@ public class ConnectionGraphTests
         var levels = graph.GetExecutionLevels();
 
         // Assert
-        Assert.Equal(2, levels.Count);
+        Assert.Single(levels);
+        Assert.Equal(2, levels[0].Count);
         Assert.Contains("A", levels[0]);
         Assert.Contains("C", levels[0]);
     }
