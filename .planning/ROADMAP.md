@@ -36,7 +36,7 @@ See: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full details.
 
 - [x] **Phase 8: API Client Setup & Configuration** - LLM API integration with streaming, error handling, and retry logic
 - [x] **Phase 9: Chat UI with Streaming** - Real-time chat interface with streaming responses and conversation history
-- [ ] **Phase 10: Context Management & Token Counting** - Token tracking and automatic context window management (gap closure in progress)
+- [x] **Phase 10: Context Management & Token Counting** - Token tracking and context window management with send blocking
 
 </details>
 
@@ -82,14 +82,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can see current token count and remaining context capacity
   2. User can have multi-turn conversations (20+ messages) without hitting context limit errors
-  3. User observes oldest messages automatically removed when approaching context limit
+  3. User is blocked from sending when approaching context limit and sees a warning modal
   4. User sees chat events published to EventBus (visible in module logs or future modules)
 **Gap Closure:** Closes CTX-01 through CTX-04 from v1.2 audit
-**Plans:** 3 plans (2 complete + 1 gap closure)
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 10-01-PLAN.md — Backend services: TokenCounter, ChatContextManager, ChatEvents, LLMService usage capture
 - [x] 10-02-PLAN.md — UI integration: TokenUsageDisplay, ChatPanel context management, send blocking, EventBus publishing
-- [ ] 10-03-PLAN.md — Gap closure: Automatic message truncation (CTX-02)
 
 ## Progress
 
@@ -104,4 +103,4 @@ Plans:
 | 7. Polish & Validation | v1.1 | 2/2 | Complete | 2026-02-23 |
 | 8. API Client Setup & Configuration | v1.2 | 2/2 | Complete | 2026-02-24 |
 | 9. Chat UI with Streaming | v1.2 | 2/2 | Complete | 2026-02-25 |
-| 10. Context Management & Token Counting | v1.2 | 2/3 | Gap Closure | - |
+| 10. Context Management & Token Counting | v1.2 | 2/2 | Complete | 2026-02-25 |
