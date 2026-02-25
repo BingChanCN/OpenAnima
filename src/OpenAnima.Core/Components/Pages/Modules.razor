@@ -1,6 +1,8 @@
 @page "/modules"
 @using OpenAnima.Core.Services
 @using OpenAnima.Core.Plugins
+@using OpenAnima.Contracts.Ports
+@using OpenAnima.Core.Ports
 @using Microsoft.AspNetCore.SignalR.Client
 @inject IModuleService ModuleService
 @inject NavigationManager Navigation
@@ -104,6 +106,52 @@
                 <span class="detail-label">Assembly</span>
                 <span class="detail-value mono">@selectedModule.Manifest.EntryAssembly</span>
             </div>
+        </div>
+
+        <div class="port-section">
+            <h3 class="section-subtitle">Ports</h3>
+            @{
+                var ports = GetModulePorts(selectedModule);
+                var inputs = ports.Where(p => p.Direction == PortDirection.Input).ToList();
+                var outputs = ports.Where(p => p.Direction == PortDirection.Output).ToList();
+            }
+            @if (ports.Count == 0)
+            {
+                <p class="text-muted" style="font-size: 0.85rem;">No ports declared</p>
+            }
+            else
+            {
+                <div class="port-columns">
+                    <div class="port-column">
+                        <div class="port-column-header">INPUTS</div>
+                        @if (inputs.Count == 0)
+                        {
+                            <span class="text-muted" style="font-size: 0.75rem;">None</span>
+                        }
+                        else
+                        {
+                            @foreach (var port in inputs)
+                            {
+                                <PortIndicator Port="@port" />
+                            }
+                        }
+                    </div>
+                    <div class="port-column">
+                        <div class="port-column-header">OUTPUTS</div>
+                        @if (outputs.Count == 0)
+                        {
+                            <span class="text-muted" style="font-size: 0.75rem;">None</span>
+                        }
+                        else
+                        {
+                            @foreach (var port in outputs)
+                            {
+                                <PortIndicator Port="@port" />
+                            }
+                        }
+                    </div>
+                </div>
+            }
         </div>
     }
 </ModuleDetailModal>
@@ -225,6 +273,12 @@
     private void CloseModal()
     {
         showModal = false;
+    }
+
+    private List<PortMetadata> GetModulePorts(PluginRegistryEntry entry)
+    {
+        var discovery = new PortDiscovery();
+        return discovery.DiscoverPorts(entry.Module.GetType());
     }
 
     public async ValueTask DisposeAsync()
