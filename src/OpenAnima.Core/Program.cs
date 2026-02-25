@@ -14,6 +14,7 @@ using OpenAI;
 using OpenAI.Chat;
 using Microsoft.Extensions.Options;
 using System.ClientModel;
+using OpenAnima.Core.DependencyInjection;
 
 // OpenAnima Core Runtime — Blazor Server web host
 
@@ -67,6 +68,9 @@ builder.Services.AddSingleton<TokenCounter>(sp =>
 });
 
 builder.Services.AddSingleton<ChatContextManager>();
+
+// --- Register wiring services ---
+builder.Services.AddWiringServices();
 
 // --- Register hosted service for runtime lifecycle ---
 builder.Services.AddHostedService<OpenAnimaHostedService>();
