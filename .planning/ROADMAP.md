@@ -48,7 +48,7 @@ See: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 
 - [x] **Phase 11: Port Type System & Testing Foundation** - Establish port types, validation, and integration tests (completed 2026-02-25)
 - [x] **Phase 12: Wiring Engine & Execution Orchestration** - Topological execution with cycle detection (completed 2026-02-25)
-- [ ] **Phase 12.5: Runtime DI Integration & Tech Debt Fix** - Register core services in DI, persist port discovery
+- [x] **Phase 12.5: Runtime DI Integration & Tech Debt Fix** - Register core services in DI, persist port discovery (completed 2026-02-25)
 - [ ] **Phase 13: Visual Drag-and-Drop Editor** - HTML5/SVG canvas with pan/zoom and connection preview
 - [ ] **Phase 14: Module Refactoring & Runtime Integration** - Refactor LLM/chat/heartbeat into port-based modules
 
@@ -95,7 +95,7 @@ Plans:
   3. PortRegistry is populated during module load and persists port metadata beyond discovery
   4. Module Load → Port Registration flow works end-to-end at runtime (not just in tests)
   5. Configuration Save/Load → Execution flow works end-to-end at runtime
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 12.5-01-PLAN.md — Interface extraction and DI registration (Wave 1)
 - [ ] 12.5-02-PLAN.md — Port registration integration and config auto-load (Wave 2)
@@ -146,7 +146,7 @@ Plans:
 | 10. Context Management & Token Counting | v1.2 | 2/2 | Complete | 2026-02-25 |
 | 11. Port Type System & Testing Foundation | 3/3 | Complete    | 2026-02-25 | - |
 | 12. Wiring Engine & Execution Orchestration | 3/3 | Complete    | 2026-02-25 | - |
-| 12.5. Runtime DI Integration & Tech Debt Fix | 2/3 | In Progress|  | - |
+| 12.5. Runtime DI Integration & Tech Debt Fix | 3/3 | Complete   | 2026-02-25 | - |
 | 13. Visual Drag-and-Drop Editor | v1.3 | 0/? | Not started | - |
 | 14. Module Refactoring & Runtime Integration | v1.3 | 0/? | Not started | - |
 
