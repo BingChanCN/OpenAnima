@@ -31,7 +31,16 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Active
 
-(None — planning next milestone)
+## Current Milestone: v1.3 True Modularization & Visual Wiring
+
+**Goal:** 把现有硬编码功能（LLM 调用、聊天输入/输出、心跳）全部拆成独立模块，建立端口类型系统和连线引擎，并提供 Web 可视化拖拽编辑器——连线后能像现在一样聊天。
+
+**Target features:**
+- 端口类型系统：固定大类（Text、Trigger），同类可连异类不可连
+- 连线引擎：模块间通过端口连线传递数据，运行时按连线拓扑执行
+- 官方模块拆分：LLM 模块、聊天输入模块、聊天输出模块、心跳模块
+- Web 可视化编辑器：拖拽模块、连线端口、保存/加载连线配置
+- 端到端验证：在编辑器中连线后能正常对话
 
 ### Future
 
@@ -39,10 +48,9 @@ Agents that proactively think and act on their own, while module connections rem
 - Language-agnostic module protocol with typed input/output interfaces
 - Dynamic module loading — download from marketplace and run without manual setup
 - C# modules loaded as in-process assemblies; other-language modules as packaged executables via IPC
-- Visual drag-and-drop editor for non-technical users to wire modules into agents
 - Permission system with autonomy levels (manual / assist / auto)
 - Agent memory and conversation history persistence (beyond session)
-- Example modules: chat interface, scheduled tasks, proactive conversation initiator
+- Additional port types (Stream, Media, etc.) for richer module communication
 
 ### Out of Scope
 
@@ -60,6 +68,7 @@ Shipped v1.2 with 6,352 LOC C#/Razor/CSS/JS across ~60 source files.
 Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode.
 Core runtime loads modules in isolated contexts, communicates via typed event bus, ticks at 100ms, serves a real-time web dashboard with module management, heartbeat monitoring, and LLM chat with streaming and context management.
 xUnit test suite covers memory leak detection and performance validation.
+v1.3 will refactor hardcoded LLM/chat/heartbeat into proper modules with port-based wiring, and add a visual drag-and-drop editor for connecting modules.
 
 ## Key Decisions
 
@@ -100,4 +109,4 @@ xUnit test suite covers memory leak detection and performance validation.
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-02-25 after v1.2 milestone*
+*Last updated: 2026-02-25 after v1.3 milestone start*

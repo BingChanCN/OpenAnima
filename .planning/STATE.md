@@ -5,13 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe
-**Current focus:** Planning next milestone
+**Current focus:** v1.3 True Modularization & Visual Wiring — defining requirements
 
 ## Current Position
 
-**Milestone:** v1.2 LLM Integration — SHIPPED 2026-02-25
-**Status:** Milestone complete, ready for next milestone
-**Last activity:** 2026-02-25 — Completed v1.2 milestone archival
+**Milestone:** v1.3 True Modularization & Visual Wiring
+**Phase:** Not started (defining requirements)
+**Status:** Defining requirements
+**Last activity:** 2026-02-25 — Milestone v1.3 started
 
 ## Performance Metrics
 
