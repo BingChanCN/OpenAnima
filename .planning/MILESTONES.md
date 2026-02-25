@@ -43,3 +43,23 @@
 
 ---
 
+
+## v1.2 LLM Integration (Shipped: 2026-02-25)
+
+**Phases:** 8-10 | **Plans:** 6 | **Tasks:** 12 | **LOC:** 6,352 C#/Razor/CSS/JS (+2,611 from v1.1)
+**Git range:** f0855ec..d98df09 | **Timeline:** 2026-02-24 → 2026-02-25
+
+**Delivered:** LLM conversation capability — OpenAI-compatible API client with streaming, real-time chat UI with Markdown rendering, and context window management with token tracking and send blocking.
+
+**Key accomplishments:**
+- OpenAI-compatible LLM API client with streaming, comprehensive error handling, and SDK built-in retry
+- Real-time chat UI with token-by-token streaming, role-based styling, and auto-scroll
+- Markdown rendering with syntax highlighting, copy-to-clipboard, and regenerate last response
+- Token counting with SharpToken and cumulative usage tracking (input/output/total)
+- Context capacity monitoring with color-coded thresholds (70%/85%/90%) and send blocking
+- EventBus chat events for module integration (message sent, response received, context limit)
+
+**Archive:** [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) | [milestones/v1.2-REQUIREMENTS.md](milestones/v1.2-REQUIREMENTS.md)
+
+---
+

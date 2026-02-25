@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based monitoring dashboard and real-time control panel, with a visual drag-and-drop editor planned for future milestones.
+A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based monitoring dashboard, real-time control panel, and LLM-powered chat interface, with a visual drag-and-drop editor planned for future milestones.
 
 ## Core Value
 
@@ -22,24 +22,16 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ Real-time state push via SignalR without manual refresh (INFRA-02) — v1.1
 - ✓ Module status display: loaded modules list, metadata, status indicators (MOD-06, MOD-07) — v1.1
 - ✓ Load/unload modules from dashboard with error display (MOD-08, MOD-09, MOD-10) — v1.1
-- ✓ Heartbeat monitoring: running state, tick count, per-tick latency, real-time updates (BEAT-01, BEAT-02, BEAT-03, BEAT-04) — v1.1
+- ✓ Heartbeat monitoring: running state, tick count, per-tick latency, real-time updates (BEAT-01~04) — v1.1
 - ✓ Responsive dashboard layout (UI-01) — v1.1
 - ✓ UX polish: confirmation dialogs, connection status indicator — v1.1
+- ✓ LLM API client via OpenAI-compatible endpoint with streaming and error handling (LLM-01~05) — v1.2
+- ✓ Chat UI with streaming responses, Markdown rendering, copy, regenerate (CHAT-01~07) — v1.2
+- ✓ Token counting, context capacity tracking, send blocking, EventBus events (CTX-01~04) — v1.2
 
 ### Active
 
-- [ ] LLM API client via OpenAI-compatible endpoint (configurable provider/model/key)
-- [ ] Chat module in dashboard for testing LLM calls
-- [ ] In-memory conversation history with context window management
-
-## Current Milestone: v1.2 LLM Integration
-
-**Goal:** Give agents the ability to call LLMs and hold conversations — the first step toward intelligent behavior.
-
-**Target features:**
-- OpenAI-compatible API calling layer (supports any compatible provider)
-- Chat panel in dashboard as conversation/test interface
-- In-memory conversation history and context window management
+(None — planning next milestone)
 
 ### Future
 
@@ -64,16 +56,16 @@ Agents that proactively think and act on their own, while module connections rem
 
 ## Context
 
-Shipped v1.1 with 3,741 LOC C#/Razor/CSS across ~50 source files.
-Tech stack: .NET 8.0, Blazor Server, SignalR, AssemblyLoadContext isolation, ConcurrentDictionary, PeriodicTimer, FileSystemWatcher.
-Core runtime loads modules in isolated contexts, communicates via typed event bus, ticks at 100ms, and serves a real-time web dashboard with module management and heartbeat monitoring.
+Shipped v1.2 with 6,352 LOC C#/Razor/CSS/JS across ~60 source files.
+Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode.
+Core runtime loads modules in isolated contexts, communicates via typed event bus, ticks at 100ms, serves a real-time web dashboard with module management, heartbeat monitoring, and LLM chat with streaming and context management.
 xUnit test suite covers memory leak detection and performance validation.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| C# core runtime | Strong Windows ecosystem, good performance, Unity/UE compatibility for future | ✓ Good — clean architecture, 3,741 LOC |
+| C# core runtime | Strong Windows ecosystem, good performance, Unity/UE compatibility for future | ✓ Good — clean architecture, 6,352 LOC |
 | Dynamic assembly loading for C# modules | Enables "download and run" without separate processes, best performance for C# ecosystem | ✓ Good — AssemblyLoadContext isolation works |
 | .slnx format (XML-based solution) | .NET 10 SDK creates .slnx by default; compatible with all dotnet CLI commands | ✓ Good |
 | LoadResult record instead of exceptions | Enables caller to decide how to handle failures without try/catch boilerplate | ✓ Good |
@@ -91,10 +83,13 @@ xUnit test suite covers memory leak detection and performance validation.
 | PluginLoadContext isCollectible: true | Enables assembly unloading for module lifecycle management | ✓ Good |
 | Serial operation execution (isOperating flag) | All buttons disable during any operation to prevent race conditions | ✓ Good |
 | ConfirmDialog only for destructive ops | Unload/stop get confirmation, load/start don't — reduces friction | ✓ Good |
-| Tiered thinking loop (3 layers) | Balances intelligence and speed — code heartbeat is free, only deep reasoning costs tokens | — Pending |
-| OpenAI-compatible API first | Covers most LLM providers with single interface, simplest path to working product | — Pending |
-| Typed interfaces + visual graph | Safety from type system, accessibility from visual editor — serves both user groups | — Pending |
-| IPC for non-C# modules | Language agnostic while keeping C# modules fast, packaged executables for zero-setup | — Pending |
+| OpenAI SDK 2.8.0 for LLM client | Official SDK with built-in retry, streaming, type-safe API | ✓ Good — covers all OpenAI-compatible providers |
+| SDK-agnostic ILLMService interface | ChatMessageInput records instead of exposing SDK types | ✓ Good — allows provider swap without consumer changes |
+| Inline error tokens in streaming | Yield error messages in stream instead of throwing exceptions | ✓ Good — UI displays errors inline |
+| Batched StateHasChanged (50ms/100 chars) | Prevents UI lag during token-by-token streaming | ✓ Good — smooth streaming UX |
+| SharpToken for token counting | Accurate tiktoken-compatible counting with cl100k_base fallback | ✓ Good — matches API-returned counts |
+| Send blocking over auto-truncation | Block sends at 90% threshold instead of auto-removing messages | ✓ Good — user retains control of conversation |
+| SignalR 8.0.x (not 10.x) | Version must match .NET 8 runtime to avoid circuit crashes | ✓ Good — critical compatibility fix |
 
 ## Constraints
 
@@ -105,4 +100,4 @@ xUnit test suite covers memory leak detection and performance validation.
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-02-24 after v1.2 milestone started*
+*Last updated: 2026-02-25 after v1.2 milestone*
