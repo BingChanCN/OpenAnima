@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-last_updated: "2026-02-25T16:53:32.537Z"
+last_updated: "2026-02-25T19:35:24.587Z"
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_plans: 9
+  completed_plans: 7
+  percent: 78
 ---
 
 # Project State: OpenAnima v1.3
@@ -25,12 +25,12 @@ progress:
 
 ## Current Position
 
-**Phase:** 12 - Wiring Engine & Execution Orchestration
-**Plan:** 3 of 3 complete
-**Status:** Milestone complete
-**Progress:** [██████████] 100%
+**Phase:** 12.5 - Runtime DI Integration & Tech Debt Fix
+**Plan:** 1 of 3 complete
+**Status:** In progress
+**Progress:** [████████░░] 78%
 
-**Next action:** Phase 12 complete. Ready for Phase 13 (Visual Editor).
+**Next action:** Continue with Plan 12.5-02 (WiringInitializationService).
 
 ## Performance Metrics
 
@@ -39,7 +39,10 @@ progress:
 - Requirements: 17 total
 - Coverage: 17/17 mapped (100%)
 - Completed: 2 phases (Phase 11, Phase 12)
-- In progress: None
+- In progress: Phase 12.5 (Runtime DI Integration)
+
+**Phase 12.5 metrics:**
+- Plan 12.5-01: 2 tasks, 8 files, 202 seconds, 48 tests passing
 
 **Phase 12 metrics:**
 - Plan 12-01: 1 task, 2 files, 657 seconds, 12 tests passing
@@ -93,6 +96,11 @@ progress:
 - Isolated failure handling: EventBus catches handler exceptions, preventing cascade failures
 - Subscription lifecycle: LoadConfiguration disposes old subscriptions to prevent memory leaks
 
+**Phase 12.5 implementation decisions:**
+- Scoped lifetime for all wiring services: Enables per-circuit isolation in Blazor Server
+- Factory registration pattern: ConfigurationLoader and WiringEngine use factory for constructor parameters
+- Interface-based DI: Constructor parameters changed to interfaces for loose coupling and testability
+
 **Critical patterns from research:**
 - Topological sort for execution order (deterministic, prevents race conditions, detects cycles)
 - Port-based EventBus routing (WiringEngine translates connections into subscriptions)
@@ -100,6 +108,11 @@ progress:
 - Throttled StateHasChanged (50-100ms during drag to prevent SignalR bottleneck)
 
 ### Active TODOs
+
+**Phase 12.5 remaining:**
+- [x] Extract interfaces and register in DI (Plan 01 - Complete)
+- [ ] Create WiringInitializationService for startup (Plan 02)
+- [ ] Add integration tests for DI resolution (Plan 03)
 
 **Phase 12 remaining:**
 - [x] Implement ConnectionGraph for topological sort and cycle detection (Plan 01 - Complete)
@@ -137,34 +150,32 @@ None currently. Phase 12 complete, ready for Phase 13.
 | Phase 12 P02 | 249 | 2 tasks | 3 files |
 | Phase 12 P01 | 657 | 1 task | 2 files |
 | Phase 12 P03 | 652 | 2 tasks | 3 files |
+| Phase 12.5 P01 | 202 | 2 tasks | 8 files |
 
 ## Session Continuity
 
 **What just happened:**
-- Completed Phase 12 Plan 03: WiringEngine Execution Orchestration
-- Created 3 files (DataCopyHelper, WiringEngine, integration tests with 7 test cases)
-- Implemented level-parallel execution with topological ordering
-- Added EventBus-based data routing with deep copy fan-out
-- All 7 integration tests passing, all existing tests still pass
+- Completed Phase 12.5 Plan 01: Runtime DI Integration
+- Created 4 interface files (IPortRegistry, IConfigurationLoader, IWiringEngine, WiringServiceExtensions)
+- Updated 3 concrete classes to implement interfaces
+- Registered all services in DI container with scoped lifetime
+- All 48 existing tests pass (2 pre-existing failures unrelated)
 
 **What's next:**
-1. Phase 12 complete - all three WIRE requirements fulfilled
-2. Ready for Phase 13: Visual Wiring Editor
-3. Build HTML5 + SVG drag-and-drop editor with Blazor
-4. Integrate WiringEngine for live execution preview
+1. Phase 12.5 Plan 02: Create WiringInitializationService for startup
+2. Phase 12.5 Plan 03: Add integration tests for DI resolution
+3. Continue to Phase 13: Visual Wiring Editor
 
 **Context for next session:**
-- Phase 12 complete: ConnectionGraph, ConfigurationLoader, WiringEngine all implemented
-- WIRE-01 fulfilled: Topological execution order with level-parallel execution
-- WIRE-02 fulfilled: Cycle detection with clear error messages
-- WIRE-03 fulfilled: EventBus-based data routing with deep copy fan-out
-- All services use .NET 8.0 built-ins (System.Text.Json, no new dependencies)
-- Ready for Phase 13 visual editor implementation
-- Port system ready: PortRegistry, PortTypeValidator, PortMetadata from Phase 11
-- Visual layout support: Position and Size fields in schema for Phase 13 editor
-- All services use .NET 8.0 built-ins (System.Text.Json, no new dependencies)
+- Phase 12.5 Plan 01 complete: Interfaces extracted, DI registration complete
+- IPortRegistry, IConfigurationLoader, IWiringEngine available for injection
+- All services registered with scoped lifetime for per-circuit isolation
+- AddWiringServices() provides single-line registration in Program.cs
+- PORT-04 requirement fulfilled: Runtime DI integration complete
+- Ready for Plan 02: WiringInitializationService for startup orchestration
+- All Phase 11/12 services now injectable in Blazor components
 
 ---
 *State initialized: 2026-02-25*
 *Last updated: 2026-02-26*
-*Ready for plan 12-02*
+*Ready for plan 12.5-02*
