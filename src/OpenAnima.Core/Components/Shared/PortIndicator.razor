@@ -1,0 +1,34 @@
+@using OpenAnima.Contracts.Ports
+
+<div class="port-indicator">
+    <svg width="12" height="12" style="flex-shrink: 0;">
+        <circle cx="6" cy="6" r="6" fill="@PortColors.GetHex(Port.Type)" />
+    </svg>
+    <span class="port-name">@Port.Name</span>
+    <span class="port-direction">(@DirectionLabel)</span>
+</div>
+
+@code {
+    [Parameter]
+    public PortMetadata Port { get; set; } = null!;
+
+    private string DirectionLabel => Port.Direction == PortDirection.Input ? "In" : "Out";
+}
+
+<style>
+    .port-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.85rem;
+    }
+
+    .port-name {
+        font-weight: 500;
+    }
+
+    .port-direction {
+        color: #888;
+        font-size: 0.75rem;
+    }
+</style>
