@@ -16,9 +16,9 @@ Requirements for v1.3 True Modularization & Visual Wiring. Each maps to roadmap 
 
 ### Wiring Engine (连线引擎)
 
-- [ ] **WIRE-01**: Runtime executes modules in topological order based on wiring connections
+- [x] **WIRE-01**: Runtime executes modules in topological order based on wiring connections
 - [ ] **WIRE-02**: Runtime detects and rejects circular dependencies at wire-time with clear error message
-- [ ] **WIRE-03**: Wiring engine routes data between connected ports during execution
+- [x] **WIRE-03**: Wiring engine routes data between connected ports during execution
 
 ### Visual Editor (可视化编辑器)
 
@@ -93,9 +93,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-02 | Phase 11 | Complete |
 | PORT-03 | Phase 11 | Complete |
 | PORT-04 | Phase 11 | Complete |
-| WIRE-01 | Phase 12 | Pending |
+| WIRE-01 | Phase 12 | Complete |
 | WIRE-02 | Phase 12 | Pending |
-| WIRE-03 | Phase 12 | Pending |
+| WIRE-03 | Phase 12 | Complete |
 | EDIT-01 | Phase 13 | Pending |
 | EDIT-02 | Phase 13 | Pending |
 | EDIT-03 | Phase 13 | Pending |
