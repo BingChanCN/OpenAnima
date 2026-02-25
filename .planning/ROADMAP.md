@@ -77,7 +77,7 @@ Plans:
   2. User creates circular connection (A→B→C→A) and receives clear error message preventing save
   3. Data sent to output port arrives at all connected input ports during execution
   4. Wiring configuration can be saved to JSON and loaded back with full topology restoration
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 Plans:
 - [ ] 12-01-PLAN.md — ConnectionGraph with topological sort and cycle detection (TDD)
 - [ ] 12-02-PLAN.md — WiringConfiguration schema and ConfigurationLoader with strict validation
@@ -127,7 +127,7 @@ Plans:
 | 9. Chat UI with Streaming | v1.2 | 2/2 | Complete | 2026-02-25 |
 | 10. Context Management & Token Counting | v1.2 | 2/2 | Complete | 2026-02-25 |
 | 11. Port Type System & Testing Foundation | 3/3 | Complete    | 2026-02-25 | - |
-| 12. Wiring Engine & Execution Orchestration | 1/3 | In Progress|  | - |
+| 12. Wiring Engine & Execution Orchestration | 2/3 | In Progress|  | - |
 | 13. Visual Drag-and-Drop Editor | v1.3 | 0/? | Not started | - |
 | 14. Module Refactoring & Runtime Integration | v1.3 | 0/? | Not started | - |
 
