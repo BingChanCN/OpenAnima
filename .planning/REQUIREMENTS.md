@@ -89,32 +89,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PORT-01 | — | Pending |
-| PORT-02 | — | Pending |
-| PORT-03 | — | Pending |
-| PORT-04 | — | Pending |
-| WIRE-01 | — | Pending |
-| WIRE-02 | — | Pending |
-| WIRE-03 | — | Pending |
-| EDIT-01 | — | Pending |
-| EDIT-02 | — | Pending |
-| EDIT-03 | — | Pending |
-| EDIT-04 | — | Pending |
-| EDIT-05 | — | Pending |
-| EDIT-06 | — | Pending |
-| RMOD-01 | — | Pending |
-| RMOD-02 | — | Pending |
-| RMOD-03 | — | Pending |
-| RMOD-04 | — | Pending |
-| RTIM-01 | — | Pending |
-| RTIM-02 | — | Pending |
-| E2E-01 | — | Pending |
+| PORT-01 | Phase 11 | Pending |
+| PORT-02 | Phase 11 | Pending |
+| PORT-03 | Phase 11 | Pending |
+| PORT-04 | Phase 11 | Pending |
+| WIRE-01 | Phase 12 | Pending |
+| WIRE-02 | Phase 12 | Pending |
+| WIRE-03 | Phase 12 | Pending |
+| EDIT-01 | Phase 13 | Pending |
+| EDIT-02 | Phase 13 | Pending |
+| EDIT-03 | Phase 13 | Pending |
+| EDIT-04 | Phase 13 | Pending |
+| EDIT-05 | Phase 13 | Pending |
+| EDIT-06 | Phase 13 | Pending |
+| RMOD-01 | Phase 14 | Pending |
+| RMOD-02 | Phase 14 | Pending |
+| RMOD-03 | Phase 14 | Pending |
+| RMOD-04 | Phase 14 | Pending |
+| RTIM-01 | Phase 14 | Pending |
+| RTIM-02 | Phase 14 | Pending |
+| E2E-01 | Phase 14 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 ⚠️
+- Mapped to phases: 17
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 after initial definition*
+*Last updated: 2026-02-25 after roadmap creation*
