@@ -17,10 +17,10 @@ Requirements for LLM Integration milestone. Each maps to roadmap phases.
 
 ### Chat Interface
 
-- [ ] **CHAT-01**: User can send text messages to the agent from a chat panel in the dashboard
-- [ ] **CHAT-02**: User sees conversation history with role-based styling (user right, assistant left)
-- [ ] **CHAT-03**: User sees streaming LLM responses appear token-by-token in real time
-- [ ] **CHAT-04**: Chat auto-scrolls to latest message unless user has scrolled up manually
+- [x] **CHAT-01**: User can send text messages to the agent from a chat panel in the dashboard
+- [x] **CHAT-02**: User sees conversation history with role-based styling (user right, assistant left)
+- [x] **CHAT-03**: User sees streaming LLM responses appear token-by-token in real time
+- [x] **CHAT-04**: Chat auto-scrolls to latest message unless user has scrolled up manually
 - [ ] **CHAT-05**: User can copy any message content to clipboard
 - [ ] **CHAT-06**: User can regenerate the last assistant response
 - [ ] **CHAT-07**: User sees Markdown-formatted responses with code block syntax highlighting
@@ -80,10 +80,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LLM-03 | Phase 8 | Complete |
 | LLM-04 | Phase 8 | Complete |
 | LLM-05 | Phase 8 | Complete |
-| CHAT-01 | Phase 9 | Pending |
-| CHAT-02 | Phase 9 | Pending |
-| CHAT-03 | Phase 9 | Pending |
-| CHAT-04 | Phase 9 | Pending |
+| CHAT-01 | Phase 9 | Complete |
+| CHAT-02 | Phase 9 | Complete |
+| CHAT-03 | Phase 9 | Complete |
+| CHAT-04 | Phase 9 | Complete |
 | CHAT-05 | Phase 9 | Pending |
 | CHAT-06 | Phase 9 | Pending |
 | CHAT-07 | Phase 9 | Pending |

@@ -9,32 +9,32 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 ## Current Position
 
-**Phase:** 8 - API Client Setup & Configuration
+**Phase:** 9 - Chat UI with Streaming
 **Plan:** 1 of 2
-**Status:** Milestone complete
-**Last activity:** 2026-02-24 — Completed 08-01-PLAN.md
+**Status:** In progress
+**Last activity:** 2026-02-25 — Completed 09-01-PLAN.md
 
-**Progress:** [██████████] 100%
+**Progress:** [████████░░] 75%
 
-### Phase 8 Goal
-Runtime can call LLM APIs with proper configuration, error handling, and retry logic
+### Phase 9 Goal
+Users can interact with LLM agents through a real-time chat interface with streaming responses
 
-### Phase 8 Requirements
-- LLM-01: User can configure LLM endpoint, API key, and model name via appsettings.json
-- LLM-02: Runtime can call OpenAI-compatible chat completion API with system/user/assistant messages
-- LLM-03: Runtime can receive streaming responses token-by-token from LLM API
-- LLM-04: User sees meaningful error messages when API calls fail (auth, rate limit, network, model errors)
-- LLM-05: Runtime retries transient API failures with exponential backoff
+### Phase 9 Requirements
+- CHAT-01: User can type a message and send it from the chat panel
+- CHAT-02: User sees conversation history with user messages right-aligned and assistant messages left-aligned
+- CHAT-03: User sees LLM responses stream token-by-token in real time
+- CHAT-04: Chat auto-scrolls to latest message unless user has scrolled up
+- CHAT-05: Chat messages render Markdown with syntax-highlighted code blocks
 
 ### Next Action
-Execute Plan 02 to implement streaming LLM responses and DI registration
+Execute Plan 02 to add Markdown rendering with syntax highlighting
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16 (v1.0 + v1.1 + v1.2)
-- Average duration: ~3.9 min
-- Total execution time: ~1.05 hours
+- Total plans completed: 17 (v1.0 + v1.1 + v1.2)
+- Average duration: ~4.0 min
+- Total execution time: ~1.17 hours
 
 **By Phase:**
 
@@ -47,14 +47,17 @@ Execute Plan 02 to implement streaming LLM responses and DI registration
 | 05 | 2 | ~5 min | ~2.5 min |
 | 06 | 2 | 5.0 min | 2.5 min |
 | 07 | 2 | 8.15 min | 4.08 min |
-| 08 | 1 | 2.83 min | 2.83 min |
+| 08 | 2 | ~5.7 min | ~2.85 min |
+| 09 | 1 | 7.05 min | 7.05 min |
 
 **Milestones:**
 - v1.0 shipped 2026-02-21 (Phases 1-2, 5 plans, 1,323 LOC)
 - v1.1 shipped 2026-02-23 (Phases 3-7, 10 plans, 3,741 LOC)
-- v1.2 in progress (Phases 8-10, 1 plan)
+- v1.2 in progress (Phases 8-10, 3 plans)
+
 | Phase 08 P01 | 2m 49s | 2 tasks | 5 files |
-| Phase 08 P02 | 173 | 2 tasks | 2 files |
+| Phase 08 P02 | 2m 53s | 2 tasks | 2 files |
+| Phase 09 P01 | 7m 3s | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -63,14 +66,13 @@ Execute Plan 02 to implement streaming LLM responses and DI registration
 Decisions are logged in PROJECT.md Key Decisions table.
 All v1.0 and v1.1 decisions archived — see PROJECT.md for full table.
 
-**v1.2 decisions pending:**
-- OpenAI SDK vs custom HTTP client (research recommends OpenAI 2.8.0)
-- Token counting library (research recommends SharpToken 2.0.4)
-- SignalR circuit timeout configuration (research recommends 60+ seconds)
+**v1.2 decisions:**
 - [Phase 08]: Used OpenAI SDK 2.8.0 for API client (per research recommendation)
 - [Phase 08]: Created SDK-agnostic interface using ChatMessageInput records
 - [Phase 08]: Error handling in streaming: Yield inline error tokens instead of throwing exceptions
 - [Phase 08]: SignalR timeout configuration: 60s client timeout, 15s keepalive, 3-minute circuit retention
+- [Phase 09]: Upgraded Markdig to 0.41.3 to satisfy Markdown.ColorCode dependency
+- [Phase 09]: Batched StateHasChanged (50ms/100 chars) for smooth streaming without UI lag
 
 ### Pending Todos
 
@@ -95,6 +97,6 @@ These must be addressed in Phase 8 planning to avoid cascading failures.
 
 ## Session Continuity
 
-Last session: 2026-02-24
-Stopped at: v1.2 roadmap created, ready for Phase 8 planning
+Last session: 2026-02-25
+Stopped at: Completed 09-01-PLAN.md — Chat UI with streaming implemented
 Resume file: None
