@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
 using OpenAnima.Core.Hosting;
+using OpenAnima.Core.Hubs;
+using OpenAnima.Core.Modules;
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Services;
 using OpenAnima.Core.Wiring;
@@ -41,17 +44,24 @@ public static class WiringServiceExtensions
             sp.GetRequiredService<IPortRegistry>(),
             sp.GetRequiredService<PortTypeValidator>()));
 
-        // Register wiring engine
+        // Register wiring engine (with optional SignalR hub context for status push)
         services.AddScoped<IWiringEngine>(sp => new WiringEngine(
             sp.GetRequiredService<IEventBus>(),
             sp.GetRequiredService<IPortRegistry>(),
-            sp.GetRequiredService<ILogger<WiringEngine>>()));
+            sp.GetRequiredService<ILogger<WiringEngine>>(),
+            sp.GetService<IHubContext<RuntimeHub, IRuntimeClient>>()));
 
         // Register hosted service for auto-load on startup
         services.AddHostedService<WiringInitializationService>();
 
         // Register editor state service
         services.AddScoped<EditorStateService>();
+
+        // Register concrete modules as singletons (shared across scopes)
+        services.AddSingleton<LLMModule>();
+        services.AddSingleton<ChatInputModule>();
+        services.AddSingleton<ChatOutputModule>();
+        services.AddSingleton<HeartbeatModule>();
 
         return services;
     }
