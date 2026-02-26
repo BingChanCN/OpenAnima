@@ -31,10 +31,10 @@ Requirements for v1.3 True Modularization & Visual Wiring. Each maps to roadmap 
 
 ### Refactored Modules (官方模块拆分)
 
-- [ ] **RMOD-01**: LLM service refactored into LLMModule with typed input/output ports
-- [ ] **RMOD-02**: Chat input refactored into ChatInputModule with output port
-- [ ] **RMOD-03**: Chat output refactored into ChatOutputModule with input port
-- [ ] **RMOD-04**: Heartbeat refactored into HeartbeatModule with trigger port
+- [x] **RMOD-01**: LLM service refactored into LLMModule with typed input/output ports
+- [x] **RMOD-02**: Chat input refactored into ChatInputModule with output port
+- [x] **RMOD-03**: Chat output refactored into ChatOutputModule with input port
+- [x] **RMOD-04**: Heartbeat refactored into HeartbeatModule with trigger port
 
 ### Runtime Integration (运行时集成)
 
@@ -102,10 +102,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EDIT-04 | Phase 13 | Pending |
 | EDIT-05 | Phase 13 (depends on Phase 12.5) | Complete |
 | EDIT-06 | Phase 13 (depends on Phase 12.5) | Complete |
-| RMOD-01 | Phase 14 | Pending |
-| RMOD-02 | Phase 14 | Pending |
-| RMOD-03 | Phase 14 | Pending |
-| RMOD-04 | Phase 14 | Pending |
+| RMOD-01 | Phase 14 | Complete |
+| RMOD-02 | Phase 14 | Complete |
+| RMOD-03 | Phase 14 | Complete |
+| RMOD-04 | Phase 14 | Complete |
 | RTIM-01 | Phase 14 | Pending |
 | RTIM-02 | Phase 14 | Pending |
 | E2E-01 | Phase 14 (depends on Phase 12.5) | Complete |
