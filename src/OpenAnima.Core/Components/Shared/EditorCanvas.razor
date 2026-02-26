@@ -9,16 +9,17 @@
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<svg @ref="_svgRef"
-     class="editor-canvas"
-     @onwheel="HandleWheel"
-     @onwheel:preventDefault
-     @onmousedown="HandleMouseDown"
-     @onmousemove="HandleMouseMove"
-     @onmouseup="HandleMouseUp"
-     @oncontextmenu:preventDefault
+<div class="editor-canvas-wrapper"
      @ondragover:preventDefault
      @ondrop="HandleDrop">
+    <svg @ref="_svgRef"
+         class="editor-canvas"
+         @onwheel="HandleWheel"
+         @onwheel:preventDefault
+         @onmousedown="HandleMouseDown"
+         @onmousemove="HandleMouseMove"
+         @onmouseup="HandleMouseUp"
+         @oncontextmenu:preventDefault>
 
     <!-- Grid pattern -->
     <defs>
@@ -64,6 +65,7 @@
         }
     </g>
 </svg>
+</div>
 
 @code {
     private ElementReference _svgRef;
