@@ -146,6 +146,9 @@ Plans:
   2. Save config → reload config round-trip works without validation errors
   3. Auto-load on startup restores previously saved configuration
   4. Existing 78 tests continue passing
+**Plans:** 1 plan
+Plans:
+- [ ] 15-01-PLAN.md — Fix ValidateConfiguration ModuleId/ModuleName mismatch + update tests + regression test
 
 ### Phase 16: Module Runtime Initialization & Port Registration
 **Goal:** Ensure concrete modules (LLMModule, ChatInputModule, ChatOutputModule, HeartbeatModule) are port-discovered, port-registered, and initialized at runtime startup
@@ -191,7 +194,7 @@ Plans:
 | 12.5. Runtime DI Integration & Tech Debt Fix | 3/3 | Complete    | 2026-02-25 | - |
 | 13. Visual Drag-and-Drop Editor | 3/3 | Complete    | 2026-02-26 | - |
 | 14. Module Refactoring & Runtime Integration | 3/3 | Complete   | 2026-02-26 | - |
-| 15. Fix ConfigurationLoader Key Mismatch | 0/0 | Pending | — | — |
+| 15. Fix ConfigurationLoader Key Mismatch | 0/1 | Planned | — | — |
 | 16. Module Runtime Initialization & Port Registration | 0/0 | Pending | — | — |
 | 17. E2E Module Pipeline Integration & Editor Polish | 0/0 | Pending | — | — |
 
