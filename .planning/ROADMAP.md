@@ -112,7 +112,11 @@ Plans:
   4. User can click to select nodes or connections and press Delete key to remove them
   5. User can save wiring configuration and reload it later with all nodes and connections restored
   6. Editor auto-saves configuration after any change without manual save action
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 13-01-PLAN.md — Editor page + SVG canvas with pan/zoom + module palette
+- [ ] 13-02-PLAN.md — Node cards with ports + bezier curve connections
+- [ ] 13-03-PLAN.md — Selection/deletion + save/load + auto-save + visual checkpoint
 
 ### Phase 14: Module Refactoring & Runtime Integration
 **Goal**: Refactor hardcoded features into port-based modules and achieve v1.2 feature parity through wiring
@@ -147,8 +151,8 @@ Plans:
 | 11. Port Type System & Testing Foundation | 3/3 | Complete    | 2026-02-25 | - |
 | 12. Wiring Engine & Execution Orchestration | 3/3 | Complete    | 2026-02-25 | - |
 | 12.5. Runtime DI Integration & Tech Debt Fix | 3/3 | Complete    | 2026-02-25 | - |
-| 13. Visual Drag-and-Drop Editor | v1.3 | 0/? | Not started | - |
+| 13. Visual Drag-and-Drop Editor | v1.3 | 0/3 | Planned | - |
 | 14. Module Refactoring & Runtime Integration | v1.3 | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-02-26 after gap closure phase creation*
+*Last updated: 2026-02-26 after phase 13 planning*
