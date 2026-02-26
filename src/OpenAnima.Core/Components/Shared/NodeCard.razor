@@ -12,7 +12,7 @@
           height="@_nodeHeight"
           rx="8"
           fill="#1c1e2e"
-          stroke="@(IsSelected ? "#6c8cff" : "#2a2d3e")"
+          stroke="@GetBorderStroke()"
           stroke-width="@(IsSelected ? 2 : 1)"
           @onclick="HandleCardClick"
           style="cursor: pointer;" />
@@ -30,8 +30,31 @@
     <!-- Title text -->
     @((MarkupString)$"<text x=\"{_nodeWidth / 2}\" y=\"{_titleHeight / 2 + 4}\" fill=\"#e4e6f0\" font-size=\"13\" font-family=\"var(--font-family)\" text-anchor=\"middle\" font-weight=\"500\" style=\"pointer-events: none\">{Node.ModuleName}</text>")
 
-    <!-- Status indicator (placeholder for Phase 14) -->
-    <circle cx="@(_nodeWidth - 12)" cy="@(_titleHeight / 2)" r="4" fill="#555" />
+    <!-- Status indicator (dynamic color based on module runtime state) -->
+    <circle cx="@(_nodeWidth - 12)" cy="@(_titleHeight / 2)" r="4"
+            fill="@_editorState.GetNodeBorderColor(Node.ModuleId)"
+            @onclick="HandleStatusClick" @onclick:stopPropagation
+            style="cursor: pointer;" />
+
+    <!-- Error popup overlay -->
+    @if (_showErrorPopup && _errorState != null)
+    {
+        <foreignObject x="10" y="@(_titleHeight + 4)" width="@(_nodeWidth - 20)" height="120">
+            <div xmlns="http://www.w3.org/1999/xhtml"
+                 style="background: #2a1015; border: 1px solid #ff0000; border-radius: 6px; padding: 8px; font-size: 11px; color: #e4e6f0; overflow-y: auto; max-height: 112px; font-family: var(--font-family);">
+                <div style="font-weight: 600; color: #ff6b6b; margin-bottom: 4px;">Error: @Node.ModuleName</div>
+                <div style="color: #ccc; margin-bottom: 4px;">@_errorState.ErrorMessage</div>
+                @if (_errorState.StackTrace != null)
+                {
+                    <div style="color: #888; font-size: 10px; white-space: pre-wrap; word-break: break-all;">@_errorState.StackTrace</div>
+                }
+                <div style="text-align: right; margin-top: 4px;">
+                    <span @onclick="CloseErrorPopup" @onclick:stopPropagation
+                          style="cursor: pointer; color: #6c8cff; font-size: 10px;">Close</span>
+                </div>
+            </div>
+        </foreignObject>
+    }
 
     <!-- Input ports (left side) -->
     @foreach (var (port, index) in _inputPorts.Select((p, i) => (p, i)))
@@ -81,6 +104,8 @@
     private List<PortMetadata> _inputPorts = new();
     private List<PortMetadata> _outputPorts = new();
     private double _nodeHeight;
+    private bool _showErrorPopup;
+    private EditorStateService.ModuleRuntimeState? _errorState;
 
     protected override void OnParametersSet()
     {
@@ -121,5 +146,27 @@
         {
             _editorState.EndConnectionDrag(Node.ModuleId, port.Name, port.Type);
         }
+    }
+
+    private string GetBorderStroke()
+    {
+        if (IsSelected) return "#6c8cff";
+        var stateColor = _editorState.GetNodeBorderColor(Node.ModuleId);
+        return stateColor != "#808080" ? stateColor : "#2a2d3e";
+    }
+
+    private void HandleStatusClick()
+    {
+        var moduleState = _editorState.GetModuleState(Node.ModuleId);
+        if (moduleState?.State == "Error")
+        {
+            _errorState = moduleState;
+            _showErrorPopup = !_showErrorPopup;
+        }
+    }
+
+    private void CloseErrorPopup()
+    {
+        _showErrorPopup = false;
     }
 }

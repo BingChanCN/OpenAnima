@@ -65,6 +65,58 @@ public class EditorStateService
     // State change notification
     public event Action? OnStateChanged;
 
+    // Module runtime state tracking
+    private readonly Dictionary<string, ModuleRuntimeState> _moduleStates = new();
+
+    /// <summary>
+    /// Runtime state snapshot for a module, used for editor display.
+    /// </summary>
+    public record ModuleRuntimeState(string State, string? ErrorMessage, string? StackTrace, DateTime LastUpdated);
+
+    /// <summary>
+    /// Updates the runtime state of a module. Fires OnStateChanged.
+    /// </summary>
+    public void UpdateModuleState(string moduleId, string state)
+    {
+        _moduleStates[moduleId] = new ModuleRuntimeState(state, null, null, DateTime.UtcNow);
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Updates a module with error state and error details. Fires OnStateChanged.
+    /// </summary>
+    public void UpdateModuleError(string moduleId, string errorMessage, string? stackTrace)
+    {
+        _moduleStates[moduleId] = new ModuleRuntimeState("Error", errorMessage, stackTrace, DateTime.UtcNow);
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Returns the runtime state of a module, or null if unknown.
+    /// </summary>
+    public ModuleRuntimeState? GetModuleState(string moduleId)
+    {
+        return _moduleStates.TryGetValue(moduleId, out var state) ? state : null;
+    }
+
+    /// <summary>
+    /// Returns the border color hex for a module based on its runtime state.
+    /// Green for Running/Completed, Red for Error, Gray for Idle/unknown.
+    /// </summary>
+    public string GetNodeBorderColor(string moduleId)
+    {
+        if (!_moduleStates.TryGetValue(moduleId, out var state))
+            return "#808080"; // gray — unknown/idle
+
+        return state.State switch
+        {
+            "Running" => "#00ff00",
+            "Completed" => "#00ff00",
+            "Error" => "#ff0000",
+            _ => "#808080"
+        };
+    }
+
     /// <summary>
     /// Updates the canvas element's viewport offset (from getBoundingClientRect).
     /// </summary>

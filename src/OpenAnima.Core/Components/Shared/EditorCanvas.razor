@@ -3,10 +3,12 @@
 @using OpenAnima.Core.Ports
 @using OpenAnima.Contracts.Ports
 @using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.JSInterop
 @inject EditorStateService _state
 @inject IPortRegistry _portRegistry
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 @implements IAsyncDisposable
 
 <div class="editor-canvas-wrapper"
@@ -75,10 +77,38 @@
     private double _panStartY;
     private DateTime _lastRenderTime = DateTime.MinValue;
     private const int RenderThrottleMs = 50;
+    private HubConnection? _hubConnection;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         _state.OnStateChanged += HandleStateChanged;
+
+        // Set up SignalR connection for module status updates
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/hubs/runtime"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<string, string>("ReceiveModuleStateChanged", (moduleId, state) =>
+        {
+            _state.UpdateModuleState(moduleId, state);
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<string, string, string?>("ReceiveModuleError", (moduleId, errorMsg, stackTrace) =>
+        {
+            _state.UpdateModuleError(moduleId, errorMsg, stackTrace);
+            InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            await _hubConnection.StartAsync();
+        }
+        catch
+        {
+            // SignalR connection failure is non-fatal for editor
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -254,6 +284,11 @@
     public async ValueTask DisposeAsync()
     {
         _state.OnStateChanged -= HandleStateChanged;
+        if (_hubConnection != null)
+        {
+            try { await _hubConnection.DisposeAsync(); }
+            catch { }
+        }
         if (_jsInitialized)
         {
             try { await JS.InvokeVoidAsync("editorCanvas.dispose", _svgRef); }
