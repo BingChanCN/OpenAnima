@@ -38,8 +38,8 @@ Requirements for v1.3 True Modularization & Visual Wiring. Each maps to roadmap 
 
 ### Runtime Integration (运行时集成)
 
-- [ ] **RTIM-01**: Editor displays real-time module status (running, error, stopped) synced from runtime
-- [ ] **RTIM-02**: Module errors during execution shown as visual indicators on corresponding nodes
+- [x] **RTIM-01**: Editor displays real-time module status (running, error, stopped) synced from runtime
+- [x] **RTIM-02**: Module errors during execution shown as visual indicators on corresponding nodes
 
 ### End-to-End (端到端验证)
 
@@ -106,8 +106,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RMOD-02 | Phase 14 | Complete |
 | RMOD-03 | Phase 14 | Complete |
 | RMOD-04 | Phase 14 | Complete |
-| RTIM-01 | Phase 14 | Pending |
-| RTIM-02 | Phase 14 | Pending |
+| RTIM-01 | Phase 14 | Complete |
+| RTIM-02 | Phase 14 | Complete |
 | E2E-01 | Phase 14 (depends on Phase 12.5) | Complete |
 
 **Coverage:**
