@@ -1,0 +1,84 @@
+@using OpenAnima.Core.Services
+@using OpenAnima.Core.Ports
+@using OpenAnima.Contracts
+@using OpenAnima.Contracts.Ports
+@inject IPortRegistry _portRegistry
+@inject EditorStateService _editorState
+
+<div class="module-palette">
+    <div class="palette-header">
+        <input type="text"
+               class="search-box"
+               placeholder="Search modules..."
+               @bind="_searchFilter"
+               @bind:event="oninput" />
+    </div>
+
+    <div class="palette-content">
+        @if (_availableModules.Count == 0)
+        {
+            <div class="empty-message">No modules loaded</div>
+        }
+        else
+        {
+            @foreach (var module in FilteredModules)
+            {
+                <div class="module-item"
+                     draggable="true"
+                     @ondragstart="@(() => HandleDragStart(module.Name))"
+                     @ondragend="HandleDragEnd">
+                    <div class="module-name">@module.Name</div>
+                    <div class="module-info">
+                        @module.InputCount in, @module.OutputCount out
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private string _searchFilter = string.Empty;
+    private List<ModuleInfo> _availableModules = new();
+
+    private record ModuleInfo(string Name, int InputCount, int OutputCount);
+
+    protected override void OnInitialized()
+    {
+        LoadAvailableModules();
+    }
+
+    private void LoadAvailableModules()
+    {
+        var allPorts = _portRegistry.GetAllPorts();
+        var moduleGroups = allPorts.GroupBy(p => p.ModuleName);
+
+        _availableModules = moduleGroups.Select(g => new ModuleInfo(
+            g.Key,
+            g.Count(p => p.Direction == PortDirection.Input),
+            g.Count(p => p.Direction == PortDirection.Output)
+        )).ToList();
+    }
+
+    private IEnumerable<ModuleInfo> FilteredModules
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_searchFilter))
+                return _availableModules;
+
+            return _availableModules.Where(m =>
+                m.Name.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private void HandleDragStart(string moduleName)
+    {
+        _editorState.DraggedModuleName = moduleName;
+    }
+
+    private void HandleDragEnd()
+    {
+        _editorState.DraggedModuleName = null;
+    }
+}

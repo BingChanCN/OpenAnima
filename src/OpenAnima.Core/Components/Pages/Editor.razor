@@ -1,0 +1,44 @@
+@page "/editor"
+@using OpenAnima.Core.Services
+@using OpenAnima.Core.Wiring
+@using OpenAnima.Core.Ports
+@using OpenAnima.Contracts
+@inject EditorStateService _state
+@inject IPortRegistry _portRegistry
+@inject IConfigurationLoader _configLoader
+@inject IWiringEngine _wiringEngine
+@implements IDisposable
+
+<div class="editor-container">
+    <div class="canvas-area">
+        <EditorCanvas />
+    </div>
+    <div class="palette-area">
+        <ModulePalette />
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Subscribe to state changes
+        _state.OnStateChanged += HandleStateChanged;
+
+        // Load current configuration from wiring engine if available
+        var currentConfig = _wiringEngine.GetCurrentConfiguration();
+        if (currentConfig != null)
+        {
+            _state.LoadConfiguration(currentConfig);
+        }
+    }
+
+    private void HandleStateChanged()
+    {
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _state.OnStateChanged -= HandleStateChanged;
+    }
+}

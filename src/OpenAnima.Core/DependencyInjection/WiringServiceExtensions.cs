@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
 using OpenAnima.Core.Hosting;
 using OpenAnima.Core.Ports;
+using OpenAnima.Core.Services;
 using OpenAnima.Core.Wiring;
 
 namespace OpenAnima.Core.DependencyInjection;
@@ -47,6 +48,9 @@ public static class WiringServiceExtensions
 
         // Register hosted service for auto-load on startup
         services.AddHostedService<WiringInitializationService>();
+
+        // Register editor state service
+        services.AddScoped<EditorStateService>();
 
         return services;
     }

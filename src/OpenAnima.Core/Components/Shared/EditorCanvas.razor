@@ -1,0 +1,135 @@
+@using OpenAnima.Core.Services
+@using Microsoft.AspNetCore.Components
+@inject EditorStateService _state
+
+<svg class="editor-canvas"
+     @onwheel="HandleWheel"
+     @onwheel:preventDefault
+     @onmousedown="HandleMouseDown"
+     @onmousemove="HandleMouseMove"
+     @onmouseup="HandleMouseUp"
+     @ondragover:preventDefault
+     @ondrop="HandleDrop">
+
+    <!-- Grid pattern -->
+    <defs>
+        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="1" fill="rgba(139, 143, 163, 0.2)" />
+        </pattern>
+    </defs>
+
+    <!-- Background with grid -->
+    <rect width="100%" height="100%" fill="var(--bg-primary)" />
+    <rect width="100%" height="100%" fill="url(#grid)" />
+
+    <!-- Transformed content -->
+    <g transform="matrix(@_state.Scale 0 0 @_state.Scale @_state.PanX @_state.PanY)">
+        @foreach (var node in _state.Configuration.Nodes)
+        {
+            <!-- Placeholder rectangles for nodes (Plan 02 replaces with NodeCard) -->
+            <rect x="@node.Position.X"
+                  y="@node.Position.Y"
+                  width="@node.Size.Width"
+                  height="@node.Size.Height"
+                  fill="var(--surface-card)"
+                  stroke="@(IsNodeSelected(node.ModuleId) ? "var(--accent-color)" : "var(--border-color)")"
+                  stroke-width="@(IsNodeSelected(node.ModuleId) ? 2 : 1)"
+                  rx="8" />
+            @((MarkupString)$"<text x=\"{node.Position.X + 10}\" y=\"{node.Position.Y + 30}\" fill=\"var(--text-primary)\" font-size=\"14\" font-family=\"var(--font-family)\">{node.ModuleName}</text>")
+            @((MarkupString)$"<text x=\"{node.Position.X + 10}\" y=\"{node.Position.Y + 50}\" fill=\"var(--text-secondary)\" font-size=\"11\" font-family=\"var(--font-family)\">{node.ModuleId.Substring(0, Math.Min(8, node.ModuleId.Length))}</text>")
+        }
+    </g>
+</svg>
+
+@code {
+    private bool _isPanning;
+    private double _panStartX;
+    private double _panStartY;
+    private DateTime _lastRenderTime = DateTime.MinValue;
+    private const int RenderThrottleMs = 50;
+
+    protected override void OnInitialized()
+    {
+        _state.OnStateChanged += HandleStateChanged;
+    }
+
+    private void HandleStateChanged()
+    {
+        StateHasChanged();
+    }
+
+    private bool IsNodeSelected(string moduleId)
+    {
+        return _state.SelectedNodeIds.Contains(moduleId);
+    }
+
+    private void HandleWheel(WheelEventArgs e)
+    {
+        // Zoom centered on cursor
+        var oldScale = _state.Scale;
+        var zoomFactor = e.DeltaY < 0 ? 1.1 : 0.9;
+        var newScale = Math.Clamp(oldScale * zoomFactor, 0.1, 3.0);
+
+        // Adjust pan to keep mouse position fixed
+        var mouseX = e.ClientX;
+        var mouseY = e.ClientY;
+        var newPanX = mouseX - newScale * (mouseX - _state.PanX) / oldScale;
+        var newPanY = mouseY - newScale * (mouseY - _state.PanY) / oldScale;
+
+        _state.UpdateScale(newScale);
+        _state.UpdatePan(newPanX, newPanY);
+    }
+
+    private void HandleMouseDown(MouseEventArgs e)
+    {
+        // Start panning on background click
+        _isPanning = true;
+        _panStartX = e.ClientX - _state.PanX;
+        _panStartY = e.ClientY - _state.PanY;
+    }
+
+    private void HandleMouseMove(MouseEventArgs e)
+    {
+        if (_isPanning)
+        {
+            var newPanX = e.ClientX - _panStartX;
+            var newPanY = e.ClientY - _panStartY;
+
+            // Update state immediately but throttle rendering
+            _state.UpdatePan(newPanX, newPanY);
+
+            var now = DateTime.UtcNow;
+            if ((now - _lastRenderTime).TotalMilliseconds >= RenderThrottleMs)
+            {
+                _lastRenderTime = now;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void HandleMouseUp(MouseEventArgs e)
+    {
+        _isPanning = false;
+        StateHasChanged(); // Final render after pan ends
+    }
+
+    private void HandleDrop(DragEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_state.DraggedModuleName))
+            return;
+
+        // Convert screen coordinates to canvas coordinates
+        var (canvasX, canvasY) = _state.ScreenToCanvas(e.ClientX, e.ClientY);
+
+        // Add node at drop position
+        _state.AddNode(_state.DraggedModuleName, canvasX, canvasY);
+
+        // Clear drag state
+        _state.DraggedModuleName = null;
+    }
+
+    public void Dispose()
+    {
+        _state.OnStateChanged -= HandleStateChanged;
+    }
+}

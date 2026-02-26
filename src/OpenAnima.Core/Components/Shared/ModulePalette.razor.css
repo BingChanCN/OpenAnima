@@ -1,0 +1,70 @@
+.module-palette {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: var(--surface-dark);
+}
+
+.palette-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.search-box {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+}
+
+.search-box:focus {
+    border-color: var(--accent-color);
+}
+
+.palette-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.empty-message {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.module-item {
+    padding: 12px;
+    margin-bottom: 8px;
+    background-color: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: grab;
+    transition: all 0.2s;
+}
+
+.module-item:hover {
+    background-color: var(--hover-bg);
+    border-color: var(--accent-color);
+}
+
+.module-item:active {
+    cursor: grabbing;
+}
+
+.module-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.module-info {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
