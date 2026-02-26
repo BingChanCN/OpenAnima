@@ -34,6 +34,10 @@ public class EditorStateService
     public double PanX { get; private set; } = 0;
     public double PanY { get; private set; } = 0;
 
+    // Canvas element offset from viewport (for ClientX/ClientY correction)
+    public double CanvasOffsetX { get; private set; } = 0;
+    public double CanvasOffsetY { get; private set; } = 0;
+
     // Current configuration
     public WiringConfiguration Configuration { get; private set; } = new();
 
@@ -62,11 +66,21 @@ public class EditorStateService
     public event Action? OnStateChanged;
 
     /// <summary>
-    /// Converts screen coordinates to canvas coordinates using inverse transform.
+    /// Updates the canvas element's viewport offset (from getBoundingClientRect).
+    /// </summary>
+    public void UpdateCanvasOffset(double left, double top)
+    {
+        CanvasOffsetX = left;
+        CanvasOffsetY = top;
+    }
+
+    /// <summary>
+    /// Converts screen (viewport) coordinates to canvas coordinates using inverse transform.
+    /// Subtracts the canvas element's viewport offset before applying pan/scale.
     /// </summary>
     public (double X, double Y) ScreenToCanvas(double screenX, double screenY)
     {
-        return ((screenX - PanX) / Scale, (screenY - PanY) / Scale);
+        return ((screenX - CanvasOffsetX - PanX) / Scale, (screenY - CanvasOffsetY - PanY) / Scale);
     }
 
     /// <summary>
@@ -199,7 +213,7 @@ public class EditorStateService
     {
         PanX = panX;
         PanY = panY;
-        NotifyStateChanged();
+        // No NotifyStateChanged — caller (HandleMouseMove) controls render throttling
     }
 
     /// <summary>
@@ -254,7 +268,7 @@ public class EditorStateService
         var updatedNode = node with { Position = newPosition };
         var nodes = Configuration.Nodes.Select(n => n.ModuleId == DraggingNodeId ? updatedNode : n).ToList();
         Configuration = Configuration with { Nodes = nodes };
-        NotifyStateChanged();
+        // No NotifyStateChanged — caller (HandleMouseMove) controls render throttling
     }
 
     /// <summary>
@@ -291,7 +305,7 @@ public class EditorStateService
 
         DragConnectionMouseX = canvasX;
         DragConnectionMouseY = canvasY;
-        NotifyStateChanged();
+        // No NotifyStateChanged — caller (HandleMouseMove) controls render throttling
     }
 
     /// <summary>

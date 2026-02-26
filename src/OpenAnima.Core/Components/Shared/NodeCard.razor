@@ -24,10 +24,11 @@
           rx="8"
           fill="#161822"
           @onmousedown="HandleTitleBarMouseDown"
+          @onmousedown:preventDefault
           style="cursor: move;" />
 
     <!-- Title text -->
-    @((MarkupString)$"<text x=\"{_nodeWidth / 2}\" y=\"{_titleHeight / 2 + 4}\" fill=\"#e4e6f0\" font-size=\"13\" font-family=\"var(--font-family)\" text-anchor=\"middle\" font-weight=\"500\">{Node.ModuleName}</text>")
+    @((MarkupString)$"<text x=\"{_nodeWidth / 2}\" y=\"{_titleHeight / 2 + 4}\" fill=\"#e4e6f0\" font-size=\"13\" font-family=\"var(--font-family)\" text-anchor=\"middle\" font-weight=\"500\" style=\"pointer-events: none\">{Node.ModuleName}</text>")
 
     <!-- Status indicator (placeholder for Phase 14) -->
     <circle cx="@(_nodeWidth - 12)" cy="@(_titleHeight / 2)" r="4" fill="#555" />
@@ -44,7 +45,7 @@
                 style="cursor: crosshair;" />
 
         <!-- Port label -->
-        @((MarkupString)$"<text x=\"14\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\">{port.Name}</text>")
+        @((MarkupString)$"<text x=\"14\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\" style=\"pointer-events: none\">{port.Name}</text>")
     }
 
     <!-- Output ports (right side) -->
@@ -56,10 +57,11 @@
         <circle cx="@_nodeWidth" cy="@portY" r="6"
                 fill="@PortColors.GetHex(port.Type)"
                 @onmousedown="@(() => HandlePortMouseDown(port))"
+                @onmousedown:preventDefault
                 style="cursor: crosshair;" />
 
         <!-- Port label -->
-        @((MarkupString)$"<text x=\"{_nodeWidth - 14}\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\" text-anchor=\"end\">{port.Name}</text>")
+        @((MarkupString)$"<text x=\"{_nodeWidth - 14}\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\" text-anchor=\"end\" style=\"pointer-events: none\">{port.Name}</text>")
     }
 </g>
 

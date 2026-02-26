@@ -36,5 +36,11 @@ window.editorCanvas = {
             element.removeEventListener('dragover', element._dragoverHandler);
             delete element._dragoverHandler;
         }
+    },
+
+    getBounds: function (element) {
+        if (!element) return { left: 0, top: 0 };
+        var rect = element.getBoundingClientRect();
+        return { left: rect.left, top: rect.top };
     }
 };

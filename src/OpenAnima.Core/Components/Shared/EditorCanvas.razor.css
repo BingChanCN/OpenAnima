@@ -12,6 +12,6 @@
     cursor: grab;
 }
 
-.editor-canvas:active {
+.editor-canvas.dragging {
     cursor: grabbing;
 }

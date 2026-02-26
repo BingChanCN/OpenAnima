@@ -13,7 +13,7 @@
      @ondragover:preventDefault
      @ondrop="HandleDrop">
     <svg @ref="_svgRef"
-         class="editor-canvas"
+         class="editor-canvas @(_state.IsDraggingConnection || _state.IsDraggingNode || _isPanning ? "dragging" : "")"
          @onwheel="HandleWheel"
          @onwheel:preventDefault
          @onmousedown="HandleMouseDown"
@@ -87,12 +87,25 @@
         {
             _jsInitialized = true;
             await JS.InvokeVoidAsync("editorCanvas.init", _svgRef);
+            await UpdateCanvasOffset();
         }
     }
 
+    private async Task UpdateCanvasOffset()
+    {
+        var bounds = await JS.InvokeAsync<SvgBounds>("editorCanvas.getBounds", _svgRef);
+        _state.UpdateCanvasOffset(bounds.Left, bounds.Top);
+    }
+
+    private record SvgBounds(double Left, double Top);
+
     private void HandleStateChanged()
     {
-        StateHasChanged();
+        // Skip during drag — HandleMouseMove controls throttled rendering directly
+        if (_state.IsDraggingNode || _state.IsDraggingConnection || _isPanning)
+            return;
+
+        InvokeAsync(StateHasChanged);
     }
 
     private bool IsNodeSelected(string moduleId)
@@ -120,9 +133,9 @@
         var zoomFactor = e.DeltaY < 0 ? 1.1 : 0.9;
         var newScale = Math.Clamp(oldScale * zoomFactor, 0.1, 3.0);
 
-        // Adjust pan to keep mouse position fixed
-        var mouseX = e.ClientX;
-        var mouseY = e.ClientY;
+        // Convert viewport coordinates to SVG-local coordinates
+        var mouseX = e.ClientX - _state.CanvasOffsetX;
+        var mouseY = e.ClientY - _state.CanvasOffsetY;
         var newPanX = mouseX - newScale * (mouseX - _state.PanX) / oldScale;
         var newPanY = mouseY - newScale * (mouseY - _state.PanY) / oldScale;
 
@@ -130,15 +143,18 @@
         _state.UpdatePan(newPanX, newPanY);
     }
 
-    private void HandleMouseDown(MouseEventArgs e)
+    private async Task HandleMouseDown(MouseEventArgs e)
     {
+        // Refresh canvas offset in case layout changed
+        await UpdateCanvasOffset();
+
         // Clear selection on background click
         _state.ClearSelection();
 
-        // Start panning on background click
+        // Start panning on background click (use SVG-local coordinates)
         _isPanning = true;
-        _panStartX = e.ClientX - _state.PanX;
-        _panStartY = e.ClientY - _state.PanY;
+        _panStartX = e.ClientX - _state.CanvasOffsetX - _state.PanX;
+        _panStartY = e.ClientY - _state.CanvasOffsetY - _state.PanY;
     }
 
     private void HandleMouseMove(MouseEventArgs e)
@@ -177,8 +193,8 @@
         // Handle canvas panning
         if (_isPanning)
         {
-            var newPanX = e.ClientX - _panStartX;
-            var newPanY = e.ClientY - _panStartY;
+            var newPanX = e.ClientX - _state.CanvasOffsetX - _panStartX;
+            var newPanY = e.ClientY - _state.CanvasOffsetY - _panStartY;
 
             // Update state immediately but throttle rendering
             _state.UpdatePan(newPanX, newPanY);
@@ -215,19 +231,24 @@
         StateHasChanged(); // Final render after pan ends
     }
 
-    private void HandleDrop(DragEventArgs e)
+    private async Task HandleDrop(DragEventArgs e)
     {
-        if (string.IsNullOrEmpty(_state.DraggedModuleName))
+        // Capture before await — DraggedModuleName can be cleared during async gap
+        var moduleName = _state.DraggedModuleName;
+        if (string.IsNullOrEmpty(moduleName))
             return;
+
+        // Clear drag state immediately to prevent double-drop
+        _state.DraggedModuleName = null;
+
+        // Refresh canvas offset for accurate coordinate conversion
+        await UpdateCanvasOffset();
 
         // Convert screen coordinates to canvas coordinates
         var (canvasX, canvasY) = _state.ScreenToCanvas(e.ClientX, e.ClientY);
 
         // Add node at drop position
-        _state.AddNode(_state.DraggedModuleName, canvasX, canvasY);
-
-        // Clear drag state
-        _state.DraggedModuleName = null;
+        _state.AddNode(moduleName, canvasX, canvasY);
     }
 
     public async ValueTask DisposeAsync()

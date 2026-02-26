@@ -1,13 +1,13 @@
 @using OpenAnima.Core.Services
 
-<!-- Invisible wider path for hit detection -->
+<!-- Invisible wider path for hit detection (disabled for preview connections) -->
 <path d="@_pathData"
       stroke="transparent"
       stroke-width="12"
       fill="none"
-      pointer-events="stroke"
+      pointer-events="@(IsPreview ? "none" : "stroke")"
       @onclick="HandleClick"
-      style="cursor: pointer;" />
+      style="@(IsPreview ? "" : "cursor: pointer;")" />
 
 <!-- Visible bezier curve -->
 <path d="@_pathData"

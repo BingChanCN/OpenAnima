@@ -74,7 +74,11 @@
 
     private void HandleStateChanged()
     {
-        StateHasChanged();
+        // Skip re-render during drag operations — EditorCanvas handles its own throttled rendering
+        if (_state.IsDraggingNode || _state.IsDraggingConnection)
+            return;
+
+        InvokeAsync(StateHasChanged);
     }
 
     private void HandleKeyDown(KeyboardEventArgs e)
