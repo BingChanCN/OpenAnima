@@ -130,7 +130,11 @@ Plans:
   5. Editor displays real-time module status (running, error, stopped) synced from runtime
   6. Module errors during execution appear as visual indicators on corresponding nodes in editor
   7. User can wire ChatInput→LLM→ChatOutput in editor and have working conversation identical to v1.2
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 14-01-PLAN.md — Module SDK contracts + concrete module implementations (LLM, Chat, Heartbeat)
+- [ ] 14-02-PLAN.md — Runtime status push via SignalR + editor visual indicators
+- [ ] 14-03-PLAN.md — DI wiring + ChatPanel integration + E2E test + visual checkpoint
 
 </details>
 
@@ -152,7 +156,7 @@ Plans:
 | 12. Wiring Engine & Execution Orchestration | 3/3 | Complete    | 2026-02-25 | - |
 | 12.5. Runtime DI Integration & Tech Debt Fix | 3/3 | Complete    | 2026-02-25 | - |
 | 13. Visual Drag-and-Drop Editor | 3/3 | Complete    | 2026-02-26 | - |
-| 14. Module Refactoring & Runtime Integration | v1.3 | 0/? | Not started | - |
+| 14. Module Refactoring & Runtime Integration | v1.3 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-02-26 after phase 13 planning*
+*Last updated: 2026-02-27 after phase 14 planning*
