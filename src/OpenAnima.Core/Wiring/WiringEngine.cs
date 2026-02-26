@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
+using OpenAnima.Core.Hubs;
 using OpenAnima.Core.Ports;
 
 namespace OpenAnima.Core.Wiring;
@@ -7,12 +9,14 @@ namespace OpenAnima.Core.Wiring;
 /// <summary>
 /// Central orchestrator for level-parallel module execution with EventBus-based data routing.
 /// Manages configuration loading, cycle detection, subscription setup, and execution order.
+/// Pushes module status via SignalR when IHubContext is available.
 /// </summary>
 public class WiringEngine : IWiringEngine
 {
     private readonly IEventBus _eventBus;
     private readonly IPortRegistry _portRegistry;
     private readonly ILogger<WiringEngine> _logger;
+    private readonly IHubContext<RuntimeHub, IRuntimeClient>? _hubContext;
 
     private ConnectionGraph? _graph;
     private WiringConfiguration? _currentConfig;
@@ -22,11 +26,13 @@ public class WiringEngine : IWiringEngine
     public WiringEngine(
         IEventBus eventBus,
         IPortRegistry portRegistry,
-        ILogger<WiringEngine> logger)
+        ILogger<WiringEngine> logger,
+        IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null)
     {
         _eventBus = eventBus;
         _portRegistry = portRegistry;
         _logger = logger;
+        _hubContext = hubContext;
     }
 
     /// <summary>
@@ -165,6 +171,10 @@ public class WiringEngine : IWiringEngine
         {
             _logger.LogDebug("Executing module: {ModuleId}", moduleId);
 
+            // Push Running status via SignalR
+            if (_hubContext != null)
+                await _hubContext.Clients.All.ReceiveModuleStateChanged(moduleId, "Running");
+
             // Publish execute event for this module
             await _eventBus.PublishAsync(new ModuleEvent<object>
             {
@@ -172,11 +182,22 @@ public class WiringEngine : IWiringEngine
                 SourceModuleId = "WiringEngine",
                 Payload = new { }
             }, ct);
+
+            // Push Completed status via SignalR
+            if (_hubContext != null)
+                await _hubContext.Clients.All.ReceiveModuleStateChanged(moduleId, "Completed");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Module execution failed: {ModuleId}", moduleId);
             _failedModules.Add(moduleId);
+
+            // Push error details and Error status via SignalR
+            if (_hubContext != null)
+            {
+                await _hubContext.Clients.All.ReceiveModuleError(moduleId, ex.Message, ex.StackTrace);
+                await _hubContext.Clients.All.ReceiveModuleStateChanged(moduleId, "Error");
+            }
         }
     }
 

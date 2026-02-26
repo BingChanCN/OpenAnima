@@ -20,4 +20,14 @@ public interface IRuntimeClient
     /// Pushes module list change notification to clients.
     /// </summary>
     Task ReceiveModuleCountChanged(int moduleCount);
+
+    /// <summary>
+    /// Pushes module execution state change to clients (Idle/Running/Completed/Error).
+    /// </summary>
+    Task ReceiveModuleStateChanged(string moduleId, string state);
+
+    /// <summary>
+    /// Pushes module error details to clients for diagnostics display.
+    /// </summary>
+    Task ReceiveModuleError(string moduleId, string errorMessage, string? stackTrace);
 }
