@@ -58,15 +58,15 @@ public class ConfigurationLoaderTests : IDisposable
             Version = "1.0",
             Nodes = new List<ModuleNode>
             {
-                new() { ModuleId = "module1", ModuleName = "Module 1", Position = new VisualPosition { X = 10, Y = 20 } }
+                new() { ModuleId = "node-guid-1", ModuleName = "Module 1", Position = new VisualPosition { X = 10, Y = 20 } }
             },
             Connections = new List<PortConnection>()
         };
 
-        // Register module so validation passes
-        _portRegistry.RegisterPorts("module1", new List<PortMetadata>
+        // Register module so validation passes (keyed by ModuleName, not ModuleId)
+        _portRegistry.RegisterPorts("Module 1", new List<PortMetadata>
         {
-            new("output1", PortType.Text, PortDirection.Output, "module1")
+            new("output1", PortType.Text, PortDirection.Output, "Module 1")
         });
 
         // Act
@@ -77,7 +77,7 @@ public class ConfigurationLoaderTests : IDisposable
         Assert.Equal(originalConfig.Name, loadedConfig.Name);
         Assert.Equal(originalConfig.Version, loadedConfig.Version);
         Assert.Single(loadedConfig.Nodes);
-        Assert.Equal("module1", loadedConfig.Nodes[0].ModuleId);
+        Assert.Equal("node-guid-1", loadedConfig.Nodes[0].ModuleId);
         Assert.Equal(10, loadedConfig.Nodes[0].Position.X);
         Assert.Equal(20, loadedConfig.Nodes[0].Position.Y);
     }
@@ -109,20 +109,20 @@ public class ConfigurationLoaderTests : IDisposable
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Contains("Module 'unknown-module' not found", result.ErrorMessage);
+        Assert.Contains("Module 'Unknown' not found", result.ErrorMessage);
     }
 
     [Fact]
     public async Task ValidateConfiguration_IncompatiblePortTypes_ReturnsFailure()
     {
         // Arrange
-        _portRegistry.RegisterPorts("module1", new List<PortMetadata>
+        _portRegistry.RegisterPorts("Module 1", new List<PortMetadata>
         {
-            new("output1", PortType.Text, PortDirection.Output, "module1")
+            new("output1", PortType.Text, PortDirection.Output, "Module 1")
         });
-        _portRegistry.RegisterPorts("module2", new List<PortMetadata>
+        _portRegistry.RegisterPorts("Module 2", new List<PortMetadata>
         {
-            new("input1", PortType.Trigger, PortDirection.Input, "module2")
+            new("input1", PortType.Trigger, PortDirection.Input, "Module 2")
         });
 
         var config = new WiringConfiguration
@@ -130,16 +130,16 @@ public class ConfigurationLoaderTests : IDisposable
             Name = "incompatible-types",
             Nodes = new List<ModuleNode>
             {
-                new() { ModuleId = "module1", ModuleName = "Module 1" },
-                new() { ModuleId = "module2", ModuleName = "Module 2" }
+                new() { ModuleId = "node-guid-1", ModuleName = "Module 1" },
+                new() { ModuleId = "node-guid-2", ModuleName = "Module 2" }
             },
             Connections = new List<PortConnection>
             {
                 new()
                 {
-                    SourceModuleId = "module1",
+                    SourceModuleId = "node-guid-1",
                     SourcePortName = "output1",
-                    TargetModuleId = "module2",
+                    TargetModuleId = "node-guid-2",
                     TargetPortName = "input1"
                 }
             }
@@ -157,13 +157,13 @@ public class ConfigurationLoaderTests : IDisposable
     public async Task ValidateConfiguration_ValidConfig_ReturnsSuccess()
     {
         // Arrange
-        _portRegistry.RegisterPorts("module1", new List<PortMetadata>
+        _portRegistry.RegisterPorts("Module 1", new List<PortMetadata>
         {
-            new("output1", PortType.Text, PortDirection.Output, "module1")
+            new("output1", PortType.Text, PortDirection.Output, "Module 1")
         });
-        _portRegistry.RegisterPorts("module2", new List<PortMetadata>
+        _portRegistry.RegisterPorts("Module 2", new List<PortMetadata>
         {
-            new("input1", PortType.Text, PortDirection.Input, "module2")
+            new("input1", PortType.Text, PortDirection.Input, "Module 2")
         });
 
         var config = new WiringConfiguration
@@ -171,16 +171,16 @@ public class ConfigurationLoaderTests : IDisposable
             Name = "valid-config",
             Nodes = new List<ModuleNode>
             {
-                new() { ModuleId = "module1", ModuleName = "Module 1" },
-                new() { ModuleId = "module2", ModuleName = "Module 2" }
+                new() { ModuleId = "node-guid-1", ModuleName = "Module 1" },
+                new() { ModuleId = "node-guid-2", ModuleName = "Module 2" }
             },
             Connections = new List<PortConnection>
             {
                 new()
                 {
-                    SourceModuleId = "module1",
+                    SourceModuleId = "node-guid-1",
                     SourcePortName = "output1",
-                    TargetModuleId = "module2",
+                    TargetModuleId = "node-guid-2",
                     TargetPortName = "input1"
                 }
             }

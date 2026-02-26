@@ -85,36 +85,46 @@ public class ConfigurationLoader : IConfigurationLoader
         // Validate all modules exist
         foreach (var node in config.Nodes)
         {
-            var ports = _portRegistry.GetPorts(node.ModuleId);
+            var ports = _portRegistry.GetPorts(node.ModuleName);
             if (ports.Count == 0)
             {
-                return ValidationResult.Fail($"Module '{node.ModuleId}' not found");
+                return ValidationResult.Fail($"Module '{node.ModuleName}' not found");
             }
         }
 
         // Validate all connections
         foreach (var connection in config.Connections)
         {
+            // Resolve source module name from ModuleId
+            string sourceModuleName;
+            try { sourceModuleName = GetModuleName(config, connection.SourceModuleId); }
+            catch (InvalidOperationException ex) { return ValidationResult.Fail(ex.Message); }
+
             // Find source port
-            var sourcePorts = _portRegistry.GetPorts(connection.SourceModuleId);
+            var sourcePorts = _portRegistry.GetPorts(sourceModuleName);
             var sourcePort = sourcePorts.FirstOrDefault(p =>
                 p.Name == connection.SourcePortName && p.Direction == OpenAnima.Contracts.Ports.PortDirection.Output);
 
             if (sourcePort == null)
             {
                 return ValidationResult.Fail(
-                    $"Source port '{connection.SourcePortName}' not found on module '{connection.SourceModuleId}'");
+                    $"Source port '{connection.SourcePortName}' not found on module '{sourceModuleName}'");
             }
 
+            // Resolve target module name from ModuleId
+            string targetModuleName;
+            try { targetModuleName = GetModuleName(config, connection.TargetModuleId); }
+            catch (InvalidOperationException ex) { return ValidationResult.Fail(ex.Message); }
+
             // Find target port
-            var targetPorts = _portRegistry.GetPorts(connection.TargetModuleId);
+            var targetPorts = _portRegistry.GetPorts(targetModuleName);
             var targetPort = targetPorts.FirstOrDefault(p =>
                 p.Name == connection.TargetPortName && p.Direction == OpenAnima.Contracts.Ports.PortDirection.Input);
 
             if (targetPort == null)
             {
                 return ValidationResult.Fail(
-                    $"Target port '{connection.TargetPortName}' not found on module '{connection.TargetModuleId}'");
+                    $"Target port '{connection.TargetPortName}' not found on module '{targetModuleName}'");
             }
 
             // Validate port type compatibility
@@ -126,6 +136,19 @@ public class ConfigurationLoader : IConfigurationLoader
         }
 
         return ValidationResult.Success();
+    }
+
+    /// <summary>
+    /// Resolve a ModuleId (GUID) to its ModuleName (type name) via the node list.
+    /// </summary>
+    private string GetModuleName(WiringConfiguration config, string moduleId)
+    {
+        var node = config.Nodes.FirstOrDefault(n => n.ModuleId == moduleId);
+        if (node == null)
+        {
+            throw new InvalidOperationException($"Module with ID '{moduleId}' not found in configuration");
+        }
+        return node.ModuleName;
     }
 
     /// <summary>
