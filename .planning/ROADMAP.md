@@ -50,7 +50,7 @@ See: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 - [x] **Phase 12: Wiring Engine & Execution Orchestration** - Topological execution with cycle detection (completed 2026-02-25)
 - [x] **Phase 12.5: Runtime DI Integration & Tech Debt Fix** - Register core services in DI, persist port discovery (completed 2026-02-25)
 - [x] **Phase 13: Visual Drag-and-Drop Editor** - HTML5/SVG canvas with pan/zoom and connection preview (completed 2026-02-26)
-- [ ] **Phase 14: Module Refactoring & Runtime Integration** - Refactor LLM/chat/heartbeat into port-based modules
+- [x] **Phase 14: Module Refactoring & Runtime Integration** - Refactor LLM/chat/heartbeat into port-based modules (completed 2026-02-26)
 
 
 ### Phase 11: Port Type System & Testing Foundation
@@ -130,7 +130,7 @@ Plans:
   5. Editor displays real-time module status (running, error, stopped) synced from runtime
   6. Module errors during execution appear as visual indicators on corresponding nodes in editor
   7. User can wire ChatInput→LLM→ChatOutput in editor and have working conversation identical to v1.2
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 14-01-PLAN.md — Module SDK contracts + concrete module implementations (LLM, Chat, Heartbeat)
 - [ ] 14-02-PLAN.md — Runtime status push via SignalR + editor visual indicators
@@ -156,7 +156,7 @@ Plans:
 | 12. Wiring Engine & Execution Orchestration | 3/3 | Complete    | 2026-02-25 | - |
 | 12.5. Runtime DI Integration & Tech Debt Fix | 3/3 | Complete    | 2026-02-25 | - |
 | 13. Visual Drag-and-Drop Editor | 3/3 | Complete    | 2026-02-26 | - |
-| 14. Module Refactoring & Runtime Integration | 2/3 | In Progress|  | - |
+| 14. Module Refactoring & Runtime Integration | 3/3 | Complete   | 2026-02-26 | - |
 
 ---
 *Last updated: 2026-02-27 after phase 14 planning*
