@@ -49,7 +49,7 @@ See: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 - [x] **Phase 11: Port Type System & Testing Foundation** - Establish port types, validation, and integration tests (completed 2026-02-25)
 - [x] **Phase 12: Wiring Engine & Execution Orchestration** - Topological execution with cycle detection (completed 2026-02-25)
 - [x] **Phase 12.5: Runtime DI Integration & Tech Debt Fix** - Register core services in DI, persist port discovery (completed 2026-02-25)
-- [ ] **Phase 13: Visual Drag-and-Drop Editor** - HTML5/SVG canvas with pan/zoom and connection preview
+- [x] **Phase 13: Visual Drag-and-Drop Editor** - HTML5/SVG canvas with pan/zoom and connection preview (completed 2026-02-26)
 - [ ] **Phase 14: Module Refactoring & Runtime Integration** - Refactor LLM/chat/heartbeat into port-based modules
 
 
@@ -112,7 +112,7 @@ Plans:
   4. User can click to select nodes or connections and press Delete key to remove them
   5. User can save wiring configuration and reload it later with all nodes and connections restored
   6. Editor auto-saves configuration after any change without manual save action
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 13-01-PLAN.md — Editor page + SVG canvas with pan/zoom + module palette
 - [ ] 13-02-PLAN.md — Node cards with ports + bezier curve connections
@@ -151,7 +151,7 @@ Plans:
 | 11. Port Type System & Testing Foundation | 3/3 | Complete    | 2026-02-25 | - |
 | 12. Wiring Engine & Execution Orchestration | 3/3 | Complete    | 2026-02-25 | - |
 | 12.5. Runtime DI Integration & Tech Debt Fix | 3/3 | Complete    | 2026-02-25 | - |
-| 13. Visual Drag-and-Drop Editor | 2/3 | In Progress|  | - |
+| 13. Visual Drag-and-Drop Editor | 3/3 | Complete   | 2026-02-26 | - |
 | 14. Module Refactoring & Runtime Integration | v1.3 | 0/? | Not started | - |
 
 ---
