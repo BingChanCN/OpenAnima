@@ -1,6 +1,8 @@
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Wiring;
 using OpenAnima.Contracts.Ports;
+using OpenAnima.Contracts;
+using Microsoft.Extensions.Logging;
 
 namespace OpenAnima.Core.Services;
 
@@ -11,10 +13,21 @@ namespace OpenAnima.Core.Services;
 public class EditorStateService
 {
     private readonly IPortRegistry _portRegistry;
+    private readonly IConfigurationLoader _configLoader;
+    private readonly IWiringEngine _wiringEngine;
+    private readonly ILogger<EditorStateService> _logger;
+    private CancellationTokenSource? _autoSaveDebounce;
 
-    public EditorStateService(IPortRegistry portRegistry)
+    public EditorStateService(
+        IPortRegistry portRegistry,
+        IConfigurationLoader configLoader,
+        IWiringEngine wiringEngine,
+        ILogger<EditorStateService> logger)
     {
         _portRegistry = portRegistry;
+        _configLoader = configLoader;
+        _wiringEngine = wiringEngine;
+        _logger = logger;
     }
     // Canvas transform
     public double Scale { get; private set; } = 1.0;
@@ -72,6 +85,7 @@ public class EditorStateService
         var nodes = new List<ModuleNode>(Configuration.Nodes) { node };
         Configuration = Configuration with { Nodes = nodes };
         NotifyStateChanged();
+        TriggerAutoSave();
     }
 
     /// <summary>
@@ -87,6 +101,7 @@ public class EditorStateService
         Configuration = Configuration with { Nodes = nodes, Connections = connections };
         SelectedNodeIds.Remove(moduleId);
         NotifyStateChanged();
+        TriggerAutoSave();
     }
 
     /// <summary>
@@ -101,6 +116,7 @@ public class EditorStateService
 
         Configuration = Configuration with { Connections = connections };
         NotifyStateChanged();
+        TriggerAutoSave();
     }
 
     /// <summary>
@@ -173,6 +189,7 @@ public class EditorStateService
         SelectedNodeIds.Clear();
         SelectedConnectionIds.Clear();
         NotifyStateChanged();
+        TriggerAutoSave();
     }
 
     /// <summary>
@@ -248,6 +265,7 @@ public class EditorStateService
         IsDraggingNode = false;
         DraggingNodeId = null;
         NotifyStateChanged();
+        TriggerAutoSave();
     }
 
     /// <summary>
@@ -305,6 +323,7 @@ public class EditorStateService
 
                 var connections = new List<PortConnection>(Configuration.Connections) { connection };
                 Configuration = Configuration with { Connections = connections };
+                TriggerAutoSave();
             }
         }
 
@@ -344,5 +363,44 @@ public class EditorStateService
     private void NotifyStateChanged()
     {
         OnStateChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Triggers auto-save with 500ms debounce to avoid excessive saves during rapid changes.
+    /// </summary>
+    private async void TriggerAutoSave()
+    {
+        // Cancel previous debounce
+        _autoSaveDebounce?.Cancel();
+        _autoSaveDebounce?.Dispose();
+        _autoSaveDebounce = new CancellationTokenSource();
+
+        try
+        {
+            // Wait 500ms before saving
+            await Task.Delay(500, _autoSaveDebounce.Token);
+
+            // Ensure configuration has a name
+            if (string.IsNullOrEmpty(Configuration.Name))
+            {
+                Configuration = Configuration with { Name = "default" };
+            }
+
+            // Save configuration
+            await _configLoader.SaveAsync(Configuration, _autoSaveDebounce.Token);
+
+            // Reload into wiring engine to keep it in sync
+            _wiringEngine.LoadConfiguration(Configuration);
+
+            _logger.LogDebug("Auto-saved configuration: {ConfigName}", Configuration.Name);
+        }
+        catch (OperationCanceledException)
+        {
+            // Debounce was cancelled, ignore
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Auto-save failed for configuration: {ConfigName}", Configuration.Name);
+        }
     }
 }

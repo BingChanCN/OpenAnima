@@ -9,7 +9,7 @@
 @inject IWiringEngine _wiringEngine
 @implements IDisposable
 
-<div class="editor-container">
+<div class="editor-container" tabindex="0" @onkeydown="HandleKeyDown">
     <div class="canvas-area">
         <EditorCanvas />
     </div>
@@ -30,11 +30,28 @@
         {
             _state.LoadConfiguration(currentConfig);
         }
+        else
+        {
+            // Start with empty configuration
+            _state.LoadConfiguration(new WiringConfiguration { Name = "default" });
+        }
     }
 
     private void HandleStateChanged()
     {
         StateHasChanged();
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Delete" || e.Key == "Backspace")
+        {
+            _state.DeleteSelected();
+        }
+        else if (e.Key == "Escape")
+        {
+            _state.ClearSelection();
+        }
     }
 
     public void Dispose()

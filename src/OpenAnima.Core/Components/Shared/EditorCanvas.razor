@@ -114,6 +114,9 @@
 
     private void HandleMouseDown(MouseEventArgs e)
     {
+        // Clear selection on background click
+        _state.ClearSelection();
+
         // Start panning on background click
         _isPanning = true;
         _panStartX = e.ClientX - _state.PanX;

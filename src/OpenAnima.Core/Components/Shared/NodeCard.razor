@@ -13,7 +13,9 @@
           rx="8"
           fill="#1c1e2e"
           stroke="@(IsSelected ? "#6c8cff" : "#2a2d3e")"
-          stroke-width="@(IsSelected ? 2 : 1)" />
+          stroke-width="@(IsSelected ? 2 : 1)"
+          @onclick="HandleCardClick"
+          style="cursor: pointer;" />
 
     <!-- Title bar -->
     <rect x="0" y="0"
@@ -95,6 +97,12 @@
         // Convert screen coordinates to canvas coordinates
         var (canvasX, canvasY) = _editorState.ScreenToCanvas(e.ClientX, e.ClientY);
         _editorState.StartNodeDrag(Node.ModuleId, canvasX, canvasY);
+    }
+
+    private void HandleCardClick(MouseEventArgs e)
+    {
+        // Select node on click (shift-click for multi-select)
+        _editorState.SelectNode(Node.ModuleId, e.ShiftKey);
     }
 
     private void HandlePortMouseDown(PortMetadata port)
