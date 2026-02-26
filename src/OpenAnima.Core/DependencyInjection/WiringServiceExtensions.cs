@@ -29,10 +29,11 @@ public static class WiringServiceExtensions
         // Ensure directory exists
         Directory.CreateDirectory(configDirectory);
 
-        // Register port system services
-        services.AddScoped<IPortRegistry, PortRegistry>();
-        services.AddScoped<PortTypeValidator>();
-        services.AddScoped<PortDiscovery>();
+        // Register port system services (singleton: PortRegistry holds app-wide state
+        // with ConcurrentDictionary; PortTypeValidator and PortDiscovery are stateless)
+        services.AddSingleton<IPortRegistry, PortRegistry>();
+        services.AddSingleton<PortTypeValidator>();
+        services.AddSingleton<PortDiscovery>();
 
         // Register configuration loader with directory
         services.AddScoped<IConfigurationLoader>(sp => new ConfigurationLoader(

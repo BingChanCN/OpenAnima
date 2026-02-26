@@ -85,7 +85,7 @@ public class WiringDIIntegrationTests : IDisposable
 
     [Fact]
     [Trait("Category", "Integration")]
-    public void ScopedServices_DifferentPerScope()
+    public void SingletonServices_SameAcrossScopes()
     {
         // Arrange & Act
         using var scope1 = _provider.CreateScope();
@@ -93,8 +93,8 @@ public class WiringDIIntegrationTests : IDisposable
         var registry1 = scope1.ServiceProvider.GetRequiredService<IPortRegistry>();
         var registry2 = scope2.ServiceProvider.GetRequiredService<IPortRegistry>();
 
-        // Assert - Different instances (scoped lifetime)
-        Assert.NotSame(registry1, registry2);
+        // Assert - Same instance (singleton lifetime, app-wide port state)
+        Assert.Same(registry1, registry2);
     }
 
     // ========== Port Registration Flow Tests ==========
