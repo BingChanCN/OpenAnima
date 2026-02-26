@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-last_updated: "2026-02-25T19:51:03.448Z"
+status: executing
+last_updated: "2026-02-26T10:06:06.766Z"
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  total_plans: 12
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State: OpenAnima v1.3
@@ -26,11 +26,11 @@ progress:
 ## Current Position
 
 **Phase:** 13 - Visual Drag-and-Drop Editor
-**Plan:** 1 of 3 complete
+**Plan:** 2 of 3 complete
 **Status:** In progress
-**Progress:** [███░░░░░░░] 33%
+**Progress:** [█████████░] 92%
 
-**Next action:** Continue to Phase 13 Plan 02 (Node Cards and Connection Rendering).
+**Next action:** Continue to Phase 13 Plan 03 (Connection Management and Save/Load).
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ progress:
 
 **Phase 13 metrics:**
 - Plan 13-01: 2 tasks, 10 files, 355 seconds
+- Plan 13-02: 2 tasks, 4 files, 1016 seconds
 
 **Phase 12.5 metrics:**
 - Plan 12.5-01: 2 tasks, 8 files, 202 seconds, 48 tests passing
@@ -78,6 +79,10 @@ progress:
 - Scoped EditorStateService: Per-circuit isolation in Blazor Server for editor state
 - Throttled rendering: 50ms throttle during pan operations prevents SignalR bottleneck
 - MarkupString for SVG text: Avoids Razor tag conflict with SVG elements
+- NodeCard as SVG group: `<g>` element (not HTML div) for proper canvas integration
+- Port positioning: Input ports at x=0, output ports at x=nodeWidth for clean connection points
+- Bezier curves: Cubic bezier with horizontal control points for smooth connection flow
+- Connection hit detection: Invisible 12px wide path underneath visible connection for easier clicking
 
 **Phase 11 implementation decisions:**
 - Port types fixed to Text and Trigger enum (not extensible by design - prevents type chaos)
@@ -172,35 +177,39 @@ None currently. Phase 12.5 complete, ready for Phase 13.
 | Phase 12.5 P02 | 156 | 1 task | 1 file |
 | Phase 12.5 P03 | 329 | 1 task | 1 file |
 | Phase 13 P01 | 355 | 2 tasks | 10 files |
+| Phase 13 P02 | 1016 | 2 tasks | 4 files |
 
 ## Session Continuity
 
 **What just happened:**
-- Completed Phase 13 Plan 01: Visual Editor Foundation
-- Created EditorStateService for central state management
-- Built Editor page at /editor with SVG canvas and module palette
-- Implemented pan/zoom with throttled rendering (50ms)
-- Added drag-to-canvas functionality from module palette
-- Registered EditorStateService in DI as scoped service
-- Added Editor link to MainLayout sidebar navigation
+- Completed Phase 13 Plan 02: Node Cards and Connection Rendering
+- Created NodeCard.razor as SVG group component with styled card layout
+- Rendered input ports on left (x=0) and output ports on right (x=nodeWidth) with colored circles
+- Added node dragging via title bar with offset calculation
+- Created ConnectionLine.razor with cubic bezier curve rendering
+- Added invisible wider path (12px) for easier connection click detection
+- Implemented port-to-port drag-to-connect with preview curve
+- Injected IPortRegistry into EditorStateService and EditorCanvas for port metadata lookup
+- Port type validation: only allow connections where source type == target type
 
 **What's next:**
-1. Phase 13 Plan 02: Node Cards and Connection Rendering
-2. Replace placeholder rectangles with NodeCard components
-3. Render ports with colored circles (PortColors)
-4. Implement bezier curve connections
-5. Add connection drag-to-create functionality
+1. Phase 13 Plan 03: Connection Management and Save/Load
+2. Delete connections (click to select, Delete key to remove)
+3. Save configuration to JSON file
+4. Load configuration from JSON file
+5. Configuration file picker UI
 
 **Context for next session:**
-- Phase 13 Plan 01 complete: Visual editor foundation established
-- EditorStateService tracks nodes, connections, selection, pan/zoom, drag operations
-- Canvas supports pan (drag background) and zoom (mouse wheel centered on cursor)
-- Module palette shows available modules from IPortRegistry with search filter
-- Drag from palette to canvas creates nodes at correct canvas coordinates
-- EDIT-01 and EDIT-02 requirements fulfilled
-- Ready for Plan 02: Node visual design and connection rendering
+- Phase 13 Plan 02 complete: Node cards and connections rendering
+- NodeCard displays as Unreal Blueprint-style cards with title bar, colored port circles, port names
+- Nodes draggable by title bar, connections follow node movement
+- ConnectionLine renders bezier curves between ports with proper colors
+- Drag from output port shows dashed preview curve following mouse
+- Drop on compatible input port creates solid connection
+- EDIT-03 requirement fulfilled
+- Ready for Plan 03: Connection management and persistence
 
 ---
 *State initialized: 2026-02-25*
 *Last updated: 2026-02-26*
-*Phase 13 Plan 01 complete - visual editor foundation established*
+*Phase 13 Plan 02 complete - node cards and connections rendering*
