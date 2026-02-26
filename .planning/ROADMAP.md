@@ -5,7 +5,7 @@
 - ✅ **v1.0 Core Platform Foundation** — Phases 1-2 (shipped 2026-02-21)
 - ✅ **v1.1 WebUI Runtime Dashboard** — Phases 3-7 (shipped 2026-02-23)
 - ✅ **v1.2 LLM Integration** — Phases 8-10 (shipped 2026-02-25)
-- 🚧 **v1.3 True Modularization & Visual Wiring** — Phases 11-14 + 12.5 (in progress)
+- ✅ **v1.3 True Modularization & Visual Wiring** — Phases 11-14 + 12.5 (shipped 2026-02-27)
 
 ## Phases
 
@@ -44,7 +44,7 @@ See: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 </details>
 
 <details open>
-<summary>🚧 v1.3 True Modularization & Visual Wiring (Phases 11-14) — IN PROGRESS</summary>
+<summary>✅ v1.3 True Modularization & Visual Wiring (Phases 11-14) — SHIPPED 2026-02-27</summary>
 
 - [x] **Phase 11: Port Type System & Testing Foundation** - Establish port types, validation, and integration tests (completed 2026-02-25)
 - [x] **Phase 12: Wiring Engine & Execution Orchestration** - Topological execution with cycle detection (completed 2026-02-25)
@@ -132,9 +132,9 @@ Plans:
   7. User can wire ChatInput→LLM→ChatOutput in editor and have working conversation identical to v1.2
 **Plans:** 3/3 plans complete
 Plans:
-- [ ] 14-01-PLAN.md — Module SDK contracts + concrete module implementations (LLM, Chat, Heartbeat)
-- [ ] 14-02-PLAN.md — Runtime status push via SignalR + editor visual indicators
-- [ ] 14-03-PLAN.md — DI wiring + ChatPanel integration + E2E test + visual checkpoint
+- [x] 14-01-PLAN.md — Module SDK contracts + concrete module implementations (LLM, Chat, Heartbeat)
+- [x] 14-02-PLAN.md — Runtime status push via SignalR + editor visual indicators
+- [x] 14-03-PLAN.md — DI wiring + ChatPanel integration + E2E test + visual checkpoint
 
 </details>
 
