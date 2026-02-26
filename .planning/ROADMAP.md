@@ -194,7 +194,7 @@ Plans:
 | 12.5. Runtime DI Integration & Tech Debt Fix | 3/3 | Complete    | 2026-02-25 | - |
 | 13. Visual Drag-and-Drop Editor | 3/3 | Complete    | 2026-02-26 | - |
 | 14. Module Refactoring & Runtime Integration | 3/3 | Complete   | 2026-02-26 | - |
-| 15. Fix ConfigurationLoader Key Mismatch | 1/1 | Complete   | 2026-02-26 | — |
+| 15. Fix ConfigurationLoader Key Mismatch | 1/1 | Complete    | 2026-02-26 | — |
 | 16. Module Runtime Initialization & Port Registration | 0/0 | Pending | — | — |
 | 17. E2E Module Pipeline Integration & Editor Polish | 0/0 | Pending | — | — |
 

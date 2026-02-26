@@ -16,9 +16,9 @@ Requirements for v1.3 True Modularization & Visual Wiring. Each maps to roadmap 
 
 ### Wiring Engine (连线引擎)
 
-- [ ] **WIRE-01**: Runtime executes modules in topological order based on wiring connections
+- [x] **WIRE-01**: Runtime executes modules in topological order based on wiring connections
 - [x] **WIRE-02**: Runtime detects and rejects circular dependencies at wire-time with clear error message
-- [ ] **WIRE-03**: Wiring engine routes data between connected ports during execution
+- [x] **WIRE-03**: Wiring engine routes data between connected ports during execution
 
 ### Visual Editor (可视化编辑器)
 
@@ -26,7 +26,7 @@ Requirements for v1.3 True Modularization & Visual Wiring. Each maps to roadmap 
 - [x] **EDIT-02**: User can pan canvas by dragging background and zoom with mouse wheel
 - [x] **EDIT-03**: User can drag from output port to input port to create connection with bezier curve preview
 - [x] **EDIT-04**: User can click to select nodes/connections and press Delete to remove them
-- [ ] **EDIT-05**: User can save wiring configuration to JSON and load it back with full graph restoration
+- [x] **EDIT-05**: User can save wiring configuration to JSON and load it back with full graph restoration
 - [x] **EDIT-06**: Editor auto-saves wiring configuration after changes
 
 ### Refactored Modules (官方模块拆分)
@@ -93,14 +93,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-02 | Phase 11 | Complete |
 | PORT-03 | Phase 11 | Complete |
 | PORT-04 | Phase 11, Phase 12.5, **Phase 16** (gap closure) | Pending |
-| WIRE-01 | Phase 12, Phase 12.5, **Phase 15** (gap closure) | Pending |
+| WIRE-01 | Phase 12, Phase 12.5, **Phase 15** (gap closure) | Complete |
 | WIRE-02 | Phase 12, Phase 12.5 (DI fix) | Complete |
-| WIRE-03 | Phase 12, Phase 12.5, **Phase 15** (gap closure) | Pending |
+| WIRE-03 | Phase 12, Phase 12.5, **Phase 15** (gap closure) | Complete |
 | EDIT-01 | Phase 13, **Phase 16** (gap closure) | Pending |
 | EDIT-02 | Phase 13 | Complete |
 | EDIT-03 | Phase 13 (depends on Phase 12.5) | Complete |
 | EDIT-04 | Phase 13 | Complete |
-| EDIT-05 | Phase 13, **Phase 15** (gap closure) | Pending |
+| EDIT-05 | Phase 13, **Phase 15** (gap closure) | Complete |
 | EDIT-06 | Phase 13 (depends on Phase 12.5) | Complete |
 | RMOD-01 | Phase 14, **Phase 16** (gap closure) | Pending |
 | RMOD-02 | Phase 14, **Phase 16** (gap closure) | Pending |
