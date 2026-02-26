@@ -26,17 +26,7 @@
     <g transform="matrix(@_state.Scale 0 0 @_state.Scale @_state.PanX @_state.PanY)">
         @foreach (var node in _state.Configuration.Nodes)
         {
-            <!-- Placeholder rectangles for nodes (Plan 02 replaces with NodeCard) -->
-            <rect x="@node.Position.X"
-                  y="@node.Position.Y"
-                  width="@node.Size.Width"
-                  height="@node.Size.Height"
-                  fill="var(--surface-card)"
-                  stroke="@(IsNodeSelected(node.ModuleId) ? "var(--accent-color)" : "var(--border-color)")"
-                  stroke-width="@(IsNodeSelected(node.ModuleId) ? 2 : 1)"
-                  rx="8" />
-            @((MarkupString)$"<text x=\"{node.Position.X + 10}\" y=\"{node.Position.Y + 30}\" fill=\"var(--text-primary)\" font-size=\"14\" font-family=\"var(--font-family)\">{node.ModuleName}</text>")
-            @((MarkupString)$"<text x=\"{node.Position.X + 10}\" y=\"{node.Position.Y + 50}\" fill=\"var(--text-secondary)\" font-size=\"11\" font-family=\"var(--font-family)\">{node.ModuleId.Substring(0, Math.Min(8, node.ModuleId.Length))}</text>")
+            <NodeCard Node="@node" IsSelected="@IsNodeSelected(node.ModuleId)" />
         }
     </g>
 </svg>
@@ -90,6 +80,38 @@
 
     private void HandleMouseMove(MouseEventArgs e)
     {
+        // Convert to canvas coordinates
+        var (canvasX, canvasY) = _state.ScreenToCanvas(e.ClientX, e.ClientY);
+
+        // Handle node dragging
+        if (_state.IsDraggingNode)
+        {
+            _state.UpdateNodeDrag(canvasX, canvasY);
+
+            var now = DateTime.UtcNow;
+            if ((now - _lastRenderTime).TotalMilliseconds >= RenderThrottleMs)
+            {
+                _lastRenderTime = now;
+                StateHasChanged();
+            }
+            return;
+        }
+
+        // Handle connection dragging
+        if (_state.IsDraggingConnection)
+        {
+            _state.UpdateConnectionDrag(canvasX, canvasY);
+
+            var now = DateTime.UtcNow;
+            if ((now - _lastRenderTime).TotalMilliseconds >= RenderThrottleMs)
+            {
+                _lastRenderTime = now;
+                StateHasChanged();
+            }
+            return;
+        }
+
+        // Handle canvas panning
         if (_isPanning)
         {
             var newPanX = e.ClientX - _panStartX;
@@ -109,6 +131,23 @@
 
     private void HandleMouseUp(MouseEventArgs e)
     {
+        // End node dragging
+        if (_state.IsDraggingNode)
+        {
+            _state.EndNodeDrag();
+            StateHasChanged();
+            return;
+        }
+
+        // End connection dragging (cancel if not on a port)
+        if (_state.IsDraggingConnection)
+        {
+            _state.EndConnectionDrag(null, null, null);
+            StateHasChanged();
+            return;
+        }
+
+        // End canvas panning
         _isPanning = false;
         StateHasChanged(); // Final render after pan ends
     }

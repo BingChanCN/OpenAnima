@@ -1,4 +1,6 @@
+using OpenAnima.Core.Ports;
 using OpenAnima.Core.Wiring;
+using OpenAnima.Contracts.Ports;
 
 namespace OpenAnima.Core.Services;
 
@@ -8,6 +10,12 @@ namespace OpenAnima.Core.Services;
 /// </summary>
 public class EditorStateService
 {
+    private readonly IPortRegistry _portRegistry;
+
+    public EditorStateService(IPortRegistry portRegistry)
+    {
+        _portRegistry = portRegistry;
+    }
     // Canvas transform
     public double Scale { get; private set; } = 1.0;
     public double PanX { get; private set; } = 0;
@@ -33,6 +41,7 @@ public class EditorStateService
     public bool IsDraggingConnection { get; set; }
     public string? DragSourceModuleId { get; set; }
     public string? DragSourcePortName { get; set; }
+    public PortType? DragSourcePortType { get; set; }
     public double DragConnectionMouseX { get; set; }
     public double DragConnectionMouseY { get; set; }
 
@@ -193,6 +202,143 @@ public class EditorStateService
         Configuration = configuration;
         ClearSelection();
         NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Starts dragging a node from the title bar.
+    /// </summary>
+    public void StartNodeDrag(string moduleId, double mouseCanvasX, double mouseCanvasY)
+    {
+        var node = Configuration.Nodes.FirstOrDefault(n => n.ModuleId == moduleId);
+        if (node == null) return;
+
+        IsDraggingNode = true;
+        DraggingNodeId = moduleId;
+        DragOffsetX = mouseCanvasX - node.Position.X;
+        DragOffsetY = mouseCanvasY - node.Position.Y;
+    }
+
+    /// <summary>
+    /// Updates the position of the node being dragged.
+    /// </summary>
+    public void UpdateNodeDrag(double mouseCanvasX, double mouseCanvasY)
+    {
+        if (!IsDraggingNode || DraggingNodeId == null) return;
+
+        var node = Configuration.Nodes.FirstOrDefault(n => n.ModuleId == DraggingNodeId);
+        if (node == null) return;
+
+        var newPosition = new VisualPosition
+        {
+            X = mouseCanvasX - DragOffsetX,
+            Y = mouseCanvasY - DragOffsetY
+        };
+
+        var updatedNode = node with { Position = newPosition };
+        var nodes = Configuration.Nodes.Select(n => n.ModuleId == DraggingNodeId ? updatedNode : n).ToList();
+        Configuration = Configuration with { Nodes = nodes };
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Ends node dragging.
+    /// </summary>
+    public void EndNodeDrag()
+    {
+        IsDraggingNode = false;
+        DraggingNodeId = null;
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Starts dragging a connection from an output port.
+    /// </summary>
+    public void StartConnectionDrag(string moduleId, string portName, PortType portType, double canvasX, double canvasY)
+    {
+        IsDraggingConnection = true;
+        DragSourceModuleId = moduleId;
+        DragSourcePortName = portName;
+        DragSourcePortType = portType;
+        DragConnectionMouseX = canvasX;
+        DragConnectionMouseY = canvasY;
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Updates the preview endpoint of the connection being dragged.
+    /// </summary>
+    public void UpdateConnectionDrag(double canvasX, double canvasY)
+    {
+        if (!IsDraggingConnection) return;
+
+        DragConnectionMouseX = canvasX;
+        DragConnectionMouseY = canvasY;
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Ends connection dragging, creating a connection if dropped on a compatible input port.
+    /// </summary>
+    public void EndConnectionDrag(string? targetModuleId, string? targetPortName, PortType? targetPortType)
+    {
+        if (!IsDraggingConnection || DragSourceModuleId == null || DragSourcePortName == null || DragSourcePortType == null)
+        {
+            IsDraggingConnection = false;
+            NotifyStateChanged();
+            return;
+        }
+
+        // Validate target: must be an input port with compatible type
+        if (targetModuleId != null && targetPortName != null && targetPortType != null)
+        {
+            // Check type compatibility
+            if (DragSourcePortType == targetPortType)
+            {
+                // Create connection
+                var connection = new PortConnection
+                {
+                    SourceModuleId = DragSourceModuleId,
+                    SourcePortName = DragSourcePortName,
+                    TargetModuleId = targetModuleId,
+                    TargetPortName = targetPortName
+                };
+
+                var connections = new List<PortConnection>(Configuration.Connections) { connection };
+                Configuration = Configuration with { Connections = connections };
+            }
+        }
+
+        // Clear drag state
+        IsDraggingConnection = false;
+        DragSourceModuleId = null;
+        DragSourcePortName = null;
+        DragSourcePortType = null;
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Calculates the absolute canvas position of a port circle.
+    /// </summary>
+    public (double X, double Y) GetPortPosition(string moduleId, string portName, PortDirection direction)
+    {
+        var node = Configuration.Nodes.FirstOrDefault(n => n.ModuleId == moduleId);
+        if (node == null) return (0, 0);
+
+        // Get ports for this module to find the port index
+        var allPorts = _portRegistry.GetPorts(node.ModuleName);
+        var ports = allPorts.Where(p => p.Direction == direction).ToList();
+        var portIndex = ports.FindIndex(p => p.Name == portName);
+        if (portIndex < 0) portIndex = 0;
+
+        const double titleHeight = 28;
+        const double portSpacing = 24;
+        const double portOffsetY = 12;
+        const double nodeWidth = 200;
+
+        var portY = titleHeight + portIndex * portSpacing + portOffsetY;
+        var portX = direction == PortDirection.Output ? nodeWidth : 0;
+
+        return (node.Position.X + portX, node.Position.Y + portY);
     }
 
     private void NotifyStateChanged()
