@@ -1,6 +1,10 @@
 @using OpenAnima.Core.Services
+@using OpenAnima.Core.Wiring
+@using OpenAnima.Core.Ports
+@using OpenAnima.Contracts.Ports
 @using Microsoft.AspNetCore.Components
 @inject EditorStateService _state
+@inject IPortRegistry _portRegistry
 
 <svg class="editor-canvas"
      @onwheel="HandleWheel"
@@ -24,6 +28,31 @@
 
     <!-- Transformed content -->
     <g transform="matrix(@_state.Scale 0 0 @_state.Scale @_state.PanX @_state.PanY)">
+        <!-- Render existing connections -->
+        @foreach (var connection in _state.Configuration.Connections)
+        {
+            var start = _state.GetPortPosition(connection.SourceModuleId, connection.SourcePortName, PortDirection.Output);
+            var end = _state.GetPortPosition(connection.TargetModuleId, connection.TargetPortName, PortDirection.Input);
+            var sourceNode = _state.Configuration.Nodes.FirstOrDefault(n => n.ModuleId == connection.SourceModuleId);
+            var color = sourceNode != null ? GetPortColor(sourceNode.ModuleName, connection.SourcePortName) : "#888888";
+            var connectionId = $"{connection.SourceModuleId}:{connection.SourcePortName}->{connection.TargetModuleId}:{connection.TargetPortName}";
+            var isSelected = _state.SelectedConnectionIds.Contains(connectionId);
+
+            <ConnectionLine Start="@start" End="@end" Color="@color" IsPreview="false" IsSelected="@isSelected"
+                          OnClick="@(() => HandleConnectionClick(connection))" />
+        }
+
+        <!-- Render preview connection during drag -->
+        @if (_state.IsDraggingConnection && _state.DragSourceModuleId != null && _state.DragSourcePortName != null && _state.DragSourcePortType != null)
+        {
+            var start = _state.GetPortPosition(_state.DragSourceModuleId, _state.DragSourcePortName, PortDirection.Output);
+            var end = (_state.DragConnectionMouseX, _state.DragConnectionMouseY);
+            var color = PortColors.GetHex(_state.DragSourcePortType.Value);
+
+            <ConnectionLine Start="@start" End="@end" Color="@color" IsPreview="true" IsSelected="false" />
+        }
+
+        <!-- Render nodes -->
         @foreach (var node in _state.Configuration.Nodes)
         {
             <NodeCard Node="@node" IsSelected="@IsNodeSelected(node.ModuleId)" />
@@ -51,6 +80,19 @@
     private bool IsNodeSelected(string moduleId)
     {
         return _state.SelectedNodeIds.Contains(moduleId);
+    }
+
+    private string GetPortColor(string moduleName, string portName)
+    {
+        var ports = _portRegistry.GetPorts(moduleName);
+        var port = ports.FirstOrDefault(p => p.Name == portName);
+        return port != null ? PortColors.GetHex(port.Type) : "#888888";
+    }
+
+    private void HandleConnectionClick(PortConnection connection)
+    {
+        _state.SelectConnection(connection.SourceModuleId, connection.SourcePortName,
+                               connection.TargetModuleId, connection.TargetPortName, false);
     }
 
     private void HandleWheel(WheelEventArgs e)

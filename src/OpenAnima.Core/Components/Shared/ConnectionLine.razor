@@ -1,0 +1,61 @@
+@using OpenAnima.Core.Services
+
+<!-- Invisible wider path for hit detection -->
+<path d="@_pathData"
+      stroke="transparent"
+      stroke-width="12"
+      fill="none"
+      pointer-events="stroke"
+      @onclick="HandleClick"
+      style="cursor: pointer;" />
+
+<!-- Visible bezier curve -->
+<path d="@_pathData"
+      stroke="@Color"
+      stroke-width="@(IsSelected ? 3 : 2)"
+      stroke-dasharray="@(IsPreview ? "8 4" : "")"
+      stroke-opacity="@(IsPreview ? 0.7 : 1.0)"
+      fill="none"
+      pointer-events="none" />
+
+@code {
+    [Parameter, EditorRequired]
+    public (double X, double Y) Start { get; set; }
+
+    [Parameter, EditorRequired]
+    public (double X, double Y) End { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Color { get; set; } = "#888888";
+
+    [Parameter]
+    public bool IsPreview { get; set; }
+
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+
+    private string _pathData = "";
+
+    protected override void OnParametersSet()
+    {
+        // Calculate cubic bezier curve
+        var dx = Math.Abs(End.X - Start.X) * 0.5;
+        var cp1X = Start.X + dx;
+        var cp1Y = Start.Y;
+        var cp2X = End.X - dx;
+        var cp2Y = End.Y;
+
+        _pathData = $"M {Start.X} {Start.Y} C {cp1X} {cp1Y}, {cp2X} {cp2Y}, {End.X} {End.Y}";
+    }
+
+    private async Task HandleClick()
+    {
+        if (!IsPreview && OnClick.HasDelegate)
+        {
+            await OnClick.InvokeAsync();
+        }
+    }
+}
