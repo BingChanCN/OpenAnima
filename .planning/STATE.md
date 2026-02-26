@@ -25,12 +25,12 @@ progress:
 
 ## Current Position
 
-**Phase:** 12.5 - Runtime DI Integration & Tech Debt Fix
-**Plan:** 3 of 3 complete
-**Status:** Milestone complete
-**Progress:** [██████████] 100%
+**Phase:** 13 - Visual Drag-and-Drop Editor
+**Plan:** 1 of 3 complete
+**Status:** In progress
+**Progress:** [███░░░░░░░] 33%
 
-**Next action:** Phase 12.5 complete. Ready for Phase 13 (Visual Wiring Editor).
+**Next action:** Continue to Phase 13 Plan 02 (Node Cards and Connection Rendering).
 
 ## Performance Metrics
 
@@ -40,6 +40,9 @@ progress:
 - Coverage: 17/17 mapped (100%)
 - Completed: 2 phases (Phase 11, Phase 12)
 - In progress: Phase 12.5 (Runtime DI Integration)
+
+**Phase 13 metrics:**
+- Plan 13-01: 2 tasks, 10 files, 355 seconds
 
 **Phase 12.5 metrics:**
 - Plan 12.5-01: 2 tasks, 8 files, 202 seconds, 48 tests passing
@@ -72,6 +75,9 @@ progress:
 - HTML5 + SVG editor: Native browser APIs with Blazor, no JavaScript framework needed
 - Augmentation over replacement: EventBus remains, wiring engine orchestrates execution order
 - Two-phase initialization: Load modules first, then wire connections (prevents circular dependencies)
+- Scoped EditorStateService: Per-circuit isolation in Blazor Server for editor state
+- Throttled rendering: 50ms throttle during pan operations prevents SignalR bottleneck
+- MarkupString for SVG text: Avoids Razor tag conflict with SVG elements
 
 **Phase 11 implementation decisions:**
 - Port types fixed to Text and Trigger enum (not extensible by design - prevents type chaos)
@@ -165,46 +171,36 @@ None currently. Phase 12.5 complete, ready for Phase 13.
 | Phase 12.5 P01 | 202 | 2 tasks | 8 files |
 | Phase 12.5 P02 | 156 | 1 task | 1 file |
 | Phase 12.5 P03 | 329 | 1 task | 1 file |
+| Phase 13 P01 | 355 | 2 tasks | 10 files |
 
 ## Session Continuity
 
 **What just happened:**
-- Completed Phase 12.5 Plan 03: DI Integration Tests
-- Created WiringDIIntegrationTests.cs with 11 integration tests
-- Tests verify DI resolution, port registration, config lifecycle, and runtime execution
-- All tests use real ServiceCollection + BuildServiceProvider (not mocks)
-- Scoped lifetime verified (different instances per scope)
-- Data routing verified through EventBus subscriptions
-- All 11 tests pass, covering all 8 requirement IDs
+- Completed Phase 13 Plan 01: Visual Editor Foundation
+- Created EditorStateService for central state management
+- Built Editor page at /editor with SVG canvas and module palette
+- Implemented pan/zoom with throttled rendering (50ms)
+- Added drag-to-canvas functionality from module palette
+- Registered EditorStateService in DI as scoped service
+- Added Editor link to MainLayout sidebar navigation
 
 **What's next:**
-1. Phase 12.5 complete - all 3 plans finished
-2. Ready to proceed to Phase 13: Visual Wiring Editor
-3. Phase 13 will build drag-and-drop editor using Blazor + SVG
+1. Phase 13 Plan 02: Node Cards and Connection Rendering
+2. Replace placeholder rectangles with NodeCard components
+3. Render ports with colored circles (PortColors)
+4. Implement bezier curve connections
+5. Add connection drag-to-create functionality
 
 **Context for next session:**
-- Phase 12.5 complete: Runtime DI integration finished
-- All wiring services (IPortRegistry, IConfigurationLoader, IWiringEngine) injectable
-- WiringInitializationService auto-loads last config on startup
-- 11 integration tests verify end-to-end DI flow
-- PORT-04, WIRE-01, WIRE-02, WIRE-03, EDIT-03, EDIT-05, EDIT-06, E2E-01 all fulfilled
-- Ready for Phase 13: Visual Wiring Editor implementation
-- All 48 existing tests pass (2 pre-existing failures unrelated)
-
-**What's next:**
-1. Phase 12.5 Plan 03: Add integration tests for DI resolution
-2. Continue to Phase 13: Visual Wiring Editor
-
-**Context for next session:**
-- Phase 12.5 Plan 02 complete: Port discovery integrated, config auto-load working
-- ModuleService now registers ports at runtime via PortDiscovery + IPortRegistry
-- WiringInitializationService auto-loads last config from .lastconfig file
-- Graceful degradation for missing/corrupt config (logs warning, starts empty)
-- PORT-04, EDIT-06, E2E-01 requirements fulfilled
-- Ready for Plan 03: Integration tests to verify DI resolution and runtime flows
-- All Phase 11/12/12.5 services now fully integrated with runtime DI
+- Phase 13 Plan 01 complete: Visual editor foundation established
+- EditorStateService tracks nodes, connections, selection, pan/zoom, drag operations
+- Canvas supports pan (drag background) and zoom (mouse wheel centered on cursor)
+- Module palette shows available modules from IPortRegistry with search filter
+- Drag from palette to canvas creates nodes at correct canvas coordinates
+- EDIT-01 and EDIT-02 requirements fulfilled
+- Ready for Plan 02: Node visual design and connection rendering
 
 ---
 *State initialized: 2026-02-25*
 *Last updated: 2026-02-26*
-*Phase 12.5 complete - ready for Phase 13*
+*Phase 13 Plan 01 complete - visual editor foundation established*

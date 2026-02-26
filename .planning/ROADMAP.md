@@ -112,7 +112,7 @@ Plans:
   4. User can click to select nodes or connections and press Delete key to remove them
   5. User can save wiring configuration and reload it later with all nodes and connections restored
   6. Editor auto-saves configuration after any change without manual save action
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 Plans:
 - [ ] 13-01-PLAN.md — Editor page + SVG canvas with pan/zoom + module palette
 - [ ] 13-02-PLAN.md — Node cards with ports + bezier curve connections
@@ -151,7 +151,7 @@ Plans:
 | 11. Port Type System & Testing Foundation | 3/3 | Complete    | 2026-02-25 | - |
 | 12. Wiring Engine & Execution Orchestration | 3/3 | Complete    | 2026-02-25 | - |
 | 12.5. Runtime DI Integration & Tech Debt Fix | 3/3 | Complete    | 2026-02-25 | - |
-| 13. Visual Drag-and-Drop Editor | v1.3 | 0/3 | Planned | - |
+| 13. Visual Drag-and-Drop Editor | 1/3 | In Progress|  | - |
 | 14. Module Refactoring & Runtime Integration | v1.3 | 0/? | Not started | - |
 
 ---

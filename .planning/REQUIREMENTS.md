@@ -22,8 +22,8 @@ Requirements for v1.3 True Modularization & Visual Wiring. Each maps to roadmap 
 
 ### Visual Editor (可视化编辑器)
 
-- [ ] **EDIT-01**: User can drag modules from palette onto canvas to place them
-- [ ] **EDIT-02**: User can pan canvas by dragging background and zoom with mouse wheel
+- [x] **EDIT-01**: User can drag modules from palette onto canvas to place them
+- [x] **EDIT-02**: User can pan canvas by dragging background and zoom with mouse wheel
 - [x] **EDIT-03**: User can drag from output port to input port to create connection with bezier curve preview
 - [ ] **EDIT-04**: User can click to select nodes/connections and press Delete to remove them
 - [x] **EDIT-05**: User can save wiring configuration to JSON and load it back with full graph restoration
@@ -96,8 +96,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WIRE-01 | Phase 12, Phase 12.5 (DI fix) | Complete (test), Pending (runtime) |
 | WIRE-02 | Phase 12, Phase 12.5 (DI fix) | Complete (test), Pending (runtime) |
 | WIRE-03 | Phase 12, Phase 12.5 (DI fix) | Complete (test), Pending (runtime) |
-| EDIT-01 | Phase 13 | Pending |
-| EDIT-02 | Phase 13 | Pending |
+| EDIT-01 | Phase 13 | Complete |
+| EDIT-02 | Phase 13 | Complete |
 | EDIT-03 | Phase 13 (depends on Phase 12.5) | Complete |
 | EDIT-04 | Phase 13 | Pending |
 | EDIT-05 | Phase 13 (depends on Phase 12.5) | Complete |
