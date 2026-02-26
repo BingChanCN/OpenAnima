@@ -151,7 +151,7 @@ Plans:
 | 11. Port Type System & Testing Foundation | 3/3 | Complete    | 2026-02-25 | - |
 | 12. Wiring Engine & Execution Orchestration | 3/3 | Complete    | 2026-02-25 | - |
 | 12.5. Runtime DI Integration & Tech Debt Fix | 3/3 | Complete    | 2026-02-25 | - |
-| 13. Visual Drag-and-Drop Editor | 3/3 | Complete   | 2026-02-26 | - |
+| 13. Visual Drag-and-Drop Editor | 3/3 | Complete    | 2026-02-26 | - |
 | 14. Module Refactoring & Runtime Integration | v1.3 | 0/? | Not started | - |
 
 ---
