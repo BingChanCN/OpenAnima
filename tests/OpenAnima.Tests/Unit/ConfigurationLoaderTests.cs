@@ -228,6 +228,42 @@ public class ConfigurationLoaderTests : IDisposable
     }
 
     [Fact]
+    public void ValidateConfiguration_ConnectionToNonExistentNode_ReturnsFailure()
+    {
+        // Arrange - register modules but connection references a non-existent node ID
+        _portRegistry.RegisterPorts("Module 1", new List<PortMetadata>
+        {
+            new("output1", PortType.Text, PortDirection.Output, "Module 1")
+        });
+
+        var config = new WiringConfiguration
+        {
+            Name = "orphan-connection",
+            Nodes = new List<ModuleNode>
+            {
+                new() { ModuleId = "node-guid-1", ModuleName = "Module 1" }
+            },
+            Connections = new List<PortConnection>
+            {
+                new()
+                {
+                    SourceModuleId = "node-guid-1",
+                    SourcePortName = "output1",
+                    TargetModuleId = "non-existent-guid",
+                    TargetPortName = "input1"
+                }
+            }
+        };
+
+        // Act
+        var result = _loader.ValidateConfiguration(config);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains("not found in configuration", result.ErrorMessage);
+    }
+
+    [Fact]
     public async Task LoadAsync_InvalidConfig_ThrowsInvalidOperationException()
     {
         // Arrange
