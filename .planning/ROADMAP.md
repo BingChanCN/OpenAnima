@@ -5,7 +5,7 @@
 - ✅ **v1.0 Core Platform Foundation** — Phases 1-2 (shipped 2026-02-21)
 - ✅ **v1.1 WebUI Runtime Dashboard** — Phases 3-7 (shipped 2026-02-23)
 - ✅ **v1.2 LLM Integration** — Phases 8-10 (shipped 2026-02-25)
-- ✅ **v1.3 True Modularization & Visual Wiring** — Phases 11-14 + 12.5 (shipped 2026-02-27)
+- ⏳ **v1.3 True Modularization & Visual Wiring** — Phases 11-14 + 12.5 + Gap Closure 15-17
 
 ## Phases
 
@@ -44,7 +44,7 @@ See: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 </details>
 
 <details open>
-<summary>✅ v1.3 True Modularization & Visual Wiring (Phases 11-14) — SHIPPED 2026-02-27</summary>
+<summary>⏳ v1.3 True Modularization & Visual Wiring (Phases 11-17) — Gap Closure In Progress</summary>
 
 - [x] **Phase 11: Port Type System & Testing Foundation** - Establish port types, validation, and integration tests (completed 2026-02-25)
 - [x] **Phase 12: Wiring Engine & Execution Orchestration** - Topological execution with cycle detection (completed 2026-02-25)
@@ -136,6 +136,40 @@ Plans:
 - [x] 14-02-PLAN.md — Runtime status push via SignalR + editor visual indicators
 - [x] 14-03-PLAN.md — DI wiring + ChatPanel integration + E2E test + visual checkpoint
 
+### Phase 15: Fix ConfigurationLoader Key Mismatch
+**Goal:** Fix critical bug where ValidateConfiguration() uses ModuleId (GUID) to look up IPortRegistry keyed by ModuleName (string), breaking all config save/load
+**Depends on:** Phase 14
+**Requirements:** EDIT-05, WIRE-01, WIRE-03
+**Gap Closure:** Closes Bug 1 from audit — fixes Config Save/Load Round-Trip and Auto-Load on Startup flows
+**Success Criteria** (what must be TRUE):
+  1. ConfigurationLoader.ValidateConfiguration() uses ModuleName for IPortRegistry lookup
+  2. Save config → reload config round-trip works without validation errors
+  3. Auto-load on startup restores previously saved configuration
+  4. Existing 78 tests continue passing
+
+### Phase 16: Module Runtime Initialization & Port Registration
+**Goal:** Ensure concrete modules (LLMModule, ChatInputModule, ChatOutputModule, HeartbeatModule) are port-discovered, port-registered, and initialized at runtime startup
+**Depends on:** Phase 15
+**Requirements:** PORT-04, RMOD-01, RMOD-02, RMOD-03, RMOD-04, EDIT-01
+**Gap Closure:** Closes Bug 2 from audit — fixes Editor Shows Real Module Ports flow
+**Success Criteria** (what must be TRUE):
+  1. WiringInitializationService calls PortDiscovery.DiscoverPorts() and IPortRegistry.RegisterPorts() for each concrete module at startup
+  2. WiringInitializationService calls InitializeAsync() on each concrete module singleton
+  3. Module palette shows real modules (LLMModule, ChatInputModule, ChatOutputModule, HeartbeatModule) instead of demo modules
+  4. Modules are fully operational at runtime (EventBus subscriptions active)
+
+### Phase 17: E2E Module Pipeline Integration & Editor Polish
+**Goal:** Wire ChatPanel to module pipeline for end-to-end conversation via modules, add visual feedback for connection rejection, and formally verify RTIM requirements
+**Depends on:** Phase 16
+**Requirements:** E2E-01, RTIM-01, RTIM-02
+**Gap Closure:** Closes Bug 3 + Bug 4 from audit, verifies RTIM-01/02, completes E2E-01
+**Success Criteria** (what must be TRUE):
+  1. ChatPanel uses ChatInputModule.SendMessageAsync() and binds ChatOutputModule.OnMessageReceived for module-based conversation
+  2. User can wire ChatInput→LLM→ChatOutput in editor and have working conversation identical to v1.2
+  3. Incompatible connection drag shows visual rejection feedback (not silent cancel)
+  4. Real-time module status (running, error, stopped) displays correctly in editor nodes
+  5. Module errors during execution appear as visual indicators on corresponding nodes
+
 </details>
 
 ## Progress
@@ -157,6 +191,9 @@ Plans:
 | 12.5. Runtime DI Integration & Tech Debt Fix | 3/3 | Complete    | 2026-02-25 | - |
 | 13. Visual Drag-and-Drop Editor | 3/3 | Complete    | 2026-02-26 | - |
 | 14. Module Refactoring & Runtime Integration | 3/3 | Complete   | 2026-02-26 | - |
+| 15. Fix ConfigurationLoader Key Mismatch | 0/0 | Pending | — | — |
+| 16. Module Runtime Initialization & Port Registration | 0/0 | Pending | — | — |
+| 17. E2E Module Pipeline Integration & Editor Polish | 0/0 | Pending | — | — |
 
 ---
-*Last updated: 2026-02-27 after phase 14 planning*
+*Last updated: 2026-02-27 after gap closure phases 15-17 created*

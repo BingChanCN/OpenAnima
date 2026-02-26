@@ -12,38 +12,38 @@ Requirements for v1.3 True Modularization & Visual Wiring. Each maps to roadmap 
 - [x] **PORT-01**: User can see port type categories (Text, Trigger) on module ports with visual color distinction
 - [x] **PORT-02**: User cannot connect ports of different types — editor rejects with visual feedback
 - [x] **PORT-03**: User can connect one output port to multiple input ports (fan-out)
-- [x] **PORT-04**: Modules declare input/output ports via typed interface, discoverable at load time
+- [ ] **PORT-04**: Modules declare input/output ports via typed interface, discoverable at load time
 
 ### Wiring Engine (连线引擎)
 
-- [x] **WIRE-01**: Runtime executes modules in topological order based on wiring connections
+- [ ] **WIRE-01**: Runtime executes modules in topological order based on wiring connections
 - [x] **WIRE-02**: Runtime detects and rejects circular dependencies at wire-time with clear error message
-- [x] **WIRE-03**: Wiring engine routes data between connected ports during execution
+- [ ] **WIRE-03**: Wiring engine routes data between connected ports during execution
 
 ### Visual Editor (可视化编辑器)
 
-- [x] **EDIT-01**: User can drag modules from palette onto canvas to place them
+- [ ] **EDIT-01**: User can drag modules from palette onto canvas to place them
 - [x] **EDIT-02**: User can pan canvas by dragging background and zoom with mouse wheel
 - [x] **EDIT-03**: User can drag from output port to input port to create connection with bezier curve preview
-- [ ] **EDIT-04**: User can click to select nodes/connections and press Delete to remove them
-- [x] **EDIT-05**: User can save wiring configuration to JSON and load it back with full graph restoration
+- [x] **EDIT-04**: User can click to select nodes/connections and press Delete to remove them
+- [ ] **EDIT-05**: User can save wiring configuration to JSON and load it back with full graph restoration
 - [x] **EDIT-06**: Editor auto-saves wiring configuration after changes
 
 ### Refactored Modules (官方模块拆分)
 
-- [x] **RMOD-01**: LLM service refactored into LLMModule with typed input/output ports
-- [x] **RMOD-02**: Chat input refactored into ChatInputModule with output port
-- [x] **RMOD-03**: Chat output refactored into ChatOutputModule with input port
-- [x] **RMOD-04**: Heartbeat refactored into HeartbeatModule with trigger port
+- [ ] **RMOD-01**: LLM service refactored into LLMModule with typed input/output ports
+- [ ] **RMOD-02**: Chat input refactored into ChatInputModule with output port
+- [ ] **RMOD-03**: Chat output refactored into ChatOutputModule with input port
+- [ ] **RMOD-04**: Heartbeat refactored into HeartbeatModule with trigger port
 
 ### Runtime Integration (运行时集成)
 
-- [x] **RTIM-01**: Editor displays real-time module status (running, error, stopped) synced from runtime
-- [x] **RTIM-02**: Module errors during execution shown as visual indicators on corresponding nodes
+- [ ] **RTIM-01**: Editor displays real-time module status (running, error, stopped) synced from runtime
+- [ ] **RTIM-02**: Module errors during execution shown as visual indicators on corresponding nodes
 
 ### End-to-End (端到端验证)
 
-- [x] **E2E-01**: User can wire ChatInput → LLM → ChatOutput in editor and have a working conversation identical to v1.2
+- [ ] **E2E-01**: User can wire ChatInput → LLM → ChatOutput in editor and have a working conversation identical to v1.2
 
 ## Future Requirements
 
@@ -92,29 +92,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-01 | Phase 11 | Complete |
 | PORT-02 | Phase 11 | Complete |
 | PORT-03 | Phase 11 | Complete |
-| PORT-04 | Phase 11, Phase 12.5 (runtime fix) | Complete (test), Pending (runtime) |
-| WIRE-01 | Phase 12, Phase 12.5 (DI fix) | Complete (test), Pending (runtime) |
-| WIRE-02 | Phase 12, Phase 12.5 (DI fix) | Complete (test), Pending (runtime) |
-| WIRE-03 | Phase 12, Phase 12.5 (DI fix) | Complete (test), Pending (runtime) |
-| EDIT-01 | Phase 13 | Complete |
+| PORT-04 | Phase 11, Phase 12.5, **Phase 16** (gap closure) | Pending |
+| WIRE-01 | Phase 12, Phase 12.5, **Phase 15** (gap closure) | Pending |
+| WIRE-02 | Phase 12, Phase 12.5 (DI fix) | Complete |
+| WIRE-03 | Phase 12, Phase 12.5, **Phase 15** (gap closure) | Pending |
+| EDIT-01 | Phase 13, **Phase 16** (gap closure) | Pending |
 | EDIT-02 | Phase 13 | Complete |
 | EDIT-03 | Phase 13 (depends on Phase 12.5) | Complete |
-| EDIT-04 | Phase 13 | Pending |
-| EDIT-05 | Phase 13 (depends on Phase 12.5) | Complete |
+| EDIT-04 | Phase 13 | Complete |
+| EDIT-05 | Phase 13, **Phase 15** (gap closure) | Pending |
 | EDIT-06 | Phase 13 (depends on Phase 12.5) | Complete |
-| RMOD-01 | Phase 14 | Complete |
-| RMOD-02 | Phase 14 | Complete |
-| RMOD-03 | Phase 14 | Complete |
-| RMOD-04 | Phase 14 | Complete |
-| RTIM-01 | Phase 14 | Complete |
-| RTIM-02 | Phase 14 | Complete |
-| E2E-01 | Phase 14 (depends on Phase 12.5) | Complete |
+| RMOD-01 | Phase 14, **Phase 16** (gap closure) | Pending |
+| RMOD-02 | Phase 14, **Phase 16** (gap closure) | Pending |
+| RMOD-03 | Phase 14, **Phase 16** (gap closure) | Pending |
+| RMOD-04 | Phase 14, **Phase 16** (gap closure) | Pending |
+| RTIM-01 | Phase 14, **Phase 17** (gap closure) | Pending |
+| RTIM-02 | Phase 14, **Phase 17** (gap closure) | Pending |
+| E2E-01 | Phase 14, **Phase 17** (gap closure) | Pending |
 
 **Coverage:**
-- v1.3 requirements: 20 total (17 functional + 3 runtime integration fixes)
-- Mapped to phases: 20
+- v1.3 requirements: 20 total
+- Satisfied: 8 (PORT-01, PORT-02, PORT-03, WIRE-02, EDIT-02, EDIT-03, EDIT-04, EDIT-06)
+- Pending (gap closure): 12
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-26 after gap closure phase creation*
+*Last updated: 2026-02-27 after gap closure phases 15-17 created*
