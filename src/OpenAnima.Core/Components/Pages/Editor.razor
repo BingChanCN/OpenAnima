@@ -3,6 +3,7 @@
 @using OpenAnima.Core.Wiring
 @using OpenAnima.Core.Ports
 @using OpenAnima.Contracts
+@using OpenAnima.Contracts.Ports
 @inject EditorStateService _state
 @inject IPortRegistry _portRegistry
 @inject IConfigurationLoader _configLoader
@@ -24,6 +25,12 @@
         // Subscribe to state changes
         _state.OnStateChanged += HandleStateChanged;
 
+        // Register demo modules if no real modules are loaded
+        if (_portRegistry.GetAllPorts().Count == 0)
+        {
+            RegisterDemoModules();
+        }
+
         // Load current configuration from wiring engine if available
         var currentConfig = _wiringEngine.GetCurrentConfiguration();
         if (currentConfig != null)
@@ -35,6 +42,34 @@
             // Start with empty configuration
             _state.LoadConfiguration(new WiringConfiguration { Name = "default" });
         }
+    }
+
+    private void RegisterDemoModules()
+    {
+        _portRegistry.RegisterPorts("TextInput", new List<PortMetadata>
+        {
+            new("text_out", PortType.Text, PortDirection.Output, "TextInput"),
+            new("trigger_out", PortType.Trigger, PortDirection.Output, "TextInput")
+        });
+
+        _portRegistry.RegisterPorts("LLMProcessor", new List<PortMetadata>
+        {
+            new("prompt_in", PortType.Text, PortDirection.Input, "LLMProcessor"),
+            new("trigger_in", PortType.Trigger, PortDirection.Input, "LLMProcessor"),
+            new("response_out", PortType.Text, PortDirection.Output, "LLMProcessor"),
+            new("done_out", PortType.Trigger, PortDirection.Output, "LLMProcessor")
+        });
+
+        _portRegistry.RegisterPorts("TextOutput", new List<PortMetadata>
+        {
+            new("text_in", PortType.Text, PortDirection.Input, "TextOutput"),
+            new("trigger_in", PortType.Trigger, PortDirection.Input, "TextOutput")
+        });
+
+        _portRegistry.RegisterPorts("TriggerButton", new List<PortMetadata>
+        {
+            new("trigger_out", PortType.Trigger, PortDirection.Output, "TriggerButton")
+        });
     }
 
     private void HandleStateChanged()

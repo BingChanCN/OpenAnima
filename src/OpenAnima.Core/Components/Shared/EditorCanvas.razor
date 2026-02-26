@@ -3,15 +3,20 @@
 @using OpenAnima.Core.Ports
 @using OpenAnima.Contracts.Ports
 @using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
 @inject EditorStateService _state
 @inject IPortRegistry _portRegistry
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<svg class="editor-canvas"
+<svg @ref="_svgRef"
+     class="editor-canvas"
      @onwheel="HandleWheel"
      @onwheel:preventDefault
      @onmousedown="HandleMouseDown"
      @onmousemove="HandleMouseMove"
      @onmouseup="HandleMouseUp"
+     @oncontextmenu:preventDefault
      @ondragover:preventDefault
      @ondrop="HandleDrop">
 
@@ -61,6 +66,8 @@
 </svg>
 
 @code {
+    private ElementReference _svgRef;
+    private bool _jsInitialized;
     private bool _isPanning;
     private double _panStartX;
     private double _panStartY;
@@ -70,6 +77,15 @@
     protected override void OnInitialized()
     {
         _state.OnStateChanged += HandleStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_jsInitialized)
+        {
+            _jsInitialized = true;
+            await JS.InvokeVoidAsync("editorCanvas.init", _svgRef);
+        }
     }
 
     private void HandleStateChanged()
@@ -212,8 +228,13 @@
         _state.DraggedModuleName = null;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         _state.OnStateChanged -= HandleStateChanged;
+        if (_jsInitialized)
+        {
+            try { await JS.InvokeVoidAsync("editorCanvas.dispose", _svgRef); }
+            catch (JSDisconnectedException) { }
+        }
     }
 }
