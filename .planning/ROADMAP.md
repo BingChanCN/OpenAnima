@@ -5,7 +5,7 @@
 - ✅ **v1.0 Core Platform Foundation** — Phases 1-2 (shipped 2026-02-21)
 - ✅ **v1.1 WebUI Runtime Dashboard** — Phases 3-7 (shipped 2026-02-23)
 - ✅ **v1.2 LLM Integration** — Phases 8-10 (shipped 2026-02-25)
-- ⏳ **v1.3 True Modularization & Visual Wiring** — Phases 11-14 + 12.5 + Gap Closure 15-17
+- ⏳ **v1.3 True Modularization & Visual Wiring** — Phases 11-14 + 12.5 + Gap Closure 15-19
 
 ## Phases
 
@@ -44,13 +44,15 @@ See: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 </details>
 
 <details open>
-<summary>⏳ v1.3 True Modularization & Visual Wiring (Phases 11-17) — Gap Closure In Progress</summary>
+<summary>⏳ v1.3 True Modularization & Visual Wiring (Phases 11-19) — Gap Closure In Progress</summary>
 
 - [x] **Phase 11: Port Type System & Testing Foundation** - Establish port types, validation, and integration tests (completed 2026-02-25)
 - [x] **Phase 12: Wiring Engine & Execution Orchestration** - Topological execution with cycle detection (completed 2026-02-25)
 - [x] **Phase 12.5: Runtime DI Integration & Tech Debt Fix** - Register core services in DI, persist port discovery (completed 2026-02-25)
 - [x] **Phase 13: Visual Drag-and-Drop Editor** - HTML5/SVG canvas with pan/zoom and connection preview (completed 2026-02-26)
 - [x] **Phase 14: Module Refactoring & Runtime Integration** - Refactor LLM/chat/heartbeat into port-based modules (completed 2026-02-26)
+- [ ] **Phase 18: RMOD Verification Evidence Backfill** - Restore missing verification artifacts and close RMOD orphaned requirements
+- [ ] **Phase 19: Requirement Metadata Drift Cleanup** - Remove invalid requirement mappings and align traceability metadata
 
 
 ### Phase 11: Port Type System & Testing Foundation
@@ -176,6 +178,29 @@ Plans:
   4. Real-time module status (running, error, stopped) displays correctly in editor nodes
   5. Module errors during execution appear as visual indicators on corresponding nodes
 
+### Phase 18: RMOD Verification Evidence Backfill
+**Goal:** Rebuild verification evidence chain for RMOD requirements by adding missing verification artifacts for Phase 14 and Phase 16
+**Depends on:** Phase 17
+**Requirements:** RMOD-01, RMOD-02, RMOD-03, RMOD-04
+**Gap Closure:** Closes 4 orphaned requirements, 1 integration gap, and 1 broken verification flow from v1.3 audit
+**Success Criteria** (what must be TRUE):
+  1. `14-VERIFICATION.md` exists with explicit RMOD requirement evidence and pass/fail outcomes
+  2. `16-VERIFICATION.md` exists with explicit RMOD requirement evidence and pass/fail outcomes
+  3. RMOD-01..04 are no longer orphaned in cross-source requirement audit
+  4. Milestone traceability links RMOD requirements to a verifiable closure phase
+**Plans:** 0 plans (pending creation)
+
+### Phase 19: Requirement Metadata Drift Cleanup
+**Goal:** Eliminate invalid requirement IDs in summary metadata and restore consistent requirement traceability
+**Depends on:** Phase 18
+**Requirements:** None (traceability and metadata integrity)
+**Gap Closure:** Closes integration gap caused by invalid `WIRE-04` and `WIRE-05` mappings in `14-03-SUMMARY.md`
+**Success Criteria** (what must be TRUE):
+  1. `14-03-SUMMARY.md` no longer references undefined requirement IDs
+  2. Summary frontmatter requirement IDs are valid against `.planning/REQUIREMENTS.md`
+  3. Audit reports no metadata drift for requirement mappings
+**Plans:** 0 plans (pending creation)
+
 </details>
 
 ## Progress
@@ -200,6 +225,8 @@ Plans:
 | 15. Fix ConfigurationLoader Key Mismatch | 1/1 | Complete    | 2026-02-26 | — |
 | 16. Module Runtime Initialization & Port Registration | 1/1 | Complete | 2026-02-27 | — |
 | 17. E2E Module Pipeline Integration & Editor Polish | 2/2 | Complete    | 2026-02-27 | — |
+| 18. RMOD Verification Evidence Backfill | 0/0 | Planned | — | — |
+| 19. Requirement Metadata Drift Cleanup | 0/0 | Planned | — | — |
 
 ---
-*Last updated: 2026-02-27 after Phase 17 completed*
+*Last updated: 2026-02-27 after gap closure phases 18-19 added*

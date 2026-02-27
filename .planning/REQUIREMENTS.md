@@ -102,10 +102,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EDIT-04 | Phase 13 | Complete |
 | EDIT-05 | Phase 13, **Phase 15** (gap closure) | Complete |
 | EDIT-06 | Phase 13 (depends on Phase 12.5) | Complete |
-| RMOD-01 | Phase 14, **Phase 16** (gap closure) | Pending |
-| RMOD-02 | Phase 14, **Phase 16** (gap closure) | Pending |
-| RMOD-03 | Phase 14, **Phase 16** (gap closure) | Pending |
-| RMOD-04 | Phase 14, **Phase 16** (gap closure) | Pending |
+| RMOD-01 | Phase 14, Phase 16, **Phase 18** (gap closure) | Pending |
+| RMOD-02 | Phase 14, Phase 16, **Phase 18** (gap closure) | Pending |
+| RMOD-03 | Phase 14, Phase 16, **Phase 18** (gap closure) | Pending |
+| RMOD-04 | Phase 14, Phase 16, **Phase 18** (gap closure) | Pending |
 | RTIM-01 | Phase 14, **Phase 17** (gap closure) | Complete |
 | RTIM-02 | Phase 14, **Phase 17** (gap closure) | Complete |
 | E2E-01 | Phase 14, **Phase 17** (gap closure) | Complete |
@@ -118,4 +118,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-27 after gap closure phases 15-17 created*
+*Last updated: 2026-02-27 after gap closure phases 18-19 added*
