@@ -1,7 +1,7 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.4
-milestone_name: TBD
+milestone_name: Module SDK & DevEx
 status: planning
 last_updated: "2026-02-28T00:00:00Z"
 progress:
@@ -12,10 +12,10 @@ progress:
   percent: 0
 ---
 
-# Project State: OpenAnima v1.4
+# Project State: OpenAnima v1.4 Module SDK & DevEx
 
 **Last updated:** 2026-02-28
-**Current milestone:** Planning v1.4
+**Current milestone:** Planning v1.4 Module SDK & DevEx
 
 ## Project Reference
 
@@ -27,12 +27,21 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ## Current Position
 
-**Status:** v1.3 milestone complete, planning v1.4
+**Status:** Defining requirements
 **Progress:** [----------] 0%
 
-**Next action:** Run `/gsd:new-milestone` to define v1.4 requirements and phases.
+**Next action:** Define v1.4 requirements for Module SDK & DevEx.
 
 ## Accumulated Context
+
+### v1.4 Scope Decisions
+
+- **SDK 形态:** dotnet new 项目模板
+- **CLI 工具:** 极简 CLI（oani new、oani pack）
+- **包格式:** 自定义 .oamod 格式（含清单和校验）
+- **文档范围:** API 参考 + 快速入门 + 示例模块 + 开发指南
+- **内置模块:** 不新增（v1.4 聚焦 SDK/文档）
+- **分发方式:** 本地包加载（为模块市场预留基础）
 
 ### Key Decisions (v1.3)
 

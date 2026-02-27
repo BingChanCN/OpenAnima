@@ -1,5 +1,15 @@
 # OpenAnima
 
+## Current Milestone: v1.4 Module SDK & DevEx
+
+**Goal:** 让开发者能够轻松创建、打包和分发自定义模块
+
+**Target features:**
+- dotnet new 项目模板
+- 极简 CLI 工具（oani new、oani pack）
+- .oamod 包格式（含清单和校验）
+- 完整文档（API 参考 + 快速入门 + 示例 + 指南）
+
 ## What This Is
 
 A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based monitoring dashboard, real-time control panel, LLM-powered chat interface, and visual drag-and-drop wiring editor.
@@ -37,7 +47,10 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Active
 
-(None — define v1.4 requirements with `/gsd:new-milestone`)
+- [ ] Module SDK: dotnet new 项目模板，一键生成模块项目结构
+- [ ] 极简 CLI 工具: oani new、oani pack 命令
+- [ ] .oamod 包格式: 自定义模块包格式，含清单和校验
+- [ ] 完整文档: API 参考 + 快速入门 + 示例模块 + 开发指南
 
 ### Future
 
@@ -115,4 +128,4 @@ v1.3 delivered the visual wiring editor:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-02-28 after v1.3 milestone completion*
+*Last updated: 2026-02-28 after v1.4 milestone started*
