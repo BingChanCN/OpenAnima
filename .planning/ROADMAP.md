@@ -160,6 +160,9 @@ Plans:
   2. WiringInitializationService calls InitializeAsync() on each concrete module singleton
   3. Module palette shows real modules (LLMModule, ChatInputModule, ChatOutputModule, HeartbeatModule) instead of demo modules
   4. Modules are fully operational at runtime (EventBus subscriptions active)
+**Plans:** 1 plan
+Plans:
+- [ ] 16-01-PLAN.md — Port discovery, module initialization at startup, remove demo fallback
 
 ### Phase 17: E2E Module Pipeline Integration & Editor Polish
 **Goal:** Wire ChatPanel to module pipeline for end-to-end conversation via modules, add visual feedback for connection rejection, and formally verify RTIM requirements
@@ -195,7 +198,7 @@ Plans:
 | 13. Visual Drag-and-Drop Editor | 3/3 | Complete    | 2026-02-26 | - |
 | 14. Module Refactoring & Runtime Integration | 3/3 | Complete   | 2026-02-26 | - |
 | 15. Fix ConfigurationLoader Key Mismatch | 1/1 | Complete    | 2026-02-26 | — |
-| 16. Module Runtime Initialization & Port Registration | 0/0 | Pending | — | — |
+| 16. Module Runtime Initialization & Port Registration | 0/1 | Planning | — | — |
 | 17. E2E Module Pipeline Integration & Editor Polish | 0/0 | Pending | — | — |
 
 ---
