@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-last_updated: "2026-02-26T19:38:31.644Z"
+last_updated: "2026-02-27T09:58:00.000Z"
 progress:
   total_phases: 8
-  completed_phases: 6
-  total_plans: 16
-  completed_plans: 16
-  percent: 100
+  completed_phases: 7
+  total_plans: 19
+  completed_plans: 18
+  percent: 95
 ---
 
 # Project State: OpenAnima v1.3
 
-**Last updated:** 2026-02-26
+**Last updated:** 2026-02-27
 **Current milestone:** v1.3 True Modularization & Visual Wiring
 
 ## Project Reference
@@ -25,12 +25,12 @@ progress:
 
 ## Current Position
 
-**Phase:** 16 - Module Runtime Initialization & Port Registration
-**Plan:** 1 of 1 complete
-**Status:** Complete
-**Progress:** [██████████] 100%
+**Phase:** 17 - E2E Module Pipeline Integration & Editor Polish
+**Plan:** 1 of 2 complete
+**Status:** In Progress
+**Progress:** [█████░░░░░] 50%
 
-**Next action:** Proceed to Phase 17 (E2E Module Pipeline Integration & Editor Polish).
+**Next action:** Execute Plan 17-02 (editor runtime status + rejection feedback polish).
 
 ## Performance Metrics
 
@@ -178,32 +178,31 @@ None currently. Phase 12.5 complete, ready for Phase 13.
 | Phase 12.5 P03 | 329 | 1 task | 1 file |
 | Phase 13 P01 | 355 | 2 tasks | 10 files |
 | Phase 13 P02 | 1016 | 2 tasks | 4 files |
+| Phase 17 P01 | 22min | 2 tasks | 6 files |
 
 ## Session Continuity
 
 **What just happened:**
-- Completed Phase 16 Plan 01: Module Runtime Initialization & Port Registration
-- Extended WiringInitializationService.StartAsync with RegisterModulePorts() and InitializeModulesAsync()
-- Port discovery and registration for all 4 concrete modules (LLMModule, ChatInputModule, ChatOutputModule, HeartbeatModule) at startup
-- Module InitializeAsync called on each singleton, activating EventBus subscriptions
-- Removed demo module fallback (RegisterDemoModules) from Editor.razor
-- 3 integration tests verify port registration, EventBus subscription activation, and absence of demo modules
-- 84 total tests, 82 pass (2 pre-existing failures in dynamic plugin loading tests)
+- Completed Phase 17 Plan 01: ChatPanel now routes send/regenerate through ChatInput -> LLM -> ChatOutput pipeline only
+- Added runtime topology validator + guided editor prompt when required chain is missing
+- Fixed WiringEngine routing to resolve ModuleName from node IDs and preserve typed payload routing by port type
+- Added/extended integration tests for configured vs missing chat pipeline and GUID-node routing behavior
+- Filtered test run passed: 6/6 (`ChatPanelModulePipelineTests` + `ModulePipelineIntegrationTests`)
 
 **What's next:**
-1. Phase 17: E2E Module Pipeline Integration & Editor Polish
-2. Wire ChatPanel to module pipeline for end-to-end conversation
-3. Add visual rejection feedback for incompatible connections
-4. Verify real-time module status display in editor
+1. Execute Phase 17 Plan 02
+2. Add explicit incompatible-connection rejection feedback in editor drag flow
+3. Apply RTIM visual contract (running/error/idle border states, warning icon, tooltip details, running pulse)
+4. Verify runtime event -> node identity mapping with tests
 
 **Context for next session:**
-- Phase 16 complete: All 4 concrete modules are port-discovered, registered, and initialized at startup
-- WiringInitializationService handles port registration BEFORE config loading
-- Editor.razor no longer has demo module fallback — palette shows real modules
-- ChatOutputModule EventBus subscription confirmed active via integration test
-- Ready for Phase 17: E2E pipeline integration and editor polish
+- Phase 17 Plan 01 complete with summary: `.planning/phases/17-e2e-module-pipeline-integration-editor-polish/17-01-SUMMARY.md`
+- ChatPanel no longer uses direct `ILLMService` streaming path
+- E2E-01 marked complete in REQUIREMENTS.md
+- ROADMAP phase 17 progress updated to `1/2 In Progress`
+- Remaining work is Plan 17-02 editor UX/status polish and associated tests
 
 ---
 *State initialized: 2026-02-25*
 *Last updated: 2026-02-27*
-*Phase 16 complete - module runtime initialization & port registration*
+*Phase 17 in progress - plan 01 complete*

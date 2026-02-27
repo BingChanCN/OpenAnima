@@ -43,7 +43,7 @@ Requirements for v1.3 True Modularization & Visual Wiring. Each maps to roadmap 
 
 ### End-to-End (端到端验证)
 
-- [ ] **E2E-01**: User can wire ChatInput → LLM → ChatOutput in editor and have a working conversation identical to v1.2
+- [x] **E2E-01**: User can wire ChatInput → LLM → ChatOutput in editor and have a working conversation identical to v1.2
 
 ## Future Requirements
 
@@ -108,7 +108,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RMOD-04 | Phase 14, **Phase 16** (gap closure) | Pending |
 | RTIM-01 | Phase 14, **Phase 17** (gap closure) | Pending |
 | RTIM-02 | Phase 14, **Phase 17** (gap closure) | Pending |
-| E2E-01 | Phase 14, **Phase 17** (gap closure) | Pending |
+| E2E-01 | Phase 14, **Phase 17** (gap closure) | Complete |
 
 **Coverage:**
 - v1.3 requirements: 20 total
