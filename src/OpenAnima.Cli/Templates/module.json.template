@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openanima.io/schemas/module.json",
+  "schemaVersion": "1.0",
+  "id": "{{ModuleId}}",
+  "name": "{{ModuleName}}",
+  "version": "{{ModuleVersion}}",
+  "description": "{{ModuleDescription}}",
+  "author": "{{ModuleAuthor}}",
+  "entryAssembly": "{{EntryAssembly}}",
+  "openanima": {
+    "minVersion": "{{OpenAnimaMinVersion}}"
+  },
+  "ports": {
+    "inputs": [],
+    "outputs": []
+  }
+}

@@ -1,0 +1,31 @@
+using OpenAnima.Contracts;
+using OpenAnima.Contracts.Ports;
+
+namespace {{Namespace}};
+
+{{PortAttributes}}
+public class {{ModuleName}} : IModule
+{
+    public IModuleMetadata Metadata { get; } = new {{ModuleName}}Metadata();
+
+    public Task InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        // TODO: Add initialization logic here
+        // This is called when the module is loaded by the OpenAnima runtime
+        return Task.CompletedTask;
+    }
+
+    public Task ShutdownAsync(CancellationToken cancellationToken = default)
+    {
+        // TODO: Add cleanup logic here
+        // This is called before the module is unloaded
+        return Task.CompletedTask;
+    }
+}
+
+internal class {{ModuleName}}Metadata : IModuleMetadata
+{
+    public string Name => "{{ModuleName}}";
+    public string Version => "{{ModuleVersion}}";
+    public string Description => "{{ModuleDescription}}";
+}

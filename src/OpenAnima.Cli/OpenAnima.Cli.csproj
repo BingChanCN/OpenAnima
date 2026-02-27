@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- .NET Global Tool Configuration -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>oani</ToolCommandName>
+    <PackageId>OpenAnima.Cli</PackageId>
+    <Version>1.0.0</Version>
+    <PackageOutputPath>./nupkg</PackageOutputPath>
+    <Description>OpenAnima module development CLI tool</Description>
+    <Authors>OpenAnima</Authors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Templates\*" />
+  </ItemGroup>
+
+</Project>
