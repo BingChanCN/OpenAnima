@@ -5,6 +5,49 @@
     position: relative;
 }
 
+.pipeline-guidance {
+    margin: 0.75rem 1rem 0.25rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 173, 51, 0.35);
+    background: rgba(255, 173, 51, 0.08);
+    color: rgba(255, 236, 204, 0.95);
+}
+
+.pipeline-guidance-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.pipeline-guidance-body {
+    margin: 0.4rem 0 0;
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.pipeline-guidance-body code {
+    color: rgba(255, 236, 204, 1);
+    font-size: 0.82rem;
+}
+
+.open-editor-btn {
+    margin-top: 0.65rem;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid rgba(255, 173, 51, 0.55);
+    background: rgba(255, 173, 51, 0.18);
+    color: rgba(255, 243, 224, 1);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.open-editor-btn:hover {
+    background: rgba(255, 173, 51, 0.24);
+    border-color: rgba(255, 173, 51, 0.7);
+}
+
 .chat-messages {
     flex: 1;
     overflow-y: auto;
@@ -53,4 +96,3 @@
     background: rgba(255, 255, 255, 0.1);
     color: rgba(255, 255, 255, 0.8);
 }
-

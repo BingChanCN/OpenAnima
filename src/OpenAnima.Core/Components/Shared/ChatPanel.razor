@@ -1,16 +1,28 @@
-@using OpenAnima.Core.LLM
-@using OpenAnima.Core.Services
-@using OpenAnima.Core.Events
 @using OpenAnima.Contracts
-@using System.Text
-@using System.Diagnostics
+@using OpenAnima.Core.Events
+@using OpenAnima.Core.LLM
+@using OpenAnima.Core.Modules
+@using OpenAnima.Core.Services
+@using OpenAnima.Core.Wiring
 @implements IAsyncDisposable
-@inject ILLMService _llmService
+@inject ChatInputModule _chatInputModule
+@inject ChatOutputModule _chatOutputModule
 @inject ChatContextManager _contextManager
 @inject IEventBus _eventBus
+@inject IWiringEngine _wiringEngine
+@inject NavigationManager _navigation
 @inject IJSRuntime JS
 
 <div class="chat-panel">
+    @if (!IsPipelineConfigured())
+    {
+        <div class="pipeline-guidance" role="status">
+            <p class="pipeline-guidance-title">Chat pipeline not configured</p>
+            <p class="pipeline-guidance-body">Connect <code>ChatInputModule → LLMModule → ChatOutputModule</code> in the editor to enable conversation.</p>
+            <button class="open-editor-btn" @onclick="OpenEditor">Open Wiring Editor</button>
+        </div>
+    }
+
     <div class="chat-messages" id="chat-messages">
         @if (_messages.Count == 0)
         {
@@ -38,17 +50,29 @@
         OutputTokens="@_contextManager.TotalOutputTokens"
         CurrentContextTokens="@_contextManager.CurrentContextTokens"
         MaxContextTokens="@_contextManager.MaxContextTokens" />
-    <ChatInput OnSend="SendMessage" IsDisabled="@(_isGenerating || IsContextLimitReached())" />
+    <ChatInput OnSend="SendMessage" IsDisabled="@(_isGenerating || IsContextLimitReached() || !IsPipelineConfigured())" />
 </div>
 
 @code {
-    private List<ChatMessageModel> _messages = new();
-    private bool _isGenerating = false;
-    private CancellationTokenSource _cts = new();
+    private readonly List<ChatMessageModel> _messages = new();
+    private bool _isGenerating;
+    private CancellationTokenSource _generationCts = new();
+    private TaskCompletionSource<string>? _pendingAssistantResponse;
 
     protected override void OnInitialized()
     {
-        _contextManager.OnStateChanged += () => InvokeAsync(StateHasChanged);
+        _contextManager.OnStateChanged += HandleContextManagerChanged;
+        _chatOutputModule.OnMessageReceived += HandleChatOutputReceived;
+    }
+
+    private void HandleContextManagerChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleChatOutputReceived(string assistantText)
+    {
+        _pendingAssistantResponse?.TrySetResult(assistantText);
     }
 
     private bool IsContextLimitReached()
@@ -57,18 +81,28 @@
         return _contextManager.GetContextStatus() == ContextStatus.Danger && utilization >= 90.0;
     }
 
+    private bool IsPipelineConfigured()
+    {
+        var currentConfig = _wiringEngine.GetCurrentConfiguration();
+        return ChatPipelineConfigurationValidator.IsConfigured(currentConfig);
+    }
+
     private async Task SendMessage(string userMessage)
     {
-        if (string.IsNullOrWhiteSpace(userMessage))
+        if (string.IsNullOrWhiteSpace(userMessage) || _isGenerating)
             return;
 
-        // Build conversation history for context check
+        if (!IsPipelineConfigured())
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
         var history = _messages
             .Where(m => !m.IsStreaming)
             .Select(m => new ChatMessageInput(m.Role, m.Content))
             .ToList();
 
-        // Check context limit BEFORE sending
         if (!_contextManager.CanSendMessage(history, userMessage))
         {
             var currentTokens = _contextManager.CurrentContextTokens;
@@ -85,7 +119,6 @@
             return;
         }
 
-        // Add user message
         _messages.Add(new ChatMessageModel
         {
             Role = "user",
@@ -93,7 +126,6 @@
             IsStreaming = false
         });
 
-        // Update context manager after send
         var messageTokenCount = _contextManager.CountTokens(userMessage);
         _contextManager.UpdateAfterSend(messageTokenCount);
         await _eventBus.PublishAsync(new ModuleEvent<MessageSentPayload>
@@ -103,7 +135,6 @@
             Payload = new MessageSentPayload(userMessage, messageTokenCount, DateTime.UtcNow)
         });
 
-        // Create assistant message placeholder
         var assistantMessage = new ChatMessageModel
         {
             Role = "assistant",
@@ -112,110 +143,30 @@
         };
         _messages.Add(assistantMessage);
 
-        _isGenerating = true;
-        await InvokeAsync(StateHasChanged);
-
-        try
-        {
-            // Build conversation history
-            history = _messages
-                .Where(m => !m.IsStreaming)
-                .Select(m => new ChatMessageInput(m.Role, m.Content))
-                .ToList();
-
-            // Stream response with usage tracking
-            var contentBuilder = new StringBuilder();
-            var stopwatch = Stopwatch.StartNew();
-            var lastUpdateTime = 0L;
-            const int updateIntervalMs = 50;
-            const int updateIntervalChars = 100;
-            var charsSinceLastUpdate = 0;
-            int? finalInputTokens = null;
-            int? finalOutputTokens = null;
-
-            await foreach (var result in _llmService.StreamWithUsageAsync(history, _cts.Token))
-            {
-                contentBuilder.Append(result.Token);
-                charsSinceLastUpdate += result.Token.Length;
-
-                // Capture usage data when available
-                if (result.InputTokens.HasValue)
-                    finalInputTokens = result.InputTokens.Value;
-                if (result.OutputTokens.HasValue)
-                    finalOutputTokens = result.OutputTokens.Value;
-
-                // Batch updates: every 50ms or 100 chars
-                if (stopwatch.ElapsedMilliseconds - lastUpdateTime >= updateIntervalMs || charsSinceLastUpdate >= updateIntervalChars)
-                {
-                    assistantMessage.Content = contentBuilder.ToString();
-                    await InvokeAsync(StateHasChanged);
-
-                    // Auto-scroll if user hasn't scrolled up
-                    var shouldScroll = await JS.InvokeAsync<bool>("chatHelpers.shouldAutoScroll", "chat-messages");
-                    if (shouldScroll)
-                    {
-                        await JS.InvokeVoidAsync("chatHelpers.scrollToBottom", "chat-messages");
-                    }
-
-                    lastUpdateTime = stopwatch.ElapsedMilliseconds;
-                    charsSinceLastUpdate = 0;
-                }
-            }
-
-            // Final update
-            assistantMessage.Content = contentBuilder.ToString();
-            assistantMessage.IsStreaming = false;
-
-            // Update context manager with API-returned usage
-            if (finalInputTokens.HasValue && finalOutputTokens.HasValue)
-            {
-                var responseTokenCount = _contextManager.CountTokens(assistantMessage.Content);
-                _contextManager.UpdateAfterResponse(finalInputTokens.Value, finalOutputTokens.Value, responseTokenCount);
-                await _eventBus.PublishAsync(new ModuleEvent<ResponseReceivedPayload>
-                {
-                    EventName = "ResponseReceived",
-                    SourceModuleId = "OpenAnima.Core",
-                    Payload = new ResponseReceivedPayload(
-                        assistantMessage.Content,
-                        finalInputTokens.Value,
-                        finalOutputTokens.Value,
-                        DateTime.UtcNow)
-                });
-            }
-
-            await InvokeAsync(StateHasChanged);
-
-            // Final scroll
-            var shouldScrollFinal = await JS.InvokeAsync<bool>("chatHelpers.shouldAutoScroll", "chat-messages");
-            if (shouldScrollFinal)
-            {
-                await JS.InvokeVoidAsync("chatHelpers.scrollToBottom", "chat-messages");
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // User cancelled - gracefully handle
-            assistantMessage.Content += "\n\n[Cancelled]";
-            assistantMessage.IsStreaming = false;
-            await InvokeAsync(StateHasChanged);
-        }
-        finally
-        {
-            _isGenerating = false;
-            await InvokeAsync(StateHasChanged);
-        }
+        await GenerateAssistantResponseAsync(userMessage, assistantMessage);
     }
 
     private async Task RegenerateLastResponse()
     {
-        // Find and remove the last assistant message
+        if (_isGenerating || !IsPipelineConfigured())
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
         var lastAssistantIndex = _messages.FindLastIndex(m => m.Role == "assistant");
         if (lastAssistantIndex == -1)
             return;
 
+        var lastUserMessage = _messages
+            .Take(lastAssistantIndex)
+            .LastOrDefault(m => m.Role == "user");
+
+        if (lastUserMessage == null)
+            return;
+
         _messages.RemoveAt(lastAssistantIndex);
 
-        // Create new assistant message placeholder
         var assistantMessage = new ChatMessageModel
         {
             Role = "assistant",
@@ -224,104 +175,114 @@
         };
         _messages.Add(assistantMessage);
 
+        await GenerateAssistantResponseAsync(lastUserMessage.Content, assistantMessage);
+    }
+
+    private async Task GenerateAssistantResponseAsync(string prompt, ChatMessageModel assistantMessage)
+    {
+        ResetGenerationCancellation();
+
         _isGenerating = true;
         await InvokeAsync(StateHasChanged);
 
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_generationCts.Token, timeoutCts.Token);
+
+        var responseTask = CreatePendingAssistantResponse(linkedCts.Token);
+
         try
         {
-            // Build conversation history (without the removed assistant message)
-            var history = _messages
-                .Where(m => !m.IsStreaming)
-                .Select(m => new ChatMessageInput(m.Role, m.Content))
-                .ToList();
+            await _chatInputModule.SendMessageAsync(prompt, linkedCts.Token);
+            var assistantResponse = await responseTask;
 
-            // Stream response with usage tracking
-            var contentBuilder = new StringBuilder();
-            var stopwatch = Stopwatch.StartNew();
-            var lastUpdateTime = 0L;
-            const int updateIntervalMs = 50;
-            const int updateIntervalChars = 100;
-            var charsSinceLastUpdate = 0;
-            int? finalInputTokens = null;
-            int? finalOutputTokens = null;
-
-            await foreach (var result in _llmService.StreamWithUsageAsync(history, _cts.Token))
-            {
-                contentBuilder.Append(result.Token);
-                charsSinceLastUpdate += result.Token.Length;
-
-                // Capture usage data when available
-                if (result.InputTokens.HasValue)
-                    finalInputTokens = result.InputTokens.Value;
-                if (result.OutputTokens.HasValue)
-                    finalOutputTokens = result.OutputTokens.Value;
-
-                // Batch updates: every 50ms or 100 chars
-                if (stopwatch.ElapsedMilliseconds - lastUpdateTime >= updateIntervalMs || charsSinceLastUpdate >= updateIntervalChars)
-                {
-                    assistantMessage.Content = contentBuilder.ToString();
-                    await InvokeAsync(StateHasChanged);
-
-                    // Auto-scroll if user hasn't scrolled up
-                    var shouldScroll = await JS.InvokeAsync<bool>("chatHelpers.shouldAutoScroll", "chat-messages");
-                    if (shouldScroll)
-                    {
-                        await JS.InvokeVoidAsync("chatHelpers.scrollToBottom", "chat-messages");
-                    }
-
-                    lastUpdateTime = stopwatch.ElapsedMilliseconds;
-                    charsSinceLastUpdate = 0;
-                }
-            }
-
-            // Final update
-            assistantMessage.Content = contentBuilder.ToString();
+            assistantMessage.Content = assistantResponse;
             assistantMessage.IsStreaming = false;
 
-            // Update context manager with API-returned usage
-            if (finalInputTokens.HasValue && finalOutputTokens.HasValue)
-            {
-                var responseTokenCount = _contextManager.CountTokens(assistantMessage.Content);
-                _contextManager.UpdateAfterResponse(finalInputTokens.Value, finalOutputTokens.Value, responseTokenCount);
-                await _eventBus.PublishAsync(new ModuleEvent<ResponseReceivedPayload>
-                {
-                    EventName = "ResponseReceived",
-                    SourceModuleId = "OpenAnima.Core",
-                    Payload = new ResponseReceivedPayload(
-                        assistantMessage.Content,
-                        finalInputTokens.Value,
-                        finalOutputTokens.Value,
-                        DateTime.UtcNow)
-                });
-            }
-
+            await UpdateAfterResponseAsync(prompt, assistantResponse);
             await InvokeAsync(StateHasChanged);
-
-            // Final scroll
-            var shouldScrollFinal = await JS.InvokeAsync<bool>("chatHelpers.shouldAutoScroll", "chat-messages");
-            if (shouldScrollFinal)
-            {
-                await JS.InvokeVoidAsync("chatHelpers.scrollToBottom", "chat-messages");
-            }
+            await ScrollToBottomIfNeededAsync();
+        }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !_generationCts.IsCancellationRequested)
+        {
+            assistantMessage.Content = "No response arrived from the module pipeline. Open the editor and verify ChatInputModule → LLMModule → ChatOutputModule wiring.";
+            assistantMessage.IsStreaming = false;
+            await InvokeAsync(StateHasChanged);
         }
         catch (OperationCanceledException)
         {
-            // User cancelled - gracefully handle
             assistantMessage.Content += "\n\n[Cancelled]";
             assistantMessage.IsStreaming = false;
             await InvokeAsync(StateHasChanged);
         }
         finally
         {
+            _pendingAssistantResponse = null;
             _isGenerating = false;
             await InvokeAsync(StateHasChanged);
         }
     }
 
-    public async ValueTask DisposeAsync()
+    private Task<string> CreatePendingAssistantResponse(CancellationToken cancellationToken)
     {
-        _cts.Cancel();
-        _cts.Dispose();
+        var completion = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _pendingAssistantResponse = completion;
+
+        if (cancellationToken.CanBeCanceled)
+        {
+            cancellationToken.Register(() => completion.TrySetCanceled(cancellationToken));
+        }
+
+        return completion.Task;
+    }
+
+    private async Task UpdateAfterResponseAsync(string prompt, string assistantResponse)
+    {
+        var inputTokens = _contextManager.CountTokens(prompt);
+        var outputTokens = _contextManager.CountTokens(assistantResponse);
+        _contextManager.UpdateAfterResponse(inputTokens, outputTokens, outputTokens);
+
+        await _eventBus.PublishAsync(new ModuleEvent<ResponseReceivedPayload>
+        {
+            EventName = "ResponseReceived",
+            SourceModuleId = "OpenAnima.Core",
+            Payload = new ResponseReceivedPayload(
+                assistantResponse,
+                inputTokens,
+                outputTokens,
+                DateTime.UtcNow)
+        });
+    }
+
+    private async Task ScrollToBottomIfNeededAsync()
+    {
+        var shouldScroll = await JS.InvokeAsync<bool>("chatHelpers.shouldAutoScroll", "chat-messages");
+        if (shouldScroll)
+        {
+            await JS.InvokeVoidAsync("chatHelpers.scrollToBottom", "chat-messages");
+        }
+    }
+
+    private void ResetGenerationCancellation()
+    {
+        _generationCts.Cancel();
+        _generationCts.Dispose();
+        _generationCts = new CancellationTokenSource();
+    }
+
+    private void OpenEditor()
+    {
+        _navigation.NavigateTo("/editor");
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _chatOutputModule.OnMessageReceived -= HandleChatOutputReceived;
+        _contextManager.OnStateChanged -= HandleContextManagerChanged;
+
+        _generationCts.Cancel();
+        _generationCts.Dispose();
+
+        return ValueTask.CompletedTask;
     }
 
     private class ChatMessageModel
@@ -331,5 +292,3 @@
         public bool IsStreaming { get; set; }
     }
 }
-
-

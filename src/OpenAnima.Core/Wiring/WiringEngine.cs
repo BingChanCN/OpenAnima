@@ -76,10 +76,18 @@ public class WiringEngine : IWiringEngine
             levels.Count, _graph.GetNodeCount());
 
         // Set up EventBus subscriptions for data routing
+        var nodeById = config.Nodes.ToDictionary(node => node.ModuleId);
         foreach (var connection in config.Connections)
         {
-            var sourceEventName = $"{connection.SourceModuleId}.port.{connection.SourcePortName}";
-            var targetEventName = $"{connection.TargetModuleId}.port.{connection.TargetPortName}";
+            var sourceModuleRuntimeName = nodeById.TryGetValue(connection.SourceModuleId, out var sourceNode)
+                ? sourceNode.ModuleName
+                : connection.SourceModuleId;
+            var targetModuleRuntimeName = nodeById.TryGetValue(connection.TargetModuleId, out var targetNode)
+                ? targetNode.ModuleName
+                : connection.TargetModuleId;
+
+            var sourceEventName = $"{sourceModuleRuntimeName}.port.{connection.SourcePortName}";
+            var targetEventName = $"{targetModuleRuntimeName}.port.{connection.TargetPortName}";
 
             var subscription = _eventBus.Subscribe<object>(
                 sourceEventName,
@@ -92,7 +100,7 @@ public class WiringEngine : IWiringEngine
                     await _eventBus.PublishAsync(new ModuleEvent<object>
                     {
                         EventName = targetEventName,
-                        SourceModuleId = connection.SourceModuleId,
+                        SourceModuleId = sourceModuleRuntimeName,
                         Payload = copiedPayload
                     }, ct);
                 });
@@ -170,6 +178,7 @@ public class WiringEngine : IWiringEngine
         try
         {
             _logger.LogDebug("Executing module: {ModuleId}", moduleId);
+            var runtimeModuleName = ResolveRuntimeModuleName(moduleId);
 
             // Push Running status via SignalR
             if (_hubContext != null)
@@ -178,7 +187,7 @@ public class WiringEngine : IWiringEngine
             // Publish execute event for this module
             await _eventBus.PublishAsync(new ModuleEvent<object>
             {
-                EventName = $"{moduleId}.execute",
+                EventName = $"{runtimeModuleName}.execute",
                 SourceModuleId = "WiringEngine",
                 Payload = new { }
             }, ct);
@@ -213,5 +222,14 @@ public class WiringEngine : IWiringEngine
             .Distinct();
 
         return upstreamModules.Any(upstream => _failedModules.Contains(upstream));
+    }
+
+    private string ResolveRuntimeModuleName(string moduleId)
+    {
+        if (_currentConfig == null)
+            return moduleId;
+
+        var matchingNode = _currentConfig.Nodes.FirstOrDefault(node => node.ModuleId == moduleId);
+        return matchingNode?.ModuleName ?? moduleId;
     }
 }
