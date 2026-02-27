@@ -1,72 +1,82 @@
-# Requirements: OpenAnima
+# Requirements: OpenAnima v1.4 Module SDK & DevEx
 
-**Defined:** 2026-02-25
-**Core Value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe
+**Defined:** 2026-02-28
+**Core Value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
 
-## v1.3 Requirements
+## v1 Requirements
 
-Requirements for v1.3 True Modularization & Visual Wiring. Each maps to roadmap phases.
+### SDK Foundation
 
-### Port System (端口类型系统)
+- [ ] **SDK-01**: Developer can create new module project with `oani new <ModuleName>` command
+- [ ] **SDK-02**: Developer can specify output directory with `oani new <ModuleName> -o <path>` option
+- [ ] **SDK-03**: Developer can preview generated files with `oani new <ModuleName> --dry-run` option
+- [ ] **SDK-04**: Generated module project compiles without errors
+- [ ] **SDK-05**: Generated module implements IModule and IModuleMetadata interfaces
 
-- [x] **PORT-01**: User can see port type categories (Text, Trigger) on module ports with visual color distinction
-- [x] **PORT-02**: User cannot connect ports of different types — editor rejects with visual feedback
-- [x] **PORT-03**: User can connect one output port to multiple input ports (fan-out)
-- [ ] **PORT-04**: Modules declare input/output ports via typed interface, discoverable at load time
+### CLI Tool
 
-### Wiring Engine (连线引擎)
+- [ ] **CLI-01**: Developer can install oani CLI as .NET global tool
+- [ ] **CLI-02**: Developer can run `oani --help` to see available commands
+- [ ] **CLI-03**: CLI returns exit code 0 on success, non-zero on failure
+- [ ] **CLI-04**: CLI outputs errors to stderr, normal output to stdout
+- [ ] **CLI-05**: Developer can set verbosity level with `-v` or `--verbosity` option
 
-- [x] **WIRE-01**: Runtime executes modules in topological order based on wiring connections
-- [x] **WIRE-02**: Runtime detects and rejects circular dependencies at wire-time with clear error message
-- [x] **WIRE-03**: Wiring engine routes data between connected ports during execution
+### Module Pack
 
-### Visual Editor (可视化编辑器)
+- [ ] **PACK-01**: Developer can pack module with `oani pack <path>` command
+- [ ] **PACK-02**: Pack command produces .oamod file containing module.json, DLL, and assets
+- [ ] **PACK-03**: Pack command builds module project before packing (unless --no-build)
+- [ ] **PACK-04**: Developer can specify output directory with `oani pack <path> -o <path>` option
+- [ ] **PACK-05**: Pack command includes SHA256 checksum in package manifest
+- [ ] **PACK-06**: Packed module can be loaded by OpenAnima runtime without modification
 
-- [ ] **EDIT-01**: User can drag modules from palette onto canvas to place them
-- [x] **EDIT-02**: User can pan canvas by dragging background and zoom with mouse wheel
-- [x] **EDIT-03**: User can drag from output port to input port to create connection with bezier curve preview
-- [x] **EDIT-04**: User can click to select nodes/connections and press Delete to remove them
-- [x] **EDIT-05**: User can save wiring configuration to JSON and load it back with full graph restoration
-- [x] **EDIT-06**: Editor auto-saves wiring configuration after changes
+### Module Validate
 
-### Refactored Modules (官方模块拆分)
+- [ ] **VAL-01**: Developer can validate module with `oani validate <path>` command
+- [ ] **VAL-02**: Validate command checks module.json exists and is valid JSON
+- [ ] **VAL-03**: Validate command checks required manifest fields (id, version, name)
+- [ ] **VAL-04**: Validate command verifies module implements IModule interface
+- [ ] **VAL-05**: Validate command reports all errors, not just first error
 
-- [ ] **RMOD-01**: LLM service refactored into LLMModule with typed input/output ports
-- [ ] **RMOD-02**: Chat input refactored into ChatInputModule with output port
-- [ ] **RMOD-03**: Chat output refactored into ChatOutputModule with input port
-- [ ] **RMOD-04**: Heartbeat refactored into HeartbeatModule with trigger port
+### Manifest Schema
 
-### Runtime Integration (运行时集成)
+- [ ] **MAN-01**: module.json supports id, version, name, description, author fields
+- [ ] **MAN-02**: module.json supports openanima version compatibility (minVersion, maxVersion)
+- [ ] **MAN-03**: module.json supports port declarations (inputs, outputs)
+- [ ] **MAN-04**: Manifest validation rejects invalid JSON with clear error messages
+- [ ] **MAN-05**: Manifest schema is versioned for future compatibility
 
-- [x] **RTIM-01**: Editor displays real-time module status (running, error, stopped) synced from runtime
-- [x] **RTIM-02**: Module errors during execution shown as visual indicators on corresponding nodes
+### Template Customization
 
-### End-to-End (端到端验证)
+- [ ] **TEMP-01**: Developer can specify module type with `--type` option (default: standard)
+- [ ] **TEMP-02**: Developer can specify input ports with `--inputs` option (e.g., --inputs Text,Trigger)
+- [ ] **TEMP-03**: Developer can specify output ports with `--outputs` option (e.g., --outputs Text)
+- [ ] **TEMP-04**: Template generates port attributes based on specified ports
+- [ ] **TEMP-05**: Template generates working ExecuteAsync method with port handling stubs
 
-- [x] **E2E-01**: User can wire ChatInput → LLM → ChatOutput in editor and have a working conversation identical to v1.2
+### Documentation
 
-## Future Requirements
+- [ ] **DOC-01**: Developer can read quick-start guide showing create-build-pack workflow
+- [ ] **DOC-02**: Quick-start guide produces working module in under 5 minutes
+- [ ] **DOC-03**: API reference documents all public interfaces (IModule, IModuleExecutor, ITickable, IEventBus)
+- [ ] **DOC-04**: API reference documents port system (PortType, PortMetadata, InputPortAttribute, OutputPortAttribute)
+- [ ] **DOC-05**: API reference includes code examples for common patterns
+
+## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
 
-### Advanced Editor UX
+### Example Modules
 
-- **EDIT-07**: User can undo/redo graph edits (Ctrl+Z/Y)
-- **EDIT-08**: User can search and filter modules in palette
-- **EDIT-09**: User can multi-select nodes (Ctrl+click or drag-box) for bulk operations
-- **EDIT-10**: User can see live execution visualization (highlight active connections)
+- **EX-01**: Example module demonstrating text processing (input → transform → output)
+- **EX-02**: Example module demonstrating trigger-based execution (tick → action)
+- **EX-03**: Example module demonstrating event subscription (subscribe → process → publish)
 
-### Port System Enhancements
+### Advanced Features
 
-- **PORT-05**: User can hover over port to see tooltip explaining purpose
-- **PORT-06**: Input ports enforce single connection (new connection replaces old)
-- **PORT-07**: Unconnected input ports use default values
-
-### Workflow Features
-
-- **EDIT-11**: User can add comments/annotations to graph sections
-- **EDIT-12**: User can collapse module groups into subgraphs
-- **EDIT-13**: User can export graph as image for sharing
+- **ADV-01**: Developer can run `oani run <path>` for local module testing
+- **ADV-02**: CLI supports shell completion generation for bash/zsh/pwsh
+- **ADV-03**: Module marketplace integration (search, install, publish)
 
 ## Out of Scope
 
@@ -74,14 +84,13 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| Automatic layout | Users want control over positioning; auto-layout rarely matches intent |
-| Inline code editing in nodes | Scope creep; modules should be proper C# classes |
-| Visual scripting for module logic | Out of scope; this is module *wiring*, not module *creation* |
-| AI-suggested connections | Unreliable; deterministic wiring is core value |
-| Collaborative editing | Complex conflict resolution; single-user first |
-| 3D node graph | Gimmick; 2D is proven and sufficient |
-| Marketplace integration in editor | v1.3 is about wiring, not distribution |
-| Breakpoints on nodes | Requires deep runtime integration, defer to v2+ |
+| Module marketplace | Requires backend infrastructure; v1.4 focuses on local packages |
+| Automatic versioning | Semantic versioning requires human judgment |
+| Code generation wizards | Creates unmaintainable boilerplate |
+| Complex project templates | Overwhelming for beginners; minimal template is better |
+| Runtime dependency bundling | OpenAnima.Contracts.dll must not be bundled to avoid type identity issues |
+| Digital signatures | Requires PKI infrastructure; overkill for local-first platform |
+| Example modules | Deferred to v2; quick-start guide covers basic patterns |
 
 ## Traceability
 
@@ -89,33 +98,48 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PORT-01 | Phase 11 | Complete |
-| PORT-02 | Phase 11 | Complete |
-| PORT-03 | Phase 11 | Complete |
-| PORT-04 | Phase 11, Phase 12.5, **Phase 16** (gap closure) | Pending |
-| WIRE-01 | Phase 12, Phase 12.5, **Phase 15** (gap closure) | Complete |
-| WIRE-02 | Phase 12, Phase 12.5 (DI fix) | Complete |
-| WIRE-03 | Phase 12, Phase 12.5, **Phase 15** (gap closure) | Complete |
-| EDIT-01 | Phase 13, **Phase 16** (gap closure) | Pending |
-| EDIT-02 | Phase 13 | Complete |
-| EDIT-03 | Phase 13 (depends on Phase 12.5) | Complete |
-| EDIT-04 | Phase 13 | Complete |
-| EDIT-05 | Phase 13, **Phase 15** (gap closure) | Complete |
-| EDIT-06 | Phase 13 (depends on Phase 12.5) | Complete |
-| RMOD-01 | Phase 14, Phase 16, **Phase 18** (gap closure) | Pending |
-| RMOD-02 | Phase 14, Phase 16, **Phase 18** (gap closure) | Pending |
-| RMOD-03 | Phase 14, Phase 16, **Phase 18** (gap closure) | Pending |
-| RMOD-04 | Phase 14, Phase 16, **Phase 18** (gap closure) | Pending |
-| RTIM-01 | Phase 14, **Phase 17** (gap closure) | Complete |
-| RTIM-02 | Phase 14, **Phase 17** (gap closure) | Complete |
-| E2E-01 | Phase 14, **Phase 17** (gap closure) | Complete |
+| SDK-01 | Phase 20 | Pending |
+| SDK-02 | Phase 20 | Pending |
+| SDK-03 | Phase 20 | Pending |
+| SDK-04 | Phase 20 | Pending |
+| SDK-05 | Phase 20 | Pending |
+| CLI-01 | Phase 20 | Pending |
+| CLI-02 | Phase 20 | Pending |
+| CLI-03 | Phase 20 | Pending |
+| CLI-04 | Phase 20 | Pending |
+| CLI-05 | Phase 20 | Pending |
+| PACK-01 | Phase 21 | Pending |
+| PACK-02 | Phase 21 | Pending |
+| PACK-03 | Phase 21 | Pending |
+| PACK-04 | Phase 21 | Pending |
+| PACK-05 | Phase 21 | Pending |
+| PACK-06 | Phase 21 | Pending |
+| VAL-01 | Phase 21 | Pending |
+| VAL-02 | Phase 21 | Pending |
+| VAL-03 | Phase 21 | Pending |
+| VAL-04 | Phase 21 | Pending |
+| VAL-05 | Phase 21 | Pending |
+| MAN-01 | Phase 20 | Pending |
+| MAN-02 | Phase 20 | Pending |
+| MAN-03 | Phase 20 | Pending |
+| MAN-04 | Phase 20 | Pending |
+| MAN-05 | Phase 20 | Pending |
+| TEMP-01 | Phase 20 | Pending |
+| TEMP-02 | Phase 20 | Pending |
+| TEMP-03 | Phase 20 | Pending |
+| TEMP-04 | Phase 20 | Pending |
+| TEMP-05 | Phase 20 | Pending |
+| DOC-01 | Phase 22 | Pending |
+| DOC-02 | Phase 22 | Pending |
+| DOC-03 | Phase 22 | Pending |
+| DOC-04 | Phase 22 | Pending |
+| DOC-05 | Phase 22 | Pending |
 
 **Coverage:**
-- v1.3 requirements: 20 total
-- Satisfied: 8 (PORT-01, PORT-02, PORT-03, WIRE-02, EDIT-02, EDIT-03, EDIT-04, EDIT-06)
-- Pending (gap closure): 12
+- v1 requirements: 31 total
+- Mapped to phases: 31
 - Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-02-25*
-*Last updated: 2026-02-27 after gap closure phases 18-19 added*
+*Requirements defined: 2026-02-28*
+*Last updated: 2026-02-28 after initial definition*
