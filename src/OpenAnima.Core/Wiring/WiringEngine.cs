@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
+using OpenAnima.Contracts.Ports;
 using OpenAnima.Core.Hubs;
 using OpenAnima.Core.Ports;
 
@@ -88,22 +89,15 @@ public class WiringEngine : IWiringEngine
 
             var sourceEventName = $"{sourceModuleRuntimeName}.port.{connection.SourcePortName}";
             var targetEventName = $"{targetModuleRuntimeName}.port.{connection.TargetPortName}";
+            var sourcePort = _portRegistry
+                .GetPorts(sourceModuleRuntimeName)
+                .FirstOrDefault(port => port.Name == connection.SourcePortName && port.Direction == PortDirection.Output);
 
-            var subscription = _eventBus.Subscribe<object>(
+            var subscription = CreateRoutingSubscription(
                 sourceEventName,
-                async (evt, ct) =>
-                {
-                    // Deep copy payload for fan-out isolation (WIRE-03)
-                    var copiedPayload = DataCopyHelper.DeepCopy(evt.Payload);
-
-                    // Publish to target port
-                    await _eventBus.PublishAsync(new ModuleEvent<object>
-                    {
-                        EventName = targetEventName,
-                        SourceModuleId = sourceModuleRuntimeName,
-                        Payload = copiedPayload
-                    }, ct);
-                });
+                targetEventName,
+                sourceModuleRuntimeName,
+                sourcePort?.Type);
 
             _subscriptions.Add(subscription);
         }
@@ -231,5 +225,43 @@ public class WiringEngine : IWiringEngine
 
         var matchingNode = _currentConfig.Nodes.FirstOrDefault(node => node.ModuleId == moduleId);
         return matchingNode?.ModuleName ?? moduleId;
+    }
+
+    private IDisposable CreateRoutingSubscription(
+        string sourceEventName,
+        string targetEventName,
+        string sourceModuleRuntimeName,
+        PortType? sourcePortType)
+    {
+        return sourcePortType switch
+        {
+            PortType.Text => _eventBus.Subscribe<string>(
+                sourceEventName,
+                (evt, ct) => ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct)),
+            PortType.Trigger => _eventBus.Subscribe<DateTime>(
+                sourceEventName,
+                (evt, ct) => ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct)),
+            _ => _eventBus.Subscribe<object>(
+                sourceEventName,
+                (evt, ct) => ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct))
+        };
+    }
+
+    private async Task ForwardPayloadAsync<TPayload>(
+        ModuleEvent<TPayload> evt,
+        string targetEventName,
+        string sourceModuleRuntimeName,
+        CancellationToken ct)
+    {
+        // Deep copy payload for fan-out isolation (WIRE-03)
+        var copiedPayload = DataCopyHelper.DeepCopy(evt.Payload);
+
+        // Publish to target port with original payload type so typed subscribers can receive it.
+        await _eventBus.PublishAsync(new ModuleEvent<TPayload>
+        {
+            EventName = targetEventName,
+            SourceModuleId = sourceModuleRuntimeName,
+            Payload = copiedPayload
+        }, ct);
     }
 }
