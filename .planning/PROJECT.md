@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based monitoring dashboard, real-time control panel, and LLM-powered chat interface, with a visual drag-and-drop editor planned for future milestones.
+A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based monitoring dashboard, real-time control panel, LLM-powered chat interface, and visual drag-and-drop wiring editor.
 
 ## Core Value
 
@@ -28,19 +28,16 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ LLM API client via OpenAI-compatible endpoint with streaming and error handling (LLM-01~05) — v1.2
 - ✓ Chat UI with streaming responses, Markdown rendering, copy, regenerate (CHAT-01~07) — v1.2
 - ✓ Token counting, context capacity tracking, send blocking, EventBus events (CTX-01~04) — v1.2
+- ✓ Port type system with visual distinction and connection validation (PORT-01~04) — v1.3
+- ✓ Wiring engine with topological execution and cycle detection (WIRE-01~03) — v1.3
+- ✓ Visual drag-and-drop editor with pan/zoom, connections, save/load (EDIT-01~06) — v1.3
+- ✓ Refactored modules: LLMModule, ChatInputModule, ChatOutputModule, HeartbeatModule (RMOD-01~04) — v1.3
+- ✓ Real-time module status display in editor (RTIM-01~02) — v1.3
+- ✓ End-to-end conversation via module wiring (E2E-01) — v1.3
 
 ### Active
 
-## Current Milestone: v1.3 True Modularization & Visual Wiring
-
-**Goal:** 把现有硬编码功能（LLM 调用、聊天输入/输出、心跳）全部拆成独立模块，建立端口类型系统和连线引擎，并提供 Web 可视化拖拽编辑器——连线后能像现在一样聊天。
-
-**Target features:**
-- 端口类型系统：固定大类（Text、Trigger），同类可连异类不可连
-- 连线引擎：模块间通过端口连线传递数据，运行时按连线拓扑执行
-- 官方模块拆分：LLM 模块、聊天输入模块、聊天输出模块、心跳模块
-- Web 可视化编辑器：拖拽模块、连线端口、保存/加载连线配置
-- 端到端验证：在编辑器中连线后能正常对话
+(None — define v1.4 requirements with `/gsd:new-milestone`)
 
 ### Future
 
@@ -64,17 +61,22 @@ Agents that proactively think and act on their own, while module connections rem
 
 ## Context
 
-Shipped v1.2 with 6,352 LOC C#/Razor/CSS/JS across ~60 source files.
+Shipped v1.3 with ~4,800 LOC C# added (total ~11,000 LOC across all source files).
 Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode.
-Core runtime loads modules in isolated contexts, communicates via typed event bus, ticks at 100ms, serves a real-time web dashboard with module management, heartbeat monitoring, and LLM chat with streaming and context management.
-xUnit test suite covers memory leak detection and performance validation.
-v1.3 will refactor hardcoded LLM/chat/heartbeat into proper modules with port-based wiring, and add a visual drag-and-drop editor for connecting modules.
+
+v1.3 delivered the visual wiring editor:
+- Port type system: Text and Trigger types with color-coded visual distinction
+- Wiring engine: Topological execution with cycle detection and data routing
+- Visual editor: HTML5/SVG canvas with drag-drop modules, bezier connections, save/load
+- Module refactoring: LLM, ChatInput, ChatOutput, Heartbeat converted to port-based modules
+- Runtime integration: Real-time status push, module initialization at startup
+- E2E verified: User can wire ChatInput→LLM→ChatOutput and have working conversation
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| C# core runtime | Strong Windows ecosystem, good performance, Unity/UE compatibility for future | ✓ Good — clean architecture, 6,352 LOC |
+| C# core runtime | Strong Windows ecosystem, good performance, Unity/UE compatibility for future | ✓ Good — clean architecture, ~11,000 LOC |
 | Dynamic assembly loading for C# modules | Enables "download and run" without separate processes, best performance for C# ecosystem | ✓ Good — AssemblyLoadContext isolation works |
 | .slnx format (XML-based solution) | .NET 10 SDK creates .slnx by default; compatible with all dotnet CLI commands | ✓ Good |
 | LoadResult record instead of exceptions | Enables caller to decide how to handle failures without try/catch boilerplate | ✓ Good |
@@ -99,6 +101,10 @@ v1.3 will refactor hardcoded LLM/chat/heartbeat into proper modules with port-ba
 | SharpToken for token counting | Accurate tiktoken-compatible counting with cl100k_base fallback | ✓ Good — matches API-returned counts |
 | Send blocking over auto-truncation | Block sends at 90% threshold instead of auto-removing messages | ✓ Good — user retains control of conversation |
 | SignalR 8.0.x (not 10.x) | Version must match .NET 8 runtime to avoid circuit crashes | ✓ Good — critical compatibility fix |
+| Port type categories (Text, Trigger) | Simple two-category system covers current use cases, extensible for future | ✓ Good — v1.3 validates approach |
+| Kahn's algorithm for topological sort | Linear O(V+E) complexity, produces level-parallel execution order | ✓ Good — efficient cycle detection |
+| SVG-based editor canvas | Native browser rendering, no external dependencies, smooth pan/zoom | ✓ Good — 60fps interactions |
+| Module singleton DI registration | Shared state across scopes for consistent module behavior | ✓ Good — EventBus subscriptions persist |
 
 ## Constraints
 
@@ -109,4 +115,4 @@ v1.3 will refactor hardcoded LLM/chat/heartbeat into proper modules with port-ba
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-02-25 after v1.3 milestone start*
+*Last updated: 2026-02-28 after v1.3 milestone completion*

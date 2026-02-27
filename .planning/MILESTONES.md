@@ -63,3 +63,25 @@
 
 ---
 
+
+## v1.3 True Modularization & Visual Wiring (Shipped: 2026-02-28)
+
+**Phases:** 11-19 + 12.5 | **Plans:** 21 | **Tasks:** 65+ | **LOC:** ~4,800 C#/Razor/JS added
+**Git range:** 1aa43fb..03ae354 | **Timeline:** 2026-02-25 → 2026-02-28 (4 days)
+
+**Delivered:** Visual drag-and-drop wiring editor with port-based module connections — transform hardcoded LLM/chat/heartbeat into modular architecture with topological execution, cycle detection, and real-time status monitoring.
+
+**Key accomplishments:**
+- Port type system (Text, Trigger) with color-coded visual distinction and connection validation
+- Wiring engine with Kahn's algorithm for topological execution and cycle detection
+- Visual HTML5/SVG editor with pan/zoom, bezier connections, and auto-save
+- Module refactoring: LLMModule, ChatInputModule, ChatOutputModule, HeartbeatModule
+- Runtime integration with SignalR status push and startup initialization
+- E2E verified: User can wire ChatInput→LLM→ChatOutput and have working conversation
+
+**Tech debt:** None — all requirements verified with evidence
+
+**Archive:** [milestones/v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) | [milestones/v1.3-REQUIREMENTS.md](milestones/v1.3-REQUIREMENTS.md) | [milestones/v1.3-MILESTONE-AUDIT.md](milestones/v1.3-MILESTONE-AUDIT.md)
+
+---
+
