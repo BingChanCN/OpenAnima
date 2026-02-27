@@ -60,6 +60,19 @@
             <ConnectionLine Start="@start" End="@end" Color="@color" IsPreview="true" IsSelected="false" />
         }
 
+        @if (_state.GetConnectionRejection() is { } rejection)
+        {
+            var markerX = _state.DragConnectionMouseX;
+            var markerY = _state.DragConnectionMouseY;
+            var rejectionText = $"Incompatible: {rejection.SourcePortType} -> {rejection.TargetPortType}";
+
+            <g class="connection-rejection-feedback" pointer-events="none">
+                <circle cx="@markerX" cy="@markerY" r="16" class="rejection-ring" />
+                <text x="@markerX" y="@(markerY + 5)" class="rejection-symbol" text-anchor="middle">×</text>
+                <text x="@(markerX + 22)" y="@(markerY - 10)" class="rejection-label">@rejectionText</text>
+            </g>
+        }
+
         <!-- Render nodes -->
         @foreach (var node in _state.Configuration.Nodes)
         {
@@ -78,6 +91,7 @@
     private DateTime _lastRenderTime = DateTime.MinValue;
     private const int RenderThrottleMs = 50;
     private HubConnection? _hubConnection;
+    private CancellationTokenSource? _rejectionClearCts;
 
     protected override async Task OnInitializedAsync()
     {
@@ -131,11 +145,57 @@
 
     private void HandleStateChanged()
     {
+        ScheduleRejectionClear();
+
         // Skip during drag — HandleMouseMove controls throttled rendering directly
         if (_state.IsDraggingNode || _state.IsDraggingConnection || _isPanning)
             return;
 
         InvokeAsync(StateHasChanged);
+    }
+
+    private void ScheduleRejectionClear()
+    {
+        var rejection = _state.GetConnectionRejection();
+        if (rejection == null)
+        {
+            _rejectionClearCts?.Cancel();
+            _rejectionClearCts?.Dispose();
+            _rejectionClearCts = null;
+            return;
+        }
+
+        var delay = rejection.ExpiresAt - DateTime.UtcNow;
+        if (delay <= TimeSpan.Zero)
+        {
+            _state.ClearExpiredConnectionRejection();
+            return;
+        }
+
+        _rejectionClearCts?.Cancel();
+        _rejectionClearCts?.Dispose();
+        _rejectionClearCts = new CancellationTokenSource();
+        var token = _rejectionClearCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(delay, token);
+                if (token.IsCancellationRequested)
+                    return;
+
+                await InvokeAsync(() =>
+                {
+                    _state.ClearExpiredConnectionRejection();
+                    StateHasChanged();
+                });
+            }
+            catch (TaskCanceledException)
+            {
+                // Ignore cancelled delay from subsequent rejection events.
+            }
+        }, token);
     }
 
     private bool IsNodeSelected(string moduleId)
@@ -284,6 +344,8 @@
     public async ValueTask DisposeAsync()
     {
         _state.OnStateChanged -= HandleStateChanged;
+        _rejectionClearCts?.Cancel();
+        _rejectionClearCts?.Dispose();
         if (_hubConnection != null)
         {
             try { await _hubConnection.DisposeAsync(); }

@@ -67,11 +67,25 @@ public class EditorStateService
 
     // Module runtime state tracking
     private readonly Dictionary<string, ModuleRuntimeState> _moduleStates = new();
+    private static readonly TimeSpan ConnectionRejectionDuration = TimeSpan.FromSeconds(1.2);
+    private ConnectionRejectionState? _connectionRejection;
 
     /// <summary>
     /// Runtime state snapshot for a module, used for editor display.
     /// </summary>
     public record ModuleRuntimeState(string State, string? ErrorMessage, string? StackTrace, DateTime LastUpdated);
+
+    /// <summary>
+    /// Transient connection rejection state for incompatible drag-and-drop attempts.
+    /// </summary>
+    public record ConnectionRejectionState(
+        string SourceModuleId,
+        string SourcePortName,
+        PortType SourcePortType,
+        string TargetModuleId,
+        string TargetPortName,
+        PortType TargetPortType,
+        DateTime ExpiresAt);
 
     /// <summary>
     /// Updates the runtime state of a module. Fires OnStateChanged.
@@ -115,6 +129,39 @@ public class EditorStateService
             "Error" => "#ff0000",
             _ => "#808080"
         };
+    }
+
+    /// <summary>
+    /// Returns the active connection rejection state, or null if none/expired.
+    /// </summary>
+    public ConnectionRejectionState? GetConnectionRejection()
+    {
+        if (_connectionRejection == null)
+            return null;
+
+        if (_connectionRejection.ExpiresAt <= DateTime.UtcNow)
+        {
+            _connectionRejection = null;
+            return null;
+        }
+
+        return _connectionRejection;
+    }
+
+    /// <summary>
+    /// Clears connection rejection state if expired at the provided timestamp.
+    /// </summary>
+    public void ClearExpiredConnectionRejection(DateTime? nowUtc = null)
+    {
+        if (_connectionRejection == null)
+            return;
+
+        var now = nowUtc ?? DateTime.UtcNow;
+        if (_connectionRejection.ExpiresAt > now)
+            return;
+
+        _connectionRejection = null;
+        NotifyStateChanged();
     }
 
     /// <summary>
@@ -339,6 +386,7 @@ public class EditorStateService
     /// </summary>
     public void StartConnectionDrag(string moduleId, string portName, PortType portType, double canvasX, double canvasY)
     {
+        _connectionRejection = null;
         IsDraggingConnection = true;
         DragSourceModuleId = moduleId;
         DragSourcePortName = portName;
@@ -372,24 +420,40 @@ public class EditorStateService
             return;
         }
 
+        var sourceModuleId = DragSourceModuleId;
+        var sourcePortName = DragSourcePortName;
+        var sourcePortType = DragSourcePortType.Value;
+
         // Validate target: must be an input port with compatible type
         if (targetModuleId != null && targetPortName != null && targetPortType != null)
         {
             // Check type compatibility
-            if (DragSourcePortType == targetPortType)
+            if (sourcePortType == targetPortType.Value)
             {
                 // Create connection
                 var connection = new PortConnection
                 {
-                    SourceModuleId = DragSourceModuleId,
-                    SourcePortName = DragSourcePortName,
+                    SourceModuleId = sourceModuleId,
+                    SourcePortName = sourcePortName,
                     TargetModuleId = targetModuleId,
                     TargetPortName = targetPortName
                 };
 
                 var connections = new List<PortConnection>(Configuration.Connections) { connection };
                 Configuration = Configuration with { Connections = connections };
+                _connectionRejection = null;
                 TriggerAutoSave();
+            }
+            else
+            {
+                _connectionRejection = new ConnectionRejectionState(
+                    sourceModuleId,
+                    sourcePortName,
+                    sourcePortType,
+                    targetModuleId,
+                    targetPortName,
+                    targetPortType.Value,
+                    DateTime.UtcNow.Add(ConnectionRejectionDuration));
             }
         }
 

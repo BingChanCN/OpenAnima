@@ -239,6 +239,55 @@ public class EditorStateServiceTests
         Assert.Equal(0.1, _service.Scale);
     }
 
+    [Fact]
+    public void EndConnectionDrag_IncompatibleTypes_SetsRejectionState()
+    {
+        // Arrange
+        _service.StartConnectionDrag("source-module", "output", PortType.Text, 10, 20);
+
+        // Act
+        _service.EndConnectionDrag("target-module", "input", PortType.Trigger);
+
+        // Assert
+        var rejection = _service.GetConnectionRejection();
+        Assert.NotNull(rejection);
+        Assert.Equal("source-module", rejection!.SourceModuleId);
+        Assert.Equal("target-module", rejection.TargetModuleId);
+        Assert.Equal(PortType.Text, rejection.SourcePortType);
+        Assert.Equal(PortType.Trigger, rejection.TargetPortType);
+        Assert.True(rejection.ExpiresAt > DateTime.UtcNow);
+    }
+
+    [Fact]
+    public void EndConnectionDrag_CompatibleTypes_CreatesConnectionAndDoesNotSetRejection()
+    {
+        // Arrange
+        _service.StartConnectionDrag("source-module", "output", PortType.Text, 0, 0);
+
+        // Act
+        _service.EndConnectionDrag("target-module", "input", PortType.Text);
+
+        // Assert
+        Assert.Single(_service.Configuration.Connections);
+        Assert.Null(_service.GetConnectionRejection());
+    }
+
+    [Fact]
+    public void ClearExpiredConnectionRejection_ClearsDeterministically()
+    {
+        // Arrange
+        _service.StartConnectionDrag("source-module", "output", PortType.Text, 0, 0);
+        _service.EndConnectionDrag("target-module", "input", PortType.Trigger);
+        var rejection = _service.GetConnectionRejection();
+        Assert.NotNull(rejection);
+
+        // Act
+        _service.ClearExpiredConnectionRejection(rejection!.ExpiresAt.AddMilliseconds(1));
+
+        // Assert
+        Assert.Null(_service.GetConnectionRejection());
+    }
+
     // Test helper classes
     private class TestPortRegistry : IPortRegistry
     {
