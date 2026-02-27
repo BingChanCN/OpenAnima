@@ -68,8 +68,8 @@
 
             <g class="connection-rejection-feedback" pointer-events="none">
                 <circle cx="@markerX" cy="@markerY" r="16" class="rejection-ring" />
-                <text x="@markerX" y="@(markerY + 5)" class="rejection-symbol" text-anchor="middle">×</text>
-                <text x="@(markerX + 22)" y="@(markerY - 10)" class="rejection-label">@rejectionText</text>
+                @((MarkupString)$"<text x=\"{markerX}\" y=\"{markerY + 5}\" class=\"rejection-symbol\" text-anchor=\"middle\">×</text>")
+                @((MarkupString)$"<text x=\"{markerX + 22}\" y=\"{markerY - 10}\" class=\"rejection-label\">{rejectionText}</text>")
             </g>
         }
 

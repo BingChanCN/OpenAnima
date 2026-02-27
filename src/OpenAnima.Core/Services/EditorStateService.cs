@@ -12,6 +12,10 @@ namespace OpenAnima.Core.Services;
 /// </summary>
 public class EditorStateService
 {
+    public const string RunningNodeBorderColor = "#2ecc71";
+    public const string ErrorNodeBorderColor = "#ff5a5a";
+    public const string IdleNodeBorderColor = "#808080";
+
     private readonly IPortRegistry _portRegistry;
     private readonly IConfigurationLoader _configLoader;
     private readonly IWiringEngine _wiringEngine;
@@ -120,14 +124,13 @@ public class EditorStateService
     public string GetNodeBorderColor(string moduleId)
     {
         if (!_moduleStates.TryGetValue(moduleId, out var state))
-            return "#808080"; // gray — unknown/idle
+            return IdleNodeBorderColor; // gray — unknown/idle
 
         return state.State switch
         {
-            "Running" => "#00ff00",
-            "Completed" => "#00ff00",
-            "Error" => "#ff0000",
-            _ => "#808080"
+            "Running" => RunningNodeBorderColor,
+            "Error" => ErrorNodeBorderColor,
+            _ => IdleNodeBorderColor
         };
     }
 

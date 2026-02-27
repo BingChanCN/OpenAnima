@@ -5,7 +5,11 @@
 @inject IPortRegistry _portRegistry
 @inject EditorStateService _editorState
 
-<g transform="translate(@Node.Position.X, @Node.Position.Y)" @onmousedown:stopPropagation>
+<g transform="translate(@Node.Position.X, @Node.Position.Y)"
+   class="node-card-root @(IsSelected ? "node-selected" : "")"
+   @onmousedown:stopPropagation>
+    <title>@GetStatusTooltip()</title>
+
     <!-- Background card -->
     <rect x="0" y="0"
           width="@_nodeWidth"
@@ -13,7 +17,8 @@
           rx="8"
           fill="#1c1e2e"
           stroke="@GetBorderStroke()"
-          stroke-width="@(IsSelected ? 2 : 1)"
+          stroke-width="@GetBorderWidth()"
+          class="node-card-background @GetNodeStateClass()"
           @onclick="HandleCardClick"
           style="cursor: pointer;" />
 
@@ -30,30 +35,21 @@
     <!-- Title text -->
     @((MarkupString)$"<text x=\"{_nodeWidth / 2}\" y=\"{_titleHeight / 2 + 4}\" fill=\"#e4e6f0\" font-size=\"13\" font-family=\"var(--font-family)\" text-anchor=\"middle\" font-weight=\"500\" style=\"pointer-events: none\">{Node.ModuleName}</text>")
 
-    <!-- Status indicator (dynamic color based on module runtime state) -->
+    <!-- Status indicator -->
     <circle cx="@(_nodeWidth - 12)" cy="@(_titleHeight / 2)" r="4"
+            class="node-status-dot @GetNodeStateClass()"
             fill="@_editorState.GetNodeBorderColor(Node.ModuleId)"
-            @onclick="HandleStatusClick" @onclick:stopPropagation
-            style="cursor: pointer;" />
+            style="cursor: default;" />
 
-    <!-- Error popup overlay -->
-    @if (_showErrorPopup && _errorState != null)
+    @if (IsRunningState())
     {
-        <foreignObject x="10" y="@(_titleHeight + 4)" width="@(_nodeWidth - 20)" height="120">
-            <div xmlns="http://www.w3.org/1999/xhtml"
-                 style="background: #2a1015; border: 1px solid #ff0000; border-radius: 6px; padding: 8px; font-size: 11px; color: #e4e6f0; overflow-y: auto; max-height: 112px; font-family: var(--font-family);">
-                <div style="font-weight: 600; color: #ff6b6b; margin-bottom: 4px;">Error: @Node.ModuleName</div>
-                <div style="color: #ccc; margin-bottom: 4px;">@_errorState.ErrorMessage</div>
-                @if (_errorState.StackTrace != null)
-                {
-                    <div style="color: #888; font-size: 10px; white-space: pre-wrap; word-break: break-all;">@_errorState.StackTrace</div>
-                }
-                <div style="text-align: right; margin-top: 4px;">
-                    <span @onclick="CloseErrorPopup" @onclick:stopPropagation
-                          style="cursor: pointer; color: #6c8cff; font-size: 10px;">Close</span>
-                </div>
-            </div>
-        </foreignObject>
+        <circle cx="@(_nodeWidth - 12)" cy="@(_titleHeight / 2)" r="7"
+                class="status-pulse" />
+    }
+
+    @if (IsErrorState())
+    {
+        @((MarkupString)$"<text x=\"{_nodeWidth - 27}\" y=\"{_titleHeight / 2 + 4}\" class=\"node-warning-icon\">⚠</text>")
     }
 
     <!-- Input ports (left side) -->
@@ -61,13 +57,11 @@
     {
         var portY = _titleHeight + index * _portSpacing + _portOffsetY;
 
-        <!-- Port circle -->
         <circle cx="0" cy="@portY" r="6"
                 fill="@PortColors.GetHex(port.Type)"
                 @onmouseup="@(() => HandlePortMouseUp(port))"
                 style="cursor: crosshair;" />
 
-        <!-- Port label -->
         @((MarkupString)$"<text x=\"14\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\" style=\"pointer-events: none\">{port.Name}</text>")
     }
 
@@ -76,14 +70,12 @@
     {
         var portY = _titleHeight + index * _portSpacing + _portOffsetY;
 
-        <!-- Port circle -->
         <circle cx="@_nodeWidth" cy="@portY" r="6"
                 fill="@PortColors.GetHex(port.Type)"
                 @onmousedown="@(() => HandlePortMouseDown(port))"
                 @onmousedown:preventDefault
                 style="cursor: crosshair;" />
 
-        <!-- Port label -->
         @((MarkupString)$"<text x=\"{_nodeWidth - 14}\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\" text-anchor=\"end\" style=\"pointer-events: none\">{port.Name}</text>")
     }
 </g>
@@ -104,69 +96,94 @@
     private List<PortMetadata> _inputPorts = new();
     private List<PortMetadata> _outputPorts = new();
     private double _nodeHeight;
-    private bool _showErrorPopup;
-    private EditorStateService.ModuleRuntimeState? _errorState;
 
     protected override void OnParametersSet()
     {
-        // Get ports for this module
         var allPorts = _portRegistry.GetPorts(Node.ModuleName);
         _inputPorts = allPorts.Where(p => p.Direction == PortDirection.Input).ToList();
         _outputPorts = allPorts.Where(p => p.Direction == PortDirection.Output).ToList();
 
-        // Calculate node height based on port count
         var maxPorts = Math.Max(_inputPorts.Count, _outputPorts.Count);
         _nodeHeight = Math.Max(_minNodeHeight, _titleHeight + maxPorts * _portSpacing + _portOffsetY);
     }
 
     private void HandleTitleBarMouseDown(MouseEventArgs e)
     {
-        // Convert screen coordinates to canvas coordinates
         var (canvasX, canvasY) = _editorState.ScreenToCanvas(e.ClientX, e.ClientY);
         _editorState.StartNodeDrag(Node.ModuleId, canvasX, canvasY);
     }
 
     private void HandleCardClick(MouseEventArgs e)
     {
-        // Select node on click (shift-click for multi-select)
         _editorState.SelectNode(Node.ModuleId, e.ShiftKey);
     }
 
     private void HandlePortMouseDown(PortMetadata port)
     {
-        // Start connection drag from output port
         var portPos = _editorState.GetPortPosition(Node.ModuleId, port.Name, port.Direction);
         _editorState.StartConnectionDrag(Node.ModuleId, port.Name, port.Type, portPos.X, portPos.Y);
     }
 
     private void HandlePortMouseUp(PortMetadata port)
     {
-        // End connection drag on input port
         if (_editorState.IsDraggingConnection)
         {
             _editorState.EndConnectionDrag(Node.ModuleId, port.Name, port.Type);
         }
     }
 
+    private bool IsRunningState()
+    {
+        return _editorState.GetModuleState(Node.ModuleId)?.State == "Running";
+    }
+
+    private bool IsErrorState()
+    {
+        return _editorState.GetModuleState(Node.ModuleId)?.State == "Error";
+    }
+
+    private string GetNodeStateClass()
+    {
+        var state = _editorState.GetModuleState(Node.ModuleId)?.State;
+        return state switch
+        {
+            "Running" => "node-running",
+            "Error" => "node-error",
+            _ => "node-idle"
+        };
+    }
+
     private string GetBorderStroke()
     {
-        if (IsSelected) return "#6c8cff";
-        var stateColor = _editorState.GetNodeBorderColor(Node.ModuleId);
-        return stateColor != "#808080" ? stateColor : "#2a2d3e";
+        return _editorState.GetNodeBorderColor(Node.ModuleId);
     }
 
-    private void HandleStatusClick()
+    private double GetBorderWidth()
+    {
+        return IsSelected ? 2.2 : 1.2;
+    }
+
+    private string GetStatusTooltip()
     {
         var moduleState = _editorState.GetModuleState(Node.ModuleId);
-        if (moduleState?.State == "Error")
-        {
-            _errorState = moduleState;
-            _showErrorPopup = !_showErrorPopup;
-        }
-    }
+        if (moduleState == null)
+            return $"Status: Idle{Environment.NewLine}Node: {Node.ModuleName}";
 
-    private void CloseErrorPopup()
-    {
-        _showErrorPopup = false;
+        var statusText = moduleState.State switch
+        {
+            "Completed" => "Stopped",
+            _ => moduleState.State
+        };
+
+        if (moduleState.State != "Error")
+        {
+            return $"Status: {statusText}{Environment.NewLine}Node: {Node.ModuleName}{Environment.NewLine}Updated: {moduleState.LastUpdated:HH:mm:ss} UTC";
+        }
+
+        var stackLine = string.IsNullOrWhiteSpace(moduleState.StackTrace)
+            ? "None"
+            : moduleState.StackTrace.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "None";
+
+        return $"Status: Error{Environment.NewLine}Node: {Node.ModuleName}{Environment.NewLine}Message: {moduleState.ErrorMessage}{Environment.NewLine}Stack: {stackLine}";
     }
 }

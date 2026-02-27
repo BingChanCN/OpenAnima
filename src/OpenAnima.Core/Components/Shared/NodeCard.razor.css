@@ -1,0 +1,42 @@
+.node-card-background {
+    transition: stroke 180ms ease, stroke-width 180ms ease;
+}
+
+.node-running {
+    filter: drop-shadow(0 0 3px rgba(46, 204, 113, 0.35));
+}
+
+.node-error {
+    filter: drop-shadow(0 0 4px rgba(255, 90, 90, 0.4));
+}
+
+.node-warning-icon {
+    fill: #ff8b8b;
+    font-size: 12px;
+    font-family: var(--font-family);
+    font-weight: 700;
+}
+
+.status-pulse {
+    fill: none;
+    stroke: rgba(46, 204, 113, 0.95);
+    stroke-width: 1.4;
+    transform-origin: center;
+    transform-box: fill-box;
+    animation: node-status-pulse 1.25s ease-out infinite;
+}
+
+@keyframes node-status-pulse {
+    0% {
+        opacity: 0.8;
+        transform: scale(0.9);
+    }
+    70% {
+        opacity: 0;
+        transform: scale(1.8);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.8);
+    }
+}
