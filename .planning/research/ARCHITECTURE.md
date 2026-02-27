@@ -1,610 +1,614 @@
-# Architecture Research: Port-Based Wiring Integration
+# Architecture Research: Module SDK & Developer Experience
 
-**Domain:** Port type system, wiring engine, and visual editor integration with Blazor Server module platform
-**Researched:** 2026-02-25
-**Confidence:** MEDIUM
+**Domain:** Module SDK, CLI tools, and package format for OpenAnima extension development
+**Researched:** 2026-02-28
+**Confidence:** HIGH
 
 ## Executive Summary
 
-v1.3 adds port-based module wiring, visual drag-and-drop editor, and module refactoring to the existing .NET 8 Blazor Server platform. The architecture integrates three new subsystems with minimal disruption to existing components:
+v1.4 adds developer experience tooling to the existing OpenAnima module platform:
 
-1. **Port Type System** — Extends IModule contracts with IPortProvider interface, adds compile-time type validation
-2. **Wiring Engine** — Replaces direct EventBus usage with topology-driven execution, uses topological sort for deterministic ordering
-3. **Visual Editor** — New Blazor page using HTML5 drag-and-drop + SVG rendering, minimal JavaScript interop
+1. **dotnet new Templates** - Project scaffolding for new modules
+2. **OpenAnima CLI (oani)** - Developer tool for creating and packaging modules
+3. **.oamod Package Format** - Self-contained module distribution format
+4. **OpenAnima.Sdk** - Shared library for module development utilities
 
-**Key integration principle:** New systems augment rather than replace existing architecture. EventBus remains for internal messaging, wiring engine orchestrates module execution order based on port connections.
+**Key integration principle:** New tooling produces artifacts compatible with existing PluginLoader and PluginLoadContext. No changes to core runtime loading logic - only addition of extraction layer for .oamod files.
 
-## System Overview
+## Existing Architecture (v1.0-v1.3)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      Blazor UI Layer (NEW + EXISTING)            │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐    │
-│  │Dashboard │  │ Modules  │  │   Chat   │  │WiringEditor  │    │
-│  │(existing)│  │(existing)│  │(existing)│  │    (NEW)     │    │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └──────┬───────┘    │
-│       │             │              │               │             │
-├───────┴─────────────┴──────────────┴───────────────┴─────────────┤
-│                    SignalR Hub Layer (EXTENDED)                  │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │  RuntimeHub: module ops, heartbeat, chat, wiring (NEW)   │    │
-│  └──────────────────────────────────────────────────────────┘    │
-├─────────────────────────────────────────────────────────────────┤
-│                    Service Layer (NEW + EXISTING)                │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐    │
-│  │  Module  │  │Heartbeat │  │   Chat   │  │WiringService │    │
-│  │ Service  │  │ Service  │  │ Service  │  │    (NEW)     │    │
-│  │(existing)│  │(existing)│  │(existing)│  │              │    │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └──────┬───────┘    │
-│       │             │              │               │             │
-├───────┴─────────────┴──────────────┴───────────────┴─────────────┤
-│                    Core Runtime Layer (EXTENDED)                 │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐    │
-│  │  Module  │  │Heartbeat │  │ EventBus │  │WiringEngine  │    │
-│  │ Registry │  │  Loop    │  │(existing)│  │    (NEW)     │    │
-│  │(existing)│  │(existing)│  │          │  │              │    │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └──────┬───────┘    │
-│       │             │              │               │             │
-│       │             └──────────────┴───────────────┘             │
-│       │                            ↓                             │
-│  ┌────┴──────────────────────────────────────────────────┐      │
-│  │         Port Registry & Type Validator (NEW)          │      │
-│  └───────────────────────────────────────────────────────┘      │
-├─────────────────────────────────────────────────────────────────┤
-│                    Module Layer (REFACTORED)                     │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐    │
-│  │Heartbeat │  │   LLM    │  │   Chat   │  │   Chat       │    │
-│  │  Module  │  │  Module  │  │  Input   │  │   Output     │    │
-│  │   (NEW)  │  │   (NEW)  │  │  Module  │  │   Module     │    │
-│  │          │  │          │  │   (NEW)  │  │    (NEW)     │    │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────────┘    │
-│       All implement: IModule + IPortProvider (NEW interface)     │
-└─────────────────────────────────────────────────────────────────┘
++------------------------------------------------------------------+
+|                    OpenAnima.Core (Blazor Server)                |
++------------------------------------------------------------------+
+|  +-------------+  +-------------+  +-------------+  +---------+ |
+|  | PluginLoader|  |WiringEngine |  | EventBus    |  |RuntimeHub| |
+|  +------+------+  +------+------+  +------+------+  +----+----+ |
+|         |                |                |              |      |
+|         v                v                v              v      |
+|  +-------------+  +-------------+  +-------------+  +---------+ |
+|  |PluginRegistry| |PortRegistry |  | Subscribers |  |SignalR  | |
+|  +------+------+  +-------------+  +-------------+  +---------+ |
+|         |                                                        |
++---------|--------------------------------------------------------+
+          | loads into isolated contexts
+          v
++------------------------------------------------------------------+
+|                    PluginLoadContext (per module)                 |
+|  +-------------------------------------------------------------+ |
+|  | Module Assembly (IModule, IModuleExecutor, ITickable)      | |
+|  | Port attributes: [InputPort], [OutputPort]                 | |
+|  +-------------------------------------------------------------+ |
++------------------------------------------------------------------+
+          | depends on
+          v
++------------------------------------------------------------------+
+|                    OpenAnima.Contracts (shared)                   |
+|  +-------------+  +-------------+  +-------------+  +---------+ |
+|  | IModule     |  | IEventBus   |  | PortMetadata|  |PortTypes| |
+|  | ITickable   |  | IModuleExec |  | Input/Output|  | Attributes| |
+|  +-------------+  +-------------+  +-------------+  +---------+ |
++------------------------------------------------------------------+
+```
+
+## New v1.4 Components
+
+```
++------------------------------------------------------------------+
+|                    NEW: OpenAnima.Sdk Project                     |
++------------------------------------------------------------------+
+|  +-------------------+  +-------------------+  +---------------+ |
+|  | ManifestBuilder   |  | PackValidator     |  | OamodPackager | |
+|  | (module.json)     |  | (pre-pack check)  |  | (.oamod create)| |
+|  +-------------------+  +-------------------+  +---------------+ |
++------------------------------------------------------------------+
+          | used by
+          v
++------------------------------------------------------------------+
+|                    NEW: OpenAnima.Cli Tool                        |
++------------------------------------------------------------------+
+|  +-------------------+  +-------------------+  +---------------+ |
+|  | oani new          |  | oani pack         |  | oani validate | |
+|  | (from template)   |  | (.oamod package)  |  | (pre-check)   | |
+|  +-------------------+  +-------------------+  +---------------+ |
++------------------------------------------------------------------+
+          | produces
+          v
++------------------------------------------------------------------+
+|                    NEW: .oamod Package Format                     |
++------------------------------------------------------------------+
+|  module.json (manifest)                                          |
+|  <ModuleName>.dll (entry assembly)                               |
+|  dependencies/ (transitively resolved)                           |
++------------------------------------------------------------------+
 ```
 
 ## Component Responsibilities
 
-| Component | Responsibility | Integration Point | Status |
-|-----------|----------------|-------------------|--------|
-| **PortRegistry** | Discover and catalog ports from loaded modules | Queries IPortProvider on module load | NEW |
-| **PortTypeValidator** | Validate port connections (type matching, direction) | Called by WiringEditor before saving connections | NEW |
-| **WiringEngine** | Execute modules in topological order based on connections | Replaces direct module execution, uses EventBus for data passing | NEW |
-| **WiringService** | Service facade for wiring operations (load/save/validate config) | Injected into WiringEditor and RuntimeHub | NEW |
-| **WiringEditor.razor** | Visual drag-and-drop canvas for module wiring | New page, reuses existing SignalR infrastructure | NEW |
-| **IPortProvider** | Interface for modules to declare input/output ports | Added to OpenAnima.Contracts, implemented by all modules | NEW |
-| **ModuleRegistry** | Track loaded modules | Extended to extract port metadata via IPortProvider | MODIFIED |
-| **HeartbeatService** | Tick loop orchestration | Delegates to WiringEngine for module execution order | MODIFIED |
-| **EventBus** | Inter-module messaging | Used by WiringEngine to pass data between connected ports | EXISTING |
-| **LLM/Chat/Heartbeat** | Core platform features | Refactored from hardcoded services into proper modules with ports | REFACTORED |
+### Existing Components (Unchanged for v1.4)
+
+| Component | Responsibility | Implementation |
+|-----------|----------------|----------------|
+| OpenAnima.Core | Runtime host, Blazor UI, module orchestration | Blazor Server app |
+| OpenAnima.Contracts | Shared interfaces for module contracts | net8.0 class library |
+| PluginLoader | Load modules from directories into isolated contexts | Uses PluginLoadContext |
+| PluginLoadContext | Assembly isolation with isCollectible:true for unloading | AssemblyLoadContext |
+| PluginManifest | Parse module.json from module directory | System.Text.Json |
+| PluginRegistry | Thread-safe registry of loaded modules | ConcurrentDictionary |
+| PortDiscovery | Scan module types for port attributes | Reflection |
+| PortRegistry | Store port metadata per module | ConcurrentDictionary |
+| WiringEngine | Topological execution of module graph | EventBus-based routing |
+| EventBus | Inter-module communication | MediatR-like pub/sub |
+
+### New Components (v1.4)
+
+| Component | Responsibility | Implementation |
+|-----------|----------------|----------------|
+| OpenAnima.Sdk | SDK library for module development utilities | net8.0 class library |
+| OpenAnima.Cli | CLI tool for module creation and packaging | .NET Tool (System.CommandLine) |
+| OpenAnima.Templates | dotnet new template pack for module projects | NuGet package (PackageType=Template) |
+| .oamod format | Self-contained module package for distribution | ZIP archive with manifest |
+| OamodExtractor | Extract .oamod files for PluginLoader (in Core) | System.IO.Compression |
 
 ## Recommended Project Structure
 
 ```
 src/
-├── OpenAnima.Contracts/          # Shared interfaces
-│   ├── IModule.cs                # Existing
-│   ├── IModuleMetadata.cs        # Existing
-│   ├── IEventBus.cs              # Existing
-│   ├── IPortProvider.cs          # NEW - port declaration interface
-│   ├── PortMetadata.cs           # NEW - port definition record
-│   ├── PortType.cs               # NEW - enum (Text, Trigger)
-│   └── PortDirection.cs          # NEW - enum (Input, Output)
-│
-├── OpenAnima.Core/
-│   ├── Services/
-│   │   ├── ModuleService.cs      # Existing
-│   │   ├── HeartbeatService.cs   # MODIFIED - delegates to WiringEngine
-│   │   ├── ChatService.cs        # Existing (will be wrapped by ChatInputModule)
-│   │   ├── IWiringService.cs     # NEW - wiring operations facade
-│   │   └── WiringService.cs      # NEW - load/save/validate wiring
-│   │
-│   ├── Wiring/                   # NEW folder
-│   │   ├── WiringEngine.cs       # NEW - topological execution
-│   │   ├── PortRegistry.cs       # NEW - port catalog
-│   │   ├── PortTypeValidator.cs  # NEW - connection validation
-│   │   ├── WiringConfig.cs       # NEW - configuration model
-│   │   ├── Wire.cs               # NEW - connection record
-│   │   └── TopologicalSorter.cs  # NEW - dependency ordering
-│   │
-│   ├── Components/
-│   │   └── Pages/
-│   │       ├── Dashboard.razor   # Existing
-│   │       ├── Modules.razor     # Existing
-│   │       ├── Chat.razor        # Existing
-│   │       ├── WiringEditor.razor # NEW - visual editor
-│   │       └── WiringEditor.razor.cs # NEW - code-behind
-│   │
-│   ├── wwwroot/
-│   │   └── js/
-│   │       └── wiring-editor.js  # NEW - minimal JS for mouse tracking
-│   │
-│   └── appsettings.json          # MODIFIED - add WiringConfig section
-│
-└── modules/                      # Module implementations
-    ├── HeartbeatModule/          # NEW - refactored from HeartbeatService
-    │   ├── HeartbeatModule.cs    # Implements IModule + IPortProvider
-    │   └── module.json           # Module manifest
-    │
-    ├── LLMModule/                # NEW - refactored from LLMService
-    │   ├── LLMModule.cs          # Implements IModule + IPortProvider
-    │   └── module.json
-    │
-    ├── ChatInputModule/          # NEW - user input capture
-    │   ├── ChatInputModule.cs
-    │   └── module.json
-    │
-    └── ChatOutputModule/         # NEW - response display
-        ├── ChatOutputModule.cs
-        └── module.json
-```
++-- OpenAnima.Contracts/          # Existing - shared contracts (unchanged)
+|   +-- IModule.cs
+|   +-- IModuleExecutor.cs
+|   +-- ITickable.cs
+|   +-- IEventBus.cs
+|   +-- Ports/
+|       +-- PortType.cs
+|       +-- PortMetadata.cs
+|       +-- InputPortAttribute.cs
+|       +-- OutputPortAttribute.cs
+|
++-- OpenAnima.Core/               # Existing - runtime host (minor addition)
+|   +-- Plugins/
+|   |   +-- PluginLoader.cs       # MODIFIED: detect .oamod vs directory
+|   |   +-- PluginManifest.cs
+|   |   +-- OamodExtractor.cs     # NEW: extract .oamod to temp
+|   +-- Ports/
+|   +-- Wiring/
+|   +-- Events/
+|   +-- Modules/
+|
++-- OpenAnima.Sdk/                # NEW - SDK library
+|   +-- Manifest/
+|   |   +-- ModuleManifest.cs     # Fluent builder for module.json
+|   |   +-- ManifestValidator.cs  # Validate required fields
+|   +-- Packaging/
+|   |   +-- OamodPackager.cs      # Create .oamod from build output
+|   |   +-- OamodReader.cs        # Read/validate .oamod
+|   |   +-- DependencyResolver.cs # Resolve deps from .deps.json
+|   +-- PortBuilding/
+|       +-- PortDefinition.cs     # Helper for port declarations
+|
++-- OpenAnima.Cli/                # NEW - CLI tool
+    +-- Program.cs                # Entry point (System.CommandLine)
+    +-- Commands/
+    |   +-- NewCommand.cs         # oani new <name>
+    |   +-- PackCommand.cs        # oani pack
+    |   +-- ValidateCommand.cs    # oani validate
+    +-- Templates/
+        +-- ModuleTemplate.cs     # Embedded module template
 
-### Structure Rationale
-
-- **OpenAnima.Contracts/:** Port-related interfaces live here because they're shared between core runtime and modules (cross-AssemblyLoadContext)
-- **Wiring/:** New folder isolates wiring logic, keeps Services/ focused on existing patterns
-- **modules/:** Official modules extracted from hardcoded features, demonstrates port-based architecture for third-party developers
-- **wwwroot/js/:** Minimal JavaScript (~50 lines) for mouse position tracking during wire dragging
-
-## Architectural Patterns
-
-### Pattern 1: Two-Phase Module Initialization
-
-**What:** Separate module loading from port wiring to avoid initialization order dependencies.
-
-**When to use:** Required when modules depend on other modules being loaded before connections can be established.
-
-**Trade-offs:**
-- Pro: Eliminates circular dependency issues
-- Pro: Deterministic initialization order
-- Con: Slightly more complex startup sequence
-
-**Example:**
-```csharp
-// Phase 1: Load all modules
-foreach (var modulePath in moduleFiles)
-{
-    var loadResult = await moduleLoader.LoadModuleAsync(modulePath);
-    if (loadResult.Success)
-    {
-        moduleRegistry.Register(loadResult.Module);
-        portRegistry.DiscoverPorts(loadResult.Module); // Extract port metadata
-    }
-}
-
-// Phase 2: Wire connections
-var wiringConfig = await wiringService.LoadConfigAsync();
-wiringEngine.ApplyWiring(wiringConfig); // Validate and establish connections
-```
-
-### Pattern 2: Topological Sort for Execution Order
-
-**What:** Use directed acyclic graph (DAG) topological sort to determine module execution order based on port connections.
-
-**When to use:** When modules have data dependencies (A's output feeds B's input) and execution order matters.
-
-**Trade-offs:**
-- Pro: Deterministic execution order
-- Pro: Prevents race conditions
-- Pro: Detects circular dependencies at wire-time
-- Con: Single-threaded execution (acceptable for v1.3 scale)
-
-**Example:**
-```csharp
-public class WiringEngine
-{
-    private List<string> _executionOrder;
-
-    public void ApplyWiring(WiringConfig config)
-    {
-        // Build dependency graph from wire connections
-        var graph = BuildDependencyGraph(config.Wires);
-
-        // Topological sort to get execution order
-        _executionOrder = TopologicalSorter.Sort(graph);
-
-        if (_executionOrder == null)
-            throw new InvalidOperationException("Circular dependency detected in wiring");
-    }
-
-    public async Task ExecuteTickAsync()
-    {
-        // Execute modules in dependency order
-        foreach (var moduleId in _executionOrder)
-        {
-            var module = moduleRegistry.GetModule(moduleId);
-            await module.ExecuteAsync(); // Module reads from input ports, writes to output ports
-        }
-    }
-}
-```
-
-### Pattern 3: Port-Based EventBus Routing
-
-**What:** WiringEngine translates port connections into EventBus subscriptions at runtime.
-
-**When to use:** Leverage existing EventBus infrastructure while adding port-based abstraction.
-
-**Trade-offs:**
-- Pro: Reuses existing EventBus (no rewrite)
-- Pro: Modules can still use EventBus directly if needed
-- Con: Two communication mechanisms (ports + events) during transition
-
-**Example:**
-```csharp
-public class WiringEngine
-{
-    private readonly IEventBus _eventBus;
-
-    public void ApplyWiring(WiringConfig config)
-    {
-        foreach (var wire in config.Wires)
-        {
-            // Subscribe target module's input port to source module's output port events
-            var eventType = GetEventTypeForPort(wire.SourcePortId);
-            _eventBus.Subscribe(eventType, data =>
-            {
-                var targetModule = moduleRegistry.GetModule(wire.TargetModuleId);
-                targetModule.ReceivePortData(wire.TargetPortId, data);
-            });
-        }
-    }
-}
-```
-
-### Pattern 4: Interface-Based Port Discovery
-
-**What:** Modules implement IPortProvider interface to declare ports explicitly, avoiding reflection magic.
-
-**When to use:** Cross-AssemblyLoadContext scenarios where type identity is unreliable.
-
-**Trade-offs:**
-- Pro: Explicit, type-safe, easy to test
-- Pro: Works across assembly boundaries
-- Con: Requires interface implementation (minimal boilerplate)
-
-**Example:**
-```csharp
-// OpenAnima.Contracts/IPortProvider.cs
-public interface IPortProvider
-{
-    PortMetadata[] GetPorts();
-}
-
-// modules/LLMModule/LLMModule.cs
-public class LLMModule : IModule, IPortProvider
-{
-    public PortMetadata[] GetPorts()
-    {
-        return new[]
-        {
-            new PortMetadata("prompt", PortType.Text, PortDirection.Input, "LLM prompt text"),
-            new PortMetadata("response", PortType.Text, PortDirection.Output, "LLM generated response"),
-            new PortMetadata("trigger", PortType.Trigger, PortDirection.Input, "Execute LLM call")
-        };
-    }
-}
-```
-
-## Data Flow
-
-### Module Execution Flow (NEW)
-
-```
-HeartbeatService.OnTick (every 100ms)
-    ↓
-WiringEngine.ExecuteTickAsync()
-    ↓
-TopologicalSorter provides execution order: [Heartbeat, ChatInput, LLM, ChatOutput]
-    ↓
-For each module in order:
-    ├─→ Module.ExecuteAsync()
-    │   ├─→ Read data from input ports (via EventBus subscriptions)
-    │   ├─→ Process data (module-specific logic)
-    │   └─→ Write data to output ports (publish to EventBus)
-    │
-    └─→ WiringEngine routes output port data to connected input ports
-```
-
-### Port Connection Flow (NEW)
-
-```
-User drags wire from Port A to Port B in WiringEditor
-    ↓
-WiringEditor.OnWireComplete(sourcePort, targetPort)
-    ↓
-PortTypeValidator.CanConnect(sourcePort, targetPort)
-    ├─→ Check: same PortType? (Text→Text, Trigger→Trigger)
-    ├─→ Check: opposite directions? (Output→Input)
-    └─→ Check: creates cycle? (topological sort validation)
-    ↓
-If valid:
-    ├─→ Add Wire to WiringConfig
-    ├─→ Update SVG rendering (visual feedback)
-    └─→ WiringService.SaveConfigAsync()
-    ↓
-RuntimeHub.ApplyWiring() (if runtime is running)
-    ↓
-WiringEngine.ApplyWiring(newConfig)
-    ├─→ Rebuild dependency graph
-    ├─→ Recompute execution order
-    └─→ Update EventBus subscriptions
-```
-
-### Module Refactoring Flow (TRANSITION)
-
-```
-v1.2 Hardcoded:
-Chat.razor → ChatService → LLMService → OpenAI API
-
-v1.3 Modular:
-Chat.razor → ChatInputModule (port: userMessage)
-                    ↓ (wire: Text)
-              LLMModule (port: prompt → response)
-                    ↓ (wire: Text)
-              ChatOutputModule (port: assistantMessage)
-                    ↓
-              Chat.razor (via SignalR push)
-
-Transition strategy:
-1. Keep ChatService as facade during v1.3
-2. ChatService internally uses modules via WiringEngine
-3. Chat.razor unchanged (still calls ChatService)
-4. v1.4 can expose modules directly to UI if needed
+templates/
++-- OpenAnima.Module/             # NEW - dotnet new template
+    +-- .template.config/
+    |   +-- template.json         # Template metadata
+    +-- content/
+    |   +-- ModuleName.cs         # Template source with placeholders
+    |   +-- ModuleName.csproj     # Template project file
+    |   +-- module.json           # Template manifest
+    +-- .template.config/
+        +-- template.json
 ```
 
 ## Integration Points
 
-### New Interfaces in OpenAnima.Contracts
+### 1. Dependency Chain
 
-```csharp
-// IPortProvider.cs - Modules declare ports
-public interface IPortProvider
+```
+OpenAnima.Templates
+    +-- References: OpenAnima.Contracts (Private=false to exclude from package)
+    +-- No project references (pure NuGet package)
+
+OpenAnima.Cli
+    +-- References: OpenAnima.Sdk
+    +-- Packages: System.CommandLine 4.0.0+
+
+OpenAnima.Sdk
+    +-- References: OpenAnima.Contracts
+    +-- Packages: System.Text.Json, System.IO.Compression
+
+OpenAnima.Core (existing, minor change)
+    +-- References: OpenAnima.Contracts (existing)
+    +-- NEW: OamodExtractor class (internal)
+```
+
+### 2. Module Loading Flow (Existing + New)
+
+```
+EXISTING FLOW (unchanged):
+1. PluginLoader.LoadModule(directory)
+2. Parse module.json --> PluginManifest
+3. Create PluginLoadContext(dllPath)
+4. Load assembly, find IModule implementation
+5. Instantiate, call InitializeAsync()
+
+NEW .oamod FLOW (extends existing):
+1. User places .oamod in modules/ directory
+2. PluginLoader detects .oamod extension
+3. OamodExtractor extracts to temp directory
+4. PluginLoader.LoadModule(extractedPath)  <-- same as before
+5. (rest unchanged)
+```
+
+### 3. Developer Workflow
+
+```
+Developer runs: dotnet new install OpenAnima.Templates
+                dotnet new oanimodule -n MyModule
+
++----------------+     creates      +----------------+
+| dotnet new     | ---------------> | Module Project |
+| oanimodule     |                  | (MyModule/)    |
++----------------+                  +----------------+
+                                           |
+         developer codes module            |
+         implements IModuleExecutor        |
+         adds [InputPort]/[OutputPort]     |
+                                           v
++----------------+     produces     +----------------+
+|  oani pack     | ---------------> | .oamod file    |
++----------------+                  +----------------+
+                                           |
+         user copies to modules/           |
+                                           v
++----------------+     loads        +----------------+
+| OpenAnima.Core | <--------------- | .oamod in      |
+| (PluginLoader) |                  | modules/ dir   |
++----------------+                  +----------------+
+```
+
+## Data Flow
+
+### oani new Command Flow
+
+```
+User runs: oani new MyModule
+
+1. Validate module name (valid C# identifier, no spaces)
+2. Create directory structure:
+   MyModule/
+   +-- module.json (generated manifest)
+   +-- MyModule.csproj (references OpenAnima.Contracts)
+   +-- MyModule.cs (template with IModuleExecutor, sample ports)
+3. Write files to disk
+4. Print next steps:
+   "Module created! Next steps:
+    1. cd MyModule
+    2. Implement your module logic
+    3. Run 'oani pack' to create .oamod package"
+```
+
+### oani pack Command Flow
+
+```
+User runs: oani pack (from module project directory)
+
+1. Read module.json, validate required fields (name, version, entryAssembly)
+2. Check bin/Debug/net8.0/ or bin/Release/net8.0/ for entry assembly
+3. Read .deps.json to resolve dependencies:
+   - Exclude: OpenAnima.Contracts (shared with runtime)
+   - Exclude: System.*, Microsoft.* (framework assemblies)
+   - Include: all other dependencies
+4. Create .oamod archive (ZIP):
+   - module.json (at root)
+   - <EntryAssembly>.dll (at root)
+   - dependencies/*.dll (in subfolder)
+5. Output to: ./dist/<ModuleName>-<Version>.oamod
+6. Print summary: "Packed MyModule-1.0.0.oamod (3 files, 150KB)"
+```
+
+### .oamod Package Structure
+
+```
+MyModule-1.0.0.oamod (ZIP archive, .oamod extension)
+|
++-- module.json                   # Required: module manifest
++-- MyModule.dll                  # Required: entry assembly
++-- dependencies/                 # Optional: non-shared dependencies
+    +-- Newtonsoft.Json.dll      # If module uses it
+    +-- Serilog.dll              # If module uses it
+
+NOT INCLUDED:
+- OpenAnima.Contracts.dll         # Shared with runtime, not packaged
+- System.*.dll                    # Framework assemblies
+- Microsoft.*.dll                 # Framework assemblies
+```
+
+### module.json Schema
+
+```json
 {
-    PortMetadata[] GetPorts();
-}
-
-// PortMetadata.cs - Port definition
-public record PortMetadata(
-    string Id,
-    string Name,
-    PortType Type,
-    PortDirection Direction,
-    string? Description = null
-);
-
-// PortType.cs - Fixed set of types (v1.3)
-public enum PortType
-{
-    Text,    // String data (chat messages, LLM responses)
-    Trigger  // Event signals (heartbeat ticks, user actions)
-}
-
-// PortDirection.cs
-public enum PortDirection
-{
-    Input,
-    Output
+  "name": "MyModule",
+  "version": "1.0.0",
+  "description": "A sample module",
+  "entryAssembly": "MyModule.dll",
+  "author": "Developer Name",
+  "minRuntimeVersion": "1.3.0"
 }
 ```
 
-### Modified HeartbeatService
+Note: Port declarations come from attributes on the module class, not the manifest. This ensures compile-time validation and avoids manifest/module drift.
+
+### PluginLoader Integration
 
 ```csharp
-// Services/HeartbeatService.cs
-public class HeartbeatService : IHostedService
+// In PluginLoader.cs - minimal change
+public LoadResult LoadModule(string moduleDirectory)
 {
-    private readonly WiringEngine _wiringEngine; // NEW dependency
-    private PeriodicTimer? _timer;
-
-    public async Task StartAsync(CancellationToken ct)
+    // NEW: Handle .oamod files
+    if (moduleDirectory.EndsWith(".oamod", StringComparison.OrdinalIgnoreCase))
     {
-        _timer = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
+        var extractor = new OamodExtractor();
+        moduleDirectory = extractor.ExtractToTemp(moduleDirectory);
+    }
 
-        while (await _timer.WaitForNextTickAsync(ct))
-        {
-            // OLD: Direct module execution
-            // foreach (var module in modules) await module.TickAsync();
+    // EXISTING: Rest unchanged
+    try
+    {
+        PluginManifest manifest = PluginManifest.LoadFromDirectory(moduleDirectory);
+        // ... existing logic ...
+    }
+    // ...
+}
+```
 
-            // NEW: Delegate to WiringEngine for topology-driven execution
-            await _wiringEngine.ExecuteTickAsync();
-        }
+## Architectural Patterns
+
+### Pattern 1: .NET Tool Pattern
+
+**What:** Console app packaged as NuGet tool with `PackAsTool=true`.
+
+**When to use:** CLI distribution for developers who have .NET SDK installed.
+
+**Trade-offs:**
+- PRO: Global or local installation via `dotnet tool install`
+- PRO: Version management via NuGet
+- PRO: Automatic PATH configuration
+- CON: Requires .NET SDK on developer machine
+
+**Example:**
+```xml
+<!-- OpenAnima.Cli.csproj -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>oani</ToolCommandName>
+    <PackageId>OpenAnima.Cli</PackageId>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="4.0.0" />
+  </ItemGroup>
+</Project>
+```
+
+### Pattern 2: Template Pack Pattern
+
+**What:** NuGet package with `PackageType=Template` containing runnable project templates.
+
+**When to use:** Project scaffolding via `dotnet new`.
+
+**Trade-offs:**
+- PRO: Uses standard `dotnet new` workflow developers already know
+- PRO: Templates are runnable projects (testable before packaging)
+- PRO: Placeholder replacement via `sourceName` in template.json
+- CON: Learning curve for template.json configuration
+
+**Example:**
+```xml
+<!-- OpenAnima.Templates.csproj -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageType>Template</PackageType>
+    <PackageVersion>1.0.0</PackageVersion>
+    <PackageId>OpenAnima.Templates</PackageId>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <ContentTargetFolders>content</ContentTargetFolders>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="templates\**\*" Exclude="templates\**\bin\**;templates\**\obj\**" />
+    <Compile Remove="**\*" />
+  </ItemGroup>
+</Project>
+```
+
+```json
+// templates/OpenAnima.Module/.template.config/template.json
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "OpenAnima",
+  "classifications": [ "OpenAnima", "Module", "Plugin" ],
+  "identity": "OpenAnima.Module.CSharp",
+  "name": "OpenAnima Module",
+  "shortName": "oanimodule",
+  "sourceName": "ModuleName",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  }
+}
+```
+
+### Pattern 3: Extract-and-Load Pattern
+
+**What:** .oamod is a ZIP archive that extracts to a temp directory, then loaded by existing PluginLoader.
+
+**When to use:** Module packaging without breaking existing loading infrastructure.
+
+**Trade-offs:**
+- PRO: Zero changes to PluginLoader core logic
+- PRO: Supports both .oamod files and unpacked directories
+- PRO: Easy debugging (can inspect extracted files)
+- CON: Temp directory management required
+- CON: Slightly slower first load (extraction time)
+
+**Example:**
+```csharp
+// OamodExtractor.cs
+public class OamodExtractor
+{
+    private readonly string _tempBasePath = Path.Combine(Path.GetTempPath(), "OpenAnima", "modules");
+
+    public string ExtractToTemp(string oamodPath)
+    {
+        var manifest = ReadManifest(oamodPath);
+        var targetPath = Path.Combine(_tempBasePath, $"{manifest.Name}-{manifest.Version}");
+
+        // Clean up previous extraction if exists
+        if (Directory.Exists(targetPath))
+            Directory.Delete(targetPath, recursive: true);
+
+        Directory.CreateDirectory(targetPath);
+
+        // Extract ZIP
+        ZipFile.ExtractToDirectory(oamodPath, targetPath);
+
+        return targetPath;
     }
 }
 ```
 
-### New WiringService
+### Pattern 4: Shared Contracts Exclusion
 
-```csharp
-// Services/IWiringService.cs
-public interface IWiringService
-{
-    Task<WiringConfig> LoadConfigAsync();
-    Task SaveConfigAsync(WiringConfig config);
-    ValidationResult ValidateConfig(WiringConfig config);
-    Task ApplyWiringAsync(WiringConfig config);
-}
+**What:** Module projects reference OpenAnima.Contracts with `<Private>false</Private>` to exclude from output.
 
-// Services/WiringService.cs
-public class WiringService : IWiringService
-{
-    private readonly WiringEngine _wiringEngine;
-    private readonly PortRegistry _portRegistry;
-    private readonly PortTypeValidator _validator;
-    private readonly IConfiguration _configuration;
+**When to use:** Cross-AssemblyLoadContext scenarios where shared types must come from a single source.
 
-    public async Task<WiringConfig> LoadConfigAsync()
-    {
-        var configPath = _configuration["WiringConfigPath"] ?? "wiring.json";
-        var json = await File.ReadAllTextAsync(configPath);
-        return JsonSerializer.Deserialize<WiringConfig>(json);
-    }
+**Trade-offs:**
+- PRO: Prevents type identity issues (InvalidCastException)
+- PRO: Reduces package size
+- PRO: Ensures runtime version of Contracts is used
+- CON: Requires explicit project configuration
 
-    public ValidationResult ValidateConfig(WiringConfig config)
-    {
-        // Check all referenced modules exist
-        // Check all referenced ports exist
-        // Check port type compatibility
-        // Check for circular dependencies
-        return _validator.Validate(config);
-    }
-}
+**Example:**
+```xml
+<!-- In module's .csproj -->
+<ItemGroup>
+  <ProjectReference Include="path/to/OpenAnima.Contracts.csproj">
+    <Private>false</Private>
+  </ProjectReference>
+</ItemGroup>
 ```
 
-### RuntimeHub Extension
+## Anti-Patterns to Avoid
 
-```csharp
-// Hubs/RuntimeHub.cs
-public class RuntimeHub : Hub<IRuntimeClient>
-{
-    private readonly IWiringService _wiringService; // NEW
+### Anti-Pattern 1: Including Contracts in .oamod
 
-    // NEW wiring methods
-    public async Task<ValidationResult> ValidateWiring(WiringConfig config)
-    {
-        return _wiringService.ValidateConfig(config);
-    }
+**What people do:** Pack OpenAnima.Contracts.dll inside the .oamod package.
 
-    public async Task ApplyWiring(WiringConfig config)
-    {
-        var validation = _wiringService.ValidateConfig(config);
-        if (!validation.IsValid)
-            throw new InvalidOperationException(validation.ErrorMessage);
+**Why it's wrong:** Breaks type identity - PluginLoadContext loads its own copy, causing InvalidCastException when Core tries to cast to its IModule interface.
 
-        await _wiringService.SaveConfigAsync(config);
-        await _wiringService.ApplyWiringAsync(config);
+**Do this instead:**
+1. Mark Contracts reference as `<Private>false</Private>` in module project
+2. OamodPackager excludes Contracts from dependencies folder
+3. Runtime provides Contracts from its own loaded copy
 
-        await Clients.All.WiringApplied(config);
-    }
-}
+### Anti-Pattern 2: Manifest Port Declarations
+
+**What people do:** Declare ports in module.json instead of using attributes.
+
+**Why it's wrong:** Manifest and code can drift. No compile-time validation. Runtime must reconcile two sources of truth.
+
+**Do this instead:** Use `[InputPort]` and `[OutputPort]` attributes on module class. PortDiscovery extracts at load time. Manifest only contains metadata (name, version, entryAssembly).
+
+### Anti-Pattern 3: Rebuilding PluginLoader
+
+**What people do:** Create a new module loading system for .oamod instead of extending existing.
+
+**Why it's wrong:** Duplicate code paths, testing burden, potential behavior divergence between .oamod and directory loading.
+
+**Do this instead:** Add extraction layer (OamodExtractor) that converts .oamod to directory, then use existing PluginLoader unchanged.
+
+### Anti-Pattern 4: Global Tool Only
+
+**What people do:** Only support global tool installation, ignoring local tools.
+
+**Why it's wrong:** Teams can't pin CLI version per project. Global tool version conflicts between projects.
+
+**Do this instead:** Support both global and local tool installation. Document local tool workflow for teams:
+
+```bash
+# Local installation (recommended for teams)
+dotnet new tool-manifest
+dotnet tool install OpenAnima.Cli
+dotnet tool run oani pack
+
+# Global installation (for individual developers)
+dotnet tool install -g OpenAnima.Cli
+oani pack
+```
+
+## Build Order & Dependencies
+
+### Phase 1: SDK Library (prerequisite for CLI)
+
+```
+OpenAnima.Sdk
+  +-- no dependencies on other NEW projects
+  +-- references: OpenAnima.Contracts
+  +-- packages: System.Text.Json, System.IO.Compression
+
+Build order within SDK:
+1. Manifest/ModuleManifest.cs        (data structure)
+2. Manifest/ManifestValidator.cs     (validates manifest)
+3. Packaging/DependencyResolver.cs   (parses .deps.json)
+4. Packaging/OamodPackager.cs        (creates .oamod)
+5. Packaging/OamodReader.cs          (reads .oamod)
+```
+
+### Phase 2: CLI Tool
+
+```
+OpenAnima.Cli
+  +-- references: OpenAnima.Sdk
+  +-- packages: System.CommandLine 4.0.0+
+
+Build order within CLI:
+1. Commands/NewCommand.cs       (oani new)
+2. Commands/PackCommand.cs      (oani pack)
+3. Commands/ValidateCommand.cs  (oani validate)
+4. Program.cs                   (root command setup)
+```
+
+### Phase 3: Template Pack
+
+```
+OpenAnima.Templates
+  +-- no project references
+  +-- contains: runnable module project template
+  +-- template.json defines placeholder replacement
+
+Template files:
+1. templates/OpenAnima.Module/content/ModuleName.csproj
+2. templates/OpenAnima.Module/content/ModuleName.cs
+3. templates/OpenAnima.Module/content/module.json
+4. templates/OpenAnima.Module/.template.config/template.json
+```
+
+### Phase 4: Core Integration (minimal)
+
+```
+OpenAnima.Core modification:
+  +-- Plugins/OamodExtractor.cs (NEW)
+  +-- Plugins/PluginLoader.cs (MODIFIED: add .oamod detection)
+
+Changes:
+1. Add OamodExtractor class
+2. Modify PluginLoader.LoadModule to detect .oamod
+3. Test with sample .oamod files
 ```
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| <20 modules (v1.3) | Single-threaded topological execution. SVG rendering. In-memory wiring config. Simple and deterministic. |
-| 20-50 modules | Add viewport virtualization (only render visible nodes). Implement ShouldRender() optimization. Consider Canvas rendering. |
-| 50-200 modules | Parallel execution for independent subgraphs. Background thread for wiring engine. Incremental topological sort. |
-| >200 modules | Distributed execution (out of scope for local-first). Consider splitting into sub-agents. |
+| 1-10 modules | Local templates, simple .oamod, CLI from source |
+| 10-50 modules | Publish templates to NuGet, signed .oamod packages |
+| 50-100 modules | Template variants (different module types), dependency caching in CLI |
+| 100+ modules | Module marketplace, version constraint resolution, signed packages |
 
-### Scaling Priorities
+### Phase-Specific Notes
 
-1. **First bottleneck:** SignalR rendering lag during node dragging (>10 modules)
-   - **Fix:** Throttle StateHasChanged to 50-100ms, use JS interop for drag rendering
-
-2. **Second bottleneck:** Topological sort performance (>50 modules)
-   - **Fix:** Cache execution order, only recompute when wiring changes
-
-3. **Third bottleneck:** Single-threaded execution blocks heartbeat (>100ms total execution time)
-   - **Fix:** Async execution with Task.WhenAll for independent modules
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Skipping Cycle Detection
-
-**What people do:** Allow any connection in visual editor, detect cycles only at runtime.
-
-**Why it's wrong:** Runtime deadlock or stack overflow. Bad UX (wiring looks valid but doesn't work).
-
-**Do this instead:** Validate connections at wire-time using topological sort. Block invalid connections with clear error message.
-
-### Anti-Pattern 2: Mixing Hardcoded and Modular Execution
-
-**What people do:** Keep some features hardcoded (e.g., heartbeat) while modularizing others (e.g., LLM).
-
-**Why it's wrong:** Inconsistent execution model. Hard to reason about timing and dependencies.
-
-**Do this instead:** Refactor all features into modules in v1.3. Use WiringEngine for all execution. Maintain consistency.
-
-### Anti-Pattern 3: Tight Coupling Between Editor and Runtime
-
-**What people do:** WiringEditor directly manipulates WiringEngine state.
-
-**Why it's wrong:** State divergence. Editor shows one thing, runtime executes another.
-
-**Do this instead:** Single source of truth (WiringConfig). Editor modifies config, runtime loads config. Clear separation.
-
-### Anti-Pattern 4: No Versioning in Wiring Config
-
-**What people do:** Save wiring config without version field.
-
-**Why it's wrong:** Breaking changes in port system or module interfaces make old configs unloadable.
-
-**Do this instead:** Include version field in WiringConfig. Implement migration logic for format changes.
-
-## Build Order
-
-Recommended implementation sequence based on dependencies:
-
-### Phase 1: Port Type System (Foundation)
-1. **PortType.cs, PortDirection.cs** - Enums (no dependencies)
-2. **PortMetadata.cs** - Port definition record (depends on: enums)
-3. **IPortProvider.cs** - Interface in OpenAnima.Contracts (depends on: PortMetadata)
-4. **PortRegistry.cs** - Port catalog (depends on: IPortProvider, PortMetadata)
-5. **PortTypeValidator.cs** - Connection validation (depends on: PortMetadata)
-
-### Phase 2: Wiring Engine (Core Logic)
-6. **Wire.cs** - Connection record (depends on: PortType)
-7. **WiringConfig.cs** - Configuration model (depends on: Wire)
-8. **TopologicalSorter.cs** - Dependency ordering (no dependencies)
-9. **WiringEngine.cs** - Execution orchestrator (depends on: WiringConfig, TopologicalSorter, EventBus)
-10. **IWiringService.cs, WiringService.cs** - Service facade (depends on: WiringEngine, PortRegistry, PortTypeValidator)
-
-### Phase 3: Module Refactoring (Demonstrate Pattern)
-11. **HeartbeatModule** - Extract from HeartbeatService (implements: IModule, IPortProvider)
-12. **LLMModule** - Extract from LLMService (implements: IModule, IPortProvider)
-13. **ChatInputModule** - New module for user input (implements: IModule, IPortProvider)
-14. **ChatOutputModule** - New module for response display (implements: IModule, IPortProvider)
-
-### Phase 4: Visual Editor (UI)
-15. **wiring-editor.js** - Mouse tracking JavaScript (~50 lines)
-16. **WiringEditor.razor** - Visual canvas markup (depends on: WiringService)
-17. **WiringEditor.razor.cs** - Code-behind with drag-and-drop logic (depends on: WiringService, RuntimeHub)
-
-### Phase 5: Integration (Glue)
-18. **HeartbeatService modification** - Delegate to WiringEngine
-19. **RuntimeHub extension** - Add wiring methods
-20. **Program.cs** - Register new services (WiringEngine, WiringService, PortRegistry)
-21. **appsettings.json** - Add WiringConfig section
-
-### Dependency Graph
-
-```
-PortType/PortDirection → PortMetadata → IPortProvider → PortRegistry
-                              ↓                              ↓
-                           Wire → WiringConfig → WiringEngine → WiringService
-                                                      ↓
-TopologicalSorter ────────────────────────────────────┘
-                                                      ↓
-                                            HeartbeatService (modified)
-                                                      ↓
-                                            WiringEditor.razor
-```
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| dotnet new templates | sourceName not replacing | Use exact match, test with `-n` flag |
+| CLI tool | System.CommandLine API changes | Pin to 4.0.0+ stable, avoid preview features |
+| .oamod packaging | Missing dependencies | Use .deps.json parser, test on clean machine |
+| Contracts versioning | Breaking changes break modules | Use semantic versioning, add minRuntimeVersion to manifest |
+| Temp extraction | Disk space growth | Implement cleanup on startup, track extractions |
 
 ## Sources
 
-**Web Search Results (MEDIUM confidence):**
-- [Blazor Basics: Building Drag-and-Drop Functionality](https://www.telerik.com/blogs/blazor-basics-building-drag-drop-functionality-blazor-applications)
-- [Beautiful Sortable Drag & Drop Lists for your Blazor Apps](https://learn.microsoft.com/en-us/shows/on-dotnet/beautiful-sortable-drag-drop-lists-for-your-blazor-apps)
-- [Tools for building a Graph/Node based user interface in a webapp](https://stackoverflow.com/questions/72164885/tools-for-building-a-graph-node-based-user-interface-in-a-webapp)
-- [Graph Execution Engine (Topological Sort) · Issue #6](https://github.com/Or-Hason/AetherLoom/issues/6)
-- [Topological Sort - USACO Guide](https://usaco.guide/gold/toposort)
-- [Rete.js - JavaScript framework for visual programming](https://retejs.org/)
-
-**Project Context (HIGH confidence):**
-- OpenAnima PROJECT.md - Existing architecture and v1.3 requirements
-- OpenAnima STACK.md - Technology decisions for v1.3
-- OpenAnima PITFALLS.md - Known integration risks
-
-**Knowledge Base (MEDIUM confidence):**
-- Topological sort for DAG execution ordering
-- Blazor Server SignalR patterns
-- AssemblyLoadContext cross-context communication
-- HTML5 drag-and-drop API
-- SVG path rendering for connections
+- [.NET Tool Creation Tutorial](https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools-how-to-create) - HIGH confidence (official docs)
+- [Custom Templates for dotnet new](https://learn.microsoft.com/en-us/dotnet/core/tools/custom-templates) - HIGH confidence (official docs)
+- [System.CommandLine Overview](https://learn.microsoft.com/en-us/dotnet/standard/commandline/) - HIGH confidence (official docs)
+- Existing OpenAnima source code (PluginLoader.cs, PluginManifest.cs, PortDiscovery.cs) - HIGH confidence (project code)
 
 ---
-*Architecture research for: Port-based wiring integration with Blazor Server module platform*
-*Researched: 2026-02-25*
-*Confidence: MEDIUM (core patterns well-established, specific library alternatives not fully verified)*
+*Architecture research for: Module SDK & DevEx (v1.4)*
+*Researched: 2026-02-28*
+*Confidence: HIGH (patterns well-established in .NET ecosystem)*

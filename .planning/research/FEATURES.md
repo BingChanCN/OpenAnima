@@ -1,206 +1,276 @@
-# Feature Landscape
+# Feature Research
 
-**Domain:** Port-based module wiring with visual node editor
-**Researched:** 2026-02-25
+**Domain:** Module SDK & Developer Experience (DevEx)
+**Researched:** 2026-02-28
+**Confidence:** HIGH
 
-## Table Stakes
+## Feature Landscape
 
-Features users expect from node-based visual programming systems. Missing = product feels incomplete.
+### Table Stakes (Users Expect These)
+
+Features users assume exist. Missing these = product feels incomplete.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| **Port Type System** | | | |
-| Fixed port type categories (Text, Trigger) | Type safety prevents invalid connections | Low | Already specified in milestone |
-| Same-type connection validation | Visual feedback before connection completes | Low | Color-coding by type is standard |
-| Input/output port distinction | Directional data flow is fundamental to node graphs | Low | Visual distinction (left=input, right=output) |
-| Multiple connections per output port | One output can feed many inputs (fan-out) | Low | Standard in all node systems |
-| Single connection per input port | Prevents ambiguous data sources | Low | Disconnect old when connecting new |
-| **Visual Editor - Canvas** | | | |
-| Drag-and-drop module placement | Core interaction model for node editors | Medium | Requires canvas coordinate system |
-| Pan canvas (click-drag background) | Navigate large graphs | Low | Standard canvas interaction |
-| Zoom in/out | View detail vs overview | Low | Mouse wheel or pinch gesture |
-| Grid snapping (optional toggle) | Align nodes neatly | Low | Improves visual organization |
-| **Visual Editor - Wiring** | | | |
-| Click-drag from port to port | Primary wiring interaction | Medium | Requires hit detection, bezier curves |
-| Visual connection preview while dragging | Shows valid/invalid targets | Medium | Color changes on hover |
-| Invalid connection rejection | Prevents type mismatches | Low | Visual shake or red flash |
-| Click connection to delete | Quick way to remove wiring | Low | Alternative to context menu |
-| Bezier curve rendering | Professional appearance, avoids overlaps | Medium | Standard in node editors |
-| **Visual Editor - Node Display** | | | |
-| Node title/name display | Identify module type | Low | Header bar on node |
-| Port labels | Identify what each port does | Low | Text next to port circle |
-| Port type visual distinction | Color-coding by type | Low | Text=blue, Trigger=yellow (example) |
-| Node selection (click) | Prerequisite for delete/move | Low | Highlight border |
-| Multi-select (Ctrl+click or drag-box) | Bulk operations | Medium | Standard UX pattern |
-| Delete selected nodes (Delete key) | Remove unwanted modules | Low | With confirmation if wired |
-| **Persistence** | | | |
-| Save wiring configuration | Preserve user's work | Medium | JSON serialization of graph |
-| Load wiring configuration | Restore saved graphs | Medium | Deserialize and render |
-| Auto-save on change | Prevent data loss | Low | Debounced save after edits |
-| **Runtime Integration** | | | |
-| Execute wiring topology at runtime | Connections actually work | High | Core wiring engine |
-| Module lifecycle (load/unload) reflected in editor | Editor shows current state | Medium | SignalR updates from runtime |
-| Error display on nodes | Show runtime failures | Low | Red border or icon on node |
+| Project scaffolding (`oani new`) | Developers expect one-command project creation, similar to `dotnet new console` or `yo code` | MEDIUM | Use .NET template system with `.template.config/template.json` |
+| Package creation (`oani pack`) | Developers need a way to bundle their module for distribution | MEDIUM | Package DLL + manifest + assets into `.oamod` format |
+| Module manifest with metadata | Consumers need to know module name, version, author, dependencies, compatibility | LOW | JSON manifest similar to VS Code's `package.json` or NuGet's `nuspec` |
+| API reference documentation | Developers need to know what interfaces/types are available for implementation | MEDIUM | DocFX or similar for .NET XML docs generation |
+| Quick-start guide | Developers want to see a working example in <5 minutes | LOW | Single-page tutorial with copy-paste commands |
+| Example modules | Developers learn by modifying working examples | LOW | 2-3 sample modules demonstrating common patterns |
+| Basic validation | Packages should be checked for required files and structure before distribution | LOW | Verify manifest exists, required fields present, DLL compiles |
 
-## Differentiators
+### Differentiators (Competitive Advantage)
 
-Features that set product apart. Not expected, but valued.
+Features that set the product apart. Not required, but valuable.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Advanced Editor UX** | | | |
-| Minimap | Navigate large graphs quickly | Medium | Small overview in corner |
-| Node search/palette | Find modules without scrolling | Low | Searchable module list |
-| Undo/redo | Recover from mistakes | Medium | Command pattern for graph edits |
-| Copy/paste nodes | Duplicate common patterns | Medium | Clipboard with relative positioning |
-| Align nodes (distribute, align left/right/top/bottom) | Clean up messy graphs | Low | Professional tool feel |
-| Connection reroute points | Manual curve control for complex graphs | High | Rare in simple editors |
-| **Port System Enhancements** | | | |
-| Port tooltips on hover | Explain port purpose without cluttering UI | Low | Helpful for learning |
-| Optional ports (show/hide) | Reduce visual clutter for advanced features | Medium | Common in Unreal Blueprint |
-| Default values for unconnected inputs | Nodes work without all inputs wired | Low | Fallback behavior |
-| Port validation messages | Explain WHY connection is invalid | Low | Better than silent rejection |
-| **Workflow Features** | | | |
-| Subgraphs/groups | Collapse complex sections into single node | High | Requires nested execution context |
-| Comments/annotations | Document graph sections | Low | Floating text boxes |
-| Node templates/presets | Quick insertion of common patterns | Medium | Library of pre-wired groups |
-| Live execution visualization | Highlight active connections during runtime | Medium | Shows data flow in real-time |
-| Breakpoints on nodes | Pause execution for debugging | High | Requires runtime integration |
-| **Integration** | | | |
-| Export graph as image | Share designs without running app | Low | Canvas to PNG |
-| Import modules from file picker | Add new module types dynamically | Medium | Extends existing module loading |
-| Version control friendly format | Diff-able JSON structure | Low | Sorted keys, stable IDs |
+| Template customization options | Allow developers to choose module type, port configuration, boilerplate code | MEDIUM | Use template parameters (`--type`, `--ports`) via `template.json` symbols |
+| Checksum/manifest verification | Ensures package integrity and authenticity | MEDIUM | SHA256 hash in manifest, optional signature support |
+| Dependency validation | Warn about missing or incompatible OpenAnima SDK versions | MEDIUM | Parse manifest dependencies, check against runtime version |
+| Interactive CLI experience | Better UX with prompts, progress indicators, colored output | LOW | System.CommandLine supports this out of the box |
+| Live template preview | Show what project structure will be created before execution | LOW | `--dry-run` flag to preview without creating files |
+| Multi-module scaffolding | Create multiple related modules in one command | MEDIUM | `oani new --modules ChatInput,LLM,ChatOutput` |
+| Module validation command | `oani validate` to check module before packing | LOW | Run static analysis, check interface implementations |
 
-## Anti-Features
+### Anti-Features (Commonly Requested, Often Problematic)
 
-Features to explicitly NOT build.
+Features that seem good but create problems.
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| **Automatic layout** | Users want control over positioning; auto-layout rarely matches intent | Provide alignment tools, let user arrange |
-| **Execution order numbers on nodes** | Clutters UI; execution order should be obvious from wiring topology | Use live visualization if debugging needed |
-| **Inline code editing in nodes** | Scope creep; modules should be proper C# classes | Keep module development in IDE |
-| **Visual scripting for module logic** | Out of scope; this is module *wiring*, not module *creation* | Modules are C# code, editor wires them |
-| **Collaborative editing** | Complex (conflict resolution, real-time sync); single-user first | Defer to future if needed |
-| **3D node graph** | Gimmick; 2D is proven and sufficient | Stick with 2D canvas |
-| **AI-suggested connections** | Unreliable; deterministic wiring is core value | User makes all connections explicitly |
-| **Marketplace integration in editor** | Scope creep; v1.3 is about wiring, not distribution | Module loading is separate concern |
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Marketplace/publishing CLI | "I want to share my module" | Requires backend infrastructure, authentication, version management, deprecation handling | Keep v1.4 to local package management; marketplace is future milestone |
+| Automatic versioning | "Bump version automatically" | Semantic versioning decisions require human judgment; can break compatibility unexpectedly | Provide `--version` flag for explicit control |
+| Code generation wizards | "Generate my module logic" | Creates unmaintainable boilerplate; locks developers into patterns they don't understand | Provide clean interfaces and examples; let developers write their own logic |
+| Complex project templates | "Full-featured starter with everything" | Overwhelming for beginners; too opinionated; hides how things actually work | Minimal template that works, plus examples for advanced patterns |
+| Runtime dependency bundling | "Include OpenAnima in my package" | Bloated packages, version conflicts, defeats modular architecture | Reference SDK interfaces only; runtime is separate concern |
 
 ## Feature Dependencies
 
 ```
-Port Type System → Connection Validation
-Connection Validation → Visual Wiring
-Visual Wiring → Save/Load Configuration
-Save/Load Configuration → Runtime Execution
+[oani new command]
+    └──requires──> [dotnet template pack]
+                       └──requires──> [template.json configuration]
 
-Module Lifecycle → Node Display Updates
-Runtime Execution → Error Display
+[oani pack command]
+    └──requires──> [.oamod format definition]
+                       └──requires──> [manifest schema (JSON)]
+    └──requires──> [CLI tool infrastructure]
+                       └──requires──> [System.CommandLine]
 
-Drag-Drop Placement → Canvas Coordinate System
-Canvas Coordinate System → Pan/Zoom
-Pan/Zoom → Minimap (optional)
+[API documentation]
+    └──requires──> [XML documentation in SDK code]
+    └──requires──> [DocFX or similar tool]
 
-Node Selection → Delete Nodes
-Node Selection → Multi-Select → Bulk Operations
+[Quick-start guide] ──enhances──> [oani new command]
+[Example modules] ──enhances──> [Quick-start guide]
+
+[Checksum verification] ──conflicts──> [Simple manual package creation]
+    (Adding checksums means manual zip creation no longer works)
 ```
 
-## MVP Recommendation
+### Dependency Notes
 
-Prioritize (in order):
+- **`oani pack` requires manifest schema:** Cannot create packages without defining what metadata they contain
+- **`oani new` requires template pack:** The .NET SDK template system (`dotnet new install`) needs templates packaged as NuGet
+- **Example modules enhance Quick-start guide:** Examples make the guide more concrete and copy-pasteable
+- **Checksum verification conflicts with simple manual creation:** If we add integrity verification, developers cannot just zip files manually
 
-1. **Port type system with validation** (Text, Trigger, same-type only) — Foundation for everything
-2. **Canvas with pan/zoom** — Basic navigation
-3. **Drag-drop module placement** — Core interaction
-4. **Click-drag wiring with visual preview** — Primary feature
-5. **Save/load wiring configuration** — Persistence
-6. **Runtime execution along wiring topology** — Makes it actually work
-7. **Delete nodes and connections** — Basic editing
-8. **Module lifecycle integration** — Shows current runtime state
+## MVP Definition
 
-Defer to post-MVP:
+### Launch With (v1.4)
 
-- **Minimap** — Nice-to-have, not critical for small graphs
-- **Undo/redo** — Valuable but can work around with save/load initially
-- **Multi-select** — Can delete one-by-one initially
-- **Node search** — Only needed when module count is high
-- **Live execution visualization** — Debugging aid, not core functionality
-- **Subgraphs** — Complex feature, defer until wiring is proven
+Minimum viable product -- what's needed to validate the concept.
 
-## Complexity Notes
+- [ ] **`oani new` command** -- Creates working module project with one command; table stakes feature
+- [ ] **`oani pack` command** -- Bundles module into `.oamod` format; essential for distribution
+- [ ] **Manifest schema** -- JSON file defining module metadata (id, version, author, dependencies, ports); required for all other features
+- [ ] **Quick-start guide** -- Single page tutorial showing create-build-pack workflow; essential for onboarding
+- [ ] **API reference** -- Generated documentation for IModule, IPort, ITickable interfaces; developers need to know what to implement
 
-**Low complexity** (< 1 day):
-- Port type color-coding
-- Grid snapping
-- Port labels
-- Delete operations
-- Auto-save
+### Add After Validation (v1.x)
 
-**Medium complexity** (1-3 days):
-- Canvas coordinate system with pan/zoom
-- Drag-drop with hit detection
-- Bezier curve rendering
-- Connection preview with validation
-- Save/load JSON serialization
-- Multi-select
+Features to add once core is working.
 
-**High complexity** (> 3 days):
-- Wiring engine execution topology
-- Subgraphs with nested contexts
-- Breakpoints with runtime integration
-- Connection reroute points
+- [ ] **Example modules** -- Trigger when developers ask "how do I..." questions
+- [ ] **`oani validate` command** -- Trigger when users report packaging errors that could have been caught earlier
+- [ ] **Template customization** -- Trigger when developers want different module types
+- [ ] **Checksum verification** -- Trigger when users share packages and report integrity issues
 
-## Dependencies on Existing System
+### Future Consideration (v2+)
+
+Features to defer until product-market fit is established.
+
+- [ ] **Module marketplace** -- Requires significant infrastructure; defer until community exists
+- [ ] **Automatic versioning** -- Semantic versioning is complex; let developers manage versions manually first
+- [ ] **Signature support** -- Requires PKI infrastructure; overkill for local-first platform
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| `oani new` command | HIGH | MEDIUM | P1 |
+| `oani pack` command | HIGH | MEDIUM | P1 |
+| Manifest schema | HIGH | LOW | P1 |
+| Quick-start guide | HIGH | LOW | P1 |
+| API reference | MEDIUM | MEDIUM | P1 |
+| Example modules | MEDIUM | LOW | P2 |
+| `oani validate` command | MEDIUM | LOW | P2 |
+| Template customization | MEDIUM | MEDIUM | P2 |
+| Checksum verification | LOW | MEDIUM | P3 |
+| Interactive CLI | LOW | LOW | P3 |
+
+**Priority key:**
+- P1: Must have for launch
+- P2: Should have, add when possible
+- P3: Nice to have, future consideration
+
+## Competitor Feature Analysis
+
+| Feature | VS Code Extensions | .NET Templates | NuGet Packages | Our Approach |
+|---------|-------------------|----------------|----------------|--------------|
+| Scaffolding | `yo code` (Yeoman) | `dotnet new` | N/A | `oani new` as dotnet template |
+| Packaging | VSIX via `vsce pack` | `.nupkg` via `dotnet pack` | `.nupkg` | `.oamod` custom format (ZIP-based) |
+| Manifest | `package.json` | `template.json` | `.nuspec` | `module.json` in module root |
+| Distribution | Marketplace | NuGet.org | NuGet.org | Local file system (marketplace future) |
+| Validation | vsce validates before publish | Template engine validates on install | `nuget pack` validates | `oani pack` validates structure |
+| Documentation | code.visualstudio.com/api | learn.microsoft.com | docs.microsoft.com | In-repo docs + generated API ref |
+
+## Recommended .oamod Package Structure
+
+Based on research of VSIX, NuGet, and other plugin formats:
+
+```
+my-module.oamod (ZIP archive)
+├── module.json          # Manifest (required)
+├── my-module.dll        # Compiled module assembly (required)
+├── dependencies/        # Optional dependent assemblies
+├── assets/              # Optional static assets (images, configs)
+└── README.md            # Optional documentation
+```
+
+### module.json Schema (Recommended)
+
+```json
+{
+  "$schema": "https://openanima.dev/schemas/module.json",
+  "id": "my-module",
+  "version": "1.0.0",
+  "name": "My Module",
+  "description": "A sample module",
+  "author": "Developer Name",
+  "license": "MIT",
+  "openanima": {
+    "minVersion": "1.4.0",
+    "maxVersion": "2.0.0"
+  },
+  "ports": {
+    "inputs": [
+      { "name": "Input", "type": "Text" }
+    ],
+    "outputs": [
+      { "name": "Output", "type": "Text" }
+    ]
+  },
+  "dependencies": [],
+  "checksum": "sha256:abc123..."
+}
+```
+
+## CLI Command Design
+
+### `oani new` Command
+
+```
+oani new <NAME> [options]
+
+Arguments:
+  <NAME>  The name of the module to create
+
+Options:
+  -o, --output <PATH>    Output directory (default: current directory)
+  -t, --template <NAME>  Template to use (default: default)
+  --dry-run              Preview files without creating
+  -v, --verbosity        Output verbosity (quiet, minimal, normal, detailed)
+
+Examples:
+  oani new MyModule
+  oani new MyModule -o ./modules
+  oani new MyModule --dry-run
+```
+
+### `oani pack` Command
+
+```
+oani pack <PATH> [options]
+
+Arguments:
+  <PATH>  Path to module project directory
+
+Options:
+  -o, --output <PATH>    Output directory for .oamod file
+  -c, --configuration    Build configuration (default: Release)
+  --no-build             Skip building before packing
+  --validate             Run validation checks before packing
+  -v, --verbosity        Output verbosity
+
+Examples:
+  oani pack ./MyModule
+  oani pack ./MyModule -o ./dist
+  oani pack ./MyModule --validate
+```
+
+## Implementation Approach
+
+### Phase 1: Template Pack (P1)
+
+Create a .NET template pack project:
+
+1. Create `OpenAnima.Templates.csproj` with `<PackageType>Template</PackageType>`
+2. Add `templates/module/.template.config/template.json` with module template configuration
+3. Include working module example as template content
+4. Package and distribute via NuGet or direct install
+
+### Phase 2: CLI Tool (P1)
+
+Create `OpenAnima.CLI` as a .NET global/local tool:
+
+1. Use `System.CommandLine` for argument parsing
+2. Implement `new` subcommand that invokes template engine
+3. Implement `pack` subcommand that:
+   - Builds the project (optional)
+   - Validates manifest
+   - Creates .oamod ZIP archive
+   - Computes and embeds checksum
+
+### Phase 3: Documentation (P1)
+
+1. Add XML documentation to all public SDK interfaces
+2. Configure DocFX for API reference generation
+3. Write quick-start guide (single Markdown file)
+4. Create 2-3 example modules in `/examples` directory
+
+## Dependencies on Existing OpenAnima System
 
 | New Feature | Depends On Existing | Integration Point |
 |-------------|---------------------|-------------------|
-| Visual node display | Module registry (MOD-05) | Query loaded modules for palette |
-| Module lifecycle in editor | SignalR real-time push (INFRA-02) | Subscribe to module load/unload events |
-| Runtime execution | Event bus (MOD-04) | Wiring engine publishes to connected ports |
-| Port type system | Module contracts (MOD-02) | Extend IModule with port declarations |
-| Save/load config | appsettings.json pattern | Store wiring graph in config file |
-| Error display | Existing error handling | Surface module errors in UI |
-
-## Real-World Reference Points
-
-**Unreal Engine Blueprint:**
-- Port types: Execution (white), Boolean (red), Integer (cyan), Float (green), String (magenta), Object (blue)
-- Right-click for node palette with search
-- Execution flow (white wires) separate from data flow (colored wires)
-- Optional pins can be shown/hidden
-- Comment boxes for documentation
-
-**Unity Visual Scripting:**
-- Control flow (white) vs data flow (colored)
-- Type-safe connections with automatic conversion nodes
-- Inline value editing for unconnected inputs
-- Subgraphs (nested state machines)
-
-**Node-RED (IoT workflow):**
-- Minimal UI: nodes, wires, deploy button
-- JSON-based flow format
-- Live execution with message passing
-- Debug nodes show data flow
-
-**n8n (workflow automation):**
-- Linear workflow emphasis (less branching than Blueprint)
-- Execution history on each node
-- Test execution before saving
-- Credential management separate from wiring
-
-**Blender Shader Nodes:**
-- Heavy use of color-coding by data type
-- Preview rendering while editing
-- Node groups for reusability
-- Frame nodes for visual organization
+| Module template | IModule, IPort interfaces | Template generates class implementing IModule |
+| `oani pack` | PluginLoader (MOD-01) | Must produce DLL loadable by existing system |
+| Manifest schema | Module contracts (MOD-02) | Ports section mirrors existing port type system |
+| Package validation | Port type system (PORT-01~04) | Validate declared ports match actual implementations |
+| CLI tool | .NET 8 runtime | Built as .NET Tool, requires .NET SDK |
 
 ## Sources
 
-- [2026: The Year of the Node-Based Editor](https://medium.com/@fadimantium/2026-the-year-of-the-node-based-editor-941f0f15d467) (LOW confidence — WebSearch only, fetch blocked)
-- [Designing your own node-based visual programming language](https://dev.to/cosmomyzrailgorynych/designing-your-own-node-based-visual-programming-language-2mpg) (LOW confidence — WebSearch only, fetch blocked)
-- [xyflow/awesome-node-based-uis](https://github.com/xyflow/awesome-node-based-uis) (LOW confidence — WebSearch only, fetch blocked)
-- Training data on Unreal Blueprint, Unity Visual Scripting, Node-RED, n8n, Blender nodes (MEDIUM confidence — widely documented patterns)
+- [Create a project template for dotnet new - Microsoft Learn](https://learn.microsoft.com/en-us/dotnet/core/tutorials/cli-templates-create-project-template) (HIGH confidence - official docs)
+- [Custom templates for dotnet new - Microsoft Learn](https://learn.microsoft.com/en-us/dotnet/core/tools/custom-templates) (HIGH confidence - official docs)
+- [.NET tools (global/local) - Microsoft Learn](https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools) (HIGH confidence - official docs)
+- [System.CommandLine syntax overview - Microsoft Learn](https://learn.microsoft.com/en-us/dotnet/standard/commandline/syntax) (HIGH confidence - official docs)
+- [VS Code Extension Manifest (package.json)](https://code.visualstudio.com/api/references/extension-manifest) (HIGH confidence - official docs)
+- [VS Code Extension Publishing](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) (HIGH confidence - official docs)
+- [NuGet .nuspec reference - Microsoft Learn](https://learn.microsoft.com/en-us/nuget/reference/nuspec) (HIGH confidence - official docs)
 
 ---
-*Feature research for: OpenAnima v1.3 True Modularization & Visual Wiring*
-*Researched: 2026-02-25*
+*Feature research for: OpenAnima v1.4 Module SDK & DevEx*
+*Researched: 2026-02-28*

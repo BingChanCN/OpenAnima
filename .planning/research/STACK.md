@@ -1,23 +1,25 @@
 # Technology Stack
 
-**Project:** OpenAnima v1.3 True Modularization & Visual Wiring
-**Researched:** 2026-02-25
+**Project:** OpenAnima v1.4 Module SDK & DevEx
+**Researched:** 2026-02-28
+**Confidence:** HIGH
 
 ## Executive Summary
 
-For v1.3's port type system, wiring engine, and visual drag-and-drop editor, **NO new NuGet packages are required**. The existing .NET 8.0 stack already provides everything needed:
+For v1.4's Module SDK and CLI tool development, **one new NuGet package is required**: System.CommandLine 2.0.3 for CLI argument parsing. All other functionality uses built-in .NET 8.0 capabilities:
 
-- **Port type system:** C# enums and records (built-in)
-- **Wiring engine:** Custom topological sort implementation (~100 LOC)
-- **Visual editor:** HTML5 Drag & Drop API + SVG rendering via Blazor
+- **dotnet new templates:** Native SDK template engine (no packages needed)
+- **CLI tool (oani):** System.CommandLine 2.0.3 + .NET Tool packaging
+- **.oamod package format:** System.IO.Compression (built-in) + System.Security.Cryptography (built-in)
+- **Documentation:** DocFX 2.77.0 (optional global tool)
 
-This approach maintains the project's "lightweight, no dependencies" philosophy established in v1.0-v1.2.
+This approach maintains the project's "minimal dependencies" philosophy while adding a single well-supported library for CLI development.
 
 ## Context
 
-OpenAnima v1.2 shipped with 6,352 LOC using .NET 8.0, Blazor Server, custom EventBus, OpenAI SDK, and pure CSS. v1.3 adds port-based wiring without changing the core stack.
+OpenAnima v1.3 shipped with ~11,000 LOC using .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, and Markdown.ColorCode. v1.4 adds module developer tooling without changing the core runtime stack.
 
-**Existing validated stack (NO CHANGES):**
+**Existing validated stack (UNCHANGED):**
 - .NET 8.0 runtime
 - Blazor Server with SignalR 8.0.x
 - Custom EventBus (lock-free, ConcurrentDictionary-based)
@@ -33,426 +35,545 @@ OpenAnima v1.2 shipped with 6,352 LOC using .NET 8.0, Blazor Server, custom Even
 ### Core Framework
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| **NONE** | — | — | Existing .NET 8.0 provides all needed capabilities |
+| System.CommandLine | 2.0.3 | CLI argument parsing | Official Microsoft library; stable release (Feb 2026); built-in help, tab completion, POSIX/Windows conventions; trim-friendly for AOT |
 
-### Port Type System
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| C# enums | .NET 8.0 (built-in) | Define port types (Text, Trigger) | Type-safe, compile-time validation, zero overhead. Enum-based types are simple, extensible, and serialize cleanly to JSON. |
-| C# records | .NET 8.0 (built-in) | Port metadata, wire connections | Immutable by default, structural equality, concise syntax. Perfect for configuration data that shouldn't mutate. |
-| System.Text.Json | .NET 8.0 (built-in) | Serialize wiring config | Already used in project, no new dependency. Fast, modern, supports source generators for AOT. |
-
-### Wiring Engine
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Custom topological sort | — | DAG execution order | Simple algorithm (~100 LOC), no external dependency. Kahn's algorithm or DFS-based cycle detection is straightforward. QuikGraph (2.5.0) exists but adds 500KB+ for a feature we can implement in 100 lines. |
-| Existing EventBus | v1.2 (custom) | Data routing between modules | Already handles pub/sub with type safety. Wiring engine maps connections to EventBus subscriptions. No changes needed to EventBus itself. |
-| Task.WhenAll | .NET 8.0 (built-in) | Parallel module execution | Execute independent modules concurrently within each topological layer. Built-in, efficient, cancellation-aware. |
-
-### Visual Drag-and-Drop Editor
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| HTML5 Drag & Drop API | Native browser | Module node dragging | Built into all modern browsers. Blazor exposes via `@ondragstart`/`@ondrop` attributes. Zero JavaScript, zero dependencies. Works perfectly with Blazor Server's rendering model. |
-| SVG (inline) | Native browser | Connection line rendering | Declarative, scales infinitely, easy to update from C# state. Blazor renders `<svg><path>` elements directly. No Canvas interop complexity. Bezier curves for professional node editor look. |
-| Blazor JSInterop | .NET 8.0 (built-in) | Mouse position during wire drag | Minimal JS (~50 LOC) only for cursor coordinates in SVG space. Everything else (validation, state, persistence) stays in C#. |
-
-## Supporting Libraries
-
+### Supporting Libraries
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| System.Text.Json | .NET 8.0 (built-in) | Wiring config persistence | Serialize/deserialize module positions and wire connections to JSON file or appsettings.json section. |
-| System.Linq | .NET 8.0 (built-in) | Topological sort, graph queries | LINQ provides clean syntax for graph traversal, cycle detection, dependency ordering. |
-| System.Collections.Concurrent | .NET 8.0 (built-in) | Thread-safe port registry | ConcurrentDictionary for port lookup during wiring validation. Matches existing EventBus pattern. |
+| System.Text.Json | .NET 8.0 (built-in) | Manifest and config parsing | Already used in PluginManifest.cs; .oamod manifest uses same patterns |
+| System.IO.Compression | .NET 8.0 (built-in) | .oamod package creation | ZipArchive class for creating/extracting .oamod files |
+| System.Security.Cryptography | .NET 8.0 (built-in) | Package integrity | SHA256 for checksums in .oamod manifest |
 
-## Alternatives Considered
-
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Graph algorithms | Custom topological sort (~100 LOC) | QuikGraph 2.5.0 NuGet package | QuikGraph is 500KB+ for a feature we can implement in 100 lines. Adds dependency for minimal benefit. Topological sort is a well-known algorithm (Kahn's or DFS-based). |
-| Visual editor | Custom HTML5 + SVG | Syncfusion Blazor Diagram | Commercial license ($995+/year). Overkill for simple port-based wiring. Adds 2MB+ dependencies. Conflicts with "pure CSS, no component library" philosophy. |
-| Visual editor | Custom HTML5 + SVG | Blazor.Diagram (open-source) | Adds learning curve and dependency. May not support custom port type validation. Last activity unclear. Custom implementation gives full control over port system integration. |
-| Connection rendering | SVG paths | HTML5 Canvas via JSInterop | Canvas requires heavy JavaScript for rendering, state sync complexity, accessibility issues. SVG is declarative, Blazor-native, inspectable in DevTools. Canvas only needed for >1000 connections (v1.3 targets <20 modules). |
-| Drag-and-drop | Native HTML5 API | Blazor.DragDrop library | Native API is sufficient for node dragging. Library adds dependency for zero benefit. HTML5 drag-and-drop works perfectly with Blazor Server. |
-| Type system | C# enums | Discriminated unions (OneOf NuGet) | C# doesn't have native discriminated unions until C# 15. OneOf library adds complexity for v1.3's simple two-type system (Text, Trigger). Enums are sufficient and extensible. |
-| Event routing | Existing EventBus | MediatR NuGet package | Project already has custom EventBus that works well. MediatR adds dependency and requires refactoring existing code. No benefit for v1.3 scope. |
+### Development Tools
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| dotnet pack | NuGet/template package creation | Template packs use PackageType=Template |
+| dotnet new install | Template installation | Install from local nupkg or directory |
+| DocFX 2.77.0 | Documentation generation | Static site from code comments + markdown |
 
 ## Installation
 
 ```bash
-# NO new packages required
-# Existing OpenAnima.Core.csproj already has everything:
-# - .NET 8.0 SDK (includes System.Text.Json, System.Linq, etc.)
-# - Blazor Server (includes SignalR, JSInterop)
-# - OpenAI SDK 2.8.0 (unchanged)
-# - SharpToken 2.0.4 (unchanged)
-# - Markdig 0.41.3 (unchanged)
+# CLI tool dependency (add to OpenAnima.Cli.csproj)
+dotnet add package System.CommandLine --version 2.0.3
+
+# Documentation tool (global install, optional)
+dotnet tool install -g docfx
+
+# Template development (no package needed - built into SDK)
+# Create .template.config/template.json in template directory
 ```
 
-## Implementation Patterns
+## Template Stack Details
 
-### 1. Port Type System
+### Template Project Structure
 
-```csharp
-// Fixed set of port types (extensible in future milestones)
-public enum PortType
-{
-    Text,    // String data (chat messages, LLM responses)
-    Trigger  // Event signals (heartbeat ticks, user actions)
-}
-
-public enum PortDirection { Input, Output }
-
-// Port metadata declared by modules
-public record PortMetadata(
-    string Name,
-    PortType Type,
-    PortDirection Direction,
-    string? Description = null
-);
-
-// Runtime connection
-public record Wire(
-    string SourceModuleId,
-    string SourcePortId,
-    string TargetModuleId,
-    string TargetPortId,
-    PortType Type
-);
-
-// Module interface extension
-public interface IPortProvider
-{
-    PortMetadata[] GetPorts();
-}
+```
+OpenAnima.Templates/
+├── templates/
+│   └── module/
+│       ├── .template.config/
+│       │   └── template.json      # Template manifest
+│       ├── ModuleName.csproj      # Project template
+│       ├── MyModule.cs            # IModule implementation stub
+│       └── module.json            # Plugin manifest template
+├── OpenAnima.Templates.csproj     # Pack as Template package type
+└── README.md
 ```
 
-**Why this design:**
-- Enums for type safety and compile-time validation
-- Records for immutability and structural equality
-- Simple two-type system (Text, Trigger) covers v1.3 needs
-- Extensible: add new PortType values without breaking existing wiring configs
-- Serializes cleanly to JSON for persistence
+### Template csproj Configuration
 
-### 2. Wiring Engine (Topological Sort)
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Template package settings -->
+    <PackageType>Template</PackageType>
+    <PackageVersion>1.0.0</PackageVersion>
+    <PackageId>OpenAnima.Templates</PackageId>
+    <Title>OpenAnima Module Templates</Title>
+    <Description>Templates for creating OpenAnima modules</Description>
+    <PackageTags>dotnet-new;templates;openanima;module</PackageTags>
 
-```csharp
-public class WiringEngine
-{
-    // Kahn's algorithm for topological sort
-    public List<string> GetExecutionOrder(List<Wire> wires, List<string> moduleIds)
-    {
-        var inDegree = moduleIds.ToDictionary(id => id, _ => 0);
-        var adjacency = moduleIds.ToDictionary(id => id, _ => new List<string>());
+    <!-- Template projects target netstandard2.0 for SDK compatibility -->
+    <TargetFramework>netstandard2.0</TargetFramework>
 
-        // Build graph
-        foreach (var wire in wires)
-        {
-            adjacency[wire.SourceModuleId].Add(wire.TargetModuleId);
-            inDegree[wire.TargetModuleId]++;
-        }
+    <!-- Include content in package, exclude build output -->
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <ContentTargetFolders>content</ContentTargetFolders>
+  </PropertyGroup>
 
-        // Find modules with no dependencies
-        var queue = new Queue<string>(inDegree.Where(kvp => kvp.Value == 0).Select(kvp => kvp.Key));
-        var order = new List<string>();
-
-        while (queue.Count > 0)
-        {
-            var current = queue.Dequeue();
-            order.Add(current);
-
-            foreach (var neighbor in adjacency[current])
-            {
-                inDegree[neighbor]--;
-                if (inDegree[neighbor] == 0)
-                {
-                    queue.Enqueue(neighbor);
-                }
-            }
-        }
-
-        // Cycle detection
-        if (order.Count != moduleIds.Count)
-        {
-            throw new InvalidOperationException("Circular dependency detected in wiring");
-        }
-
-        return order;
-    }
-}
+  <ItemGroup>
+    <!-- Include all template files, exclude build artifacts -->
+    <Content Include="templates\**\*" Exclude="templates\**\bin\**;templates\**\obj\**" />
+    <Compile Remove="**\*" />
+  </ItemGroup>
+</Project>
 ```
 
-**Why custom implementation:**
-- Kahn's algorithm is ~30 lines, well-understood, easy to debug
-- Cycle detection built-in (if order.Count != moduleIds.Count)
-- No external dependency
-- Integrates directly with existing EventBus
-
-### 3. Visual Editor (HTML5 + SVG)
-
-```razor
-@* Module node component *@
-<div class="module-node"
-     draggable="true"
-     @ondragstart="OnDragStart"
-     @ondragover:preventDefault
-     @ondrop="OnDrop"
-     style="left: @X px; top: @Y px;">
-
-    <div class="module-header">@ModuleName</div>
-
-    <div class="input-ports">
-        @foreach (var port in InputPorts)
-        {
-            <div class="port input-port"
-                 @onmousedown="() => StartWire(port)">
-                @port.Name
-            </div>
-        }
-    </div>
-
-    <div class="output-ports">
-        @foreach (var port in OutputPorts)
-        {
-            <div class="port output-port"
-                 @onmousedown="() => StartWire(port)">
-                @port.Name
-            </div>
-        }
-    </div>
-</div>
-
-@* SVG connection layer *@
-<svg class="wiring-canvas" @ref="svgElement">
-    @foreach (var wire in Wires)
-    {
-        <path d="@GetWirePath(wire)"
-              stroke="@GetWireColor(wire.Type)"
-              stroke-width="2"
-              fill="none" />
-    }
-
-    @if (isDraggingWire)
-    {
-        <path d="@GetDragWirePath()"
-              stroke="@GetWireColor(dragSourcePort.Type)"
-              stroke-width="2"
-              stroke-dasharray="5,5"
-              fill="none" />
-    }
-</svg>
-
-@code {
-    private string GetWirePath(Wire wire)
-    {
-        var sourcePos = GetPortPosition(wire.SourceModuleId, wire.SourcePortId);
-        var targetPos = GetPortPosition(wire.TargetModuleId, wire.TargetPortId);
-
-        // Bezier curve for smooth connections
-        var controlOffset = Math.Abs(targetPos.X - sourcePos.X) * 0.5;
-
-        return $"M {sourcePos.X},{sourcePos.Y} " +
-               $"C {sourcePos.X + controlOffset},{sourcePos.Y} " +
-               $"{targetPos.X - controlOffset},{targetPos.Y} " +
-               $"{targetPos.X},{targetPos.Y}";
-    }
-
-    private string GetWireColor(PortType type) => type switch
-    {
-        PortType.Text => "#4CAF50",    // Green for text data
-        PortType.Trigger => "#FF9800", // Orange for triggers
-        _ => "#666666"
-    };
-}
-```
-
-**Why HTML5 + SVG:**
-- Native browser APIs, zero dependencies
-- Blazor handles all state management in C#
-- SVG paths render smoothly at any zoom level
-- Declarative: Blazor re-renders SVG when state changes
-- Minimal JavaScript (only for mouse coordinates)
-
-### 4. Minimal JavaScript Interop
-
-**File:** `wwwroot/js/wiring-editor.js` (~50 lines)
-
-```javascript
-window.wiringEditor = {
-    // Convert screen coordinates to SVG coordinates
-    getMousePosition: function(event, svgElement) {
-        const CTM = svgElement.getScreenCTM();
-        return {
-            x: (event.clientX - CTM.e) / CTM.a,
-            y: (event.clientY - CTM.f) / CTM.d
-        };
-    },
-
-    // Get element center position
-    getElementPosition: function(element) {
-        const rect = element.getBoundingClientRect();
-        return {
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height / 2
-        };
-    }
-};
-```
-
-**Why minimal JS:**
-- Only needed for coordinate conversion during wire dragging
-- Everything else (validation, state, persistence) stays in C#
-- Maintains Blazor-first architecture
-- Easy to test and debug
-
-## Integration Points
-
-| Component | Integration Method | Notes |
-|-----------|-------------------|-------|
-| Module interface | Add `IPortProvider` to OpenAnima.Contracts | Modules implement `GetPorts()` to declare ports |
-| EventBus | Wiring engine maps connections to subscriptions | Wire from ModuleA.OutputPort to ModuleB.InputPort → EventBus.Subscribe<TPayload> |
-| Configuration | Add `WiringConfig` section to appsettings.json | Stores module positions and wire connections |
-| Dashboard UI | Add `WiringEditor.razor` to Pages/ | Reuses existing SignalR infrastructure |
-| Module loading | Extract port metadata after module load | Call `IPortProvider.GetPorts()` via reflection or direct interface |
-
-### Configuration Structure
+### template.json Configuration
 
 ```json
 {
-  "WiringConfig": {
-    "modules": [
-      {
-        "id": "heartbeat-1",
-        "type": "HeartbeatModule",
-        "position": { "x": 100, "y": 100 }
-      },
-      {
-        "id": "llm-1",
-        "type": "LLMModule",
-        "position": { "x": 400, "y": 100 }
-      }
-    ],
-    "wires": [
-      {
-        "source": { "moduleId": "heartbeat-1", "portId": "tick" },
-        "target": { "moduleId": "llm-1", "portId": "trigger" },
-        "type": "Trigger"
-      }
-    ]
+  "$schema": "http://json.schemastore.org/template",
+  "author": "OpenAnima",
+  "classifications": ["OpenAnima", "Module", "Plugin"],
+  "identity": "OpenAnima.Module.CSharp",
+  "name": "OpenAnima Module",
+  "shortName": "oani-module",
+  "description": "Creates a new OpenAnima module with IModule implementation",
+  "sourceName": "ModuleName",
+  "preferNameDirectory": true,
+  "symbols": {
+    "name": {
+      "type": "parameter",
+      "dataType": "text",
+      "description": "The name of the module",
+      "replaces": "ModuleName",
+      "fileRename": "ModuleName"
+    },
+    "description": {
+      "type": "parameter",
+      "dataType": "text",
+      "description": "Module description",
+      "defaultValue": "An OpenAnima module"
+    }
+  },
+  "postActions": [
+    {
+      "description": "Restore NuGet packages",
+      "manualInstructions": [{ "text": "Run 'dotnet restore'" }],
+      "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
+      "continueOnError": true
+    }
+  ]
+}
+```
+
+### Template Installation
+
+```bash
+# Install from local nupkg
+dotnet new install ./bin/Release/OpenAnima.Templates.1.0.0.nupkg
+
+# Install from directory (development)
+dotnet new install ./templates
+
+# Use the template
+dotnet new oani-module --name MyAwesomeModule
+
+# Uninstall
+dotnet new uninstall OpenAnima.Templates
+```
+
+## CLI Tool Stack Details
+
+### CLI Project Configuration
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- .NET Tool settings -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>oani</ToolCommandName>
+    <PackageId>OpenAnima.Cli</PackageId>
+    <PackageVersion>1.0.0</PackageVersion>
+    <Description>OpenAnima module development CLI</Description>
+    <PackageOutputPath>./nupkg</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.3" />
+  </ItemGroup>
+</Project>
+```
+
+### CLI Command Structure
+
+```csharp
+using System.CommandLine;
+
+namespace OpenAnima.Cli;
+
+class Program
+{
+    static async Task<int> Main(string[] args)
+    {
+        // Root command
+        var rootCommand = new RootCommand("OpenAnima module development CLI");
+
+        // oani new <name>
+        var newCommand = new Command("new", "Create a new module from template");
+        var nameArgument = new Argument<string>("name", "The module name");
+        var outputOption = new Option<DirectoryInfo?>(["--output", "-o"], "Output directory");
+        newCommand.Arguments.Add(nameArgument);
+        newCommand.Options.Add(outputOption);
+        newCommand.SetAction(async ctx =>
+        {
+            var name = ctx.GetValue(nameArgument);
+            var output = ctx.GetValue(outputOption);
+            return await CreateNewModule(name, output);
+        });
+
+        // oani pack <path>
+        var packCommand = new Command("pack", "Package a module as .oamod");
+        var pathArgument = new Argument<DirectoryInfo>("path", "Path to module directory");
+        var outputOption2 = new Option<DirectoryInfo?>(["--output", "-o"], "Output directory for .oamod file");
+        packCommand.Arguments.Add(pathArgument);
+        packCommand.Options.Add(outputOption2);
+        packCommand.SetAction(async ctx =>
+        {
+            var path = ctx.GetValue(pathArgument);
+            var output = ctx.GetValue(outputOption2);
+            return await PackModule(path, output);
+        });
+
+        rootCommand.Subcommands.Add(newCommand);
+        rootCommand.Subcommands.Add(packCommand);
+
+        return await rootCommand.Parse(args).InvokeAsync();
+    }
+}
+```
+
+### CLI Installation
+
+```bash
+# Pack as tool
+dotnet pack
+
+# Install globally
+dotnet tool install --global --add-source ./nupkg OpenAnima.Cli
+
+# Install locally (recommended for project-specific tools)
+dotnet new tool-manifest  # Creates .config/dotnet-tools.json
+dotnet tool install --add-source ./nupkg OpenAnima.Cli
+
+# Use
+oani new MyModule
+oani pack ./modules/MyModule
+
+# Restore tools after clone
+dotnet tool restore
+```
+
+## .oamod Package Format
+
+### Package Structure
+
+```
+my-module.oamod (ZIP archive)
+├── manifest.json           # Package manifest
+├── checksums.sha256        # SHA256 hashes for all files
+├── module.json             # Existing plugin manifest format
+├── MyModule.dll            # Compiled assembly
+├── OpenAnima.Contracts.dll # Contracts reference (copied from SDK)
+└── dependencies/           # Additional NuGet dependencies (optional)
+```
+
+### Package Manifest Schema (manifest.json)
+
+```json
+{
+  "$schema": "https://openanima.dev/schemas/oamod-manifest-v1.json",
+  "formatVersion": "1.0",
+  "package": {
+    "id": "MyModule",
+    "version": "1.0.0",
+    "description": "A sample OpenAnima module",
+    "author": "Developer Name",
+    "createdAt": "2026-02-28T12:00:00Z"
+  },
+  "module": {
+    "entryAssembly": "MyModule.dll",
+    "targetFramework": "net8.0",
+    "openAnimaVersion": "1.4.0"
+  },
+  "integrity": {
+    "algorithm": "SHA256",
+    "checksumsFile": "checksums.sha256"
   }
 }
 ```
 
-## What NOT to Add
+### Checksums File (checksums.sha256)
 
-| Avoid | Why | Impact |
-|-------|-----|--------|
-| QuikGraph NuGet | 500KB+ for 100 LOC of topological sort | Unnecessary dependency, increases attack surface, complicates deployment |
-| Syncfusion/DevExpress | Commercial license ($995-$1,499/year) | Cost, overkill for simple wiring, conflicts with pure CSS philosophy |
-| MediatR | Project has custom EventBus that works | Refactoring cost, no benefit, adds dependency |
-| Canvas-based rendering | Heavy JSInterop, state sync complexity | SVG is simpler, more maintainable, better for <100 connections |
-| OneOf discriminated unions | Adds complexity for two-type system | C# enums are sufficient, extensible, and serialize cleanly |
-| Blazor.Diagram framework | Learning curve, may not fit port system | Custom implementation gives full control |
-| Third-party drag-and-drop | Native HTML5 API is sufficient | Zero benefit, adds dependency |
+```
+a1b2c3d4e5f6...  MyModule.dll
+f6e5d4c3b2a1...  OpenAnima.Contracts.dll
+1234567890ab...  module.json
+```
+
+### Pack Implementation
+
+```csharp
+public async Task<int> PackModule(DirectoryInfo modulePath, DirectoryInfo? outputPath)
+{
+    // 1. Validate module directory
+    var moduleJsonPath = Path.Combine(modulePath.FullName, "module.json");
+    if (!File.Exists(moduleJsonPath))
+    {
+        Console.Error.WriteLine("Error: module.json not found");
+        return 1;
+    }
+
+    // 2. Parse existing module manifest
+    var moduleManifest = JsonSerializer.Deserialize<PluginManifest>(
+        await File.ReadAllTextAsync(moduleJsonPath));
+
+    // 3. Find DLL
+    var dllPath = Path.Combine(modulePath.FullName, moduleManifest!.EntryAssembly);
+    if (!File.Exists(dllPath))
+    {
+        Console.Error.WriteLine($"Error: {moduleManifest.EntryAssembly} not found");
+        return 1;
+    }
+
+    // 4. Create .oamod package
+    var outputDir = outputPath?.FullName ?? modulePath.Parent?.FullName ?? ".";
+    var oamodPath = Path.Combine(outputDir, $"{moduleManifest.Name}-{moduleManifest.Version}.oamod");
+
+    using var archive = ZipFile.Open(oamodPath, ZipArchiveMode.Create);
+
+    // Add files
+    var filesToPack = new[] { dllPath, moduleJsonPath };
+    var checksums = new List<(string file, string hash)>();
+
+    foreach (var file in filesToPack)
+    {
+        var entry = archive.CreateEntry(Path.GetFileName(file));
+        using var entryStream = entry.Open();
+        using var fileStream = File.OpenRead(file);
+        await fileStream.CopyToAsync(entryStream);
+
+        // Calculate checksum
+        fileStream.Position = 0;
+        using var sha256 = SHA256.Create();
+        var hash = Convert.ToHexString(await sha256.ComputeHashAsync(fileStream));
+        checksums.Add((Path.GetFileName(file), hash));
+    }
+
+    // 5. Create checksums file
+    var checksumsEntry = archive.CreateEntry("checksums.sha256");
+    using (var checksumsStream = new StreamWriter(checksumsEntry.Open()))
+    {
+        foreach (var (file, hash) in checksums)
+        {
+            await checksumsStream.WriteLineAsync($"{hash}  {file}");
+        }
+    }
+
+    // 6. Create manifest
+    var manifest = new OamodManifest
+    {
+        FormatVersion = "1.0",
+        Package = new PackageInfo { Id = moduleManifest.Name, Version = moduleManifest.Version },
+        Module = new ModuleInfo { EntryAssembly = moduleManifest.EntryAssembly, TargetFramework = "net8.0" }
+    };
+
+    var manifestEntry = archive.CreateEntry("manifest.json");
+    using var manifestStream = new StreamWriter(manifestEntry.Open());
+    await manifestStream.WriteAsync(JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
+
+    Console.WriteLine($"Created: {oamodPath}");
+    return 0;
+}
+```
+
+### Verification Implementation
+
+```csharp
+public async Task<bool> VerifyOamod(string oamodPath)
+{
+    using var archive = ZipFile.OpenRead(oamodPath);
+
+    // 1. Parse manifest
+    var manifestEntry = archive.GetEntry("manifest.json")
+        ?? throw new InvalidDataException("manifest.json not found");
+
+    using var manifestStream = new StreamReader(manifestEntry.Open());
+    var manifest = JsonSerializer.Deserialize<OamodManifest>(await manifestStream.ReadToEndAsync());
+
+    // 2. Parse checksums
+    var checksumsEntry = archive.GetEntry("checksums.sha256")
+        ?? throw new InvalidDataException("checksums.sha256 not found");
+
+    using var checksumsStream = new StreamReader(checksumsEntry.Open());
+    var expectedChecksums = new Dictionary<string, string>();
+    while (await checksumsStream.ReadLineAsync() is { } line)
+    {
+        var parts = line.Split("  ", 2);
+        if (parts.Length == 2)
+            expectedChecksums[parts[1]] = parts[0];
+    }
+
+    // 3. Verify each file
+    using var sha256 = SHA256.Create();
+    foreach (var entry in archive.Entries.Where(e => !e.FullName.EndsWith("/")))
+    {
+        if (entry.Name is "manifest.json" or "checksums.sha256") continue;
+
+        using var entryStream = entry.Open();
+        var actualHash = Convert.ToHexString(await sha256.ComputeHashAsync(entryStream));
+
+        if (!expectedChecksums.TryGetValue(entry.Name, out var expectedHash))
+        {
+            Console.Error.WriteLine($"Missing checksum for: {entry.Name}");
+            return false;
+        }
+
+        if (actualHash != expectedHash)
+        {
+            Console.Error.WriteLine($"Checksum mismatch for: {entry.Name}");
+            return false;
+        }
+    }
+
+    return true;
+}
+```
+
+## Documentation Stack Details
+
+### DocFX Configuration
+
+```
+docs/
+├── docfx.json              # DocFX configuration
+├── index.md                # Landing page
+├── toc.yml                 # Navigation structure
+├── api/                    # API reference (auto-generated from XML docs)
+├── guides/                 # Developer guides
+│   ├── getting-started.md
+│   ├── creating-modules.md
+│   ├── port-types.md
+│   └── debugging.md
+└── examples/               # Example modules
+    └── hello-world/
+```
+
+### docfx.json
+
+```json
+{
+  "metadata": [
+    {
+      "src": [
+        { "files": ["src/OpenAnima.Contracts/**/*.cs"] }
+      ],
+      "dest": "api",
+      "includePrivate": false
+    }
+  ],
+  "build": {
+    "content": [
+      { "files": ["**/*.md", "**/*.yml"] }
+    ],
+    "resource": [
+      { "files": ["images/**"] }
+    ],
+    "output": "_site",
+    "template": ["default", "modern"]
+  }
+}
+```
+
+### Build Documentation
+
+```bash
+# Install DocFX
+dotnet tool install -g docfx
+
+# Build docs
+docfx docfx.json
+
+# Build and serve locally
+docfx docfx.json --serve
+
+# Output at http://localhost:8080
+```
+
+## Alternatives Considered
+
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|-------------------------|
+| System.CommandLine 2.0.3 | McMaster.Extensions.CommandLineUtils | If encountering issues with System.CommandLine (unlikely - now stable) |
+| DocFX | Sandcastle Help File Builder | If Windows-only CHM output required (not our case) |
+| Custom .oamod format | Raw NuGet packages (.nupkg) | If distributing via nuget.org (our case: local-first, custom validation) |
+| Built-in template engine | Custom scaffolding code | If extremely complex conditional generation needed (overkill for module template) |
+| .NET Tool packaging | Standalone executable | If tool needs to run without .NET SDK installed (our audience: developers with SDK) |
+
+## What NOT to Use
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| Microsoft.Extensions.CommandLineUtils | Deprecated; maintenance mode | System.CommandLine 2.0.3 |
+| Custom CLI parsing (string[] args parsing) | Error-prone; no help generation; no tab completion | System.CommandLine |
+| Raw .nupkg for module distribution | NuGet designed for libraries, not runtime plugins; dependency resolution conflicts | Custom .oamod with explicit manifest |
+| Roslyn Source Generators for templates | Too complex for simple scaffolding | Standard dotnet new templates |
+| YARP/CLI framework | Overkill for 2-command tool | Simple System.CommandLine app |
+
+## Integration Points with Existing Stack
+
+| Component | Integration |
+|-----------|-------------|
+| OpenAnima.Contracts | Template references Contracts project; CLI validates IModule implementation |
+| PluginLoader | .oamod extracts to temp directory, then existing LoadModule() works unchanged |
+| PluginManifest | Existing module.json format embedded inside .oamod |
+| Port System | Template generates port declarations in stub module |
+| .NET 8.0 Runtime | CLI tool targets net8.0; templates generate net8.0 projects |
 
 ## Version Compatibility
 
 | Package | Version | Compatible With | Notes |
 |---------|---------|-----------------|-------|
-| .NET Runtime | 8.0 | Blazor Server 8.0.x | LTS until Nov 2026, no upgrade needed |
-| SignalR | 8.0.x | .NET 8.0 | Must match runtime version (critical for circuit stability) |
-| System.Text.Json | .NET 8.0 (built-in) | All .NET 8 libraries | No version conflicts possible |
-| OpenAI SDK | 2.8.0 | .NET 8.0 | Unchanged from v1.2 |
-| SharpToken | 2.0.4 | .NET 8.0 | Unchanged from v1.2 |
+| System.CommandLine | 2.0.3 | .NET 8.0+ | Stable release, no dependencies |
+| DocFX | 2.77.0 | .NET 8.0 SDK | Requires SDK for build |
+| Template packages | netstandard2.0 | All .NET SDK versions | Standard for template projects |
+| .oamod format | N/A (runtime-agnostic) | Any .NET version | ZIP-based, validated by CLI |
 
-**No new dependencies = no new compatibility issues.**
+## Files to Create
 
-## Migration Path from v1.2
-
-### Existing Code Reuse
-
-| v1.2 Component | v1.3 Usage | Changes Required |
-|----------------|------------|------------------|
-| `IModule` interface | Add `IPortProvider` interface | Modules implement both interfaces |
-| Custom EventBus | Wiring engine uses for data routing | No changes to EventBus itself |
-| Module loading | Extract port metadata after load | Add reflection or interface call to get ports |
-| SignalR Hub | Push wiring updates to clients | Optional: only if multi-user editing needed |
-| LLM service | Refactor into LLMModule | Wrap existing service, expose Text input/output ports |
-| Chat UI | Refactor into ChatInput/ChatOutput modules | Split existing component into two modules |
-| Heartbeat loop | Refactor into HeartbeatModule | Wrap existing loop, expose Trigger output port |
-
-### New Code Required
-
-1. **Port type system** — Enums, records, validation (~200 LOC)
-2. **Wiring engine** — Topological sort, execution orchestration (~300 LOC)
-3. **Visual editor UI** — Blazor components, drag-and-drop, SVG rendering (~400 LOC)
-4. **Configuration persistence** — JSON serialization, load/save (~100 LOC)
-5. **Module refactoring** — Split LLM/chat/heartbeat into proper modules (~300 LOC)
-6. **JavaScript interop** — Mouse position utilities (~50 LOC)
-7. **Tests** — Port system, wiring engine, cycle detection (~250 LOC)
-
-**Estimated total:** +1,600 LOC (26% increase from v1.2's 6,352 LOC)
-
-## Performance Considerations
-
-| Scenario | Approach | Rationale |
-|----------|----------|-----------|
-| <50 modules, <100 wires | SVG with full re-render | Blazor Server handles easily, no optimization needed |
-| Drag operations | Throttle StateHasChanged to 50-100ms | Prevents SignalR bandwidth saturation (see PITFALLS.md) |
-| Topological sort | Cache execution order, recompute on wiring change | Sort is O(V+E), fast for <50 modules |
-| Port lookup | ConcurrentDictionary by module+port ID | O(1) lookup during validation |
-| Wire rendering | Compute paths on-demand in GetWirePath() | Blazor caches render output, no manual optimization needed |
-
-**v1.3 target:** <20 modules, <50 wires. No performance optimizations required beyond throttling.
-
-## Security Considerations
-
-| Concern | Mitigation | Implementation |
-|---------|------------|----------------|
-| Malicious wiring configs | Validate before loading | Check module IDs exist, ports exist, types match, no cycles |
-| Module sandbox escape | AssemblyLoadContext isolation | Already implemented in v1.0, unchanged |
-| LLM API key exposure | Don't store in wiring config | Keep in appsettings.json secrets section |
-| Port data injection | Validate data types at runtime | EventBus already type-safe, wiring adds port type validation |
+| File Path | Purpose |
+|-----------|---------|
+| `src/OpenAnima.Cli/Program.cs` | CLI entry point with System.CommandLine |
+| `src/OpenAnima.Cli/OpenAnima.Cli.csproj` | Tool project configuration |
+| `src/OpenAnima.Cli/Commands/NewCommand.cs` | oani new implementation |
+| `src/OpenAnima.Cli/Commands/PackCommand.cs` | oani pack implementation |
+| `src/OpenAnima.Cli/Models/OamodManifest.cs` | .oamod manifest models |
+| `templates/OpenAnima.Templates.csproj` | Template package project |
+| `templates/templates/module/.template.config/template.json` | Template manifest |
+| `templates/templates/module/ModuleName.csproj` | Generated project template |
+| `templates/templates/module/MyModule.cs` | Module stub |
+| `templates/templates/module/module.json` | Plugin manifest template |
+| `docs/docfx.json` | DocFX configuration |
 
 ## Confidence Assessment
 
 | Area | Confidence | Rationale |
 |------|------------|-----------|
-| Port type system | HIGH | C# enums and records are well-understood, proven patterns |
-| Wiring engine | HIGH | Topological sort is textbook algorithm, widely implemented |
-| Visual editor | MEDIUM | HTML5 + SVG approach validated in community articles, but specific performance at scale not verified |
-| Integration | HIGH | Existing EventBus and module system provide clean integration points |
-| No new packages | HIGH | .NET 8.0 built-ins cover all requirements |
+| System.CommandLine | HIGH | Official Microsoft library, stable release, comprehensive docs |
+| Template system | HIGH | Native SDK feature, well-documented, widely used |
+| .oamod format | HIGH | Simple ZIP-based format, built-in .NET support |
+| DocFX | MEDIUM | Well-established but configuration can be complex |
+| CLI tool packaging | HIGH | Standard .NET feature since .NET Core 2.1 |
 
 ## Sources
 
-**Web Search Results (MEDIUM confidence):**
-- [Blazor Basics: Building Drag-and-Drop Functionality](https://www.telerik.com/blogs/blazor-basics-building-drag-drop-functionality-blazor-applications) — HTML5 drag-and-drop patterns
-- [Investigating Drag and Drop with Blazor](https://chrissainty.com/investigating-drag-and-drop-with-blazor/) — Native API usage
-- [Topological Sort - Neo4j Graph Data Science](https://neo4j.com/docs/graph-data-science/current/algorithms/dag/topological-sort/) — Algorithm reference
-- [QuikGraph GitHub](https://github.com/KeRNeLith/QuikGraph) — Alternative library (not recommended)
-- [Rete.js](https://rete.js.org/) — JavaScript node editor (not applicable to Blazor Server)
-- [ReactFlow alternatives](https://github.com/xyflow/awesome-node-based-uis) — Node editor ecosystem overview
-
-**Knowledge Base (HIGH confidence):**
-- .NET 8.0 built-in libraries (System.Text.Json, System.Linq, System.Collections.Concurrent)
-- HTML5 Drag & Drop API (W3C standard)
-- SVG path rendering (W3C standard)
-- Blazor JSInterop patterns (Microsoft documentation)
-- Topological sort algorithms (Kahn's algorithm, DFS-based cycle detection)
-
-**Codebase Analysis (HIGH confidence):**
-- Existing EventBus implementation reviewed (lock-free, ConcurrentDictionary-based)
-- OpenAnima.Core.csproj dependencies verified
-- Module loading and AssemblyLoadContext patterns confirmed
-
-**Verification Status:**
-- ✓ .NET 8.0 capabilities confirmed via codebase analysis
-- ✓ HTML5 + SVG approach validated in Blazor community articles
-- ✓ Topological sort algorithm well-documented in academic sources
-- ⚠ Specific library versions not verified due to network restrictions (NuGet, GitHub access blocked)
-- ⚠ Performance at scale (>50 modules) not verified, but v1.3 targets <20 modules
+- [Microsoft Learn: Custom templates for dotnet new](https://learn.microsoft.com/en-us/dotnet/core/tools/custom-templates) - HIGH confidence
+- [Microsoft Learn: System.CommandLine tutorial](https://learn.microsoft.com/en-us/dotnet/standard/commandline/get-started-tutorial) - HIGH confidence
+- [Microsoft Learn: Create a .NET tool](https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools-how-to-create) - HIGH confidence
+- [NuGet: System.CommandLine](https://www.nuget.org/packages/System.CommandLine) - HIGH confidence - Version 2.0.3 verified stable
+- [DocFX Documentation](https://dotnet.github.io/docfx/) - HIGH confidence
+- [GitHub: dotnet/templating wiki](https://github.com/dotnet/templating/wiki/Reference-for-template.json) - HIGH confidence
+- [Microsoft Learn: NuGet package creation](https://learn.microsoft.com/en-us/nuget/create-packages/creating-a-package) - HIGH confidence
 
 ---
-*Stack research for: Port type system, wiring engine, visual drag-and-drop editor in Blazor Server*
-*Researched: 2026-02-25*
-*Confidence: HIGH for core recommendations, MEDIUM for alternatives comparison*
+*Stack research for: Module SDK & CLI Tool Development*
+*Researched: 2026-02-28*
+*Confidence: HIGH*
