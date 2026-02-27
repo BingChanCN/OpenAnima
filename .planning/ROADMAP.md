@@ -51,7 +51,7 @@ See: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 - [x] **Phase 12.5: Runtime DI Integration & Tech Debt Fix** - Register core services in DI, persist port discovery (completed 2026-02-25)
 - [x] **Phase 13: Visual Drag-and-Drop Editor** - HTML5/SVG canvas with pan/zoom and connection preview (completed 2026-02-26)
 - [x] **Phase 14: Module Refactoring & Runtime Integration** - Refactor LLM/chat/heartbeat into port-based modules (completed 2026-02-26)
-- [ ] **Phase 18: RMOD Verification Evidence Backfill** - Restore missing verification artifacts and close RMOD orphaned requirements
+- [x] **Phase 18: RMOD Verification Evidence Backfill** - Restore missing verification artifacts and close RMOD orphaned requirements (completed 2026-02-27)
 - [ ] **Phase 19: Requirement Metadata Drift Cleanup** - Remove invalid requirement mappings and align traceability metadata
 
 
@@ -188,7 +188,7 @@ Plans:
   2. `16-VERIFICATION.md` exists with explicit RMOD requirement evidence and pass/fail outcomes
   3. RMOD-01..04 are no longer orphaned in cross-source requirement audit
   4. Milestone traceability links RMOD requirements to a verifiable closure phase
-**Plans:** 0 plans (pending creation)
+**Plans:** 1/1 plans complete
 
 ### Phase 19: Requirement Metadata Drift Cleanup
 **Goal:** Eliminate invalid requirement IDs in summary metadata and restore consistent requirement traceability
@@ -225,7 +225,7 @@ Plans:
 | 15. Fix ConfigurationLoader Key Mismatch | 1/1 | Complete    | 2026-02-26 | — |
 | 16. Module Runtime Initialization & Port Registration | 1/1 | Complete | 2026-02-27 | — |
 | 17. E2E Module Pipeline Integration & Editor Polish | 2/2 | Complete    | 2026-02-27 | — |
-| 18. RMOD Verification Evidence Backfill | 0/0 | Planned | — | — |
+| 18. RMOD Verification Evidence Backfill | 1/1 | Complete   | 2026-02-27 | — |
 | 19. Requirement Metadata Drift Cleanup | 0/0 | Planned | — | — |
 
 ---
