@@ -2,61 +2,61 @@
 
 ## Milestones
 
-- ✅ **v1.0 Core Platform Foundation** — Phases 1-2 (shipped 2026-02-21)
-- ✅ **v1.1 WebUI Runtime Dashboard** — Phases 3-7 (shipped 2026-02-23)
-- ✅ **v1.2 LLM Integration** — Phases 8-10 (shipped 2026-02-25)
-- ✅ **v1.3 True Modularization & Visual Wiring** — Phases 11-19 + 12.5 (shipped 2026-02-28)
-- 🚧 **v1.4 Module SDK & DevEx** — Phases 20-22 (in progress)
+- **v1.0 Core Platform Foundation** - Phases 1-2 (shipped 2026-02-21)
+- **v1.1 WebUI Runtime Dashboard** - Phases 3-7 (shipped 2026-02-23)
+- **v1.2 LLM Integration** - Phases 8-10 (shipped 2026-02-25)
+- **v1.3 True Modularization & Visual Wiring** - Phases 11-19 + 12.5 (shipped 2026-02-28)
+- **v1.4 Module SDK & DevEx** - Phases 20-22 (in progress)
 
 ## Phases
 
 <details>
-<summary>✅ v1.0 Core Platform Foundation (Phases 1-2) — SHIPPED 2026-02-21</summary>
+<summary>v1.0 Core Platform Foundation (Phases 1-2) - SHIPPED 2026-02-21</summary>
 
-- [x] Phase 1: Core Plugin System (3/3 plans) — completed 2026-02-21
-- [x] Phase 2: Event Bus & Heartbeat Loop (2/2 plans) — completed 2026-02-21
+- [x] Phase 1: Core Plugin System (3/3 plans) - completed 2026-02-21
+- [x] Phase 2: Event Bus & Heartbeat Loop (2/2 plans) - completed 2026-02-21
 
 See: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full details.
 
 </details>
 
 <details>
-<summary>✅ v1.1 WebUI Runtime Dashboard (Phases 3-7) — SHIPPED 2026-02-23</summary>
+<summary>v1.1 WebUI Runtime Dashboard (Phases 3-7) - SHIPPED 2026-02-23</summary>
 
-- [x] Phase 3: Service Abstraction & Hosting (2/2 plans) — completed 2026-02-22
-- [x] Phase 4: Blazor UI with Static Display (2/2 plans) — completed 2026-02-22
-- [x] Phase 5: SignalR Real-Time Updates (2/2 plans) — completed 2026-02-22
-- [x] Phase 6: Control Operations (2/2 plans) — completed 2026-02-22
-- [x] Phase 7: Polish & Validation (2/2 plans) — completed 2026-02-23
+- [x] Phase 3: Service Abstraction & Hosting (2/2 plans) - completed 2026-02-22
+- [x] Phase 4: Blazor UI with Static Display (2/2 plans) - completed 2026-02-22
+- [x] Phase 5: SignalR Real-Time Updates (2/2 plans) - completed 2026-02-22
+- [x] Phase 6: Control Operations (2/2 plans) - completed 2026-02-22
+- [x] Phase 7: Polish & Validation (2/2 plans) - completed 2026-02-23
 
 See: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md) for full details.
 
 </details>
 
 <details>
-<summary>✅ v1.2 LLM Integration (Phases 8-10) — SHIPPED 2026-02-25</summary>
+<summary>v1.2 LLM Integration (Phases 8-10) - SHIPPED 2026-02-25</summary>
 
-- [x] Phase 8: API Client Setup & Configuration (2/2 plans) — completed 2026-02-24
-- [x] Phase 9: Chat UI with Streaming (2/2 plans) — completed 2026-02-25
-- [x] Phase 10: Context Management & Token Counting (2/2 plans) — completed 2026-02-25
+- [x] Phase 8: API Client Setup & Configuration (2/2 plans) - completed 2026-02-24
+- [x] Phase 9: Chat UI with Streaming (2/2 plans) - completed 2026-02-25
+- [x] Phase 10: Context Management & Token Counting (2/2 plans) - completed 2026-02-25
 
 See: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 
 </details>
 
 <details>
-<summary>✅ v1.3 True Modularization & Visual Wiring (Phases 11-19) — SHIPPED 2026-02-28</summary>
+<summary>v1.3 True Modularization & Visual Wiring (Phases 11-19) - SHIPPED 2026-02-28</summary>
 
-- [x] Phase 11: Port Type System & Testing Foundation (3/3 plans) — completed 2026-02-25
-- [x] Phase 12: Wiring Engine & Execution Orchestration (3/3 plans) — completed 2026-02-25
-- [x] Phase 12.5: Runtime DI Integration & Tech Debt Fix (3/3 plans) — completed 2026-02-25
-- [x] Phase 13: Visual Drag-and-Drop Editor (3/3 plans) — completed 2026-02-26
-- [x] Phase 14: Module Refactoring & Runtime Integration (3/3 plans) — completed 2026-02-26
-- [x] Phase 15: Fix ConfigurationLoader Key Mismatch (1/1 plan) — completed 2026-02-26
-- [x] Phase 16: Module Runtime Initialization & Port Registration (1/1 plan) — completed 2026-02-27
-- [x] Phase 17: E2E Module Pipeline Integration & Editor Polish (2/2 plans) — completed 2026-02-27
-- [x] Phase 18: RMOD Verification Evidence Backfill (1/1 plan) — completed 2026-02-27
-- [x] Phase 19: Requirement Metadata Drift Cleanup (1/1 plan) — completed 2026-02-28
+- [x] Phase 11: Port Type System & Testing Foundation (3/3 plans) - completed 2026-02-25
+- [x] Phase 12: Wiring Engine & Execution Orchestration (3/3 plans) - completed 2026-02-25
+- [x] Phase 12.5: Runtime DI Integration & Tech Debt Fix (3/3 plans) - completed 2026-02-25
+- [x] Phase 13: Visual Drag-and-Drop Editor (3/3 plans) - completed 2026-02-26
+- [x] Phase 14: Module Refactoring & Runtime Integration (3/3 plans) - completed 2026-02-26
+- [x] Phase 15: Fix ConfigurationLoader Key Mismatch (1/1 plan) - completed 2026-02-26
+- [x] Phase 16: Module Runtime Initialization & Port Registration (1/1 plan) - completed 2026-02-27
+- [x] Phase 17: E2E Module Pipeline Integration & Editor Polish (2/2 plans) - completed 2026-02-27
+- [x] Phase 18: RMOD Verification Evidence Backfill (1/1 plan) - completed 2026-02-27
+- [x] Phase 19: Requirement Metadata Drift Cleanup (1/1 plan) - completed 2026-02-28
 
 See: [milestones/v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
 
@@ -64,7 +64,7 @@ See: [milestones/v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
 
 ---
 
-### 🚧 v1.4 Module SDK & DevEx (In Progress)
+### v1.4 Module SDK & DevEx (In Progress)
 
 **Milestone Goal:** Developers can create, validate, and pack custom modules with a simple CLI tool.
 
@@ -78,12 +78,12 @@ See: [milestones/v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
   3. Developer can customize module template with ports and type options
   4. CLI follows standard conventions (help, exit codes, verbosity, stdout/stderr discipline)
   5. Generated module implements IModule and IModuleMetadata interfaces correctly
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 20-01: CLI project setup and installable .NET tool
-- [ ] 20-02: Module templates with manifest schema
-- [ ] 20-03: Template customization options
+- [ ] 20-01-PLAN.md - CLI project setup with System.CommandLine and installable .NET tool
+- [ ] 20-02-PLAN.md - Manifest schema model and embedded templates for module generation
+- [ ] 20-03-PLAN.md - `oani new` command with template customization options and tests
 
 #### Phase 21: Pack, Validate & Runtime Integration
 **Goal**: Developer can validate and pack modules into distributable .oamod files
@@ -123,7 +123,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 20 → 21 → 22
+Phases execute in numeric order: 20 -> 21 -> 22
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -147,10 +147,10 @@ Phases execute in numeric order: 20 → 21 → 22
 | 17. E2E Module Pipeline Integration | v1.3 | 2/2 | Complete | 2026-02-27 |
 | 18. RMOD Verification Evidence Backfill | v1.3 | 1/1 | Complete | 2026-02-27 |
 | 19. Requirement Metadata Drift Cleanup | v1.3 | 1/1 | Complete | 2026-02-28 |
-| 20. CLI Foundation & Templates | v1.4 | 0/3 | Not started | - |
+| 20. CLI Foundation & Templates | v1.4 | 0/3 | Ready to execute | - |
 | 21. Pack, Validate & Integration | v1.4 | 0/3 | Not started | - |
 | 22. Documentation | v1.4 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-28*
-*Last updated: 2026-02-28*
+*Last updated: 2026-02-28 - Phase 20 plans created*
