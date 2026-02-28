@@ -13,7 +13,7 @@
 - [x] **ANIMA-04**: User can delete Anima
 - [x] **ANIMA-05**: User can rename Anima
 - [x] **ANIMA-06**: User can clone existing Anima (duplicate configuration)
-- [ ] **ANIMA-07**: Each Anima has independent heartbeat loop
+- [x] **ANIMA-07**: Each Anima has independent heartbeat loop
 - [ ] **ANIMA-08**: Each Anima has independent module instances
 - [ ] **ANIMA-09**: Each Anima has independent chat interface
 - [x] **ANIMA-10**: Anima configuration persists across sessions
@@ -59,8 +59,8 @@
 
 - [x] **ARCH-01**: AnimaRuntimeManager manages all Anima instances
 - [x] **ARCH-02**: AnimaContext identifies current Anima for scoped services
-- [ ] **ARCH-03**: Each Anima has isolated EventBus instance
-- [ ] **ARCH-04**: Each Anima has isolated WiringEngine instance
+- [x] **ARCH-03**: Each Anima has isolated EventBus instance
+- [x] **ARCH-04**: Each Anima has isolated WiringEngine instance
 - [x] **ARCH-05**: Configuration files stored per Anima in separate directories
 - [x] **ARCH-06**: Service disposal prevents memory leaks (IAsyncDisposable)
 
@@ -104,14 +104,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ARCH-02 | Phase 23 | Complete |
 | ARCH-05 | Phase 23 | Complete |
 | ARCH-06 | Phase 23 | Complete |
-| ANIMA-07 | Phase 24 | Pending |
+| ANIMA-07 | Phase 24 | Complete |
 | ANIMA-08 | Phase 24 | Pending |
 | I18N-01 | Phase 24 | Pending |
 | I18N-02 | Phase 24 | Pending |
 | I18N-03 | Phase 24 | Pending |
 | I18N-04 | Phase 24 | Pending |
-| ARCH-03 | Phase 24 | Pending |
-| ARCH-04 | Phase 24 | Pending |
+| ARCH-03 | Phase 24 | Complete |
+| ARCH-04 | Phase 24 | Complete |
 | MODMGMT-01 | Phase 25 | Pending |
 | MODMGMT-02 | Phase 25 | Pending |
 | MODMGMT-03 | Phase 25 | Pending |

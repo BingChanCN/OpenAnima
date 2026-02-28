@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: completed
-last_updated: "2026-02-28T13:06:07.449Z"
-last_activity: "2026-02-28 — Completed 23-02: AnimaListPanel sidebar UI + AnimaInitializationService"
+last_updated: "2026-02-28T15:20:16.075Z"
+last_activity: "2026-02-28 — Completed 24-01: Per-Anima runtime isolation (AnimaRuntime container)"
 progress:
-  total_phases: 11
+  total_phases: 12
   completed_phases: 11
-  total_plans: 23
-  completed_plans: 23
-  percent: 100
+  total_plans: 26
+  completed_plans: 24
+  percent: 92
 ---
 
 # Project State: OpenAnima v1.5 Multi-Anima Architecture
@@ -28,12 +28,12 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ## Current Position
 
-**Phase:** 23 - Multi-Anima Foundation
-**Plan:** 02 complete (all plans done)
-**Status:** Milestone complete
-**Last activity:** 2026-02-28 — Completed 23-02: AnimaListPanel sidebar UI + AnimaInitializationService
+**Phase:** 24 - Service Migration i18n
+**Plan:** 01 complete
+**Status:** In progress (2 plans remain)
+**Last activity:** 2026-02-28 — Completed 24-01: Per-Anima runtime isolation (AnimaRuntime container)
 
-**Progress:** [██████████] 100%
+**Progress:** [█████████░] 92%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 - Trend: Stable
 | Phase 23-multi-anima-foundation P01 | 3 | 2 tasks | 8 files |
 | Phase 23-multi-anima-foundation P02 | 3 | 2 tasks | 10 files |
+| Phase 24-service-migration-i18n P01 | 90 | 6 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -77,8 +78,10 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 - **Phase 23-01:** Short 8-char hex ID from Guid.NewGuid().ToString("N")[..8] for Anima directory names — readable, effectively collision-free for single-user app
 - **Phase 23-01:** AnimaContext is a plain singleton with event (not CascadingValue) to avoid full layout re-render on every active-Anima change
 - **Phase 23-01:** Clone copies only anima.json (not runtime state files) to prevent inheriting runtime state in cloned Anima
-- **Phase 23-02:** AnimaInitializationService registered before OpenAnimaHostedService to ensure Anima data ready before module scanning
-- **Phase 23-02:** CascadingValue wraps only anima-list-section to minimize re-render scope on sidebar collapse toggle
+- **Phase 24-01:** Global IEventBus singleton kept for module constructors (ANIMA-08 partial) — full module instance isolation deferred to next phase
+- **Phase 24-01:** IAnimaRuntimeManager implements both IAsyncDisposable and IDisposable to satisfy .NET DI disposal requirements
+- **Phase 24-01:** IRuntimeClient methods all include animaId as first parameter so UI can filter SignalR push events by active Anima
+- **Phase 24-01:** DeleteAsync auto-switches active Anima via AnimaContext.SetActive() when deleted Anima was active
 
 ### Key Decisions (v1.4)
 
