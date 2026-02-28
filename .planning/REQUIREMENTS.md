@@ -58,9 +58,9 @@
 
 - [x] **DOC-01**: Developer can read quick-start guide showing create-build-pack workflow
 - [x] **DOC-02**: Quick-start guide produces working module in under 5 minutes
-- [ ] **DOC-03**: API reference documents all public interfaces (IModule, IModuleExecutor, ITickable, IEventBus)
-- [ ] **DOC-04**: API reference documents port system (PortType, PortMetadata, InputPortAttribute, OutputPortAttribute)
-- [ ] **DOC-05**: API reference includes code examples for common patterns
+- [x] **DOC-03**: API reference documents all public interfaces (IModule, IModuleExecutor, ITickable, IEventBus)
+- [x] **DOC-04**: API reference documents port system (PortType, PortMetadata, InputPortAttribute, OutputPortAttribute)
+- [x] **DOC-05**: API reference includes code examples for common patterns
 
 ## v2 Requirements
 
@@ -131,9 +131,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEMP-05 | Phase 20 | Complete |
 | DOC-01 | Phase 22 | Complete |
 | DOC-02 | Phase 22 | Complete |
-| DOC-03 | Phase 22 | Pending |
-| DOC-04 | Phase 22 | Pending |
-| DOC-05 | Phase 22 | Pending |
+| DOC-03 | Phase 22 | Complete |
+| DOC-04 | Phase 22 | Complete |
+| DOC-05 | Phase 22 | Complete |
 
 **Coverage:**
 - v1 requirements: 31 total
