@@ -22,14 +22,14 @@
             {
                 <div class="anima-avatar @(isActive ? "active" : "")"
                      title="@anima.Name"
-                     @onclick="() => AnimaContext.SetActive(anima.Id)">
+                     @onclick="() => SwitchToAnima(anima.Id)">
                     @anima.Name[0]
                 </div>
             }
             else
             {
                 <div class="anima-card @(isActive ? "active" : "")"
-                     @onclick="() => AnimaContext.SetActive(anima.Id)"
+                     @onclick="() => SwitchToAnima(anima.Id)"
                      @oncontextmenu="(e) => OpenContextMenu(e, anima.Id)"
                      @oncontextmenu:preventDefault="true">
                     @if (isRenaming)
@@ -108,11 +108,20 @@
     private void OpenCreateDialog() => _showCreateDialog = true;
     private void CloseCreateDialog() => _showCreateDialog = false;
 
+    private void SwitchToAnima(string animaId)
+    {
+        AnimaContext.SetActive(animaId);
+        // Pre-warm runtime for the selected Anima
+        AnimaManager.GetOrCreateRuntime(animaId);
+    }
+
     private async Task HandleCreate(string name)
     {
         _showCreateDialog = false;
         var anima = await AnimaManager.CreateAsync(name);
         AnimaContext.SetActive(anima.Id);
+        // Pre-warm runtime for the new Anima
+        AnimaManager.GetOrCreateRuntime(anima.Id);
     }
 
     // --- Context menu ---
@@ -173,6 +182,8 @@
         if (_contextMenuAnimaId == null) return;
         var cloned = await AnimaManager.CloneAsync(_contextMenuAnimaId);
         AnimaContext.SetActive(cloned.Id);
+        // Pre-warm runtime for the cloned Anima
+        AnimaManager.GetOrCreateRuntime(cloned.Id);
     }
 
     // --- Delete ---
@@ -185,17 +196,8 @@
         _showDeleteConfirm = false;
         if (_contextMenuAnimaId == null) return;
 
-        var deletedId = _contextMenuAnimaId;
-        var wasActive = AnimaContext.ActiveAnimaId == deletedId;
-
-        await AnimaManager.DeleteAsync(deletedId);
-
-        if (wasActive)
-        {
-            var remaining = AnimaManager.GetAll();
-            if (remaining.Count > 0)
-                AnimaContext.SetActive(remaining[0].Id);
-        }
+        // DeleteAsync handles runtime disposal and auto-switches active Anima
+        await AnimaManager.DeleteAsync(_contextMenuAnimaId);
     }
 
     public ValueTask DisposeAsync()
