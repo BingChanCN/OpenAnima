@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
+using OpenAnima.Core.Anima;
 using OpenAnima.Core.DependencyInjection;
 using OpenAnima.Core.Events;
 using OpenAnima.Core.Hosting;
@@ -29,9 +31,23 @@ public class ModuleRuntimeInitializationTests : IDisposable
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
+        services.AddSingleton<ILLMService>(new FakeLLMService());
+        // Global EventBus for singleton modules (ANIMA-08: per-Anima wiring is a future phase)
         services.AddSingleton<EventBus>();
         services.AddSingleton<IEventBus>(sp => sp.GetRequiredService<EventBus>());
-        services.AddSingleton<ILLMService>(new FakeLLMService());
+
+        // Register AnimaContext and AnimaRuntimeManager (required by WiringInitializationService)
+        var tempAnimaRoot = Path.Combine(Path.GetTempPath(), $"anima-init-test-{Guid.NewGuid()}");
+        var animaContext = new AnimaContext();
+        animaContext.SetActive("test-anima");
+        services.AddSingleton<IAnimaContext>(animaContext);
+        services.AddSingleton<IAnimaRuntimeManager>(sp =>
+            new AnimaRuntimeManager(
+                tempAnimaRoot,
+                NullLogger<AnimaRuntimeManager>.Instance,
+                NullLoggerFactory.Instance,
+                animaContext));
+
         services.AddWiringServices(_tempConfigDir);
 
         _provider = services.BuildServiceProvider();
@@ -92,6 +108,7 @@ public class ModuleRuntimeInitializationTests : IDisposable
         await service.StartAsync(CancellationToken.None);
 
         var chatOutput = _provider.GetRequiredService<ChatOutputModule>();
+        // Modules use the global EventBus (ANIMA-08: per-Anima wiring is a future phase)
         var eventBus = _provider.GetRequiredService<IEventBus>();
 
         var receivedTcs = new TaskCompletionSource<string>();

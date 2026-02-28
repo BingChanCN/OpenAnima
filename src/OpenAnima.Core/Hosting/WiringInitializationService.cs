@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
+using OpenAnima.Core.Anima;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Wiring;
@@ -10,11 +11,13 @@ namespace OpenAnima.Core.Hosting;
 
 /// <summary>
 /// Hosted service that discovers module ports, initializes modules, and auto-loads
-/// the last saved wiring configuration on application startup.
+/// the last saved wiring configuration into the active Anima's WiringEngine on startup.
 /// </summary>
 public class WiringInitializationService : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly IAnimaRuntimeManager _animaRuntimeManager;
+    private readonly IAnimaContext _animaContext;
     private readonly ILogger<WiringInitializationService> _logger;
     private readonly string _configDirectory;
 
@@ -28,16 +31,20 @@ public class WiringInitializationService : IHostedService
 
     public WiringInitializationService(
         IServiceProvider serviceProvider,
+        IAnimaRuntimeManager animaRuntimeManager,
+        IAnimaContext animaContext,
         ILogger<WiringInitializationService> logger)
     {
         _serviceProvider = serviceProvider;
+        _animaRuntimeManager = animaRuntimeManager;
+        _animaContext = animaContext;
         _logger = logger;
         _configDirectory = Path.Combine(AppContext.BaseDirectory, "wiring-configs");
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        // Phase 16: Register ports and initialize modules BEFORE loading config
+        // Register ports and initialize modules BEFORE loading config
         RegisterModulePorts();
         await InitializeModulesAsync(cancellationToken);
 
@@ -58,16 +65,25 @@ public class WiringInitializationService : IHostedService
             return;
         }
 
+        // Get the active Anima's WiringEngine
+        var activeId = _animaContext.ActiveAnimaId;
+        if (activeId == null)
+        {
+            _logger.LogWarning("No active Anima — skipping config load");
+            return;
+        }
+
+        var runtime = _animaRuntimeManager.GetOrCreateRuntime(activeId);
+
         // Create scope to resolve scoped services
         using var scope = _serviceProvider.CreateScope();
         var configLoader = scope.ServiceProvider.GetRequiredService<IConfigurationLoader>();
-        var wiringEngine = scope.ServiceProvider.GetRequiredService<IWiringEngine>();
 
         try
         {
-            _logger.LogInformation("Loading last configuration: {ConfigName}", lastConfigName);
+            _logger.LogInformation("Loading last configuration: {ConfigName} into Anima {Id}", lastConfigName, activeId);
             var config = await configLoader.LoadAsync(lastConfigName, cancellationToken);
-            wiringEngine.LoadConfiguration(config);
+            runtime.WiringEngine.LoadConfiguration(config);
             _logger.LogInformation("Successfully loaded configuration: {ConfigName}", lastConfigName);
         }
         catch (FileNotFoundException ex)

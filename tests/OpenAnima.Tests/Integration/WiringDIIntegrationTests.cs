@@ -30,7 +30,10 @@ public class WiringDIIntegrationTests : IDisposable
         // Build real DI container
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        // Note: EventBus and WiringEngine are now per-Anima inside AnimaRuntime.
+        // Global EventBus for singleton modules (ANIMA-08: per-Anima wiring is a future phase)
+        services.AddSingleton<EventBus>();
+        services.AddSingleton<IEventBus>(sp => sp.GetRequiredService<EventBus>());
+        // Note: WiringEngine is now per-Anima inside AnimaRuntime.
         // Only register port/config services here.
         services.AddWiringServices(_tempConfigDir);
 

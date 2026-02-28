@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using OpenAnima.Contracts;
+using OpenAnima.Core.Events;
 using OpenAnima.Core.Hosting;
 using OpenAnima.Core.Plugins;
 using OpenAnima.Core.Hubs;
@@ -20,8 +22,11 @@ var builder = WebApplication.CreateBuilder(args);
 // --- Register core runtime components as singletons ---
 builder.Services.AddSingleton<PluginRegistry>();
 builder.Services.AddSingleton<PluginLoader>();
-// Note: EventBus and HeartbeatLoop are now per-Anima inside AnimaRuntime.
-// PluginRegistry and PluginLoader remain global for module scanning.
+// Global EventBus for singleton modules (ChatInputModule, ChatOutputModule, etc.)
+// Note: WiringEngine and HeartbeatLoop use per-Anima EventBus inside AnimaRuntime.
+// ANIMA-08: module instances are shared across Animas — per-Anima EventBus wiring is a future phase.
+builder.Services.AddSingleton<EventBus>();
+builder.Services.AddSingleton<IEventBus>(sp => sp.GetRequiredService<EventBus>());
 
 // --- Register service facades ---
 builder.Services.AddSingleton<IModuleService, ModuleService>();

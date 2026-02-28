@@ -9,7 +9,7 @@ namespace OpenAnima.Core.Anima;
 /// Singleton manager for all Anima CRUD operations with filesystem persistence.
 /// Directory structure: {animasRoot}/{id}/anima.json
 /// </summary>
-public class AnimaRuntimeManager : IAnimaRuntimeManager
+public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -190,6 +190,11 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager
             await runtime.DisposeAsync();
         _runtimes.Clear();
         _lock.Dispose();
+    }
+
+    public void Dispose()
+    {
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 
     public AnimaRuntime? GetRuntime(string animaId) =>

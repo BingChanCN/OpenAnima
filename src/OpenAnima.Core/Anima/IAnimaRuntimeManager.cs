@@ -3,7 +3,7 @@ namespace OpenAnima.Core.Anima;
 /// <summary>
 /// Manages all Anima instances: CRUD operations with filesystem persistence and per-Anima runtime lifecycle.
 /// </summary>
-public interface IAnimaRuntimeManager : IAsyncDisposable
+public interface IAnimaRuntimeManager : IAsyncDisposable, IDisposable
 {
     /// <summary>Returns all Animas ordered by CreatedAt.</summary>
     IReadOnlyList<AnimaDescriptor> GetAll();
