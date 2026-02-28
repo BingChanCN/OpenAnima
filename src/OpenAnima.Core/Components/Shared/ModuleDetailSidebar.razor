@@ -1,0 +1,142 @@
+@using OpenAnima.Core.Services
+@using OpenAnima.Core.Plugins
+@using OpenAnima.Core.Anima
+@using OpenAnima.Contracts.Ports
+@using OpenAnima.Core.Ports
+@inject IStringLocalizer<SharedResources> L
+@inject IAnimaModuleStateService ModuleStateService
+@inject IAnimaContext AnimaContext
+@inject IAnimaRuntimeManager AnimaManager
+
+<div class="detail-sidebar @(IsVisible ? "visible" : "")">
+    @if (SelectedModule != null)
+    {
+        <div class="sidebar-header">
+            <h3>@SelectedModule.Manifest.Name</h3>
+            <button class="close-btn" @onclick="HandleClose">×</button>
+        </div>
+        <div class="sidebar-content">
+            <!-- Basic Info -->
+            <div class="info-section">
+                <label>@L["Modules.Detail.Version"]</label>
+                <span>@SelectedModule.Manifest.Version</span>
+            </div>
+            <div class="info-section">
+                <label>@L["Modules.Detail.Author"]</label>
+                <span>@L["Modules.Detail.Unknown"]</span>
+            </div>
+            <div class="info-section">
+                <label>@L["Modules.Detail.Description"]</label>
+                <span>@(SelectedModule.Manifest.Description ?? L["Modules.Detail.NoDescription"].Value)</span>
+            </div>
+
+            <!-- Ports -->
+            <div class="info-section">
+                <label>@L["Modules.Detail.Ports"]</label>
+                @{
+                    var discovery = new PortDiscovery();
+                    var ports = discovery.DiscoverPorts(SelectedModule.Module.GetType());
+                    var inputs = ports.Where(p => p.Direction == PortDirection.Input).ToList();
+                    var outputs = ports.Where(p => p.Direction == PortDirection.Output).ToList();
+                }
+                @if (ports.Count == 0)
+                {
+                    <p class="text-muted">@L["Modules.Detail.NoPorts"]</p>
+                }
+                else
+                {
+                    <div class="port-columns">
+                        <div class="port-column">
+                            <div class="port-column-header">@L["Modules.Detail.Inputs"]</div>
+                            @if (inputs.Count == 0)
+                            {
+                                <span class="text-muted">@L["Modules.Detail.None"]</span>
+                            }
+                            else
+                            {
+                                @foreach (var port in inputs)
+                                {
+                                    <PortIndicator Port="@port" />
+                                }
+                            }
+                        </div>
+                        <div class="port-column">
+                            <div class="port-column-header">@L["Modules.Detail.Outputs"]</div>
+                            @if (outputs.Count == 0)
+                            {
+                                <span class="text-muted">@L["Modules.Detail.None"]</span>
+                            }
+                            else
+                            {
+                                @foreach (var port in outputs)
+                                {
+                                    <PortIndicator Port="@port" />
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Install Info -->
+            <div class="info-section">
+                <label>@L["Modules.Detail.LoadedAt"]</label>
+                <span>@SelectedModule.LoadedAt.ToString("yyyy-MM-dd HH:mm:ss")</span>
+            </div>
+
+            <!-- Usage (which Animas have this enabled) -->
+            <div class="info-section">
+                <label>@L["Modules.Detail.EnabledIn"]</label>
+                @{
+                    var enabledAnimas = AnimaManager.GetAll()
+                        .Where(a => ModuleStateService.IsModuleEnabled(a.Id, SelectedModule.Manifest.Name))
+                        .Select(a => a.Name)
+                        .ToList();
+                }
+                @if (enabledAnimas.Count == 0)
+                {
+                    <span class="text-muted">@L["Modules.Detail.NotEnabled"]</span>
+                }
+                else
+                {
+                    <span>@string.Join(", ", enabledAnimas)</span>
+                }
+            </div>
+
+            <!-- Actions -->
+            <div class="sidebar-actions">
+                @{
+                    var isEnabled = AnimaContext.ActiveAnimaId != null
+                        && ModuleStateService.IsModuleEnabled(AnimaContext.ActiveAnimaId, SelectedModule.Manifest.Name);
+                }
+                <button @onclick="HandleEnableDisable" class="btn btn-primary">
+                    @(isEnabled ? L["Modules.Disable"] : L["Modules.Enable"])
+                </button>
+                <button @onclick="HandleUninstall" class="btn btn-danger">@L["Modules.Uninstall"]</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public PluginRegistryEntry? SelectedModule { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnEnableDisable { get; set; }
+    [Parameter] public EventCallback OnUninstall { get; set; }
+
+    private async Task HandleClose()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task HandleEnableDisable()
+    {
+        await OnEnableDisable.InvokeAsync();
+    }
+
+    private async Task HandleUninstall()
+    {
+        await OnUninstall.InvokeAsync();
+    }
+}
