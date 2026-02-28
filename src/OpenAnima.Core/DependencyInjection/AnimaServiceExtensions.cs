@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.Hubs;
+using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.DependencyInjection;
 
@@ -34,6 +35,9 @@ public static class AnimaServiceExtensions
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetRequiredService<IAnimaContext>(),
                 sp.GetService<IHubContext<RuntimeHub, IRuntimeClient>>()));
+
+        services.AddSingleton<IAnimaModuleStateService>(sp =>
+            new AnimaModuleStateService(animasRoot));
 
         return services;
     }
