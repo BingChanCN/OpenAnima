@@ -149,7 +149,7 @@ Phases execute in numeric order: 20 -> 21 -> 22
 | 19. Requirement Metadata Drift Cleanup | v1.3 | 1/1 | Complete | 2026-02-28 |
 | 20. CLI Foundation & Templates | 3/3 | Complete   | 2026-02-28 | - |
 | 21. Pack, Validate & Integration | 3/3 | Complete    | 2026-02-28 | - |
-| 22. Documentation | 2/2 | Complete   | 2026-02-28 | - |
+| 22. Documentation | 2/2 | Complete    | 2026-02-28 | - |
 
 ---
 *Roadmap created: 2026-02-28*
