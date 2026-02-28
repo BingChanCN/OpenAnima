@@ -14,14 +14,16 @@
 @inject IAnimaContext _animaContext
 @inject NavigationManager _navigation
 @inject IJSRuntime JS
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
 
 <div class="chat-panel">
     @if (!IsPipelineConfigured())
     {
         <div class="pipeline-guidance" role="status">
-            <p class="pipeline-guidance-title">Chat pipeline not configured</p>
-            <p class="pipeline-guidance-body">Connect <code>ChatInputModule → LLMModule → ChatOutputModule</code> in the editor to enable conversation.</p>
-            <button class="open-editor-btn" @onclick="OpenEditor">Open Wiring Editor</button>
+            <p class="pipeline-guidance-title">@L["Chat.PipelineNotConfigured"]</p>
+            <p class="pipeline-guidance-body">@L["Chat.PipelineInstructions"]</p>
+            <button class="open-editor-btn" @onclick="OpenEditor">@L["Chat.OpenEditor"]</button>
         </div>
     }
 
@@ -30,7 +32,7 @@
         {
             <div class="empty-state">
                 <span class="empty-icon">💬</span>
-                <p>Start a conversation</p>
+                <p>@L["Chat.EmptyState"]</p>
             </div>
         }
         else
@@ -42,7 +44,7 @@
             @if (!_isGenerating && Messages.Count > 0 && Messages.Last().Role == "assistant")
             {
                 <button class="regenerate-btn" @onclick="RegenerateLastResponse">
-                    <span>🔄</span> Regenerate
+                    <span>🔄</span> @L["Chat.Regenerate"]
                 </button>
             }
         }
@@ -65,12 +67,15 @@
     {
         _contextManager.OnStateChanged += HandleContextManagerChanged;
         _chatOutputModule.OnMessageReceived += HandleChatOutputReceived;
+        LangSvc.LanguageChanged += OnLanguageChanged;
     }
 
     private void HandleContextManagerChanged()
     {
         InvokeAsync(StateHasChanged);
     }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
     private void HandleChatOutputReceived(string assistantText)
     {
@@ -296,6 +301,7 @@
     {
         _chatOutputModule.OnMessageReceived -= HandleChatOutputReceived;
         _contextManager.OnStateChanged -= HandleContextManagerChanged;
+        LangSvc.LanguageChanged -= OnLanguageChanged;
 
         _generationCts.Cancel();
         _generationCts.Dispose();

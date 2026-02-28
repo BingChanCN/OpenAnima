@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Localization;
 using OpenAnima.Core.Anima;
+using OpenAnima.Core.Resources;
+using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.Components.Pages;
 
@@ -8,6 +11,8 @@ public partial class Monitor : IAsyncDisposable
 {
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private IAnimaContext AnimaContext { get; set; } = default!;
+    [Inject] private LanguageService LangSvc { get; set; } = default!;
+    [Inject] private IStringLocalizer<SharedResources> L { get; set; } = default!;
 
     private HubConnection? hubConnection;
     private HubConnectionState connectionState = HubConnectionState.Disconnected;
@@ -35,14 +40,16 @@ public partial class Monitor : IAsyncDisposable
 
     private string ConnectionTitle => connectionState switch
     {
-        HubConnectionState.Connected => "Connected",
-        HubConnectionState.Reconnecting => "Reconnecting...",
-        HubConnectionState.Disconnected => "Disconnected",
+        HubConnectionState.Connected => L["Monitor.Connected"].Value,
+        HubConnectionState.Reconnecting => L["Monitor.Reconnecting"].Value,
+        HubConnectionState.Disconnected => L["Monitor.Disconnected"].Value,
         _ => connectionState.ToString()
     };
 
     protected override async Task OnInitializedAsync()
     {
+        LangSvc.LanguageChanged += OnLanguageChanged;
+
         hubConnection = new HubConnectionBuilder()
             .WithUrl(Navigation.ToAbsoluteUri("/hubs/runtime"))
             .WithAutomaticReconnect()
@@ -122,9 +129,16 @@ public partial class Monitor : IAsyncDisposable
         return Task.CompletedTask;
     }
 
+    private void OnLanguageChanged()
+    {
+        if (!_disposed)
+            InvokeAsync(StateHasChanged);
+    }
+
     public async ValueTask DisposeAsync()
     {
         _disposed = true;
+        LangSvc.LanguageChanged -= OnLanguageChanged;
         if (hubConnection is not null)
             await hubConnection.DisposeAsync();
     }

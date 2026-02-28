@@ -1,29 +1,29 @@
 @page "/monitor"
 
 <h1 class="page-title">
-    Monitor
+    @L["Monitor.Title"]
     <span class="connection-dot @ConnectionClass"
           title="@ConnectionTitle"></span>
 </h1>
 
 @if (connectionState == HubConnectionState.Reconnecting)
 {
-    <div class="reconnecting-banner">Reconnecting...</div>
+    <div class="reconnecting-banner">@L["Monitor.Reconnecting"]</div>
 }
 
 <div class="monitor-grid">
     <div class="metric-card card">
         <div class="metric-header">
-            <span class="metric-label">Heartbeat</span>
+            <span class="metric-label">@L["Nav.Heartbeat"]</span>
         </div>
         <div class="metric-value status-text @(isRunning ? "running" : "stopped")">
-            @(isRunning ? "Running" : "Stopped")
+            @(isRunning ? L["Heartbeat.Running"].Value : L["Heartbeat.Stopped"].Value)
         </div>
     </div>
 
     <div class="metric-card card">
         <div class="metric-header">
-            <span class="metric-label">Tick Count</span>
+            <span class="metric-label">@L["Heartbeat.TickCount"]</span>
         </div>
         <div class="metric-value mono tick-value">
             @tickCount.ToString("N0")
@@ -32,7 +32,7 @@
 
     <div class="metric-card card">
         <div class="metric-header">
-            <span class="metric-label">Tick Latency</span>
+            <span class="metric-label">@L["Monitor.TickLatency"]</span>
         </div>
         <div class="metric-value mono @LatencyClass">
             @latencyMs.ToString("F1") ms
@@ -41,7 +41,7 @@
 
     <div class="metric-card card trend-card">
         <div class="metric-header">
-            <span class="metric-label">Latency Trend</span>
+            <span class="metric-label">@L["Monitor.LatencyTrend"]</span>
             <span class="metric-sublabel">last @latencyHistory.Count points</span>
         </div>
         <div class="sparkline-container">

@@ -152,4 +152,109 @@
   <data name="Editor.Title" xml:space="preserve">
     <value>编辑器</value>
   </data>
+  <data name="Heartbeat.StartHeartbeat" xml:space="preserve">
+    <value>启动心跳</value>
+  </data>
+  <data name="Heartbeat.StopHeartbeat" xml:space="preserve">
+    <value>停止心跳</value>
+  </data>
+  <data name="Heartbeat.StopConfirm" xml:space="preserve">
+    <value>确定要停止心跳循环吗？</value>
+  </data>
+  <data name="Monitor.Reconnecting" xml:space="preserve">
+    <value>重新连接中...</value>
+  </data>
+  <data name="Monitor.Connected" xml:space="preserve">
+    <value>已连接</value>
+  </data>
+  <data name="Monitor.Disconnected" xml:space="preserve">
+    <value>已断开</value>
+  </data>
+  <data name="Monitor.TickLatency" xml:space="preserve">
+    <value>心跳延迟</value>
+  </data>
+  <data name="Monitor.LatencyTrend" xml:space="preserve">
+    <value>延迟趋势</value>
+  </data>
+  <data name="Modules.Available" xml:space="preserve">
+    <value>可用模块</value>
+  </data>
+  <data name="Modules.NoAvailable" xml:space="preserve">
+    <value>暂无可用模块，请将模块文件夹放入 modules 目录。</value>
+  </data>
+  <data name="Modules.Loaded" xml:space="preserve">
+    <value>已加载</value>
+  </data>
+  <data name="Modules.NoLoaded" xml:space="preserve">
+    <value>暂无已加载模块。</value>
+  </data>
+  <data name="Modules.StatusAvailable" xml:space="preserve">
+    <value>可用</value>
+  </data>
+  <data name="Modules.StatusLoaded" xml:space="preserve">
+    <value>已加载</value>
+  </data>
+  <data name="Modules.Load" xml:space="preserve">
+    <value>加载</value>
+  </data>
+  <data name="Modules.Unload" xml:space="preserve">
+    <value>卸载</value>
+  </data>
+  <data name="Modules.UnloadTitle" xml:space="preserve">
+    <value>卸载模块</value>
+  </data>
+  <data name="Modules.UnloadConfirm" xml:space="preserve">
+    <value>确定要卸载</value>
+  </data>
+  <data name="Modules.Detail.Version" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="Modules.Detail.Description" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="Modules.Detail.NoDescription" xml:space="preserve">
+    <value>暂无描述</value>
+  </data>
+  <data name="Modules.Detail.LoadedAt" xml:space="preserve">
+    <value>加载时间</value>
+  </data>
+  <data name="Modules.Detail.Assembly" xml:space="preserve">
+    <value>程序集</value>
+  </data>
+  <data name="Modules.Detail.Ports" xml:space="preserve">
+    <value>端口</value>
+  </data>
+  <data name="Modules.Detail.NoPorts" xml:space="preserve">
+    <value>未声明端口</value>
+  </data>
+  <data name="Modules.Detail.Inputs" xml:space="preserve">
+    <value>输入</value>
+  </data>
+  <data name="Modules.Detail.Outputs" xml:space="preserve">
+    <value>输出</value>
+  </data>
+  <data name="Modules.Detail.None" xml:space="preserve">
+    <value>无</value>
+  </data>
+  <data name="Anima.NameLabel" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="Anima.NamePlaceholder" xml:space="preserve">
+    <value>输入 Anima 名称...</value>
+  </data>
+  <data name="Common.Create" xml:space="preserve">
+    <value>创建</value>
+  </data>
+  <data name="Chat.PipelineNotConfigured" xml:space="preserve">
+    <value>聊天管道未配置</value>
+  </data>
+  <data name="Chat.PipelineInstructions" xml:space="preserve">
+    <value>请在编辑器中连接 ChatInputModule → LLMModule → ChatOutputModule 以启用对话。</value>
+  </data>
+  <data name="Chat.OpenEditor" xml:space="preserve">
+    <value>打开连线编辑器</value>
+  </data>
+  <data name="Chat.EmptyState" xml:space="preserve">
+    <value>开始对话</value>
+  </data>
 </root>

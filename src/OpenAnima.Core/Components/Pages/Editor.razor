@@ -10,6 +10,8 @@
 @inject IConfigurationLoader _configLoader
 @inject IAnimaRuntimeManager _animaRuntimeManager
 @inject IAnimaContext _animaContext
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
 @implements IDisposable
 
 <div class="editor-container" tabindex="0" @onkeydown="HandleKeyDown">
@@ -26,6 +28,7 @@
     {
         // Subscribe to state changes
         _state.OnStateChanged += HandleStateChanged;
+        LangSvc.LanguageChanged += OnLanguageChanged;
 
         // Load current configuration from active Anima's wiring engine if available
         var activeRuntime = _animaRuntimeManager.GetRuntime(_animaContext.ActiveAnimaId ?? "");
@@ -50,6 +53,8 @@
         InvokeAsync(StateHasChanged);
     }
 
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
     private void HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Delete" || e.Key == "Backspace")
@@ -65,5 +70,6 @@
     public void Dispose()
     {
         _state.OnStateChanged -= HandleStateChanged;
+        LangSvc.LanguageChanged -= OnLanguageChanged;
     }
 }

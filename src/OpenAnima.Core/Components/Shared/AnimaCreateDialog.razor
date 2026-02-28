@@ -1,27 +1,31 @@
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
+@implements IDisposable
+
 @if (IsVisible)
 {
     <div class="modal-backdrop" @onclick="HandleCancel"></div>
     <div class="modal-dialog" @onclick:stopPropagation="true">
         <div class="modal-header">
-            <h2>Create New Anima</h2>
+            <h2>@L["Anima.Create"]</h2>
         </div>
         <div class="modal-body">
-            <label class="input-label" for="anima-name-input">Name</label>
+            <label class="input-label" for="anima-name-input">@L["Anima.NameLabel"]</label>
             <input id="anima-name-input"
                    class="anima-name-input"
                    type="text"
-                   placeholder="Enter Anima name..."
+                   placeholder="@L["Anima.NamePlaceholder"]"
                    @bind="_name"
                    @bind:event="oninput"
                    @onkeydown="HandleKeyDown"
                    autofocus />
         </div>
         <div class="modal-actions">
-            <button class="btn btn-secondary" @onclick="HandleCancel">Cancel</button>
+            <button class="btn btn-secondary" @onclick="HandleCancel">@L["Common.Cancel"]</button>
             <button class="btn btn-primary"
                     @onclick="HandleCreate"
                     disabled="@(string.IsNullOrWhiteSpace(_name))">
-                Create
+                @L["Common.Create"]
             </button>
         </div>
     </div>
@@ -33,6 +37,13 @@
     [Parameter] public EventCallback OnCancel { get; set; }
 
     private string _name = "";
+
+    protected override void OnInitialized()
+    {
+        LangSvc.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
     private async Task HandleCreate()
     {
@@ -56,5 +67,10 @@
             await HandleCreate();
         else if (e.Key == "Escape")
             await HandleCancel();
+    }
+
+    public void Dispose()
+    {
+        LangSvc.LanguageChanged -= OnLanguageChanged;
     }
 }

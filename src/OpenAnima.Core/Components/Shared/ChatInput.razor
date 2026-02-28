@@ -1,10 +1,12 @@
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
 @implements IDisposable
 
 <div class="chat-input-container">
     <textarea
         id="chat-input"
         rows="1"
-        placeholder="Type a message..."
+        placeholder="@L["Chat.Placeholder"]"
         @oninput="OnInput"
         disabled="@IsDisabled">
     </textarea>
@@ -30,10 +32,13 @@
     {
         if (firstRender)
         {
+            LangSvc.LanguageChanged += OnLanguageChanged;
             _dotNetRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("chatHelpers.setupEnterHandler", "chat-input", _dotNetRef);
         }
     }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
     private void OnInput(ChangeEventArgs e)
     {
@@ -66,6 +71,7 @@
 
     public void Dispose()
     {
+        LangSvc.LanguageChanged -= OnLanguageChanged;
         _dotNetRef?.Dispose();
     }
 }

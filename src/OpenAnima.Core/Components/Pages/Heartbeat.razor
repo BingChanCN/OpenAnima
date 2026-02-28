@@ -4,15 +4,17 @@
 @inject IAnimaRuntimeManager AnimaRuntimeManager
 @inject IAnimaContext AnimaContext
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
 @implements IAsyncDisposable
 
-<h1 class="page-title">Heartbeat</h1>
+<h1 class="page-title">@L["Heartbeat.Title"]</h1>
 
 <div class="heartbeat-container">
     <div class="status-card-large">
-        <div class="status-label">Status</div>
+        <div class="status-label">@L["Dashboard.RuntimeStatus"]</div>
         <div class="status-value @(isRunning ? "running" : "stopped")">
-            @(isRunning ? "Running" : "Stopped")
+            @(isRunning ? L["Heartbeat.Running"].Value : L["Heartbeat.Stopped"].Value)
         </div>
 
         <div class="control-section">
@@ -20,7 +22,7 @@
                     disabled="@isLoading"
                     @onclick="ToggleHeartbeat">
                 @if (isLoading) { <span class="spinner"></span> }
-                @(isRunning ? "Stop Heartbeat" : "Start Heartbeat")
+                @(isRunning ? L["Heartbeat.StopHeartbeat"].Value : L["Heartbeat.StartHeartbeat"].Value)
             </button>
             @if (!string.IsNullOrEmpty(errorMessage))
             {
@@ -31,20 +33,20 @@
 
     <div class="stats-container">
         <div class="stat-card card">
-            <span class="stat-label">Tick Count</span>
+            <span class="stat-label">@L["Heartbeat.TickCount"]</span>
             <span class="stat-value mono">@tickCount</span>
         </div>
         <div class="stat-card card">
-            <span class="stat-label">Latency</span>
+            <span class="stat-label">@L["Heartbeat.Latency"]</span>
             <span class="stat-value mono">@latencyMs.ToString("F2") ms</span>
         </div>
     </div>
 </div>
 
 <ConfirmDialog IsVisible="@showStopConfirm"
-               Title="Stop Heartbeat"
-               Message="Are you sure you want to stop the heartbeat loop?"
-               ConfirmText="Stop"
+               Title="@L["Heartbeat.StopHeartbeat"]"
+               Message="@L["Heartbeat.StopConfirm"]"
+               ConfirmText="@L["Anima.Stop"]"
                ConfirmButtonClass="btn-danger"
                OnConfirm="@ConfirmStop"
                OnCancel="@CancelStop" />
@@ -61,6 +63,7 @@
     protected override async Task OnInitializedAsync()
     {
         AnimaContext.ActiveAnimaChanged += OnActiveAnimaChanged;
+        LangSvc.LanguageChanged += OnLanguageChanged;
 
         hubConnection = new HubConnectionBuilder()
             .WithUrl(Navigation.ToAbsoluteUri("/hubs/runtime"))
@@ -92,6 +95,8 @@
         RefreshFromActiveRuntime();
         InvokeAsync(StateHasChanged);
     }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
     private void RefreshFromActiveRuntime()
     {
@@ -186,6 +191,7 @@
     public async ValueTask DisposeAsync()
     {
         AnimaContext.ActiveAnimaChanged -= OnActiveAnimaChanged;
+        LangSvc.LanguageChanged -= OnLanguageChanged;
         if (hubConnection is not null)
             await hubConnection.DisposeAsync();
     }

@@ -2,13 +2,15 @@
 @implements IAsyncDisposable
 @inject IAnimaRuntimeManager AnimaManager
 @inject IAnimaContext AnimaContext
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
 
 <div class="anima-list-panel">
     @if (!SidebarCollapsed)
     {
         <div class="anima-list-header">
             <span class="anima-list-title">Animas</span>
-            <button class="add-anima-btn" @onclick="OpenCreateDialog" title="Create new Anima">+</button>
+            <button class="add-anima-btn" @onclick="OpenCreateDialog" title="@L["Anima.Create"]">+</button>
         </div>
     }
 
@@ -54,7 +56,7 @@
 
     @if (SidebarCollapsed)
     {
-        <button class="add-anima-btn-collapsed" @onclick="OpenCreateDialog" title="Create new Anima">+</button>
+        <button class="add-anima-btn-collapsed" @onclick="OpenCreateDialog" title="@L["Anima.Create"]">+</button>
     }
 </div>
 
@@ -71,9 +73,9 @@
                   OnClose="CloseContextMenu" />
 
 <ConfirmDialog IsVisible="_showDeleteConfirm"
-               Title="Delete Anima"
-               Message="@($"Delete \"{_contextMenuAnimaName}\"? This cannot be undone.")"
-               ConfirmText="Delete"
+               Title="@L["Anima.Delete"]"
+               Message="@($"{L["Anima.ConfirmDelete"].Value} \"{_contextMenuAnimaName}\"")"
+               ConfirmText="@L["Anima.Delete"]"
                ConfirmButtonClass="btn-danger"
                OnConfirm="HandleDelete"
                OnCancel="CloseDeleteConfirm" />
@@ -96,12 +98,15 @@
     {
         AnimaManager.StateChanged += HandleStateChanged;
         AnimaContext.ActiveAnimaChanged += HandleStateChanged;
+        LangSvc.LanguageChanged += OnLanguageChanged;
     }
 
     private void HandleStateChanged()
     {
         InvokeAsync(StateHasChanged);
     }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
     // --- Create ---
 
@@ -204,6 +209,7 @@
     {
         AnimaManager.StateChanged -= HandleStateChanged;
         AnimaContext.ActiveAnimaChanged -= HandleStateChanged;
+        LangSvc.LanguageChanged -= OnLanguageChanged;
         return ValueTask.CompletedTask;
     }
 }

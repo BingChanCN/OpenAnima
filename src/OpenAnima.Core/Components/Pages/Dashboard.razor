@@ -4,16 +4,18 @@
 @inject IModuleService ModuleService
 @inject IAnimaRuntimeManager AnimaRuntimeManager
 @inject IAnimaContext AnimaContext
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
 @implements IDisposable
 
 <div class="dashboard-container">
-    <h1 class="page-title">Runtime Dashboard</h1>
+    <h1 class="page-title">@L["Dashboard.Title"]</h1>
 
     <div class="summary-grid">
         <div class="summary-card card">
             <span class="summary-icon">&#x25A8;</span>
             <div class="summary-content">
-                <span class="summary-label">Modules</span>
+                <span class="summary-label">@L["Dashboard.ModuleCount"]</span>
                 <span class="summary-value">@ModuleService.Count</span>
             </div>
         </div>
@@ -21,9 +23,9 @@
         <div class="summary-card card">
             <span class="summary-icon">&#x25C9;</span>
             <div class="summary-content">
-                <span class="summary-label">Heartbeat</span>
+                <span class="summary-label">@L["Dashboard.HeartbeatStatus"]</span>
                 <span class="summary-value status-indicator @(ActiveRuntime?.IsRunning == true ? "running" : "stopped")">
-                    @(ActiveRuntime?.IsRunning == true ? "Running" : "Stopped")
+                    @(ActiveRuntime?.IsRunning == true ? L["Heartbeat.Running"].Value : L["Heartbeat.Stopped"].Value)
                 </span>
             </div>
         </div>
@@ -31,7 +33,7 @@
         <div class="summary-card card">
             <span class="summary-icon">&#x29D7;</span>
             <div class="summary-content">
-                <span class="summary-label">Ticks</span>
+                <span class="summary-label">@L["Heartbeat.TickCount"]</span>
                 <span class="summary-value mono">@(ActiveRuntime?.HeartbeatLoop.TickCount ?? 0)</span>
             </div>
         </div>
@@ -51,6 +53,7 @@
     protected override void OnInitialized()
     {
         AnimaContext.ActiveAnimaChanged += OnActiveAnimaChanged;
+        LangSvc.LanguageChanged += OnLanguageChanged;
     }
 
     private void OnActiveAnimaChanged()
@@ -58,8 +61,11 @@
         InvokeAsync(StateHasChanged);
     }
 
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
     public void Dispose()
     {
         AnimaContext.ActiveAnimaChanged -= OnActiveAnimaChanged;
+        LangSvc.LanguageChanged -= OnLanguageChanged;
     }
 }

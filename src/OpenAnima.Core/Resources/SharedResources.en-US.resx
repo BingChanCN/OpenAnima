@@ -152,4 +152,109 @@
   <data name="Editor.Title" xml:space="preserve">
     <value>Editor</value>
   </data>
+  <data name="Heartbeat.StartHeartbeat" xml:space="preserve">
+    <value>Start Heartbeat</value>
+  </data>
+  <data name="Heartbeat.StopHeartbeat" xml:space="preserve">
+    <value>Stop Heartbeat</value>
+  </data>
+  <data name="Heartbeat.StopConfirm" xml:space="preserve">
+    <value>Are you sure you want to stop the heartbeat loop?</value>
+  </data>
+  <data name="Monitor.Reconnecting" xml:space="preserve">
+    <value>Reconnecting...</value>
+  </data>
+  <data name="Monitor.Connected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="Monitor.Disconnected" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="Monitor.TickLatency" xml:space="preserve">
+    <value>Tick Latency</value>
+  </data>
+  <data name="Monitor.LatencyTrend" xml:space="preserve">
+    <value>Latency Trend</value>
+  </data>
+  <data name="Modules.Available" xml:space="preserve">
+    <value>Available</value>
+  </data>
+  <data name="Modules.NoAvailable" xml:space="preserve">
+    <value>No modules available. Place module folders in the modules directory.</value>
+  </data>
+  <data name="Modules.Loaded" xml:space="preserve">
+    <value>Loaded</value>
+  </data>
+  <data name="Modules.NoLoaded" xml:space="preserve">
+    <value>No modules loaded.</value>
+  </data>
+  <data name="Modules.StatusAvailable" xml:space="preserve">
+    <value>Available</value>
+  </data>
+  <data name="Modules.StatusLoaded" xml:space="preserve">
+    <value>Loaded</value>
+  </data>
+  <data name="Modules.Load" xml:space="preserve">
+    <value>Load</value>
+  </data>
+  <data name="Modules.Unload" xml:space="preserve">
+    <value>Unload</value>
+  </data>
+  <data name="Modules.UnloadTitle" xml:space="preserve">
+    <value>Unload Module</value>
+  </data>
+  <data name="Modules.UnloadConfirm" xml:space="preserve">
+    <value>Are you sure you want to unload</value>
+  </data>
+  <data name="Modules.Detail.Version" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="Modules.Detail.Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="Modules.Detail.NoDescription" xml:space="preserve">
+    <value>No description</value>
+  </data>
+  <data name="Modules.Detail.LoadedAt" xml:space="preserve">
+    <value>Loaded At</value>
+  </data>
+  <data name="Modules.Detail.Assembly" xml:space="preserve">
+    <value>Assembly</value>
+  </data>
+  <data name="Modules.Detail.Ports" xml:space="preserve">
+    <value>Ports</value>
+  </data>
+  <data name="Modules.Detail.NoPorts" xml:space="preserve">
+    <value>No ports declared</value>
+  </data>
+  <data name="Modules.Detail.Inputs" xml:space="preserve">
+    <value>INPUTS</value>
+  </data>
+  <data name="Modules.Detail.Outputs" xml:space="preserve">
+    <value>OUTPUTS</value>
+  </data>
+  <data name="Modules.Detail.None" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Anima.NameLabel" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Anima.NamePlaceholder" xml:space="preserve">
+    <value>Enter Anima name...</value>
+  </data>
+  <data name="Common.Create" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="Chat.PipelineNotConfigured" xml:space="preserve">
+    <value>Chat pipeline not configured</value>
+  </data>
+  <data name="Chat.PipelineInstructions" xml:space="preserve">
+    <value>Connect ChatInputModule → LLMModule → ChatOutputModule in the editor to enable conversation.</value>
+  </data>
+  <data name="Chat.OpenEditor" xml:space="preserve">
+    <value>Open Wiring Editor</value>
+  </data>
+  <data name="Chat.EmptyState" xml:space="preserve">
+    <value>Start a conversation</value>
+  </data>
 </root>

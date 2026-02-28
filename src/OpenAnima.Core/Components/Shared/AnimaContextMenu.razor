@@ -1,10 +1,14 @@
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
+@implements IDisposable
+
 @if (IsVisible)
 {
     <div class="context-menu-backdrop" @onclick="HandleClose"></div>
     <div class="context-menu" style="left: @(X)px; top: @(Y)px;" @onclick:stopPropagation="true">
-        <button class="context-menu-item" @onclick="HandleRename">Rename</button>
-        <button class="context-menu-item" @onclick="HandleClone">Clone</button>
-        <button class="context-menu-item context-menu-item--danger" @onclick="HandleDelete">Delete</button>
+        <button class="context-menu-item" @onclick="HandleRename">@L["Anima.Rename"]</button>
+        <button class="context-menu-item" @onclick="HandleClone">@L["Anima.Clone"]</button>
+        <button class="context-menu-item context-menu-item--danger" @onclick="HandleDelete">@L["Anima.Delete"]</button>
     </div>
 }
 
@@ -16,6 +20,13 @@
     [Parameter] public EventCallback OnClone { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
+
+    protected override void OnInitialized()
+    {
+        LangSvc.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
     private async Task HandleRename()
     {
@@ -38,5 +49,10 @@
     private async Task HandleClose()
     {
         await OnClose.InvokeAsync();
+    }
+
+    public void Dispose()
+    {
+        LangSvc.LanguageChanged -= OnLanguageChanged;
     }
 }

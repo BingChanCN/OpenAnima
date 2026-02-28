@@ -1,3 +1,7 @@
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
+@implements IDisposable
+
 @if (IsVisible)
 {
     <div class="modal-backdrop" @onclick="Cancel"></div>
@@ -9,7 +13,7 @@
             <p>@Message</p>
         </div>
         <div class="modal-actions">
-            <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+            <button class="btn btn-secondary" @onclick="Cancel">@L["Common.Cancel"]</button>
             <button class="btn @ConfirmButtonClass" @onclick="Confirm">@ConfirmText</button>
         </div>
     </div>
@@ -37,6 +41,13 @@
     [Parameter]
     public EventCallback OnCancel { get; set; }
 
+    protected override void OnInitialized()
+    {
+        LangSvc.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
     private async Task Confirm()
     {
         await OnConfirm.InvokeAsync();
@@ -45,5 +56,10 @@
     private async Task Cancel()
     {
         await OnCancel.InvokeAsync();
+    }
+
+    public void Dispose()
+    {
+        LangSvc.LanguageChanged -= OnLanguageChanged;
     }
 }

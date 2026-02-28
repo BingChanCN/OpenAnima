@@ -6,16 +6,18 @@
 @using Microsoft.AspNetCore.SignalR.Client
 @inject IModuleService ModuleService
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
 @implements IAsyncDisposable
 
-<h1 class="page-title">Modules</h1>
+<h1 class="page-title">@L["Modules.Title"]</h1>
 
 <!-- Available Modules Section -->
 <div class="modules-section">
-    <h2 class="section-title">Available</h2>
+    <h2 class="section-title">@L["Modules.Available"]</h2>
     @if (availableModules.Count == 0)
     {
-        <p class="text-muted">No modules available. Place module folders in the modules directory.</p>
+        <p class="text-muted">@L["Modules.NoAvailable"]</p>
     }
     else
     {
@@ -24,13 +26,13 @@
             <div class="module-item card">
                 <div class="module-item-info">
                     <span class="module-item-name">@name</span>
-                    <span class="status-indicator available"><span class="status-dot"></span>Available</span>
+                    <span class="status-indicator available"><span class="status-dot"></span>@L["Modules.StatusAvailable"]</span>
                 </div>
                 <button class="btn btn-primary @(operatingModule == name ? "loading" : "")"
                         disabled="@isOperating"
                         @onclick="() => LoadModule(name)">
                     @if (operatingModule == name) { <span class="spinner"></span> }
-                    Load
+                    @L["Modules.Load"]
                 </button>
                 @if (moduleErrors.TryGetValue(name, out var availErr))
                 {
@@ -43,10 +45,10 @@
 
 <!-- Loaded Modules Section -->
 <div class="modules-section">
-    <h2 class="section-title">Loaded</h2>
+    <h2 class="section-title">@L["Modules.Loaded"]</h2>
     @if (ModuleService.Count == 0)
     {
-        <p class="text-muted">No modules loaded.</p>
+        <p class="text-muted">@L["Modules.NoLoaded"]</p>
     }
     else
     {
@@ -57,13 +59,13 @@
                 <div class="module-item-info" @onclick="() => ShowDetails(entry)" style="cursor:pointer">
                     <span class="module-item-name">@entry.Module.Metadata.Name</span>
                     <span class="module-item-version">v@(entry.Module.Metadata.Version)</span>
-                    <span class="status-indicator loaded"><span class="status-dot"></span>Loaded</span>
+                    <span class="status-indicator loaded"><span class="status-dot"></span>@L["Modules.StatusLoaded"]</span>
                 </div>
                 <button class="btn btn-danger @(operatingModule == moduleName ? "loading" : "")"
                         disabled="@isOperating"
                         @onclick="() => UnloadModule(moduleName)">
                     @if (operatingModule == moduleName) { <span class="spinner"></span> }
-                    Unload
+                    @L["Modules.Unload"]
                 </button>
                 @if (moduleErrors.TryGetValue(moduleName, out var loadedErr))
                 {
@@ -76,9 +78,9 @@
 
 <!-- Confirmation Dialog -->
 <ConfirmDialog IsVisible="@showUnloadConfirm"
-               Title="Unload Module"
-               Message="@($"Are you sure you want to unload {moduleToUnload}? This will stop all module operations.")"
-               ConfirmText="Unload"
+               Title="@L["Modules.UnloadTitle"]"
+               Message="@($"{L["Modules.UnloadConfirm"].Value} {moduleToUnload}?")"
+               ConfirmText="@L["Modules.Unload"]"
                ConfirmButtonClass="btn-danger"
                OnConfirm="@ConfirmUnload"
                OnCancel="@CancelUnload" />
@@ -91,25 +93,25 @@
     {
         <div class="detail-grid">
             <div class="detail-row">
-                <span class="detail-label">Version</span>
+                <span class="detail-label">@L["Modules.Detail.Version"]</span>
                 <span class="detail-value">@selectedModule.Module.Metadata.Version</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Description</span>
-                <span class="detail-value">@(selectedModule.Module.Metadata.Description ?? "No description")</span>
+                <span class="detail-label">@L["Modules.Detail.Description"]</span>
+                <span class="detail-value">@(selectedModule.Module.Metadata.Description ?? L["Modules.Detail.NoDescription"].Value)</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Loaded At</span>
+                <span class="detail-label">@L["Modules.Detail.LoadedAt"]</span>
                 <span class="detail-value mono">@selectedModule.LoadedAt.ToString("yyyy-MM-dd HH:mm:ss")</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Assembly</span>
+                <span class="detail-label">@L["Modules.Detail.Assembly"]</span>
                 <span class="detail-value mono">@selectedModule.Manifest.EntryAssembly</span>
             </div>
         </div>
 
         <div class="port-section">
-            <h3 class="section-subtitle">Ports</h3>
+            <h3 class="section-subtitle">@L["Modules.Detail.Ports"]</h3>
             @{
                 var ports = GetModulePorts(selectedModule);
                 var inputs = ports.Where(p => p.Direction == PortDirection.Input).ToList();
@@ -117,16 +119,16 @@
             }
             @if (ports.Count == 0)
             {
-                <p class="text-muted" style="font-size: 0.85rem;">No ports declared</p>
+                <p class="text-muted" style="font-size: 0.85rem;">@L["Modules.Detail.NoPorts"]</p>
             }
             else
             {
                 <div class="port-columns">
                     <div class="port-column">
-                        <div class="port-column-header">INPUTS</div>
+                        <div class="port-column-header">@L["Modules.Detail.Inputs"]</div>
                         @if (inputs.Count == 0)
                         {
-                            <span class="text-muted" style="font-size: 0.75rem;">None</span>
+                            <span class="text-muted" style="font-size: 0.75rem;">@L["Modules.Detail.None"]</span>
                         }
                         else
                         {
@@ -137,10 +139,10 @@
                         }
                     </div>
                     <div class="port-column">
-                        <div class="port-column-header">OUTPUTS</div>
+                        <div class="port-column-header">@L["Modules.Detail.Outputs"]</div>
                         @if (outputs.Count == 0)
                         {
-                            <span class="text-muted" style="font-size: 0.75rem;">None</span>
+                            <span class="text-muted" style="font-size: 0.75rem;">@L["Modules.Detail.None"]</span>
                         }
                         else
                         {
@@ -169,6 +171,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        LangSvc.LanguageChanged += OnLanguageChanged;
+
         hubConnection = new HubConnectionBuilder()
             .WithUrl(Navigation.ToAbsoluteUri("/hubs/runtime"))
             .WithAutomaticReconnect()
@@ -264,6 +268,8 @@
         moduleToUnload = null;
     }
 
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
     private void ShowDetails(PluginRegistryEntry entry)
     {
         selectedModule = entry;
@@ -283,6 +289,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        LangSvc.LanguageChanged -= OnLanguageChanged;
         if (hubConnection is not null)
             await hubConnection.DisposeAsync();
     }
