@@ -7,9 +7,9 @@
 
 ### SDK Foundation
 
-- [ ] **SDK-01**: Developer can create new module project with `oani new <ModuleName>` command
-- [ ] **SDK-02**: Developer can specify output directory with `oani new <ModuleName> -o <path>` option
-- [ ] **SDK-03**: Developer can preview generated files with `oani new <ModuleName> --dry-run` option
+- [x] **SDK-01**: Developer can create new module project with `oani new <ModuleName>` command
+- [x] **SDK-02**: Developer can specify output directory with `oani new <ModuleName> -o <path>` option
+- [x] **SDK-03**: Developer can preview generated files with `oani new <ModuleName> --dry-run` option
 - [x] **SDK-04**: Generated module project compiles without errors
 - [x] **SDK-05**: Generated module implements IModule and IModuleMetadata interfaces
 
@@ -48,9 +48,9 @@
 
 ### Template Customization
 
-- [ ] **TEMP-01**: Developer can specify module type with `--type` option (default: standard)
-- [ ] **TEMP-02**: Developer can specify input ports with `--inputs` option (e.g., --inputs Text,Trigger)
-- [ ] **TEMP-03**: Developer can specify output ports with `--outputs` option (e.g., --outputs Text)
+- [x] **TEMP-01**: Developer can specify module type with `--type` option (default: standard)
+- [x] **TEMP-02**: Developer can specify input ports with `--inputs` option (e.g., --inputs Text,Trigger)
+- [x] **TEMP-03**: Developer can specify output ports with `--outputs` option (e.g., --outputs Text)
 - [x] **TEMP-04**: Template generates port attributes based on specified ports
 - [x] **TEMP-05**: Template generates working ExecuteAsync method with port handling stubs
 
@@ -98,9 +98,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SDK-01 | Phase 20 | Pending |
-| SDK-02 | Phase 20 | Pending |
-| SDK-03 | Phase 20 | Pending |
+| SDK-01 | Phase 20 | Complete |
+| SDK-02 | Phase 20 | Complete |
+| SDK-03 | Phase 20 | Complete |
 | SDK-04 | Phase 20 | Complete |
 | SDK-05 | Phase 20 | Complete |
 | CLI-01 | Phase 20 | Complete |
@@ -124,9 +124,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MAN-03 | Phase 20 | Complete |
 | MAN-04 | Phase 20 | Complete |
 | MAN-05 | Phase 20 | Complete |
-| TEMP-01 | Phase 20 | Pending |
-| TEMP-02 | Phase 20 | Pending |
-| TEMP-03 | Phase 20 | Pending |
+| TEMP-01 | Phase 20 | Complete |
+| TEMP-02 | Phase 20 | Complete |
+| TEMP-03 | Phase 20 | Complete |
 | TEMP-04 | Phase 20 | Complete |
 | TEMP-05 | Phase 20 | Complete |
 | DOC-01 | Phase 22 | Pending |
