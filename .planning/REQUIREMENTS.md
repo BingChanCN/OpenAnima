@@ -23,11 +23,11 @@
 
 ### Module Pack
 
-- [ ] **PACK-01**: Developer can pack module with `oani pack <path>` command
-- [ ] **PACK-02**: Pack command produces .oamod file containing module.json, DLL, and assets
-- [ ] **PACK-03**: Pack command builds module project before packing (unless --no-build)
-- [ ] **PACK-04**: Developer can specify output directory with `oani pack <path> -o <path>` option
-- [ ] **PACK-05**: Pack command includes SHA256 checksum in package manifest
+- [x] **PACK-01**: Developer can pack module with `oani pack <path>` command
+- [x] **PACK-02**: Pack command produces .oamod file containing module.json, DLL, and assets
+- [x] **PACK-03**: Pack command builds module project before packing (unless --no-build)
+- [x] **PACK-04**: Developer can specify output directory with `oani pack <path> -o <path>` option
+- [x] **PACK-05**: Pack command includes SHA256 checksum in package manifest
 - [ ] **PACK-06**: Packed module can be loaded by OpenAnima runtime without modification
 
 ### Module Validate
@@ -108,11 +108,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLI-03 | Phase 20 | Pending |
 | CLI-04 | Phase 20 | Pending |
 | CLI-05 | Phase 20 | Pending |
-| PACK-01 | Phase 21 | Pending |
-| PACK-02 | Phase 21 | Pending |
-| PACK-03 | Phase 21 | Pending |
-| PACK-04 | Phase 21 | Pending |
-| PACK-05 | Phase 21 | Pending |
+| PACK-01 | Phase 21 | Complete |
+| PACK-02 | Phase 21 | Complete |
+| PACK-03 | Phase 21 | Complete |
+| PACK-04 | Phase 21 | Complete |
+| PACK-05 | Phase 21 | Complete |
 | PACK-06 | Phase 21 | Pending |
 | VAL-01 | Phase 21 | Complete |
 | VAL-02 | Phase 21 | Complete |

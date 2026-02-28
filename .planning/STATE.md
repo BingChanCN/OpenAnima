@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Module SDK & DevEx
 status: planning
-last_updated: "2026-02-28T09:05:32.137Z"
-last_activity: 2026-02-28 — Roadmap created for v1.4 Module SDK & DevEx milestone
+last_updated: "2026-02-28T09:18:07Z"
+last_activity: 2026-02-28 — Completed 21-02-PLAN.md (Pack Command Implementation)
 progress:
   total_phases: 12
   completed_phases: 10
   total_plans: 27
-  completed_plans: 22
-  percent: 81
+  completed_plans: 23
+  percent: 85
 ---
 
 # Project State: OpenAnima v1.4 Module SDK & DevEx
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 ## Current Position
 
 **Phase:** 21 of 22 (Pack, Validate & Runtime Integration)
-**Plan:** 1 of 3 in current phase
+**Plan:** 2 of 3 in current phase
 **Status:** Executing
-**Last activity:** 2026-02-28 — Completed 21-01-PLAN.md (Validate Command Implementation)
+**Last activity:** 2026-02-28 — Completed 21-02-PLAN.md (Pack Command Implementation)
 
-**Progress:** [████████░░] 81%
+**Progress:** [████████░░] 85%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 *Updated after each plan completion*
 | Phase 21 P01 | 3 | 2 tasks | 3 files |
+| Phase 21 P02 | 10 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,9 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 - **Phase 21:** Use name-based type comparison for IModule detection to avoid type identity issues across AssemblyLoadContext boundaries
 - **Phase 21:** Accumulate all validation errors before reporting for better developer experience
 - **Phase 21:** Make assembly validation optional (warning only) if module not built yet
+- **Phase 21:** MD5 for checksum algorithm (sufficient for integrity verification, not cryptographic security)
+- **Phase 21:** In-memory manifest enrichment (source module.json unchanged, only packed version has checksum/targetFramework)
+- **Phase 21:** Search Release then Debug for DLL (supports both --no-build and post-build scenarios)
 
 ### Key Decisions (v1.3)
 
