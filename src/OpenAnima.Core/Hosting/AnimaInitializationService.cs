@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Core.Anima;
+using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.Hosting;
 
@@ -13,15 +14,18 @@ public class AnimaInitializationService : IHostedService
 {
     private readonly IAnimaRuntimeManager _animaManager;
     private readonly IAnimaContext _animaContext;
+    private readonly IAnimaModuleStateService _moduleStateService;
     private readonly ILogger<AnimaInitializationService> _logger;
 
     public AnimaInitializationService(
         IAnimaRuntimeManager animaManager,
         IAnimaContext animaContext,
+        IAnimaModuleStateService moduleStateService,
         ILogger<AnimaInitializationService> logger)
     {
         _animaManager = animaManager;
         _animaContext = animaContext;
+        _moduleStateService = moduleStateService;
         _logger = logger;
     }
 
@@ -30,6 +34,7 @@ public class AnimaInitializationService : IHostedService
         _logger.LogInformation("Initializing Anima runtime...");
 
         await _animaManager.InitializeAsync(ct);
+        await _moduleStateService.InitializeAsync();
 
         var all = _animaManager.GetAll();
         string activeId;
