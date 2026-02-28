@@ -77,6 +77,7 @@ builder.Services.AddAnimaServices();
 builder.Services.AddWiringServices();
 
 // --- Register hosted service for runtime lifecycle ---
+builder.Services.AddHostedService<AnimaInitializationService>();
 builder.Services.AddHostedService<OpenAnimaHostedService>();
 
 // --- Add Blazor Server ---

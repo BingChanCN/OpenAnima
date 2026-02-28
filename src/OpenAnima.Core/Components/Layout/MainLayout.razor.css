@@ -65,6 +65,18 @@
 }
 
 /* Navigation */
+.anima-list-section {
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.sidebar.collapsed .anima-list-section {
+    padding: 4px;
+}
+
+/* Navigation */
 .sidebar-nav {
     padding: 8px;
     flex: 1;

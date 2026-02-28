@@ -21,6 +21,11 @@
                 @(SidebarCollapsed ? "\u25B6" : "\u25C0")
             </button>
         </div>
+        <CascadingValue Value="SidebarCollapsed" Name="SidebarCollapsed">
+            <div class="anima-list-section">
+                <AnimaListPanel />
+            </div>
+        </CascadingValue>
         <nav class="sidebar-nav" role="navigation" aria-label="Main navigation">
             <NavLink href="/" class="nav-item" Match="NavLinkMatch.All">
                 <span class="nav-icon">&#x25A3;</span>
