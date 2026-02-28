@@ -7,11 +7,17 @@ public class AnimaRuntimeManagerTests : IAsyncDisposable
 {
     private readonly string _tempRoot;
     private readonly AnimaRuntimeManager _manager;
+    private readonly AnimaContext _animaContext;
 
     public AnimaRuntimeManagerTests()
     {
         _tempRoot = Path.Combine(Path.GetTempPath(), $"anima-test-{Guid.NewGuid()}");
-        _manager = new AnimaRuntimeManager(_tempRoot, NullLogger<AnimaRuntimeManager>.Instance);
+        _animaContext = new AnimaContext();
+        _manager = new AnimaRuntimeManager(
+            _tempRoot,
+            NullLogger<AnimaRuntimeManager>.Instance,
+            NullLoggerFactory.Instance,
+            _animaContext);
     }
 
     // --- CreateAsync ---
@@ -68,7 +74,7 @@ public class AnimaRuntimeManagerTests : IAsyncDisposable
         await _manager.CreateAsync("Anima1");
         await _manager.CreateAsync("Anima2");
 
-        var manager2 = new AnimaRuntimeManager(_tempRoot, NullLogger<AnimaRuntimeManager>.Instance);
+        var manager2 = new AnimaRuntimeManager(_tempRoot, NullLogger<AnimaRuntimeManager>.Instance, NullLoggerFactory.Instance, new AnimaContext());
         await manager2.InitializeAsync();
 
         var all = manager2.GetAll();
@@ -127,7 +133,7 @@ public class AnimaRuntimeManagerTests : IAsyncDisposable
         Assert.Equal("NewName", updated!.Name);
 
         // Verify persisted to disk
-        var manager2 = new AnimaRuntimeManager(_tempRoot, NullLogger<AnimaRuntimeManager>.Instance);
+        var manager2 = new AnimaRuntimeManager(_tempRoot, NullLogger<AnimaRuntimeManager>.Instance, NullLoggerFactory.Instance, new AnimaContext());
         await manager2.InitializeAsync();
         var loaded = manager2.GetById(descriptor.Id);
         Assert.Equal("NewName", loaded!.Name);
@@ -196,7 +202,7 @@ public class AnimaRuntimeManagerTests : IAsyncDisposable
     [Fact]
     public async Task DisposeAsync_DisposesWithoutError()
     {
-        var manager = new AnimaRuntimeManager(_tempRoot, NullLogger<AnimaRuntimeManager>.Instance);
+        var manager = new AnimaRuntimeManager(_tempRoot, NullLogger<AnimaRuntimeManager>.Instance, NullLoggerFactory.Instance, new AnimaContext());
         await manager.DisposeAsync(); // should not throw
     }
 

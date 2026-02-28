@@ -1,5 +1,7 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using OpenAnima.Core.Hubs;
 
 namespace OpenAnima.Core.Anima;
 
@@ -17,15 +19,27 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager
 
     private readonly string _animasRoot;
     private readonly ILogger<AnimaRuntimeManager> _logger;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly IAnimaContext _animaContext;
+    private readonly IHubContext<RuntimeHub, IRuntimeClient>? _hubContext;
     private readonly Dictionary<string, AnimaDescriptor> _animas = new();
+    private readonly Dictionary<string, AnimaRuntime> _runtimes = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     public event Action? StateChanged;
 
-    public AnimaRuntimeManager(string animasRoot, ILogger<AnimaRuntimeManager> logger)
+    public AnimaRuntimeManager(
+        string animasRoot,
+        ILogger<AnimaRuntimeManager> logger,
+        ILoggerFactory loggerFactory,
+        IAnimaContext animaContext,
+        IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null)
     {
         _animasRoot = animasRoot;
         _logger = logger;
+        _loggerFactory = loggerFactory;
+        _animaContext = animaContext;
+        _hubContext = hubContext;
         Directory.CreateDirectory(_animasRoot);
     }
 
@@ -68,6 +82,13 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager
     {
         var dir = Path.Combine(_animasRoot, id);
 
+        // Dispose runtime before removing descriptor
+        if (_runtimes.TryGetValue(id, out var runtime))
+        {
+            await runtime.DisposeAsync();
+            _runtimes.Remove(id);
+        }
+
         await _lock.WaitAsync(ct);
         try
         {
@@ -78,6 +99,14 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager
         finally
         {
             _lock.Release();
+        }
+
+        // Auto-switch active Anima if the deleted one was active
+        if (_animaContext.ActiveAnimaId == id)
+        {
+            var next = GetAll().FirstOrDefault();
+            if (next != null)
+                _animaContext.SetActive(next.Id);
         }
 
         StateChanged?.Invoke();
@@ -157,8 +186,23 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager
 
     public async ValueTask DisposeAsync()
     {
+        foreach (var runtime in _runtimes.Values)
+            await runtime.DisposeAsync();
+        _runtimes.Clear();
         _lock.Dispose();
-        await ValueTask.CompletedTask;
+    }
+
+    public AnimaRuntime? GetRuntime(string animaId) =>
+        _runtimes.TryGetValue(animaId, out var runtime) ? runtime : null;
+
+    public AnimaRuntime GetOrCreateRuntime(string animaId)
+    {
+        if (_runtimes.TryGetValue(animaId, out var existing))
+            return existing;
+
+        var runtime = new AnimaRuntime(animaId, _loggerFactory, _hubContext);
+        _runtimes[animaId] = runtime;
+        return runtime;
     }
 
     // --- Private helpers ---

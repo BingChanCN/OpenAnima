@@ -36,7 +36,7 @@ public class RuntimeHub : Hub<IRuntimeClient>
         var modulesPath = Path.Combine(AppContext.BaseDirectory, "modules", moduleName);
         var result = _moduleService.LoadModule(modulesPath);
         if (result.Success)
-            await Clients.All.ReceiveModuleCountChanged(_moduleService.Count);
+            await Clients.All.ReceiveModuleCountChanged("", _moduleService.Count);
         return result;
     }
 
@@ -48,7 +48,7 @@ public class RuntimeHub : Hub<IRuntimeClient>
     {
         var result = _moduleService.UnloadModule(moduleName);
         if (result.Success)
-            await Clients.All.ReceiveModuleCountChanged(_moduleService.Count);
+            await Clients.All.ReceiveModuleCountChanged("", _moduleService.Count);
         return result;
     }
 
@@ -61,7 +61,7 @@ public class RuntimeHub : Hub<IRuntimeClient>
         try
         {
             await _heartbeatService.StartAsync();
-            await Clients.All.ReceiveHeartbeatStateChanged(true);
+            await Clients.All.ReceiveHeartbeatStateChanged("", true);
             return true;
         }
         catch
@@ -79,7 +79,7 @@ public class RuntimeHub : Hub<IRuntimeClient>
         try
         {
             await _heartbeatService.StopAsync();
-            await Clients.All.ReceiveHeartbeatStateChanged(false);
+            await Clients.All.ReceiveHeartbeatStateChanged("", false);
             return true;
         }
         catch

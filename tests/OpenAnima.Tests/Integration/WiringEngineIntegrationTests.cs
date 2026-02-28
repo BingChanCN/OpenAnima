@@ -33,7 +33,7 @@ public class WiringEngineIntegrationTests
         // Arrange
         var eventBus = new EventBus(NullLogger<EventBus>.Instance);
         var portRegistry = new PortRegistry();
-        var wiringEngine = new WiringEngine(eventBus, portRegistry, NullLogger<WiringEngine>.Instance);
+        var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
 
         // Register test modules
         var discovery = new PortDiscovery();
@@ -73,7 +73,7 @@ public class WiringEngineIntegrationTests
         // Arrange
         var eventBus = new EventBus(NullLogger<EventBus>.Instance);
         var portRegistry = new PortRegistry();
-        var wiringEngine = new WiringEngine(eventBus, portRegistry, NullLogger<WiringEngine>.Instance);
+        var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
 
         // Register test modules
         var discovery = new PortDiscovery();
@@ -110,7 +110,7 @@ public class WiringEngineIntegrationTests
         // Arrange
         var eventBus = new EventBus(NullLogger<EventBus>.Instance);
         var portRegistry = new PortRegistry();
-        var wiringEngine = new WiringEngine(eventBus, portRegistry, NullLogger<WiringEngine>.Instance);
+        var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
 
         // Register test modules
         var discovery = new PortDiscovery();
@@ -177,7 +177,7 @@ public class WiringEngineIntegrationTests
         // Arrange
         var eventBus = new EventBus(NullLogger<EventBus>.Instance);
         var portRegistry = new PortRegistry();
-        var wiringEngine = new WiringEngine(eventBus, portRegistry, NullLogger<WiringEngine>.Instance);
+        var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
 
         // Register test modules
         var discovery = new PortDiscovery();
@@ -247,7 +247,7 @@ public class WiringEngineIntegrationTests
         // Arrange
         var eventBus = new EventBus(NullLogger<EventBus>.Instance);
         var portRegistry = new PortRegistry();
-        var wiringEngine = new WiringEngine(eventBus, portRegistry, NullLogger<WiringEngine>.Instance);
+        var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
 
         // Register test modules
         var discovery = new PortDiscovery();
@@ -326,7 +326,7 @@ public class WiringEngineIntegrationTests
         // Arrange
         var eventBus = new EventBus(NullLogger<EventBus>.Instance);
         var portRegistry = new PortRegistry();
-        var wiringEngine = new WiringEngine(eventBus, portRegistry, NullLogger<WiringEngine>.Instance);
+        var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
 
         // Register test modules
         var discovery = new PortDiscovery();
@@ -395,7 +395,7 @@ public class WiringEngineIntegrationTests
         // Arrange
         var eventBus = new EventBus(NullLogger<EventBus>.Instance);
         var portRegistry = new PortRegistry();
-        var wiringEngine = new WiringEngine(eventBus, portRegistry, NullLogger<WiringEngine>.Instance);
+        var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
 
         // Register test modules
         var discovery = new PortDiscovery();

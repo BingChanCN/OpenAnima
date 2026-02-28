@@ -153,7 +153,7 @@ public class ModulePipelineIntegrationTests
         portRegistry.RegisterPorts("LLMModule", portDiscovery.DiscoverPorts(typeof(LLMModule)));
         portRegistry.RegisterPorts("ChatOutputModule", portDiscovery.DiscoverPorts(typeof(ChatOutputModule)));
 
-        var wiringEngine = new WiringEngine(eventBus, portRegistry, NullLogger<WiringEngine>.Instance);
+        var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
         var chatInput = new ChatInputModule(eventBus, NullLogger<ChatInputModule>.Instance);
         var llmModule = new LLMModule(fakeLlm, eventBus, NullLogger<LLMModule>.Instance);
         var chatOutput = new ChatOutputModule(eventBus, NullLogger<ChatOutputModule>.Instance);

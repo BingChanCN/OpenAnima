@@ -17,6 +17,7 @@ public class HeartbeatLoop : IDisposable
 {
     private readonly IEventBus _eventBus;
     private readonly PluginRegistry _registry;
+    private readonly string _animaId;
     private readonly TimeSpan _interval;
     private readonly ILogger<HeartbeatLoop>? _logger;
     private readonly IHubContext<RuntimeHub, IRuntimeClient>? _hubContext;
@@ -38,12 +39,14 @@ public class HeartbeatLoop : IDisposable
     public HeartbeatLoop(
         IEventBus eventBus,
         PluginRegistry registry,
+        string animaId = "",
         TimeSpan? interval = null,
         ILogger<HeartbeatLoop>? logger = null,
         IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null)
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        _animaId = animaId;
         _interval = interval ?? TimeSpan.FromMilliseconds(100);
         _logger = logger;
         _hubContext = hubContext;
@@ -68,7 +71,7 @@ public class HeartbeatLoop : IDisposable
 
         if (_hubContext != null)
         {
-            _ = _hubContext.Clients.All.ReceiveHeartbeatStateChanged(true);
+            _ = _hubContext.Clients.All.ReceiveHeartbeatStateChanged(_animaId, true);
         }
 
         return Task.CompletedTask;
@@ -159,7 +162,7 @@ public class HeartbeatLoop : IDisposable
 
             if (_hubContext != null)
             {
-                _ = _hubContext.Clients.All.ReceiveHeartbeatTick(_tickCount, latencyMs);
+                _ = _hubContext.Clients.All.ReceiveHeartbeatTick(_animaId, _tickCount, latencyMs);
             }
         }
         catch (Exception ex)
@@ -220,7 +223,7 @@ public class HeartbeatLoop : IDisposable
 
         if (_hubContext != null)
         {
-            _ = _hubContext.Clients.All.ReceiveHeartbeatStateChanged(false);
+            _ = _hubContext.Clients.All.ReceiveHeartbeatStateChanged(_animaId, false);
         }
     }
 

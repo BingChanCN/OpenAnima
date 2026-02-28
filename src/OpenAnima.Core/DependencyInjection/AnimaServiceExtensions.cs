@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Core.Anima;
+using OpenAnima.Core.Hubs;
 
 namespace OpenAnima.Core.DependencyInjection;
 
@@ -23,12 +25,15 @@ public static class AnimaServiceExtensions
         var animasRoot = Path.Combine(dataRoot, "animas");
         Directory.CreateDirectory(animasRoot);
 
+        services.AddSingleton<IAnimaContext, AnimaContext>();
+
         services.AddSingleton<IAnimaRuntimeManager>(sp =>
             new AnimaRuntimeManager(
                 animasRoot,
-                sp.GetRequiredService<ILogger<AnimaRuntimeManager>>()));
-
-        services.AddSingleton<IAnimaContext, AnimaContext>();
+                sp.GetRequiredService<ILogger<AnimaRuntimeManager>>(),
+                sp.GetRequiredService<ILoggerFactory>(),
+                sp.GetRequiredService<IAnimaContext>(),
+                sp.GetService<IHubContext<RuntimeHub, IRuntimeClient>>()));
 
         return services;
     }

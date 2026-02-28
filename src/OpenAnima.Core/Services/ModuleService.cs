@@ -85,7 +85,7 @@ public class ModuleService : IModuleService
             _logger.LogInformation("Loaded module: {Name} v{Version}",
                 result.Manifest.Name, result.Manifest.Version);
 
-            _ = _hubContext.Clients.All.ReceiveModuleCountChanged(_registry.Count);
+            _ = _hubContext.Clients.All.ReceiveModuleCountChanged("", _registry.Count);
 
             return new ModuleOperationResult(result.Manifest.Name, true);
         }
@@ -171,7 +171,7 @@ public class ModuleService : IModuleService
             }
         }
 
-        _ = _hubContext.Clients.All.ReceiveModuleCountChanged(_registry.Count);
+        _ = _hubContext.Clients.All.ReceiveModuleCountChanged("", _registry.Count);
 
         return results;
     }
@@ -203,7 +203,7 @@ public class ModuleService : IModuleService
             {
                 _portRegistry.UnregisterPorts(moduleName);
                 _logger.LogInformation("Unloaded module: {Name}", moduleName);
-                _ = _hubContext.Clients.All.ReceiveModuleCountChanged(_registry.Count);
+                _ = _hubContext.Clients.All.ReceiveModuleCountChanged("", _registry.Count);
                 return new ModuleOperationResult(moduleName, true);
             }
             else

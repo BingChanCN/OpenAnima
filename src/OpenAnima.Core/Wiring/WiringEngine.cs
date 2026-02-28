@@ -16,6 +16,7 @@ public class WiringEngine : IWiringEngine
 {
     private readonly IEventBus _eventBus;
     private readonly IPortRegistry _portRegistry;
+    private readonly string _animaId;
     private readonly ILogger<WiringEngine> _logger;
     private readonly IHubContext<RuntimeHub, IRuntimeClient>? _hubContext;
 
@@ -27,12 +28,14 @@ public class WiringEngine : IWiringEngine
     public WiringEngine(
         IEventBus eventBus,
         IPortRegistry portRegistry,
-        ILogger<WiringEngine> logger,
+        string animaId = "",
+        ILogger<WiringEngine>? logger = null,
         IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null)
     {
         _eventBus = eventBus;
         _portRegistry = portRegistry;
-        _logger = logger;
+        _animaId = animaId;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<WiringEngine>.Instance;
         _hubContext = hubContext;
     }
 
@@ -176,7 +179,7 @@ public class WiringEngine : IWiringEngine
 
             // Push Running status via SignalR
             if (_hubContext != null)
-                await _hubContext.Clients.All.ReceiveModuleStateChanged(moduleId, "Running");
+                await _hubContext.Clients.All.ReceiveModuleStateChanged(_animaId, moduleId, "Running");
 
             // Publish execute event for this module
             await _eventBus.PublishAsync(new ModuleEvent<object>
@@ -188,7 +191,7 @@ public class WiringEngine : IWiringEngine
 
             // Push Completed status via SignalR
             if (_hubContext != null)
-                await _hubContext.Clients.All.ReceiveModuleStateChanged(moduleId, "Completed");
+                await _hubContext.Clients.All.ReceiveModuleStateChanged(_animaId, moduleId, "Completed");
         }
         catch (Exception ex)
         {
@@ -198,8 +201,8 @@ public class WiringEngine : IWiringEngine
             // Push error details and Error status via SignalR
             if (_hubContext != null)
             {
-                await _hubContext.Clients.All.ReceiveModuleError(moduleId, ex.Message, ex.StackTrace);
-                await _hubContext.Clients.All.ReceiveModuleStateChanged(moduleId, "Error");
+                await _hubContext.Clients.All.ReceiveModuleError(_animaId, moduleId, ex.Message, ex.StackTrace);
+                await _hubContext.Clients.All.ReceiveModuleStateChanged(_animaId, moduleId, "Error");
             }
         }
     }

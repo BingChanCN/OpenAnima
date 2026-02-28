@@ -1,7 +1,7 @@
 namespace OpenAnima.Core.Anima;
 
 /// <summary>
-/// Manages all Anima instances: CRUD operations with filesystem persistence.
+/// Manages all Anima instances: CRUD operations with filesystem persistence and per-Anima runtime lifecycle.
 /// </summary>
 public interface IAnimaRuntimeManager : IAsyncDisposable
 {
@@ -14,7 +14,7 @@ public interface IAnimaRuntimeManager : IAsyncDisposable
     /// <summary>Creates a new Anima with the given name and persists it to disk.</summary>
     Task<AnimaDescriptor> CreateAsync(string name, CancellationToken ct = default);
 
-    /// <summary>Deletes an Anima and removes its directory from disk.</summary>
+    /// <summary>Deletes an Anima, disposes its runtime, and removes its directory from disk.</summary>
     Task DeleteAsync(string id, CancellationToken ct = default);
 
     /// <summary>Renames an Anima and updates anima.json on disk.</summary>
@@ -25,6 +25,12 @@ public interface IAnimaRuntimeManager : IAsyncDisposable
 
     /// <summary>Loads all Animas from disk. Call once at application startup.</summary>
     Task InitializeAsync(CancellationToken ct = default);
+
+    /// <summary>Returns the runtime for the given Anima ID, or null if not yet created.</summary>
+    AnimaRuntime? GetRuntime(string animaId);
+
+    /// <summary>Returns the runtime for the given Anima ID, creating it if it doesn't exist.</summary>
+    AnimaRuntime GetOrCreateRuntime(string animaId);
 
     /// <summary>Fires when any Anima is created, deleted, renamed, or cloned.</summary>
     event Action? StateChanged;

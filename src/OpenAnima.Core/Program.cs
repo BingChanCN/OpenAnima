@@ -30,9 +30,9 @@ builder.Services.AddSingleton<HeartbeatLoop>(sp =>
     new HeartbeatLoop(
         sp.GetRequiredService<IEventBus>(),
         sp.GetRequiredService<PluginRegistry>(),
-        TimeSpan.FromMilliseconds(100),
-        sp.GetRequiredService<ILogger<HeartbeatLoop>>(),
-        sp.GetRequiredService<IHubContext<RuntimeHub, IRuntimeClient>>()));
+        interval: TimeSpan.FromMilliseconds(100),
+        logger: sp.GetRequiredService<ILogger<HeartbeatLoop>>(),
+        hubContext: sp.GetRequiredService<IHubContext<RuntimeHub, IRuntimeClient>>()));
 
 // --- Register service facades ---
 builder.Services.AddSingleton<IModuleService, ModuleService>();

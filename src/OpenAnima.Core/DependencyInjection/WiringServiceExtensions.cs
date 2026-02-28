@@ -48,8 +48,8 @@ public static class WiringServiceExtensions
         services.AddScoped<IWiringEngine>(sp => new WiringEngine(
             sp.GetRequiredService<IEventBus>(),
             sp.GetRequiredService<IPortRegistry>(),
-            sp.GetRequiredService<ILogger<WiringEngine>>(),
-            sp.GetService<IHubContext<RuntimeHub, IRuntimeClient>>()));
+            logger: sp.GetRequiredService<ILogger<WiringEngine>>(),
+            hubContext: sp.GetService<IHubContext<RuntimeHub, IRuntimeClient>>()));
 
         // Register hosted service for auto-load on startup
         services.AddHostedService<WiringInitializationService>();
