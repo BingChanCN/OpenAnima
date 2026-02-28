@@ -15,11 +15,11 @@
 
 ### CLI Tool
 
-- [ ] **CLI-01**: Developer can install oani CLI as .NET global tool
-- [ ] **CLI-02**: Developer can run `oani --help` to see available commands
-- [ ] **CLI-03**: CLI returns exit code 0 on success, non-zero on failure
-- [ ] **CLI-04**: CLI outputs errors to stderr, normal output to stdout
-- [ ] **CLI-05**: Developer can set verbosity level with `-v` or `--verbosity` option
+- [x] **CLI-01**: Developer can install oani CLI as .NET global tool
+- [x] **CLI-02**: Developer can run `oani --help` to see available commands
+- [x] **CLI-03**: CLI returns exit code 0 on success, non-zero on failure
+- [x] **CLI-04**: CLI outputs errors to stderr, normal output to stdout
+- [x] **CLI-05**: Developer can set verbosity level with `-v` or `--verbosity` option
 
 ### Module Pack
 
@@ -103,11 +103,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SDK-03 | Phase 20 | Pending |
 | SDK-04 | Phase 20 | Complete |
 | SDK-05 | Phase 20 | Complete |
-| CLI-01 | Phase 20 | Pending |
-| CLI-02 | Phase 20 | Pending |
-| CLI-03 | Phase 20 | Pending |
-| CLI-04 | Phase 20 | Pending |
-| CLI-05 | Phase 20 | Pending |
+| CLI-01 | Phase 20 | Complete |
+| CLI-02 | Phase 20 | Complete |
+| CLI-03 | Phase 20 | Complete |
+| CLI-04 | Phase 20 | Complete |
+| CLI-05 | Phase 20 | Complete |
 | PACK-01 | Phase 21 | Complete |
 | PACK-02 | Phase 21 | Complete |
 | PACK-03 | Phase 21 | Complete |

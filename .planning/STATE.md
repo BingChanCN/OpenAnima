@@ -57,6 +57,8 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 - Trend: Stable
 
 *Updated after each plan completion*
+| Phase 20 P01 | 2 | 2 tasks | 3 files |
+| Phase 20 P02 | 2 | 2 tasks | 8 files |
 | Phase 21 P01 | 3 | 2 tasks | 3 files |
 | Phase 21 P02 | 10 | 2 tasks | 5 files |
 | Phase 21 P03 | 5 | 2 tasks | 5 files |
@@ -75,6 +77,9 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ### Key Decisions (v1.4)
 
+- **Phase 20:** Silent-first output: Default verbosity is "quiet" with no output unless errors occur or --verbosity is set
+- **Phase 20:** Exit code discipline: 0=success, 1=general error, 2=validation error for consistent CLI error reporting
+- **Phase 20:** Stream separation: stderr for errors, stdout for normal output
 - **Phase 20:** Use System.Text.Json for manifest serialization
 - **Phase 20:** Aggregate all validation errors before reporting
 - **Phase 20:** Use embedded resources for templates (not file paths)

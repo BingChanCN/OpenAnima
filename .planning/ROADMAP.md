@@ -81,7 +81,7 @@ See: [milestones/v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 20-01-PLAN.md - CLI project setup with System.CommandLine and installable .NET tool
+- [x] 20-01-PLAN.md - CLI project setup with System.CommandLine and installable .NET tool
 - [ ] 20-02-PLAN.md - Manifest schema model and embedded templates for module generation
 - [ ] 20-03-PLAN.md - `oani new` command with template customization options and tests
 
