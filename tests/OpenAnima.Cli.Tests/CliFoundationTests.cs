@@ -1155,6 +1155,447 @@ public class OamodExtractorTests
 }
 
 /// <summary>
+/// Unit tests for ModuleNameValidator service.
+/// </summary>
+public class ModuleNameValidatorTests
+{
+    [Fact]
+    public void Validate_ValidName_ReturnsNoErrors()
+    {
+        var errors = ModuleNameValidator.Validate("MyModule");
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void Validate_ValidNameWithUnderscore_ReturnsNoErrors()
+    {
+        var errors = ModuleNameValidator.Validate("My_Module");
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void Validate_ValidNameWithDigits_ReturnsNoErrors()
+    {
+        var errors = ModuleNameValidator.Validate("Module123");
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void Validate_EmptyName_ReturnsError()
+    {
+        var errors = ModuleNameValidator.Validate("");
+        Assert.NotEmpty(errors);
+        Assert.Contains(errors, e => e.Contains("required"));
+    }
+
+    [Fact]
+    public void Validate_ReservedKeyword_ReturnsError()
+    {
+        var errors = ModuleNameValidator.Validate("class");
+        Assert.NotEmpty(errors);
+        Assert.Contains(errors, e => e.Contains("reserved"));
+    }
+
+    [Fact]
+    public void Validate_StartsWithDigit_ReturnsError()
+    {
+        var errors = ModuleNameValidator.Validate("123Module");
+        Assert.NotEmpty(errors);
+        Assert.Contains(errors, e => e.Contains("start with a letter"));
+    }
+
+    [Fact]
+    public void Validate_ContainsInvalidCharacter_ReturnsError()
+    {
+        var errors = ModuleNameValidator.Validate("My-Module");
+        Assert.NotEmpty(errors);
+        Assert.Contains(errors, e => e.Contains("invalid character"));
+    }
+
+    [Fact]
+    public void Validate_ContainsSpace_ReturnsError()
+    {
+        var errors = ModuleNameValidator.Validate("My Module");
+        Assert.NotEmpty(errors);
+        Assert.Contains(errors, e => e.Contains("invalid character"));
+    }
+
+    [Fact]
+    public void IsValid_ValidName_ReturnsTrue()
+    {
+        Assert.True(ModuleNameValidator.IsValid("MyModule"));
+    }
+
+    [Fact]
+    public void IsValid_InvalidName_ReturnsFalse()
+    {
+        Assert.False(ModuleNameValidator.IsValid("123Module"));
+    }
+
+    [Fact]
+    public void GetSuggestion_ReservedKeyword_PrefixesWithMy()
+    {
+        var suggestion = ModuleNameValidator.GetSuggestion("class");
+        Assert.NotNull(suggestion);
+        Assert.StartsWith("My", suggestion);
+    }
+
+    [Fact]
+    public void GetSuggestion_StartsWithDigit_PrefixesWithModule()
+    {
+        var suggestion = ModuleNameValidator.GetSuggestion("123Test");
+        Assert.NotNull(suggestion);
+        Assert.StartsWith("Module", suggestion);
+    }
+
+    [Fact]
+    public void GetSuggestion_InvalidCharacters_ReplacesWithUnderscore()
+    {
+        var suggestion = ModuleNameValidator.GetSuggestion("My-Module");
+        Assert.NotNull(suggestion);
+        Assert.Contains("_", suggestion);
+        Assert.DoesNotContain("-", suggestion);
+    }
+}
+
+/// <summary>
+/// Unit tests for NewCommand.
+/// </summary>
+public class NewCommandTests
+{
+    [Fact]
+    public void NewCommand_ValidModuleName_ReturnsSuccess()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-new-{Guid.NewGuid()}");
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            var args = new[] { "new", "TestModule", "-o", tempDir };
+
+            // Act
+            var exitCode = RunCliWithArgs(args);
+
+            // Assert
+            Assert.Equal(ExitCodes.Success, exitCode);
+            Assert.True(Directory.Exists(Path.Combine(tempDir, "TestModule")));
+            Assert.True(File.Exists(Path.Combine(tempDir, "TestModule", "TestModule.cs")));
+            Assert.True(File.Exists(Path.Combine(tempDir, "TestModule", "TestModule.csproj")));
+            Assert.True(File.Exists(Path.Combine(tempDir, "TestModule", "module.json")));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void NewCommand_InvalidModuleName_ReturnsValidationError()
+    {
+        // Arrange
+        var args = new[] { "new", "123Invalid" };
+
+        // Act
+        var (exitCode, stderr) = RunCliWithArgsAndCaptureError(args);
+
+        // Assert
+        Assert.Equal(ExitCodes.ValidationError, exitCode);
+        Assert.Contains("start with a letter", stderr);
+    }
+
+    [Fact]
+    public void NewCommand_ReservedKeyword_ReturnsValidationError()
+    {
+        // Arrange
+        var args = new[] { "new", "class" };
+
+        // Act
+        var (exitCode, stderr) = RunCliWithArgsAndCaptureError(args);
+
+        // Assert
+        Assert.Equal(ExitCodes.ValidationError, exitCode);
+        Assert.Contains("reserved", stderr);
+    }
+
+    [Fact]
+    public void NewCommand_DryRun_DoesNotCreateFiles()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-new-{Guid.NewGuid()}");
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            var args = new[] { "new", "TestModule", "-o", tempDir, "--dry-run" };
+
+            // Act
+            var (exitCode, stdout) = RunCliWithArgsAndCaptureOutput(args);
+
+            // Assert
+            Assert.Equal(ExitCodes.Success, exitCode);
+            Assert.Contains("TestModule.cs", stdout);
+            Assert.Contains("TestModule.csproj", stdout);
+            Assert.Contains("module.json", stdout);
+            Assert.False(Directory.Exists(Path.Combine(tempDir, "TestModule")));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void NewCommand_WithInputPorts_GeneratesPortAttributes()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-new-{Guid.NewGuid()}");
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            var args = new[] { "new", "TestModule", "-o", tempDir, "--inputs", "TextInput" };
+
+            // Act
+            var exitCode = RunCliWithArgs(args);
+
+            // Assert
+            Assert.Equal(ExitCodes.Success, exitCode);
+            var csContent = File.ReadAllText(Path.Combine(tempDir, "TestModule", "TestModule.cs"));
+            Assert.Contains("[InputPort(\"TextInput\", PortType.Text)]", csContent);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void NewCommand_WithOutputPorts_GeneratesPortAttributes()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-new-{Guid.NewGuid()}");
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            var args = new[] { "new", "TestModule", "-o", tempDir, "--outputs", "TriggerOutput:Trigger" };
+
+            // Act
+            var exitCode = RunCliWithArgs(args);
+
+            // Assert
+            Assert.Equal(ExitCodes.Success, exitCode);
+            var csContent = File.ReadAllText(Path.Combine(tempDir, "TestModule", "TestModule.cs"));
+            Assert.Contains("[OutputPort(\"TriggerOutput\", PortType.Trigger)]", csContent);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void NewCommand_WithMultiplePorts_GeneratesAllAttributes()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-new-{Guid.NewGuid()}");
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            var args = new[] { "new", "TestModule", "-o", tempDir,
+                "--inputs", "Input1", "Input2:Text",
+                "--outputs", "Output1", "Output2:Trigger" };
+
+            // Act
+            var exitCode = RunCliWithArgs(args);
+
+            // Assert
+            Assert.Equal(ExitCodes.Success, exitCode);
+            var csContent = File.ReadAllText(Path.Combine(tempDir, "TestModule", "TestModule.cs"));
+            Assert.Contains("[InputPort(\"Input1\", PortType.Text)]", csContent);
+            Assert.Contains("[InputPort(\"Input2\", PortType.Text)]", csContent);
+            Assert.Contains("[OutputPort(\"Output1\", PortType.Text)]", csContent);
+            Assert.Contains("[OutputPort(\"Output2\", PortType.Trigger)]", csContent);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void NewCommand_InvalidPortType_ReturnsValidationError()
+    {
+        // Arrange
+        var args = new[] { "new", "TestModule", "--inputs", "Input:InvalidType" };
+
+        // Act
+        var (exitCode, stderr) = RunCliWithArgsAndCaptureError(args);
+
+        // Assert
+        Assert.Equal(ExitCodes.ValidationError, exitCode);
+        Assert.Contains("Invalid", stderr);
+        Assert.Contains("port type", stderr);
+    }
+
+    [Fact]
+    public void NewCommand_ExistingDirectory_ReturnsGeneralError()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-new-{Guid.NewGuid()}");
+        var moduleDir = Path.Combine(tempDir, "TestModule");
+
+        try
+        {
+            Directory.CreateDirectory(moduleDir);
+            var args = new[] { "new", "TestModule", "-o", tempDir };
+
+            // Act
+            var (exitCode, stderr) = RunCliWithArgsAndCaptureError(args);
+
+            // Assert
+            Assert.Equal(ExitCodes.GeneralError, exitCode);
+            Assert.Contains("already exists", stderr);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void NewCommand_GeneratedFilesContainExpectedContent()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-new-{Guid.NewGuid()}");
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            var args = new[] { "new", "TestModule", "-o", tempDir };
+
+            // Act - Create module
+            var exitCode = RunCliWithArgs(args);
+            Assert.Equal(ExitCodes.Success, exitCode);
+
+            // Assert - Verify file contents
+            var csContent = File.ReadAllText(Path.Combine(tempDir, "TestModule", "TestModule.cs"));
+            var csprojContent = File.ReadAllText(Path.Combine(tempDir, "TestModule", "TestModule.csproj"));
+            var jsonContent = File.ReadAllText(Path.Combine(tempDir, "TestModule", "module.json"));
+
+            // Verify C# file
+            Assert.Contains("namespace TestModule", csContent);
+            Assert.Contains("class TestModule", csContent);
+            Assert.Contains("IModule", csContent);
+            Assert.Contains("IModuleMetadata", csContent);
+
+            // Verify project file
+            Assert.Contains("net8.0", csprojContent);
+            Assert.Contains("OpenAnima.Contracts", csprojContent);
+
+            // Verify manifest
+            Assert.Contains("\"id\": \"TestModule\"", jsonContent);
+            Assert.Contains("\"name\": \"TestModule\"", jsonContent);
+            Assert.Contains("\"version\": \"1.0.0\"", jsonContent);
+            Assert.Contains("\"schemaVersion\"", jsonContent);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    /// <summary>
+    /// Helper method to run CLI with captured output and error.
+    /// </summary>
+    private static (int ExitCode, string StdErr) RunCliWithArgsAndCaptureError(string[] args)
+    {
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
+        var outWriter = new StringWriter();
+        var errorWriter = new StringWriter();
+
+        try
+        {
+            Console.SetOut(outWriter);
+            Console.SetError(errorWriter);
+
+            var exitCode = Program.Main(args);
+            var stderr = errorWriter.ToString();
+
+            return (exitCode, stderr);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            outWriter.Dispose();
+            errorWriter.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Helper method to run CLI with captured output.
+    /// </summary>
+    private static (int ExitCode, string StdOut) RunCliWithArgsAndCaptureOutput(string[] args)
+    {
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
+        var outWriter = new StringWriter();
+        var errorWriter = new StringWriter();
+
+        try
+        {
+            Console.SetOut(outWriter);
+            Console.SetError(errorWriter);
+
+            var exitCode = Program.Main(args);
+            var stdout = outWriter.ToString();
+
+            return (exitCode, stdout);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            outWriter.Dispose();
+            errorWriter.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Helper method to run CLI with captured output.
+    /// </summary>
+    private static int RunCliWithArgs(string[] args)
+    {
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
+        var outWriter = new StringWriter();
+        var errorWriter = new StringWriter();
+
+        try
+        {
+            Console.SetOut(outWriter);
+            Console.SetError(errorWriter);
+
+            return Program.Main(args);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            outWriter.Dispose();
+            errorWriter.Dispose();
+        }
+    }
+}
+
+/// <summary>
 /// Unit tests for PluginLoader.ScanDirectory with .oamod files.
 /// </summary>
 public class PluginLoaderOamodTests
