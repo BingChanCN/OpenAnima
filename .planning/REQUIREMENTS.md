@@ -93,13 +93,53 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be filled by roadmapper) | | |
+| ANIMA-01 | Phase 23 | Pending |
+| ANIMA-02 | Phase 23 | Pending |
+| ANIMA-03 | Phase 23 | Pending |
+| ANIMA-04 | Phase 23 | Pending |
+| ANIMA-05 | Phase 23 | Pending |
+| ANIMA-06 | Phase 23 | Pending |
+| ANIMA-10 | Phase 23 | Pending |
+| ARCH-01 | Phase 23 | Pending |
+| ARCH-02 | Phase 23 | Pending |
+| ARCH-05 | Phase 23 | Pending |
+| ARCH-06 | Phase 23 | Pending |
+| ANIMA-07 | Phase 24 | Pending |
+| ANIMA-08 | Phase 24 | Pending |
+| I18N-01 | Phase 24 | Pending |
+| I18N-02 | Phase 24 | Pending |
+| I18N-03 | Phase 24 | Pending |
+| I18N-04 | Phase 24 | Pending |
+| ARCH-03 | Phase 24 | Pending |
+| ARCH-04 | Phase 24 | Pending |
+| MODMGMT-01 | Phase 25 | Pending |
+| MODMGMT-02 | Phase 25 | Pending |
+| MODMGMT-03 | Phase 25 | Pending |
+| MODMGMT-04 | Phase 25 | Pending |
+| MODMGMT-05 | Phase 25 | Pending |
+| MODMGMT-06 | Phase 25 | Pending |
+| MODCFG-01 | Phase 26 | Pending |
+| MODCFG-02 | Phase 26 | Pending |
+| MODCFG-03 | Phase 26 | Pending |
+| MODCFG-04 | Phase 26 | Pending |
+| MODCFG-05 | Phase 26 | Pending |
+| ANIMA-09 | Phase 26 | Pending |
+| BUILTIN-01 | Phase 27 | Pending |
+| BUILTIN-02 | Phase 27 | Pending |
+| BUILTIN-03 | Phase 27 | Pending |
+| BUILTIN-04 | Phase 27 | Pending |
+| BUILTIN-05 | Phase 27 | Pending |
+| BUILTIN-06 | Phase 27 | Pending |
+| BUILTIN-07 | Phase 27 | Pending |
+| BUILTIN-08 | Phase 27 | Pending |
+| BUILTIN-09 | Phase 27 | Pending |
+| BUILTIN-10 | Phase 27 | Pending |
 
 **Coverage:**
-- v1.5 requirements: TBD total
-- Mapped to phases: TBD
-- Unmapped: TBD
+- v1.5 requirements: 47 total
+- Mapped to phases: 47
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-28*
-*Last updated: 2026-02-28 after initial definition*
+*Last updated: 2026-02-28 after roadmap creation*

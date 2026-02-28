@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Multi-Anima Architecture
-status: defining_requirements
+status: roadmap_created
 last_updated: "2026-02-28T12:00:00.000Z"
-last_activity: 2026-02-28 — Milestone v1.5 started
+last_activity: 2026-02-28 — Roadmap created for v1.5
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -22,46 +22,40 @@ progress:
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
 
-**Current focus:** Defining requirements
+**Current focus:** Transform from single-runtime dashboard to multi-instance Anima architecture with i18n support and rich module ecosystem.
 
 See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ## Current Position
 
-**Phase:** Not started (defining requirements)
-**Plan:** —
-**Status:** Defining requirements
-**Last activity:** 2026-02-28 — Milestone v1.5 started
+**Phase:** 23 - Multi-Anima Foundation
+**Plan:** Not started
+**Status:** Ready to begin
+**Last activity:** 2026-02-28 — Roadmap created for v1.5
+
+**Progress:** ░░░░░░░░░░░░░░░░░░░░ 0% (0/5 phases)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 39 (across v1.0-v1.3)
+- Total plans completed: 39 (across v1.0-v1.4)
 - Average duration: ~30 min
 - Total execution time: ~19.5 hours
 
 **By Milestone:**
 
 | Milestone | Phases | Plans | Total Time |
-|-----------|--------|-------|-----------|
+|-----------|--------|-------|--------------|
 | v1.0 Core Platform | 2 | 5 | ~2.5 hrs |
 | v1.1 WebUI Dashboard | 5 | 10 | ~5 hrs |
 | v1.2 LLM Integration | 3 | 6 | ~3 hrs |
 | v1.3 Visual Wiring | 9 | 18 | ~9 hrs |
 | v1.4 Module SDK | 3 | 8 | TBD |
+| v1.5 Multi-Anima | 5 | 0 | 0 hrs |
 
 **Recent Trend:**
 - Last 5 plans: Consistent ~5 min execution
 - Trend: Stable
-
-*Updated after each plan completion*
-| Phase 20 P01 | 2 | 2 tasks | 3 files |
-| Phase 20 P02 | 2 | 2 tasks | 8 files |
-| Phase 20 P03 | 5 | 2 tasks | 3 files |
-| Phase 21 P01 | 3 | 2 tasks | 3 files |
-| Phase 21 P02 | 10 | 2 tasks | 5 files |
-| Phase 21 P03 | 5 | 2 tasks | 5 files |
-| Phase 20 P02 | 2 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -76,14 +70,9 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 - **Module page:** Real implementation replacing placeholder (list, install/uninstall, enable/disable, info display)
 - **Implementation order:** Architecture → Modules → i18n
 
-### v1.4 Scope Decisions
+### Key Decisions (v1.5)
 
-- **SDK form:** dotnet new project templates
-- **CLI tool:** Minimal CLI (oani new, oani pack, oani validate)
-- **Package format:** Custom .oamod format with manifest and checksum
-- **Documentation scope:** API reference + quick-start + example patterns
-- **Built-in modules:** None new (v1.4 focuses on SDK/docs)
-- **Distribution:** Local package loading (foundation for future marketplace)
+*No decisions yet — milestone just started*
 
 ### Key Decisions (v1.4)
 
@@ -118,14 +107,23 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ### Active TODOs
 
-None — ready to start Phase 20
+- [ ] Begin Phase 23 planning with `/gsd:plan-phase 23`
+- [ ] Review research summary for architecture guidance
+- [ ] Validate AnimaRuntimeManager factory pattern during planning
 
 ### Known Blockers
 
-None
+None — ready to start
+
+### Technical Debt
+
+*Inherited from v1.4:*
+- Schema mismatch between CLI and Runtime (extended manifest fields)
+- SUMMARY metadata gaps (documentation only)
+- Test isolation issues (pre-existing infrastructure)
 
 ---
 
 *State initialized: 2026-02-28*
 *Last updated: 2026-02-28*
-*Roadmap created, ready for Phase 20 planning*
+*Roadmap created, ready for Phase 23 planning*
