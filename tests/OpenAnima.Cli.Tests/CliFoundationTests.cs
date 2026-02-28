@@ -1,6 +1,7 @@
 using Xunit;
 using OpenAnima.Cli.Services;
 using OpenAnima.Cli.Models;
+using OpenAnima.Core.Plugins;
 using System.IO.Compression;
 using System.Text.Json;
 
@@ -987,6 +988,271 @@ public class PackCommandTests
             Console.SetError(originalError);
             outWriter.Dispose();
             errorWriter.Dispose();
+        }
+    }
+}
+/// <summary>
+/// Unit tests for OamodExtractor.
+/// </summary>
+public class OamodExtractorTests
+{
+    [Fact]
+    public void Extract_ValidOamod_ExtractsToCorrectDirectory()
+    {
+        // Arrange - Create a temp .oamod file (ZIP with module.json and dummy DLL)
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-oamod-{Guid.NewGuid()}");
+        var extractBasePath = Path.Combine(Path.GetTempPath(), $"test-extract-{Guid.NewGuid()}");
+        var oamodPath = Path.Combine(tempDir, "TestModule.oamod");
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            Directory.CreateDirectory(extractBasePath);
+
+            // Create a ZIP with module.json and a dummy DLL
+            var manifestJson = @"{
+                ""id"": ""TestModule"",
+                ""name"": ""TestModule"",
+                ""version"": ""1.0.0"",
+                ""entryAssembly"": ""TestModule.dll""
+            }";
+
+            var tempModuleDir = Path.Combine(tempDir, "module-content");
+            Directory.CreateDirectory(tempModuleDir);
+            File.WriteAllText(Path.Combine(tempModuleDir, "module.json"), manifestJson);
+            File.WriteAllText(Path.Combine(tempModuleDir, "TestModule.dll"), "fake dll content");
+
+            ZipFile.CreateFromDirectory(tempModuleDir, oamodPath);
+
+            // Act
+            var extractedDir = OamodExtractor.Extract(oamodPath, extractBasePath);
+
+            // Assert
+            Assert.True(Directory.Exists(extractedDir), "Extracted directory should exist");
+            Assert.True(File.Exists(Path.Combine(extractedDir, "module.json")), "module.json should exist");
+            Assert.True(File.Exists(Path.Combine(extractedDir, "TestModule.dll")), "TestModule.dll should exist");
+            Assert.Contains(".extracted", extractedDir);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            if (Directory.Exists(extractBasePath)) Directory.Delete(extractBasePath, true);
+        }
+    }
+
+    [Fact]
+    public void Extract_CalledTwice_IsIdempotent()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-oamod-{Guid.NewGuid()}");
+        var extractBasePath = Path.Combine(Path.GetTempPath(), $"test-extract-{Guid.NewGuid()}");
+        var oamodPath = Path.Combine(tempDir, "TestModule.oamod");
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            Directory.CreateDirectory(extractBasePath);
+
+            var manifestJson = @"{
+                ""id"": ""TestModule"",
+                ""name"": ""TestModule"",
+                ""version"": ""1.0.0"",
+                ""entryAssembly"": ""TestModule.dll""
+            }";
+
+            var tempModuleDir = Path.Combine(tempDir, "module-content");
+            Directory.CreateDirectory(tempModuleDir);
+            File.WriteAllText(Path.Combine(tempModuleDir, "module.json"), manifestJson);
+            File.WriteAllText(Path.Combine(tempModuleDir, "TestModule.dll"), "fake dll content");
+
+            ZipFile.CreateFromDirectory(tempModuleDir, oamodPath);
+
+            // Act - Extract twice
+            var extractedDir1 = OamodExtractor.Extract(oamodPath, extractBasePath);
+            var extractedDir2 = OamodExtractor.Extract(oamodPath, extractBasePath);
+
+            // Assert - Both should succeed and point to the same directory
+            Assert.Equal(extractedDir1, extractedDir2);
+            Assert.True(File.Exists(Path.Combine(extractedDir2, "module.json")));
+            Assert.True(File.Exists(Path.Combine(extractedDir2, "TestModule.dll")));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            if (Directory.Exists(extractBasePath)) Directory.Delete(extractBasePath, true);
+        }
+    }
+
+    [Fact]
+    public void NeedsExtraction_NoExistingExtraction_ReturnsTrue()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-oamod-{Guid.NewGuid()}");
+        var extractBasePath = Path.Combine(Path.GetTempPath(), $"test-extract-{Guid.NewGuid()}");
+        var oamodPath = Path.Combine(tempDir, "TestModule.oamod");
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            Directory.CreateDirectory(extractBasePath);
+            File.WriteAllText(oamodPath, "fake oamod content");
+
+            // Act
+            var needsExtraction = OamodExtractor.NeedsExtraction(oamodPath, extractBasePath);
+
+            // Assert
+            Assert.True(needsExtraction, "Should need extraction when no extraction exists");
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            if (Directory.Exists(extractBasePath)) Directory.Delete(extractBasePath, true);
+        }
+    }
+
+    [Fact]
+    public void NeedsExtraction_AfterExtraction_ReturnsFalse()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-oamod-{Guid.NewGuid()}");
+        var extractBasePath = Path.Combine(Path.GetTempPath(), $"test-extract-{Guid.NewGuid()}");
+        var oamodPath = Path.Combine(tempDir, "TestModule.oamod");
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            Directory.CreateDirectory(extractBasePath);
+
+            var manifestJson = @"{
+                ""id"": ""TestModule"",
+                ""name"": ""TestModule"",
+                ""version"": ""1.0.0"",
+                ""entryAssembly"": ""TestModule.dll""
+            }";
+
+            var tempModuleDir = Path.Combine(tempDir, "module-content");
+            Directory.CreateDirectory(tempModuleDir);
+            File.WriteAllText(Path.Combine(tempModuleDir, "module.json"), manifestJson);
+            File.WriteAllText(Path.Combine(tempModuleDir, "TestModule.dll"), "fake dll content");
+
+            ZipFile.CreateFromDirectory(tempModuleDir, oamodPath);
+
+            // Act - Extract first
+            OamodExtractor.Extract(oamodPath, extractBasePath);
+
+            // Then check if needs extraction
+            var needsExtraction = OamodExtractor.NeedsExtraction(oamodPath, extractBasePath);
+
+            // Assert
+            Assert.False(needsExtraction, "Should not need extraction after successful extraction");
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            if (Directory.Exists(extractBasePath)) Directory.Delete(extractBasePath, true);
+        }
+    }
+}
+
+/// <summary>
+/// Unit tests for PluginLoader.ScanDirectory with .oamod files.
+/// </summary>
+public class PluginLoaderOamodTests
+{
+    [Fact]
+    public void ScanDirectory_WithOamodFile_ExtractsAndLoads()
+    {
+        // Arrange - Create a modules directory with a .oamod file
+        var modulesPath = Path.Combine(Path.GetTempPath(), $"test-modules-{Guid.NewGuid()}");
+        var oamodPath = Path.Combine(modulesPath, "TestModule.oamod");
+
+        try
+        {
+            Directory.CreateDirectory(modulesPath);
+
+            var manifestJson = @"{
+                ""id"": ""TestModule"",
+                ""name"": ""TestModule"",
+                ""version"": ""1.0.0"",
+                ""entryAssembly"": ""TestModule.dll""
+            }";
+
+            var tempModuleDir = Path.Combine(Path.GetTempPath(), $"module-content-{Guid.NewGuid()}");
+            Directory.CreateDirectory(tempModuleDir);
+            File.WriteAllText(Path.Combine(tempModuleDir, "module.json"), manifestJson);
+            File.WriteAllText(Path.Combine(tempModuleDir, "TestModule.dll"), "fake dll content");
+
+            ZipFile.CreateFromDirectory(tempModuleDir, oamodPath);
+            Directory.Delete(tempModuleDir, true);
+
+            var loader = new PluginLoader();
+
+            // Act
+            var results = loader.ScanDirectory(modulesPath);
+
+            // Assert - Should have attempted to load the .oamod
+            Assert.NotEmpty(results);
+            // The load will fail (fake DLL), but extraction should have occurred
+            var extractedDir = Path.Combine(modulesPath, ".extracted", "TestModule");
+            Assert.True(Directory.Exists(extractedDir), "Extracted directory should exist");
+            Assert.True(File.Exists(Path.Combine(extractedDir, "module.json")), "module.json should exist in extracted directory");
+        }
+        finally
+        {
+            if (Directory.Exists(modulesPath)) Directory.Delete(modulesPath, true);
+        }
+    }
+
+    [Fact]
+    public void ScanDirectory_SkipsExtractedDirectory()
+    {
+        // Arrange - Create a modules directory with both a .oamod and a regular module
+        var modulesPath = Path.Combine(Path.GetTempPath(), $"test-modules-{Guid.NewGuid()}");
+        var oamodPath = Path.Combine(modulesPath, "TestModule.oamod");
+        var regularModuleDir = Path.Combine(modulesPath, "RegularModule");
+
+        try
+        {
+            Directory.CreateDirectory(modulesPath);
+            Directory.CreateDirectory(regularModuleDir);
+
+            // Create regular module
+            var regularManifest = @"{
+                ""id"": ""RegularModule"",
+                ""name"": ""RegularModule"",
+                ""version"": ""1.0.0"",
+                ""entryAssembly"": ""RegularModule.dll""
+            }";
+            File.WriteAllText(Path.Combine(regularModuleDir, "module.json"), regularManifest);
+
+            // Create .oamod
+            var manifestJson = @"{
+                ""id"": ""TestModule"",
+                ""name"": ""TestModule"",
+                ""version"": ""1.0.0"",
+                ""entryAssembly"": ""TestModule.dll""
+            }";
+
+            var tempModuleDir = Path.Combine(Path.GetTempPath(), $"module-content-{Guid.NewGuid()}");
+            Directory.CreateDirectory(tempModuleDir);
+            File.WriteAllText(Path.Combine(tempModuleDir, "module.json"), manifestJson);
+            File.WriteAllText(Path.Combine(tempModuleDir, "TestModule.dll"), "fake dll content");
+
+            ZipFile.CreateFromDirectory(tempModuleDir, oamodPath);
+            Directory.Delete(tempModuleDir, true);
+
+            var loader = new PluginLoader();
+
+            // Act
+            var results = loader.ScanDirectory(modulesPath);
+
+            // Assert - Should have 2 results: RegularModule and TestModule (from .oamod)
+            // Not 3 (which would indicate .extracted was scanned as a separate module)
+            Assert.Equal(2, results.Count);
+        }
+        finally
+        {
+            if (Directory.Exists(modulesPath)) Directory.Delete(modulesPath, true);
         }
     }
 }
