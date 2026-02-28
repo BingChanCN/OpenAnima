@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Module SDK & DevEx
-status: ready_to_plan
-last_updated: "2026-02-28T00:00:00Z"
+status: planning
+last_updated: "2026-02-28T09:05:32.137Z"
+last_activity: 2026-02-28 — Roadmap created for v1.4 Module SDK & DevEx milestone
 progress:
-  total_phases: 3
-  completed_phases: 0
-  total_plans: 8
-  completed_plans: 0
-  percent: 0
+  total_phases: 12
+  completed_phases: 10
+  total_plans: 27
+  completed_plans: 22
+  percent: 81
 ---
 
 # Project State: OpenAnima v1.4 Module SDK & DevEx
@@ -21,18 +22,18 @@ progress:
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
 
-**Current focus:** Phase 20: CLI Foundation & Templates
+**Current focus:** Phase 21: Pack, Validate & Runtime Integration
 
 See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ## Current Position
 
-**Phase:** 20 of 22 (CLI Foundation & Templates)
-**Plan:** 0 of 3 in current phase
-**Status:** Ready to plan
-**Last activity:** 2026-02-28 — Roadmap created for v1.4 Module SDK & DevEx milestone
+**Phase:** 21 of 22 (Pack, Validate & Runtime Integration)
+**Plan:** 1 of 3 in current phase
+**Status:** Executing
+**Last activity:** 2026-02-28 — Completed 21-01-PLAN.md (Validate Command Implementation)
 
-**Progress:** [░░░░░░░░░░] 0%
+**Progress:** [████████░░] 81%
 
 ## Performance Metrics
 
@@ -56,6 +57,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 - Trend: Stable
 
 *Updated after each plan completion*
+| Phase 21 P01 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -67,6 +69,12 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 - **Documentation scope:** API reference + quick-start + example patterns
 - **Built-in modules:** None new (v1.4 focuses on SDK/docs)
 - **Distribution:** Local package loading (foundation for future marketplace)
+
+### Key Decisions (v1.4)
+
+- **Phase 21:** Use name-based type comparison for IModule detection to avoid type identity issues across AssemblyLoadContext boundaries
+- **Phase 21:** Accumulate all validation errors before reporting for better developer experience
+- **Phase 21:** Make assembly validation optional (warning only) if module not built yet
 
 ### Key Decisions (v1.3)
 

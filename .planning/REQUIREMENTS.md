@@ -32,11 +32,11 @@
 
 ### Module Validate
 
-- [ ] **VAL-01**: Developer can validate module with `oani validate <path>` command
-- [ ] **VAL-02**: Validate command checks module.json exists and is valid JSON
-- [ ] **VAL-03**: Validate command checks required manifest fields (id, version, name)
-- [ ] **VAL-04**: Validate command verifies module implements IModule interface
-- [ ] **VAL-05**: Validate command reports all errors, not just first error
+- [x] **VAL-01**: Developer can validate module with `oani validate <path>` command
+- [x] **VAL-02**: Validate command checks module.json exists and is valid JSON
+- [x] **VAL-03**: Validate command checks required manifest fields (id, version, name)
+- [x] **VAL-04**: Validate command verifies module implements IModule interface
+- [x] **VAL-05**: Validate command reports all errors, not just first error
 
 ### Manifest Schema
 
@@ -114,11 +114,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PACK-04 | Phase 21 | Pending |
 | PACK-05 | Phase 21 | Pending |
 | PACK-06 | Phase 21 | Pending |
-| VAL-01 | Phase 21 | Pending |
-| VAL-02 | Phase 21 | Pending |
-| VAL-03 | Phase 21 | Pending |
-| VAL-04 | Phase 21 | Pending |
-| VAL-05 | Phase 21 | Pending |
+| VAL-01 | Phase 21 | Complete |
+| VAL-02 | Phase 21 | Complete |
+| VAL-03 | Phase 21 | Complete |
+| VAL-04 | Phase 21 | Complete |
+| VAL-05 | Phase 21 | Complete |
 | MAN-01 | Phase 20 | Pending |
 | MAN-02 | Phase 20 | Pending |
 | MAN-03 | Phase 20 | Pending |
