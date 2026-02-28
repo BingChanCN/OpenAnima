@@ -10,6 +10,7 @@ public class ModuleDirectoryWatcher : IDisposable
     private readonly Action<string> _onModuleDiscovered;
     private readonly HashSet<string> _discoveredPaths = new();
     private FileSystemWatcher? _watcher;
+    private FileSystemWatcher? _fileWatcher;
     private readonly Dictionary<string, Timer> _debounceTimers = new();
     private readonly object _lock = new();
 
@@ -25,7 +26,7 @@ public class ModuleDirectoryWatcher : IDisposable
     }
 
     /// <summary>
-    /// Starts watching the modules directory for new subdirectories.
+    /// Starts watching the modules directory for new subdirectories and .oamod files.
     /// Creates the directory if it doesn't exist.
     /// </summary>
     public void StartWatching()
@@ -36,7 +37,7 @@ public class ModuleDirectoryWatcher : IDisposable
             Directory.CreateDirectory(_modulesPath);
         }
 
-        // Initialize watcher
+        // Initialize directory watcher
         _watcher = new FileSystemWatcher(_modulesPath)
         {
             NotifyFilter = NotifyFilters.DirectoryName,
@@ -45,6 +46,18 @@ public class ModuleDirectoryWatcher : IDisposable
 
         _watcher.Created += OnDirectoryCreated;
         _watcher.EnableRaisingEvents = true;
+
+        // Initialize .oamod file watcher
+        _fileWatcher = new FileSystemWatcher(_modulesPath)
+        {
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+            Filter = "*.oamod",
+            IncludeSubdirectories = false
+        };
+
+        _fileWatcher.Created += OnOamodCreated;
+        _fileWatcher.Changed += OnOamodCreated;
+        _fileWatcher.EnableRaisingEvents = true;
     }
 
     /// <summary>
@@ -56,6 +69,13 @@ public class ModuleDirectoryWatcher : IDisposable
         {
             _watcher.EnableRaisingEvents = false;
             _watcher.Created -= OnDirectoryCreated;
+        }
+
+        if (_fileWatcher != null)
+        {
+            _fileWatcher.EnableRaisingEvents = false;
+            _fileWatcher.Created -= OnOamodCreated;
+            _fileWatcher.Changed -= OnOamodCreated;
         }
 
         // Dispose all pending timers
@@ -70,7 +90,7 @@ public class ModuleDirectoryWatcher : IDisposable
     }
 
     /// <summary>
-    /// Manually re-scans the modules directory and invokes the callback for any new (untracked) directories.
+    /// Manually re-scans the modules directory and invokes the callback for any new (untracked) directories and .oamod files.
     /// Useful as a fallback if FileSystemWatcher events are missed.
     /// </summary>
     public void RefreshAll()
@@ -80,6 +100,7 @@ public class ModuleDirectoryWatcher : IDisposable
             return;
         }
 
+        // Scan directories
         foreach (string subdirectory in Directory.GetDirectories(_modulesPath))
         {
             lock (_lock)
@@ -88,6 +109,29 @@ public class ModuleDirectoryWatcher : IDisposable
                 {
                     _discoveredPaths.Add(subdirectory);
                     _onModuleDiscovered(subdirectory);
+                }
+            }
+        }
+
+        // Scan .oamod files
+        foreach (string oamodFile in Directory.GetFiles(_modulesPath, "*.oamod"))
+        {
+            lock (_lock)
+            {
+                if (!_discoveredPaths.Contains(oamodFile))
+                {
+                    _discoveredPaths.Add(oamodFile);
+
+                    // Extract and discover
+                    try
+                    {
+                        var extractedDir = OamodExtractor.Extract(oamodFile, _modulesPath);
+                        _onModuleDiscovered(extractedDir);
+                    }
+                    catch
+                    {
+                        // Ignore extraction errors during refresh
+                    }
                 }
             }
         }
@@ -132,9 +176,57 @@ public class ModuleDirectoryWatcher : IDisposable
         }
     }
 
+    private void OnOamodCreated(object sender, FileSystemEventArgs e)
+    {
+        string fullPath = e.FullPath;
+
+        lock (_lock)
+        {
+            // Dispose existing timer for this path if any
+            if (_debounceTimers.TryGetValue(fullPath, out var existingTimer))
+            {
+                existingTimer.Dispose();
+            }
+
+            // Create new debounce timer (500ms delay)
+            _debounceTimers[fullPath] = new Timer(_ =>
+            {
+                lock (_lock)
+                {
+                    // Remove timer
+                    if (_debounceTimers.TryGetValue(fullPath, out var timer))
+                    {
+                        timer.Dispose();
+                        _debounceTimers.Remove(fullPath);
+                    }
+
+                    // Check if already discovered (prevent duplicates)
+                    if (_discoveredPaths.Contains(fullPath))
+                    {
+                        return;
+                    }
+
+                    _discoveredPaths.Add(fullPath);
+                }
+
+                // Extract and invoke callback outside lock
+                try
+                {
+                    var extractedDir = OamodExtractor.Extract(fullPath, _modulesPath);
+                    _onModuleDiscovered(extractedDir);
+                }
+                catch
+                {
+                    // Log but don't crash on extraction failure (file might still be copying)
+                }
+            }, null, 500, Timeout.Infinite);
+        }
+    }
+
     public void Dispose()
     {
         StopWatching();
         _watcher?.Dispose();
+        _fileWatcher?.Dispose();
     }
 }
