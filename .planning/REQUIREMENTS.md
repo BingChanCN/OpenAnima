@@ -1,96 +1,91 @@
-# Requirements: OpenAnima v1.4 Module SDK & DevEx
+# Requirements: OpenAnima v1.5
 
 **Defined:** 2026-02-28
 **Core Value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
 
-## v1 Requirements
+## v1.5 Requirements
 
-### SDK Foundation
+### Anima Management (ANIMA)
 
-- [x] **SDK-01**: Developer can create new module project with `oani new <ModuleName>` command
-- [x] **SDK-02**: Developer can specify output directory with `oani new <ModuleName> -o <path>` option
-- [x] **SDK-03**: Developer can preview generated files with `oani new <ModuleName> --dry-run` option
-- [x] **SDK-04**: Generated module project compiles without errors
-- [x] **SDK-05**: Generated module implements IModule and IModuleMetadata interfaces
+- [ ] **ANIMA-01**: User can create new Anima with custom name
+- [ ] **ANIMA-02**: User can view list of all Animas in global sidebar
+- [ ] **ANIMA-03**: User can switch between different Animas
+- [ ] **ANIMA-04**: User can delete Anima
+- [ ] **ANIMA-05**: User can rename Anima
+- [ ] **ANIMA-06**: User can clone existing Anima (duplicate configuration)
+- [ ] **ANIMA-07**: Each Anima has independent heartbeat loop
+- [ ] **ANIMA-08**: Each Anima has independent module instances
+- [ ] **ANIMA-09**: Each Anima has independent chat interface
+- [ ] **ANIMA-10**: Anima configuration persists across sessions
 
-### CLI Tool
+### Internationalization (I18N)
 
-- [x] **CLI-01**: Developer can install oani CLI as .NET global tool
-- [x] **CLI-02**: Developer can run `oani --help` to see available commands
-- [x] **CLI-03**: CLI returns exit code 0 on success, non-zero on failure
-- [x] **CLI-04**: CLI outputs errors to stderr, normal output to stdout
-- [x] **CLI-05**: Developer can set verbosity level with `-v` or `--verbosity` option
+- [ ] **I18N-01**: User can switch UI language between Chinese and English
+- [ ] **I18N-02**: All UI text displays in selected language
+- [ ] **I18N-03**: Language preference persists across sessions
+- [ ] **I18N-04**: Missing translations fall back to English
 
-### Module Pack
+### Module Management (MODMGMT)
 
-- [x] **PACK-01**: Developer can pack module with `oani pack <path>` command
-- [x] **PACK-02**: Pack command produces .oamod file containing module.json, DLL, and assets
-- [x] **PACK-03**: Pack command builds module project before packing (unless --no-build)
-- [x] **PACK-04**: Developer can specify output directory with `oani pack <path> -o <path>` option
-- [x] **PACK-05**: Pack command includes SHA256 checksum in package manifest
-- [x] **PACK-06**: Packed module can be loaded by OpenAnima runtime without modification
+- [ ] **MODMGMT-01**: User can view list of all installed modules
+- [ ] **MODMGMT-02**: User can install module from .oamod package
+- [ ] **MODMGMT-03**: User can uninstall module
+- [ ] **MODMGMT-04**: User can enable/disable module per Anima
+- [ ] **MODMGMT-05**: User can view module information (name, version, author, description)
+- [ ] **MODMGMT-06**: User can search and filter modules by name
 
-### Module Validate
+### Module Configuration (MODCFG)
 
-- [x] **VAL-01**: Developer can validate module with `oani validate <path>` command
-- [x] **VAL-02**: Validate command checks module.json exists and is valid JSON
-- [x] **VAL-03**: Validate command checks required manifest fields (id, version, name)
-- [x] **VAL-04**: Validate command verifies module implements IModule interface
-- [x] **VAL-05**: Validate command reports all errors, not just first error
+- [ ] **MODCFG-01**: User can click module in editor to show detail panel on right
+- [ ] **MODCFG-02**: User can edit module-specific configuration in detail panel
+- [ ] **MODCFG-03**: Module configuration persists per Anima
+- [ ] **MODCFG-04**: Configuration changes validate before saving
+- [ ] **MODCFG-05**: Detail panel shows module status and metadata
 
-### Manifest Schema
+### Built-in Modules (BUILTIN)
 
-- [x] **MAN-01**: module.json supports id, version, name, description, author fields
-- [x] **MAN-02**: module.json supports openanima version compatibility (minVersion, maxVersion)
-- [x] **MAN-03**: module.json supports port declarations (inputs, outputs)
-- [x] **MAN-04**: Manifest validation rejects invalid JSON with clear error messages
-- [x] **MAN-05**: Manifest schema is versioned for future compatibility
+- [ ] **BUILTIN-01**: Fixed text module outputs configurable text content
+- [ ] **BUILTIN-02**: User can edit fixed text content in detail panel
+- [ ] **BUILTIN-03**: Text concat module concatenates two text inputs
+- [ ] **BUILTIN-04**: Text split module splits text by delimiter
+- [ ] **BUILTIN-05**: Text merge module merges multiple inputs into one output
+- [ ] **BUILTIN-06**: Conditional branch module routes based on condition expression
+- [ ] **BUILTIN-07**: LLM module allows configuration of API URL in detail panel
+- [ ] **BUILTIN-08**: LLM module allows configuration of API key in detail panel
+- [ ] **BUILTIN-09**: LLM module allows configuration of model name in detail panel
+- [ ] **BUILTIN-10**: Heartbeat module is optional (not required for Anima to run)
 
-### Template Customization
+### Architecture (ARCH)
 
-- [x] **TEMP-01**: Developer can specify module type with `--type` option (default: standard)
-- [x] **TEMP-02**: Developer can specify input ports with `--inputs` option (e.g., --inputs Text,Trigger)
-- [x] **TEMP-03**: Developer can specify output ports with `--outputs` option (e.g., --outputs Text)
-- [x] **TEMP-04**: Template generates port attributes based on specified ports
-- [x] **TEMP-05**: Template generates working ExecuteAsync method with port handling stubs
-
-### Documentation
-
-- [x] **DOC-01**: Developer can read quick-start guide showing create-build-pack workflow
-- [x] **DOC-02**: Quick-start guide produces working module in under 5 minutes
-- [x] **DOC-03**: API reference documents all public interfaces (IModule, IModuleExecutor, ITickable, IEventBus)
-- [x] **DOC-04**: API reference documents port system (PortType, PortMetadata, InputPortAttribute, OutputPortAttribute)
-- [x] **DOC-05**: API reference includes code examples for common patterns
+- [ ] **ARCH-01**: AnimaRuntimeManager manages all Anima instances
+- [ ] **ARCH-02**: AnimaContext identifies current Anima for scoped services
+- [ ] **ARCH-03**: Each Anima has isolated EventBus instance
+- [ ] **ARCH-04**: Each Anima has isolated WiringEngine instance
+- [ ] **ARCH-05**: Configuration files stored per Anima in separate directories
+- [ ] **ARCH-06**: Service disposal prevents memory leaks (IAsyncDisposable)
 
 ## v2 Requirements
 
-Deferred to future release. Tracked but not in current roadmap.
+### Future Enhancements
 
-### Example Modules
-
-- **EX-01**: Example module demonstrating text processing (input → transform → output)
-- **EX-02**: Example module demonstrating trigger-based execution (tick → action)
-- **EX-03**: Example module demonstrating event subscription (subscribe → process → publish)
-
-### Advanced Features
-
-- **ADV-01**: Developer can run `oani run <path>` for local module testing
-- **ADV-02**: CLI supports shell completion generation for bash/zsh/pwsh
-- **ADV-03**: Module marketplace integration (search, install, publish)
+- **ANIMA-11**: Anima can run in background while viewing different Anima
+- **ANIMA-12**: Anima execution statistics (uptime, module execution count)
+- **MODMGMT-07**: Module dependency resolution and auto-install
+- **MODMGMT-08**: Module marketplace integration
+- **BUILTIN-11**: Loop control module for iterative execution
+- **BUILTIN-12**: Variable storage module for state persistence
+- **I18N-05**: Additional language support (Japanese, Korean, etc.)
 
 ## Out of Scope
 
-Explicitly excluded. Documented to prevent scope creep.
-
 | Feature | Reason |
 |---------|--------|
-| Module marketplace | Requires backend infrastructure; v1.4 focuses on local packages |
-| Automatic versioning | Semantic versioning requires human judgment |
-| Code generation wizards | Creates unmaintainable boilerplate |
-| Complex project templates | Overwhelming for beginners; minimal template is better |
-| Runtime dependency bundling | OpenAnima.Contracts.dll must not be bundled to avoid type identity issues |
-| Digital signatures | Requires PKI infrastructure; overkill for local-first platform |
-| Example modules | Deferred to v2; quick-start guide covers basic patterns |
+| Nested Anima instances | Unclear value proposition, high complexity |
+| Cross-Anima communication | Violates isolation principle, wait for user demand |
+| Auto-update modules | Breaking changes risk, user loses control |
+| Module marketplace backend | Infrastructure burden, validate local-first approach first |
+| Real-time collaboration | Multi-user complexity, single-user focus for v1.5 |
+| Cloud sync | Privacy concerns, local-first principle |
 
 ## Traceability
 
@@ -98,47 +93,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SDK-01 | Phase 20 | Complete |
-| SDK-02 | Phase 20 | Complete |
-| SDK-03 | Phase 20 | Complete |
-| SDK-04 | Phase 20 | Complete |
-| SDK-05 | Phase 20 | Complete |
-| CLI-01 | Phase 20 | Complete |
-| CLI-02 | Phase 20 | Complete |
-| CLI-03 | Phase 20 | Complete |
-| CLI-04 | Phase 20 | Complete |
-| CLI-05 | Phase 20 | Complete |
-| PACK-01 | Phase 21 | Complete |
-| PACK-02 | Phase 21 | Complete |
-| PACK-03 | Phase 21 | Complete |
-| PACK-04 | Phase 21 | Complete |
-| PACK-05 | Phase 21 | Complete |
-| PACK-06 | Phase 21 | Complete |
-| VAL-01 | Phase 21 | Complete |
-| VAL-02 | Phase 21 | Complete |
-| VAL-03 | Phase 21 | Complete |
-| VAL-04 | Phase 21 | Complete |
-| VAL-05 | Phase 21 | Complete |
-| MAN-01 | Phase 20 | Complete |
-| MAN-02 | Phase 20 | Complete |
-| MAN-03 | Phase 20 | Complete |
-| MAN-04 | Phase 20 | Complete |
-| MAN-05 | Phase 20 | Complete |
-| TEMP-01 | Phase 20 | Complete |
-| TEMP-02 | Phase 20 | Complete |
-| TEMP-03 | Phase 20 | Complete |
-| TEMP-04 | Phase 20 | Complete |
-| TEMP-05 | Phase 20 | Complete |
-| DOC-01 | Phase 22 | Complete |
-| DOC-02 | Phase 22 | Complete |
-| DOC-03 | Phase 22 | Complete |
-| DOC-04 | Phase 22 | Complete |
-| DOC-05 | Phase 22 | Complete |
+| (To be filled by roadmapper) | | |
 
 **Coverage:**
-- v1 requirements: 31 total
-- Mapped to phases: 31
-- Unmapped: 0 ✓
+- v1.5 requirements: TBD total
+- Mapped to phases: TBD
+- Unmapped: TBD
 
 ---
 *Requirements defined: 2026-02-28*
