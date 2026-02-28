@@ -28,7 +28,7 @@
 - [x] **PACK-03**: Pack command builds module project before packing (unless --no-build)
 - [x] **PACK-04**: Developer can specify output directory with `oani pack <path> -o <path>` option
 - [x] **PACK-05**: Pack command includes SHA256 checksum in package manifest
-- [ ] **PACK-06**: Packed module can be loaded by OpenAnima runtime without modification
+- [x] **PACK-06**: Packed module can be loaded by OpenAnima runtime without modification
 
 ### Module Validate
 
@@ -113,7 +113,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PACK-03 | Phase 21 | Complete |
 | PACK-04 | Phase 21 | Complete |
 | PACK-05 | Phase 21 | Complete |
-| PACK-06 | Phase 21 | Pending |
+| PACK-06 | Phase 21 | Complete |
 | VAL-01 | Phase 21 | Complete |
 | VAL-02 | Phase 21 | Complete |
 | VAL-03 | Phase 21 | Complete |
