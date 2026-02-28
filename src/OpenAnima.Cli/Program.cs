@@ -60,6 +60,10 @@ public class Program
         // Register the 'validate' command
         rootCommand.AddCommand(new ValidateCommand());
 
+        // Register the 'pack' command
+        var packService = new PackService();
+        rootCommand.AddCommand(new PackCommand(packService));
+
         // Parse arguments
         var parseResult = rootCommand.Parse(args);
 
@@ -118,6 +122,7 @@ Options:
 
 Commands:
   new <name>       Create a new module project
-  validate <path>  Validate a module project");
+  validate <path>  Validate a module project
+  pack <path>      Pack module into a .oamod file");
     }
 }

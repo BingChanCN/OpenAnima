@@ -551,11 +551,11 @@ public class ValidateCommandTests
         var originalOut = Console.Out;
         var originalError = Console.Error;
 
+        var outWriter = new StringWriter();
+        var errorWriter = new StringWriter();
+
         try
         {
-            using var outWriter = new StringWriter();
-            using var errorWriter = new StringWriter();
-
             Console.SetOut(outWriter);
             Console.SetError(errorWriter);
 
@@ -565,6 +565,8 @@ public class ValidateCommandTests
         {
             Console.SetOut(originalOut);
             Console.SetError(originalError);
+            outWriter.Dispose();
+            errorWriter.Dispose();
         }
     }
 }
@@ -582,8 +584,16 @@ public class PackServiceTests
         var binDir = Path.Combine(tempDir, "bin", "Release", "net8.0");
         var outputDir = Path.Combine(Path.GetTempPath(), $"test-output-{Guid.NewGuid()}");
 
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
         try
         {
+            using var outWriter = new StringWriter();
+            using var errorWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            Console.SetError(errorWriter);
+
             Directory.CreateDirectory(binDir);
             Directory.CreateDirectory(outputDir);
 
@@ -608,6 +618,8 @@ public class PackServiceTests
         }
         finally
         {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
             if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
         }
@@ -621,8 +633,16 @@ public class PackServiceTests
         var binDir = Path.Combine(tempDir, "bin", "Release", "net8.0");
         var outputDir = Path.Combine(Path.GetTempPath(), $"test-output-{Guid.NewGuid()}");
 
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
         try
         {
+            using var outWriter = new StringWriter();
+            using var errorWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            Console.SetError(errorWriter);
+
             Directory.CreateDirectory(binDir);
             Directory.CreateDirectory(outputDir);
 
@@ -648,6 +668,8 @@ public class PackServiceTests
         }
         finally
         {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
             if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
         }
@@ -661,8 +683,16 @@ public class PackServiceTests
         var binDir = Path.Combine(tempDir, "bin", "Release", "net8.0");
         var outputDir = Path.Combine(Path.GetTempPath(), $"test-output-{Guid.NewGuid()}");
 
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
         try
         {
+            using var outWriter = new StringWriter();
+            using var errorWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            Console.SetError(errorWriter);
+
             Directory.CreateDirectory(binDir);
             Directory.CreateDirectory(outputDir);
 
@@ -695,6 +725,8 @@ public class PackServiceTests
         }
         finally
         {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
             if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
         }
@@ -708,8 +740,16 @@ public class PackServiceTests
         var binDir = Path.Combine(tempDir, "bin", "Release", "net8.0");
         var outputDir = Path.Combine(Path.GetTempPath(), $"test-output-{Guid.NewGuid()}");
 
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
         try
         {
+            using var outWriter = new StringWriter();
+            using var errorWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            Console.SetError(errorWriter);
+
             Directory.CreateDirectory(binDir);
             Directory.CreateDirectory(outputDir);
 
@@ -740,6 +780,8 @@ public class PackServiceTests
         }
         finally
         {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
             if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
         }
@@ -752,8 +794,16 @@ public class PackServiceTests
         var tempDir = Path.Combine(Path.GetTempPath(), $"test-module-{Guid.NewGuid()}");
         var outputDir = Path.Combine(Path.GetTempPath(), $"test-output-{Guid.NewGuid()}");
 
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
         try
         {
+            using var outWriter = new StringWriter();
+            using var errorWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            Console.SetError(errorWriter);
+
             Directory.CreateDirectory(tempDir);
             Directory.CreateDirectory(outputDir);
 
@@ -767,6 +817,8 @@ public class PackServiceTests
         }
         finally
         {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
             if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
         }
@@ -779,8 +831,16 @@ public class PackServiceTests
         var nonExistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent-{Guid.NewGuid()}");
         var outputDir = Path.Combine(Path.GetTempPath(), $"test-output-{Guid.NewGuid()}");
 
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
         try
         {
+            using var outWriter = new StringWriter();
+            using var errorWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            Console.SetError(errorWriter);
+
             Directory.CreateDirectory(outputDir);
             var packService = new PackService();
 
@@ -792,7 +852,141 @@ public class PackServiceTests
         }
         finally
         {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
             if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
+        }
+    }
+}
+
+/// <summary>
+/// Unit tests for PackCommand.
+/// </summary>
+public class PackCommandTests
+{
+    [Fact]
+    public void PackCommand_NonExistentDirectory_ReturnsGeneralError()
+    {
+        // Arrange
+        var nonExistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent-{Guid.NewGuid()}");
+        var args = new[] { "pack", nonExistentPath };
+
+        // Act
+        var exitCode = RunCliWithArgs(args);
+
+        // Assert
+        Assert.Equal(ExitCodes.GeneralError, exitCode);
+    }
+
+    [Fact]
+    public void PackCommand_HelpOutput_ContainsPack()
+    {
+        // Arrange
+        var args = new[] { "--help" };
+
+        // Act
+        var (exitCode, stdout) = RunCliWithArgsAndCaptureOutput(args);
+
+        // Assert
+        Assert.Equal(ExitCodes.Success, exitCode);
+        Assert.Contains("pack", stdout);
+    }
+
+    [Fact]
+    public void PackCommand_IntegrationTest_CreatesOamodFile()
+    {
+        // Arrange - Create a temp module directory with module.json + fake DLL
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-module-{Guid.NewGuid()}");
+        var binDir = Path.Combine(tempDir, "bin", "Release", "net8.0");
+        var outputDir = Path.Combine(Path.GetTempPath(), $"test-output-{Guid.NewGuid()}");
+
+        try
+        {
+            Directory.CreateDirectory(binDir);
+            Directory.CreateDirectory(outputDir);
+
+            var manifestJson = @"{
+                ""id"": ""IntegrationTestModule"",
+                ""name"": ""IntegrationTestModule"",
+                ""version"": ""1.0.0""
+            }";
+
+            File.WriteAllText(Path.Combine(tempDir, "module.json"), manifestJson);
+            File.WriteAllText(Path.Combine(binDir, "IntegrationTestModule.dll"), "fake dll content");
+
+            var args = new[] { "pack", tempDir, "--no-build", "-o", outputDir };
+
+            // Act
+            var exitCode = RunCliWithArgs(args);
+
+            // Assert
+            Assert.Equal(ExitCodes.Success, exitCode);
+            var oamodPath = Path.Combine(outputDir, "IntegrationTestModule.oamod");
+            Assert.True(File.Exists(oamodPath), "Expected .oamod file to exist");
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
+        }
+    }
+
+    /// <summary>
+    /// Helper method to run CLI with captured output.
+    /// </summary>
+    private static (int ExitCode, string StdOut) RunCliWithArgsAndCaptureOutput(string[] args)
+    {
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
+        var outWriter = new StringWriter();
+        var errorWriter = new StringWriter();
+
+        try
+        {
+            Console.SetOut(outWriter);
+            Console.SetError(errorWriter);
+
+            var exitCode = Program.Main(args);
+
+            // Get the string BEFORE restoring console
+            var stdout = outWriter.ToString();
+
+            return (exitCode, stdout);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            outWriter.Dispose();
+            errorWriter.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Helper method to run CLI with captured output.
+    /// </summary>
+    private static int RunCliWithArgs(string[] args)
+    {
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+
+        var outWriter = new StringWriter();
+        var errorWriter = new StringWriter();
+
+        try
+        {
+            Console.SetOut(outWriter);
+            Console.SetError(errorWriter);
+
+            return Program.Main(args);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+            outWriter.Dispose();
+            errorWriter.Dispose();
         }
     }
 }
