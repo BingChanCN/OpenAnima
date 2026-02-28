@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
+using OpenAnima.Core.Anima;
 using OpenAnima.Core.DependencyInjection;
 using OpenAnima.Core.Events;
 using OpenAnima.Core.Ports;
@@ -28,8 +30,8 @@ public class WiringDIIntegrationTests : IDisposable
         // Build real DI container
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-        services.AddSingleton<EventBus>();
-        services.AddSingleton<IEventBus>(sp => sp.GetRequiredService<EventBus>());
+        // Note: EventBus and WiringEngine are now per-Anima inside AnimaRuntime.
+        // Only register port/config services here.
         services.AddWiringServices(_tempConfigDir);
 
         _provider = services.BuildServiceProvider();
@@ -63,12 +65,11 @@ public class WiringDIIntegrationTests : IDisposable
     [Trait("Category", "Integration")]
     public void IWiringEngine_ResolvesFromDI()
     {
-        // Arrange & Act
-        using var scope = _provider.CreateScope();
-        var engine = scope.ServiceProvider.GetRequiredService<IWiringEngine>();
-
-        // Assert
-        Assert.NotNull(engine);
+        // WiringEngine is now per-Anima inside AnimaRuntime, not registered in DI.
+        // Verify AnimaRuntime creates a WiringEngine.
+        var runtime = new AnimaRuntime("test-anima", NullLoggerFactory.Instance);
+        Assert.NotNull(runtime.WiringEngine);
+        Assert.IsType<WiringEngine>(runtime.WiringEngine);
     }
 
     [Fact]
@@ -201,10 +202,10 @@ public class WiringDIIntegrationTests : IDisposable
     [Trait("Category", "Integration")]
     public void WiringEngine_LoadAndExecute()
     {
-        // Arrange
-        using var scope = _provider.CreateScope();
-        var engine = scope.ServiceProvider.GetRequiredService<IWiringEngine>();
-        var registry = scope.ServiceProvider.GetRequiredService<IPortRegistry>();
+        // Arrange — WiringEngine is now per-Anima inside AnimaRuntime
+        var runtime = new AnimaRuntime("test-anima", NullLoggerFactory.Instance);
+        var engine = runtime.WiringEngine;
+        var registry = _provider.GetRequiredService<IPortRegistry>();
 
         // Register ports for two modules
         registry.RegisterPorts("ModuleA", new List<PortMetadata>
@@ -246,10 +247,10 @@ public class WiringDIIntegrationTests : IDisposable
     [Trait("Category", "Integration")]
     public void WiringEngine_CycleDetection()
     {
-        // Arrange
-        using var scope = _provider.CreateScope();
-        var engine = scope.ServiceProvider.GetRequiredService<IWiringEngine>();
-        var registry = scope.ServiceProvider.GetRequiredService<IPortRegistry>();
+        // Arrange — WiringEngine is now per-Anima inside AnimaRuntime
+        var runtime = new AnimaRuntime("test-anima", NullLoggerFactory.Instance);
+        var engine = runtime.WiringEngine;
+        var registry = _provider.GetRequiredService<IPortRegistry>();
 
         // Register ports for cyclic modules
         registry.RegisterPorts("ModuleA", new List<PortMetadata>
@@ -295,11 +296,11 @@ public class WiringDIIntegrationTests : IDisposable
     [Trait("Category", "Integration")]
     public async Task WiringEngine_DataRouting()
     {
-        // Arrange
-        using var scope = _provider.CreateScope();
-        var engine = scope.ServiceProvider.GetRequiredService<IWiringEngine>();
-        var registry = scope.ServiceProvider.GetRequiredService<IPortRegistry>();
-        var eventBus = scope.ServiceProvider.GetRequiredService<IEventBus>();
+        // Arrange — WiringEngine is now per-Anima inside AnimaRuntime
+        var runtime = new AnimaRuntime("test-anima", NullLoggerFactory.Instance);
+        var engine = runtime.WiringEngine;
+        var eventBus = runtime.EventBus;
+        var registry = _provider.GetRequiredService<IPortRegistry>();
 
         // Register ports
         registry.RegisterPorts("ModuleA", new List<PortMetadata>
@@ -355,4 +356,3 @@ public class WiringDIIntegrationTests : IDisposable
         Assert.Equal("test-data", await tcs.Task);
     }
 }
-

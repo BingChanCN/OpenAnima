@@ -1,9 +1,5 @@
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using OpenAnima.Contracts;
 using OpenAnima.Core.Hosting;
-using OpenAnima.Core.Hubs;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Services;
@@ -17,7 +13,8 @@ namespace OpenAnima.Core.DependencyInjection;
 public static class WiringServiceExtensions
 {
     /// <summary>
-    /// Registers all wiring-related services (PortRegistry, ConfigurationLoader, WiringEngine) as scoped services.
+    /// Registers all wiring-related services (PortRegistry, ConfigurationLoader) as scoped services.
+    /// Note: WiringEngine is now per-Anima inside AnimaRuntime — not registered here.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configDirectory">Optional directory for wiring configurations. Defaults to 'wiring-configs' in app base directory.</param>
@@ -44,13 +41,6 @@ public static class WiringServiceExtensions
             sp.GetRequiredService<IPortRegistry>(),
             sp.GetRequiredService<PortTypeValidator>()));
 
-        // Register wiring engine (with optional SignalR hub context for status push)
-        services.AddScoped<IWiringEngine>(sp => new WiringEngine(
-            sp.GetRequiredService<IEventBus>(),
-            sp.GetRequiredService<IPortRegistry>(),
-            logger: sp.GetRequiredService<ILogger<WiringEngine>>(),
-            hubContext: sp.GetService<IHubContext<RuntimeHub, IRuntimeClient>>()));
-
         // Register hosted service for auto-load on startup
         services.AddHostedService<WiringInitializationService>();
 
@@ -58,6 +48,7 @@ public static class WiringServiceExtensions
         services.AddScoped<EditorStateService>();
 
         // Register concrete modules as singletons (shared across scopes)
+        // Note: module instances are shared across Animas (known limitation — see ANIMA-08)
         services.AddSingleton<LLMModule>();
         services.AddSingleton<ChatInputModule>();
         services.AddSingleton<ChatOutputModule>();

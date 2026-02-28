@@ -8,13 +8,13 @@ using OpenAnima.Core.Ports;
 namespace OpenAnima.Core.Services;
 
 /// <summary>
-/// Module management service wrapping PluginRegistry, PluginLoader, and EventBus injection.
+/// Module management service wrapping PluginRegistry, PluginLoader, and port discovery.
+/// Note: EventBus injection into modules is now per-Anima via AnimaRuntime.
 /// </summary>
 public class ModuleService : IModuleService
 {
     private readonly PluginRegistry _registry;
     private readonly PluginLoader _loader;
-    private readonly IEventBus _eventBus;
     private readonly ILogger<ModuleService> _logger;
     private readonly IHubContext<RuntimeHub, IRuntimeClient> _hubContext;
     private readonly PortDiscovery _portDiscovery;
@@ -23,7 +23,6 @@ public class ModuleService : IModuleService
     public ModuleService(
         PluginRegistry registry,
         PluginLoader loader,
-        IEventBus eventBus,
         ILogger<ModuleService> logger,
         IHubContext<RuntimeHub, IRuntimeClient> hubContext,
         PortDiscovery portDiscovery,
@@ -31,7 +30,6 @@ public class ModuleService : IModuleService
     {
         _registry = registry;
         _loader = loader;
-        _eventBus = eventBus;
         _logger = logger;
         _hubContext = hubContext;
         _portDiscovery = portDiscovery;
@@ -63,8 +61,6 @@ public class ModuleService : IModuleService
                 result.Module,
                 result.Context!,
                 result.Manifest);
-
-            InjectEventBus(result.Module);
 
             // Discover and register ports
             var moduleType = result.Module.GetType();
@@ -126,8 +122,6 @@ public class ModuleService : IModuleService
                         result.Context!,
                         result.Manifest);
 
-                    InjectEventBus(result.Module);
-
                     // Discover and register ports
                     var moduleType = result.Module.GetType();
                     var ports = _portDiscovery.DiscoverPorts(moduleType);
@@ -174,18 +168,6 @@ public class ModuleService : IModuleService
         _ = _hubContext.Clients.All.ReceiveModuleCountChanged("", _registry.Count);
 
         return results;
-    }
-
-    private void InjectEventBus(IModule module)
-    {
-        var moduleType = module.GetType();
-        var eventBusProperty = moduleType.GetProperty("EventBus");
-        if (eventBusProperty != null && eventBusProperty.CanWrite)
-        {
-            eventBusProperty.SetValue(module, _eventBus);
-            _logger.LogDebug("Injected EventBus into {Name}",
-                module.Metadata.Name);
-        }
     }
 
     public ModuleOperationResult UnloadModule(string moduleName)

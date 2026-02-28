@@ -1,6 +1,8 @@
 @page "/heartbeat"
 @using Microsoft.AspNetCore.SignalR.Client
-@inject IHeartbeatService HeartbeatService
+@using OpenAnima.Core.Anima
+@inject IAnimaRuntimeManager AnimaRuntimeManager
+@inject IAnimaContext AnimaContext
 @inject NavigationManager Navigation
 @implements IAsyncDisposable
 
@@ -58,55 +60,85 @@
 
     protected override async Task OnInitializedAsync()
     {
+        AnimaContext.ActiveAnimaChanged += OnActiveAnimaChanged;
+
         hubConnection = new HubConnectionBuilder()
             .WithUrl(Navigation.ToAbsoluteUri("/hubs/runtime"))
             .WithAutomaticReconnect()
             .Build();
 
-        hubConnection.On<bool>("ReceiveHeartbeatStateChanged", (running) =>
+        hubConnection.On<string, bool>("ReceiveHeartbeatStateChanged", (animaId, running) =>
         {
+            if (animaId != AnimaContext.ActiveAnimaId) return;
             isRunning = running;
             errorMessage = null;
             InvokeAsync(StateHasChanged);
         });
 
-        hubConnection.On<long, double>("ReceiveHeartbeatTick", (tick, latency) =>
+        hubConnection.On<string, long, double>("ReceiveHeartbeatTick", (animaId, tick, latency) =>
         {
+            if (animaId != AnimaContext.ActiveAnimaId) return;
             tickCount = tick;
             latencyMs = latency;
             InvokeAsync(StateHasChanged);
         });
 
         await hubConnection.StartAsync();
-        isRunning = HeartbeatService.IsRunning;
-        tickCount = HeartbeatService.TickCount;
+        RefreshFromActiveRuntime();
+    }
+
+    private void OnActiveAnimaChanged()
+    {
+        RefreshFromActiveRuntime();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void RefreshFromActiveRuntime()
+    {
+        var activeId = AnimaContext.ActiveAnimaId;
+        if (activeId == null) return;
+        var runtime = AnimaRuntimeManager.GetRuntime(activeId);
+        if (runtime != null)
+        {
+            isRunning = runtime.IsRunning;
+            tickCount = runtime.HeartbeatLoop.TickCount;
+            latencyMs = runtime.HeartbeatLoop.LastTickLatencyMs;
+        }
+        else
+        {
+            isRunning = false;
+            tickCount = 0;
+            latencyMs = 0;
+        }
     }
 
     private async Task ToggleHeartbeat()
     {
         if (isRunning)
         {
-            // Stop is destructive - show confirmation
             showStopConfirm = true;
             return;
         }
 
-        // Start is not destructive - proceed immediately
         isLoading = true;
         errorMessage = null;
         StateHasChanged();
 
         try
         {
-            var result = await hubConnection!.InvokeAsync<bool>("StartHeartbeat");
-            if (!result)
+            var activeId = AnimaContext.ActiveAnimaId;
+            if (activeId == null)
             {
-                errorMessage = "Operation failed. Please try again.";
+                errorMessage = "No active Anima selected.";
+                return;
             }
+            var runtime = AnimaRuntimeManager.GetOrCreateRuntime(activeId);
+            await runtime.HeartbeatLoop.StartAsync();
+            isRunning = true;
         }
-        catch
+        catch (Exception ex)
         {
-            errorMessage = "Connection error. Please refresh.";
+            errorMessage = $"Failed to start: {ex.Message}";
         }
         finally
         {
@@ -124,15 +156,20 @@
 
         try
         {
-            var result = await hubConnection!.InvokeAsync<bool>("StopHeartbeat");
-            if (!result)
+            var activeId = AnimaContext.ActiveAnimaId;
+            if (activeId == null)
             {
-                errorMessage = "Operation failed. Please try again.";
+                errorMessage = "No active Anima selected.";
+                return;
             }
+            var runtime = AnimaRuntimeManager.GetRuntime(activeId);
+            if (runtime != null)
+                await runtime.HeartbeatLoop.StopAsync();
+            isRunning = false;
         }
-        catch
+        catch (Exception ex)
         {
-            errorMessage = "Connection error. Please refresh.";
+            errorMessage = $"Failed to stop: {ex.Message}";
         }
         finally
         {
@@ -148,6 +185,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        AnimaContext.ActiveAnimaChanged -= OnActiveAnimaChanged;
         if (hubConnection is not null)
             await hubConnection.DisposeAsync();
     }

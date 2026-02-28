@@ -174,7 +174,7 @@
             .WithAutomaticReconnect()
             .Build();
 
-        hubConnection.On<int>("ReceiveModuleCountChanged", async (count) =>
+        hubConnection.On<string, int>("ReceiveModuleCountChanged", async (animaId, count) =>
         {
             await RefreshAvailableModules();
             await InvokeAsync(StateHasChanged);

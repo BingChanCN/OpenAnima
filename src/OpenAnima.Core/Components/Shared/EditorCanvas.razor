@@ -5,8 +5,10 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.JSInterop
+@using OpenAnima.Core.Anima
 @inject EditorStateService _state
 @inject IPortRegistry _portRegistry
+@inject IAnimaContext _animaContext
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 @implements IAsyncDisposable
@@ -103,14 +105,16 @@
             .WithAutomaticReconnect()
             .Build();
 
-        _hubConnection.On<string, string>("ReceiveModuleStateChanged", (moduleId, state) =>
+        _hubConnection.On<string, string, string>("ReceiveModuleStateChanged", (animaId, moduleId, state) =>
         {
+            if (animaId != _animaContext.ActiveAnimaId) return;
             _state.UpdateModuleState(moduleId, state);
             InvokeAsync(StateHasChanged);
         });
 
-        _hubConnection.On<string, string, string?>("ReceiveModuleError", (moduleId, errorMsg, stackTrace) =>
+        _hubConnection.On<string, string, string, string?>("ReceiveModuleError", (animaId, moduleId, errorMsg, stackTrace) =>
         {
+            if (animaId != _animaContext.ActiveAnimaId) return;
             _state.UpdateModuleError(moduleId, errorMsg, stackTrace);
             InvokeAsync(StateHasChanged);
         });

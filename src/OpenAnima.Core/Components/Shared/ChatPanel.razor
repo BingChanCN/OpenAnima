@@ -4,12 +4,14 @@
 @using OpenAnima.Core.Modules
 @using OpenAnima.Core.Services
 @using OpenAnima.Core.Wiring
+@using OpenAnima.Core.Anima
 @implements IAsyncDisposable
 @inject ChatInputModule _chatInputModule
 @inject ChatOutputModule _chatOutputModule
 @inject ChatContextManager _contextManager
-@inject IEventBus _eventBus
-@inject IWiringEngine _wiringEngine
+@inject ChatSessionState _chatSessionState
+@inject IAnimaRuntimeManager _animaRuntimeManager
+@inject IAnimaContext _animaContext
 @inject NavigationManager _navigation
 @inject IJSRuntime JS
 
@@ -24,7 +26,7 @@
     }
 
     <div class="chat-messages" id="chat-messages">
-        @if (_messages.Count == 0)
+        @if (Messages.Count == 0)
         {
             <div class="empty-state">
                 <span class="empty-icon">💬</span>
@@ -33,11 +35,11 @@
         }
         else
         {
-            @foreach (var message in _messages)
+            @foreach (var message in Messages)
             {
                 <ChatMessage Role="@message.Role" Content="@message.Content" IsStreaming="@message.IsStreaming" />
             }
-            @if (!_isGenerating && _messages.Count > 0 && _messages.Last().Role == "assistant")
+            @if (!_isGenerating && Messages.Count > 0 && Messages.Last().Role == "assistant")
             {
                 <button class="regenerate-btn" @onclick="RegenerateLastResponse">
                     <span>🔄</span> Regenerate
@@ -54,10 +56,10 @@
 </div>
 
 @code {
-    private readonly List<ChatMessageModel> _messages = new();
     private bool _isGenerating;
     private CancellationTokenSource _generationCts = new();
     private TaskCompletionSource<string>? _pendingAssistantResponse;
+    private List<ChatSessionMessage> Messages => _chatSessionState.Messages;
 
     protected override void OnInitialized()
     {
@@ -83,8 +85,18 @@
 
     private bool IsPipelineConfigured()
     {
-        var currentConfig = _wiringEngine.GetCurrentConfiguration();
+        var activeId = _animaContext.ActiveAnimaId;
+        if (activeId == null) return false;
+        var runtime = _animaRuntimeManager.GetRuntime(activeId);
+        var currentConfig = runtime?.WiringEngine.GetCurrentConfiguration();
         return ChatPipelineConfigurationValidator.IsConfigured(currentConfig);
+    }
+
+    private IEventBus? GetActiveEventBus()
+    {
+        var activeId = _animaContext.ActiveAnimaId;
+        if (activeId == null) return null;
+        return _animaRuntimeManager.GetOrCreateRuntime(activeId).EventBus;
     }
 
     private async Task SendMessage(string userMessage)
@@ -98,7 +110,7 @@
             return;
         }
 
-        var history = _messages
+        var history = Messages
             .Where(m => !m.IsStreaming)
             .Select(m => new ChatMessageInput(m.Role, m.Content))
             .ToList();
@@ -110,16 +122,18 @@
             var utilization = _contextManager.GetContextUtilization();
 
             await JS.InvokeVoidAsync("chatHelpers.showContextLimitModal", currentTokens, maxTokens);
-            await _eventBus.PublishAsync(new ModuleEvent<ContextLimitReachedPayload>
-            {
-                EventName = "ContextLimitReached",
-                SourceModuleId = "OpenAnima.Core",
-                Payload = new ContextLimitReachedPayload(currentTokens, maxTokens, utilization)
-            });
+            var eventBus = GetActiveEventBus();
+            if (eventBus != null)
+                await eventBus.PublishAsync(new ModuleEvent<ContextLimitReachedPayload>
+                {
+                    EventName = "ContextLimitReached",
+                    SourceModuleId = "OpenAnima.Core",
+                    Payload = new ContextLimitReachedPayload(currentTokens, maxTokens, utilization)
+                });
             return;
         }
 
-        _messages.Add(new ChatMessageModel
+        Messages.Add(new ChatSessionMessage
         {
             Role = "user",
             Content = userMessage,
@@ -128,20 +142,22 @@
 
         var messageTokenCount = _contextManager.CountTokens(userMessage);
         _contextManager.UpdateAfterSend(messageTokenCount);
-        await _eventBus.PublishAsync(new ModuleEvent<MessageSentPayload>
-        {
-            EventName = "MessageSent",
-            SourceModuleId = "OpenAnima.Core",
-            Payload = new MessageSentPayload(userMessage, messageTokenCount, DateTime.UtcNow)
-        });
+        var eventBusSend = GetActiveEventBus();
+        if (eventBusSend != null)
+            await eventBusSend.PublishAsync(new ModuleEvent<MessageSentPayload>
+            {
+                EventName = "MessageSent",
+                SourceModuleId = "OpenAnima.Core",
+                Payload = new MessageSentPayload(userMessage, messageTokenCount, DateTime.UtcNow)
+            });
 
-        var assistantMessage = new ChatMessageModel
+        var assistantMessage = new ChatSessionMessage
         {
             Role = "assistant",
             Content = "",
             IsStreaming = true
         };
-        _messages.Add(assistantMessage);
+        Messages.Add(assistantMessage);
 
         await GenerateAssistantResponseAsync(userMessage, assistantMessage);
     }
@@ -154,31 +170,31 @@
             return;
         }
 
-        var lastAssistantIndex = _messages.FindLastIndex(m => m.Role == "assistant");
+        var lastAssistantIndex = Messages.FindLastIndex(m => m.Role == "assistant");
         if (lastAssistantIndex == -1)
             return;
 
-        var lastUserMessage = _messages
+        var lastUserMessage = Messages
             .Take(lastAssistantIndex)
             .LastOrDefault(m => m.Role == "user");
 
         if (lastUserMessage == null)
             return;
 
-        _messages.RemoveAt(lastAssistantIndex);
+        Messages.RemoveAt(lastAssistantIndex);
 
-        var assistantMessage = new ChatMessageModel
+        var assistantMessage = new ChatSessionMessage
         {
             Role = "assistant",
             Content = "",
             IsStreaming = true
         };
-        _messages.Add(assistantMessage);
+        Messages.Add(assistantMessage);
 
         await GenerateAssistantResponseAsync(lastUserMessage.Content, assistantMessage);
     }
 
-    private async Task GenerateAssistantResponseAsync(string prompt, ChatMessageModel assistantMessage)
+    private async Task GenerateAssistantResponseAsync(string prompt, ChatSessionMessage assistantMessage)
     {
         ResetGenerationCancellation();
 
@@ -241,16 +257,18 @@
         var outputTokens = _contextManager.CountTokens(assistantResponse);
         _contextManager.UpdateAfterResponse(inputTokens, outputTokens, outputTokens);
 
-        await _eventBus.PublishAsync(new ModuleEvent<ResponseReceivedPayload>
-        {
-            EventName = "ResponseReceived",
-            SourceModuleId = "OpenAnima.Core",
-            Payload = new ResponseReceivedPayload(
-                assistantResponse,
-                inputTokens,
-                outputTokens,
-                DateTime.UtcNow)
-        });
+        var eventBus = GetActiveEventBus();
+        if (eventBus != null)
+            await eventBus.PublishAsync(new ModuleEvent<ResponseReceivedPayload>
+            {
+                EventName = "ResponseReceived",
+                SourceModuleId = "OpenAnima.Core",
+                Payload = new ResponseReceivedPayload(
+                    assistantResponse,
+                    inputTokens,
+                    outputTokens,
+                    DateTime.UtcNow)
+            });
     }
 
     private async Task ScrollToBottomIfNeededAsync()
@@ -283,12 +301,5 @@
         _generationCts.Dispose();
 
         return ValueTask.CompletedTask;
-    }
-
-    private class ChatMessageModel
-    {
-        public string Role { get; set; } = "";
-        public string Content { get; set; } = "";
-        public bool IsStreaming { get; set; }
     }
 }

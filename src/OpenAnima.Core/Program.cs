@@ -1,11 +1,8 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
-using OpenAnima.Contracts;
-using OpenAnima.Core.Events;
 using OpenAnima.Core.Hosting;
 using OpenAnima.Core.Plugins;
-using OpenAnima.Core.Runtime;
 using OpenAnima.Core.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using OpenAnima.Core.Services;
@@ -23,21 +20,11 @@ var builder = WebApplication.CreateBuilder(args);
 // --- Register core runtime components as singletons ---
 builder.Services.AddSingleton<PluginRegistry>();
 builder.Services.AddSingleton<PluginLoader>();
-builder.Services.AddSingleton<EventBus>();
-builder.Services.AddSingleton<IEventBus>(sp =>
-    sp.GetRequiredService<EventBus>());
-builder.Services.AddSingleton<HeartbeatLoop>(sp =>
-    new HeartbeatLoop(
-        sp.GetRequiredService<IEventBus>(),
-        sp.GetRequiredService<PluginRegistry>(),
-        interval: TimeSpan.FromMilliseconds(100),
-        logger: sp.GetRequiredService<ILogger<HeartbeatLoop>>(),
-        hubContext: sp.GetRequiredService<IHubContext<RuntimeHub, IRuntimeClient>>()));
+// Note: EventBus and HeartbeatLoop are now per-Anima inside AnimaRuntime.
+// PluginRegistry and PluginLoader remain global for module scanning.
 
 // --- Register service facades ---
 builder.Services.AddSingleton<IModuleService, ModuleService>();
-builder.Services.AddSingleton<IHeartbeatService, HeartbeatService>();
-builder.Services.AddSingleton<IEventBusService, EventBusService>();
 
 // --- Register LLM services ---
 builder.Services.AddOptions<LLMOptions>()

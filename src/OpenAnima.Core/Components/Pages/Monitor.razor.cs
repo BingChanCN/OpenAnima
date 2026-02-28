@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
+using OpenAnima.Core.Anima;
 
 namespace OpenAnima.Core.Components.Pages;
 
 public partial class Monitor : IAsyncDisposable
 {
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private IAnimaContext AnimaContext { get; set; } = default!;
 
     private HubConnection? hubConnection;
     private HubConnectionState connectionState = HubConnectionState.Disconnected;
@@ -46,9 +48,9 @@ public partial class Monitor : IAsyncDisposable
             .WithAutomaticReconnect()
             .Build();
 
-        hubConnection.On<long, double>("ReceiveHeartbeatTick", OnHeartbeatTick);
-        hubConnection.On<bool>("ReceiveHeartbeatStateChanged", OnHeartbeatStateChanged);
-        hubConnection.On<int>("ReceiveModuleCountChanged", OnModuleCountChanged);
+        hubConnection.On<string, long, double>("ReceiveHeartbeatTick", OnHeartbeatTick);
+        hubConnection.On<string, bool>("ReceiveHeartbeatStateChanged", OnHeartbeatStateChanged);
+        hubConnection.On<string, int>("ReceiveModuleCountChanged", OnModuleCountChanged);
 
         hubConnection.Reconnecting += OnReconnecting;
         hubConnection.Reconnected += OnReconnected;
@@ -65,8 +67,9 @@ public partial class Monitor : IAsyncDisposable
         }
     }
 
-    private void OnHeartbeatTick(long tick, double latency)
+    private void OnHeartbeatTick(string animaId, long tick, double latency)
     {
+        if (animaId != AnimaContext.ActiveAnimaId) return;
         tickCount = tick;
         latencyMs = latency;
         latencyHistory.Add(latency);
@@ -82,14 +85,15 @@ public partial class Monitor : IAsyncDisposable
         }
     }
 
-    private void OnHeartbeatStateChanged(bool running)
+    private void OnHeartbeatStateChanged(string animaId, bool running)
     {
+        if (animaId != AnimaContext.ActiveAnimaId) return;
         isRunning = running;
         if (!_disposed)
             InvokeAsync(StateHasChanged);
     }
 
-    private void OnModuleCountChanged(int count)
+    private void OnModuleCountChanged(string animaId, int count)
     {
         // Module count tracked for future use
     }

@@ -5,17 +5,16 @@ namespace OpenAnima.Core.Hubs;
 
 /// <summary>
 /// SignalR Hub for runtime control operations and state push.
-/// Provides client-to-server RPC methods for module and heartbeat control.
+/// Provides client-to-server RPC methods for module control.
+/// Note: Heartbeat is now per-Anima — controlled directly via AnimaRuntime, not via hub.
 /// </summary>
 public class RuntimeHub : Hub<IRuntimeClient>
 {
     private readonly IModuleService _moduleService;
-    private readonly IHeartbeatService _heartbeatService;
 
-    public RuntimeHub(IModuleService moduleService, IHeartbeatService heartbeatService)
+    public RuntimeHub(IModuleService moduleService)
     {
         _moduleService = moduleService;
-        _heartbeatService = heartbeatService;
     }
 
     /// <summary>
@@ -50,41 +49,5 @@ public class RuntimeHub : Hub<IRuntimeClient>
         if (result.Success)
             await Clients.All.ReceiveModuleCountChanged("", _moduleService.Count);
         return result;
-    }
-
-    /// <summary>
-    /// Starts the heartbeat loop.
-    /// Client calls: hubConnection.InvokeAsync&lt;bool&gt;("StartHeartbeat")
-    /// </summary>
-    public async Task<bool> StartHeartbeat()
-    {
-        try
-        {
-            await _heartbeatService.StartAsync();
-            await Clients.All.ReceiveHeartbeatStateChanged("", true);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Stops the heartbeat loop.
-    /// Client calls: hubConnection.InvokeAsync&lt;bool&gt;("StopHeartbeat")
-    /// </summary>
-    public async Task<bool> StopHeartbeat()
-    {
-        try
-        {
-            await _heartbeatService.StopAsync();
-            await Clients.All.ReceiveHeartbeatStateChanged("", false);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
     }
 }

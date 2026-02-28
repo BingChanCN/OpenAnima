@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OpenAnima.Core.Anima;
 using OpenAnima.Core.Plugins;
 using OpenAnima.Core.Services;
 
@@ -7,22 +8,23 @@ namespace OpenAnima.Core.Hosting;
 
 /// <summary>
 /// Hosted service that manages the OpenAnima runtime lifecycle.
-/// Handles module scanning, loading, heartbeat start, and directory watching.
+/// Handles module scanning, loading, and directory watching.
+/// Heartbeat is now per-Anima — started/stopped by user via AnimaRuntime.
 /// </summary>
 public class OpenAnimaHostedService : IHostedService
 {
     private readonly IModuleService _moduleService;
-    private readonly IHeartbeatService _heartbeatService;
+    private readonly IAnimaRuntimeManager _animaRuntimeManager;
     private readonly ILogger<OpenAnimaHostedService> _logger;
     private ModuleDirectoryWatcher? _watcher;
 
     public OpenAnimaHostedService(
         IModuleService moduleService,
-        IHeartbeatService heartbeatService,
+        IAnimaRuntimeManager animaRuntimeManager,
         ILogger<OpenAnimaHostedService> logger)
     {
         _moduleService = moduleService;
-        _heartbeatService = heartbeatService;
+        _animaRuntimeManager = animaRuntimeManager;
         _logger = logger;
     }
 
@@ -51,12 +53,9 @@ public class OpenAnimaHostedService : IHostedService
         _logger.LogInformation(
             "Loaded {Count} module(s)", _moduleService.Count);
 
-        // 2. Start heartbeat loop
-        await _heartbeatService.StartAsync(ct);
-        _logger.LogInformation(
-            "Heartbeat started (100ms interval)");
+        // Note: Heartbeat is now per-Anima. Runtimes start when user explicitly starts them.
 
-        // 3. Start watching for new modules
+        // 2. Start watching for new modules
         if (!Directory.Exists(modulesPath))
             Directory.CreateDirectory(modulesPath);
 
@@ -80,18 +79,31 @@ public class OpenAnimaHostedService : IHostedService
         _watcher.StartWatching();
         _logger.LogInformation(
             "Watching for new modules in {Path}", modulesPath);
+
+        await Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken ct)
     {
         _logger.LogInformation("OpenAnima runtime stopping...");
 
-        // 1. Stop heartbeat
-        await _heartbeatService.StopAsync();
-        _logger.LogInformation(
-            "Heartbeat stopped (Ticks: {Ticks}, Skipped: {Skipped})",
-            _heartbeatService.TickCount,
-            _heartbeatService.SkippedCount);
+        // 1. Stop all Anima runtimes
+        foreach (var anima in _animaRuntimeManager.GetAll())
+        {
+            var runtime = _animaRuntimeManager.GetRuntime(anima.Id);
+            if (runtime != null && runtime.IsRunning)
+            {
+                try
+                {
+                    await runtime.HeartbeatLoop.StopAsync();
+                    _logger.LogInformation("Stopped runtime for Anima {Id}", anima.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error stopping runtime for Anima {Id}", anima.Id);
+                }
+            }
+        }
 
         // 2. Shutdown modules
         foreach (var entry in _moduleService.GetAllModules())
