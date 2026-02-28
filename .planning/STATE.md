@@ -1,39 +1,37 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: Module SDK & DevEx
-status: completed
-last_updated: "2026-02-28T11:19:33.825Z"
-last_activity: 2026-02-28 — Completed 22-02-PLAN.md (API Reference Documentation)
+milestone: v1.5
+milestone_name: Multi-Anima Architecture
+status: defining_requirements
+last_updated: "2026-02-28T12:00:00.000Z"
+last_activity: 2026-02-28 — Milestone v1.5 started
 progress:
-  total_phases: 13
-  completed_phases: 13
-  total_plans: 29
-  completed_plans: 29
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
-# Project State: OpenAnima v1.4 Module SDK & DevEx
+# Project State: OpenAnima v1.5 Multi-Anima Architecture
 
 **Last updated:** 2026-02-28
-**Current milestone:** v1.4 Module SDK & DevEx
+**Current milestone:** v1.5 Multi-Anima Architecture
 
 ## Project Reference
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
 
-**Current focus:** Phase 22: Documentation
+**Current focus:** Defining requirements
 
 See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ## Current Position
 
-**Phase:** 22 of 22 (Documentation)
-**Plan:** 2 of 2 in current phase (Completed)
-**Status:** v1.4 milestone complete
-**Last activity:** 2026-02-28 — Completed 22-02-PLAN.md (API Reference Documentation)
-
-**Progress:** [██████████] 100%
+**Phase:** Not started (defining requirements)
+**Plan:** —
+**Status:** Defining requirements
+**Last activity:** 2026-02-28 — Milestone v1.5 started
 
 ## Performance Metrics
 
@@ -66,6 +64,17 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 | Phase 20 P02 | 2 | 2 tasks | 8 files |
 
 ## Accumulated Context
+
+### v1.5 Scope Decisions
+
+- **Architecture shift:** From single runtime to multi-Anima instances (each with independent heartbeat, modules, chat)
+- **UI layout:** Three-column layout (global sidebar + Anima list/Editor + detail panel)
+- **i18n scope:** UI text only (Chinese/English), not module content or conversations
+- **Module detail panel:** Right-side panel in editor for configuration
+- **Data persistence:** Anima configs, module configs, language preference (not conversation history)
+- **Built-in modules:** Fixed text, text concat/split/merge, conditional branch, configurable LLM, optional heartbeat
+- **Module page:** Real implementation replacing placeholder (list, install/uninstall, enable/disable, info display)
+- **Implementation order:** Architecture → Modules → i18n
 
 ### v1.4 Scope Decisions
 

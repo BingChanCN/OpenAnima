@@ -10,7 +10,16 @@
 - .oamod package format with MD5 checksums and manifest validation
 - Complete documentation: 5-minute quick-start + API reference + common patterns
 
-**Next milestone:** TBD — use `/gsd:new-milestone` to define v1.5 or v2.0
+## Current Milestone: v1.5 Multi-Anima Architecture
+
+**Goal:** Transform from single-runtime dashboard to multi-instance Anima architecture with i18n support and rich module ecosystem.
+
+**Target features:**
+- Multi-Anima architecture: Each Anima is an independent agent instance with its own heartbeat, modules, and chat interface
+- Internationalization: Chinese/English UI with language preference persistence
+- Module ecosystem: Rebuilt module management page with install/uninstall/enable/disable capabilities
+- Rich built-in modules: Fixed text, text processing (concat/split/merge), conditional branching, configurable LLM, optional heartbeat
+- Module configuration UI: Right-side detail panel in editor for per-module configuration
 
 ## What This Is
 
@@ -85,7 +94,29 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Active
 
-(No active requirements — use `/gsd:new-milestone` to define next milestone)
+- [ ] User can switch UI language between Chinese and English
+- [ ] User's language preference persists across sessions
+- [ ] User can create new Anima instances
+- [ ] User can view list of all Animas in global sidebar
+- [ ] Each Anima has independent heartbeat loop
+- [ ] Each Anima has independent module instances
+- [ ] Each Anima has independent chat interface
+- [ ] User can switch between Animas
+- [ ] Anima configuration (name, module connections) persists across sessions
+- [ ] User can view module list (built-in + third-party)
+- [ ] User can install/uninstall modules
+- [ ] User can enable/disable modules
+- [ ] User can view module information (author, version, description)
+- [ ] User can click module in editor to show detail panel on right
+- [ ] User can edit module configuration in detail panel
+- [ ] Module configuration persists across sessions
+- [ ] Fixed text module: User can edit text content in detail panel
+- [ ] Text concat module: Concatenates two text inputs
+- [ ] Text split module: Splits text by delimiter
+- [ ] Text merge module: Merges multiple inputs into one output
+- [ ] Conditional branch module: Routes to different outputs based on condition
+- [ ] LLM module: User can configure API URL and key in detail panel
+- [ ] Heartbeat module: Optional module (no longer core requirement)
 
 ### Future
 
@@ -169,4 +200,4 @@ v1.4 delivered the module SDK:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-02-28 after v1.4 milestone completion*
+*Last updated: 2026-02-28 after v1.5 milestone started*
