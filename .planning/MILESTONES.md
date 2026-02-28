@@ -1,5 +1,25 @@
 # Milestones
 
+## v1.4 Module SDK & DevEx (Shipped: 2026-02-28)
+
+**Phases:** 20-22 | **Plans:** 8 | **Tasks:** 16 | **LOC:** ~1,747 C# CLI + ~1,408 lines docs
+**Git range:** feat(20-02)..feat(21-03) | **Timeline:** 2026-02-28 (1 day)
+
+**Delivered:** Complete module SDK with CLI tool, project templates, packaging system, and comprehensive documentation — developers can create, validate, and pack custom modules in under 5 minutes.
+
+**Key accomplishments:**
+- Installable .NET global tool (oani) with System.CommandLine, exit codes, and verbosity control
+- Module validation with manifest JSON checking and IModule implementation verification via isolated assembly reflection
+- Pack command creates .oamod ZIP archives with MD5 checksums and target framework metadata
+- 5-minute quick-start tutorial showing complete create-build-pack workflow with HelloModule example
+- Complete API reference documentation for all public interfaces (IModule, IModuleExecutor, ITickable, IEventBus, port system)
+
+**Tech debt (accepted):** Schema mismatch between CLI and Runtime (extended manifest fields generated but not consumed), SUMMARY metadata gaps (documentation only), test isolation issues (pre-existing infrastructure issue)
+
+**Archive:** [milestones/v1.4-ROADMAP.md](milestones/v1.4-ROADMAP.md) | [milestones/v1.4-REQUIREMENTS.md](milestones/v1.4-REQUIREMENTS.md) | [milestones/v1.4-MILESTONE-AUDIT.md](milestones/v1.4-MILESTONE-AUDIT.md)
+
+---
+
 ## v1.0 Core Platform Foundation (Shipped: 2026-02-21)
 
 **Phases:** 1-2 | **Plans:** 5 | **Tasks:** 10 | **LOC:** 1,323 C#
