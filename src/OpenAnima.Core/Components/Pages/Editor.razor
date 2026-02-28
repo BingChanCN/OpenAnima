@@ -2,12 +2,14 @@
 @using OpenAnima.Core.Services
 @using OpenAnima.Core.Wiring
 @using OpenAnima.Core.Ports
+@using OpenAnima.Core.Anima
 @using OpenAnima.Contracts
 @using OpenAnima.Contracts.Ports
 @inject EditorStateService _state
 @inject IPortRegistry _portRegistry
 @inject IConfigurationLoader _configLoader
-@inject IWiringEngine _wiringEngine
+@inject IAnimaRuntimeManager _animaRuntimeManager
+@inject IAnimaContext _animaContext
 @implements IDisposable
 
 <div class="editor-container" tabindex="0" @onkeydown="HandleKeyDown">
@@ -25,8 +27,9 @@
         // Subscribe to state changes
         _state.OnStateChanged += HandleStateChanged;
 
-        // Load current configuration from wiring engine if available
-        var currentConfig = _wiringEngine.GetCurrentConfiguration();
+        // Load current configuration from active Anima's wiring engine if available
+        var activeRuntime = _animaRuntimeManager.GetRuntime(_animaContext.ActiveAnimaId ?? "");
+        var currentConfig = activeRuntime?.WiringEngine.GetCurrentConfiguration();
         if (currentConfig != null)
         {
             _state.LoadConfiguration(currentConfig);
