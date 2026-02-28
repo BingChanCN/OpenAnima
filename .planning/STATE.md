@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: executing
-last_updated: "2026-02-28T15:45:42.171Z"
-last_activity: "2026-02-28 — Completed 24-02: i18n language switching with LanguageService and Settings page"
+last_updated: "2026-03-01T17:18:00.000Z"
+last_activity: "2026-03-01 — Completed 25-03: Module detail UI and per-Anima controls"
 progress:
-  total_phases: 12
-  completed_phases: 12
-  total_plans: 26
-  completed_plans: 26
+  total_phases: 13
+  completed_phases: 13
+  total_plans: 29
+  completed_plans: 29
   percent: 100
 ---
 
 # Project State: OpenAnima v1.5 Multi-Anima Architecture
 
-**Last updated:** 2026-02-28
+**Last updated:** 2026-03-01
 **Current milestone:** v1.5 Multi-Anima Architecture
 
 ## Project Reference
@@ -28,10 +28,10 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ## Current Position
 
-**Phase:** 24 - Service Migration i18n
+**Phase:** 25 - Module Management
 **Plan:** 03 complete (phase complete)
 **Status:** Phase complete — all 3 plans done
-**Last activity:** 2026-02-28 — Completed 24-03: Component localization sweep (all 11 components)
+**Last activity:** 2026-03-01 — Completed 25-03: Module detail UI and per-Anima controls
 
 **Progress:** [██████████] 100%
 
@@ -61,6 +61,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 | Phase 24-service-migration-i18n P01 | 90 | 6 tasks | 23 files |
 | Phase 24-service-migration-i18n P02 | 3 | 1 tasks | 10 files |
 | Phase 24-service-migration-i18n P03 | 12 | 1 tasks | 14 files |
+| Phase 25 P03 | 5 | 4 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,9 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 - **Phase 24-02:** MainLayout reads localStorage on first render to restore language preference on app load
 - **Phase 24-02:** Chinese (zh-CN) is default and fallback language per CONTEXT.md locked decision
 - **Phase 24-03:** Monitor partial class pattern — IStringLocalizer injected in Monitor.razor.cs to avoid CS0102 duplicate definition with @inject directive
+- **Phase 25-03:** ModuleContextMenu follows AnimaContextMenu pattern with backdrop and button-based menu items
+- **Phase 25-03:** ModuleDetailSidebar displays 'Unknown' for author since PluginManifest lacks Author property
+- **Phase 25-03:** Status badges update automatically on ActiveAnimaChanged event to reflect per-Anima state
 
 ### Key Decisions (v1.4)
 

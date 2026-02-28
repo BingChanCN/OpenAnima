@@ -30,8 +30,8 @@
 - [ ] **MODMGMT-01**: User can view list of all installed modules
 - [ ] **MODMGMT-02**: User can install module from .oamod package
 - [ ] **MODMGMT-03**: User can uninstall module
-- [ ] **MODMGMT-04**: User can enable/disable module per Anima
-- [ ] **MODMGMT-05**: User can view module information (name, version, author, description)
+- [x] **MODMGMT-04**: User can enable/disable module per Anima
+- [x] **MODMGMT-05**: User can view module information (name, version, author, description)
 - [ ] **MODMGMT-06**: User can search and filter modules by name
 
 ### Module Configuration (MODCFG)
@@ -115,8 +115,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MODMGMT-01 | Phase 25 | Pending |
 | MODMGMT-02 | Phase 25 | Pending |
 | MODMGMT-03 | Phase 25 | Pending |
-| MODMGMT-04 | Phase 25 | Pending |
-| MODMGMT-05 | Phase 25 | Pending |
+| MODMGMT-04 | Phase 25 | Complete |
+| MODMGMT-05 | Phase 25 | Complete |
 | MODMGMT-06 | Phase 25 | Pending |
 | MODCFG-01 | Phase 26 | Pending |
 | MODCFG-02 | Phase 26 | Pending |
