@@ -1,6 +1,8 @@
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Reflection;
+using OpenAnima.Cli.Commands;
+using OpenAnima.Cli.Services;
 
 namespace OpenAnima.Cli;
 
@@ -50,9 +52,13 @@ public class Program
 
         rootCommand.AddGlobalOption(helpOption);
 
-        // Placeholder "new" subcommand (Plan 03 implements full functionality)
-        var newCommand = new Command("new", "Create a new module project");
+        // Register the 'new' command
+        var templateEngine = new TemplateEngine();
+        var newCommand = new NewCommand(templateEngine);
         rootCommand.AddCommand(newCommand);
+
+        // Register the 'validate' command
+        rootCommand.AddCommand(new ValidateCommand());
 
         // Parse arguments
         var parseResult = rootCommand.Parse(args);
@@ -94,8 +100,9 @@ public class Program
             return ExitCodes.Success;
         }
 
-        // Invoke the command
-        return parseResult.Invoke();
+        // Invoke the command and return the exit code
+        var exitCode = parseResult.Invoke();
+        return exitCode;
     }
 
     private static void PrintHelp()
@@ -110,6 +117,7 @@ Options:
   -h, --help               Show help and usage information
 
 Commands:
-  new    Create a new module project");
+  new <name>       Create a new module project
+  validate <path>  Validate a module project");
     }
 }
