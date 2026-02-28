@@ -1,276 +1,298 @@
 # Project Research Summary
 
-**Project:** OpenAnima v1.3 True Modularization & Visual Wiring
-**Domain:** Port-based module system with visual node editor in Blazor Server
-**Researched:** 2026-02-25
-**Confidence:** MEDIUM-HIGH
+**Project:** OpenAnima v1.5 Multi-Anima Architecture
+**Domain:** Multi-instance agent runtime with i18n and module ecosystem
+**Researched:** 2026-02-28
+**Confidence:** HIGH
 
 ## Executive Summary
 
-OpenAnima v1.3 transforms the existing hardcoded LLM/chat/heartbeat features into a true port-based modular architecture with visual drag-and-drop wiring. Research shows this is achievable with zero new dependencies — .NET 8.0's built-in capabilities (enums, records, System.Text.Json, HTML5 drag-and-drop, SVG rendering) provide everything needed. The recommended approach uses a custom topological sort (~100 LOC) for execution ordering, HTML5 + SVG for the visual editor, and extends the existing EventBus for data routing between connected ports.
+OpenAnima v1.5 transforms the single-instance agent runtime into a multi-Anima architecture where users can create, manage, and run multiple independent AI agents simultaneously. The research reveals this requires shifting from singleton-based global state to a factory pattern with per-Anima isolation, analogous to multi-tenant SaaS architecture where each Anima is a "tenant" with isolated runtime state.
 
-The critical success factor is avoiding the "refactoring trap" — breaking existing v1.2 functionality while modularizing. Research identifies 10 major pitfalls, with the top three being: (1) circular dependency deadlock from invalid wiring, (2) SignalR rendering bottleneck during drag operations, and (3) breaking existing features during modularization. All three can be mitigated through upfront design: cycle detection in the wiring engine, throttled StateHasChanged during drag, and comprehensive integration tests before refactoring.
+The recommended approach leverages Blazor Server's built-in scoped services with minimal new dependencies: Microsoft.Extensions.Localization 8.0.* for i18n with custom JSON localizer, System.Text.Json (built-in) for configuration persistence, and an AnimaRuntimeManager singleton factory to manage per-Anima instances. Each Anima gets its own EventBus, HeartbeatLoop, WiringEngine, and module instances, while shared infrastructure (PluginRegistry, PortRegistry) remains singleton. An AnimaContext scoped service acts as the "tenant resolver" identifying which Anima the current circuit is viewing.
 
-The architecture follows a clean separation: Port Type System (foundation) → Wiring Engine (execution orchestration) → Visual Editor (UI) → Module Refactoring (demonstration). This sequence ensures each layer is validated before the next depends on it, reducing integration risk.
+Critical risks center on memory leaks from improper disposal (EventBus subscriptions, AssemblyLoadContext), service lifetime mismatches (singleton-to-scoped), concurrent configuration file writes, and culture switching requiring full page reload. Prevention requires implementing IAsyncDisposable for all event subscriptions, clearing Assembly references before Unload(), using atomic write-to-temp-then-rename pattern for file persistence, and establishing clear per-Anima state boundaries from the start. The architecture is well-documented with high confidence in stack choices and patterns.
 
 ## Key Findings
 
 ### Recommended Stack
 
-No new NuGet packages required. The existing .NET 8.0 stack already provides all necessary capabilities for v1.3's port system, wiring engine, and visual editor.
+The v1.5 stack maintains OpenAnima's "minimal dependencies" philosophy while adding only essential i18n support. Core runtime (.NET 8.0, Blazor Server, SignalR 8.0.x, OpenAI SDK 2.8.0) remains unchanged.
 
 **Core technologies:**
-- **C# enums and records** (built-in): Port type system (Text, Trigger) with compile-time validation and clean JSON serialization
-- **Custom topological sort** (~100 LOC): DAG execution ordering with cycle detection, avoiding 500KB+ QuikGraph dependency
-- **HTML5 Drag & Drop API + SVG** (native browser): Visual editor with zero JavaScript dependencies, Blazor-native rendering
-- **System.Text.Json** (built-in): Wiring configuration persistence, already used throughout project
-- **Existing EventBus** (custom): Data routing between connected ports, no changes needed to EventBus itself
+- **Microsoft.Extensions.Localization 8.0.*** — Official .NET localization with IStringLocalizer support for Blazor Server
+- **Custom JSON localizer** — JSON-based resource files (more flexible than .resx for translators, easier version control)
+- **System.Text.Json (built-in)** — JSON serialization for configuration persistence, zero additional dependencies
+- **Scoped services (built-in)** — Per-circuit state isolation, perfect for per-Anima state
+- **State container pattern** — Lightweight reactive state management (20 LOC, no dependencies)
 
-**Critical version requirements:**
-- .NET 8.0 LTS (no upgrade needed, supported until Nov 2026)
-- SignalR 8.0.x must match runtime version for circuit stability
-
-**Alternatives rejected:**
-- QuikGraph (graph algorithms library): 500KB+ for 100 lines of topological sort code
-- Syncfusion/DevExpress (visual editor): Commercial license ($995+/year), conflicts with pure CSS philosophy
-- Blazor.Diagram (open-source): Adds learning curve, may not support custom port validation
-- Canvas rendering: Heavy JSInterop complexity, SVG is simpler for <100 connections
+**Why minimal dependencies:** Built-in .NET 8 capabilities handle all requirements. JSON localizer avoids .resx complexity. Scoped services provide natural per-Anima isolation without external state management libraries.
 
 ### Expected Features
 
+Research across VSCode, JetBrains, Unreal Engine, and multi-tenant SaaS patterns reveals clear table stakes and differentiators.
+
 **Must have (table stakes):**
-- Port type system with Text and Trigger types, same-type connection validation
-- Visual drag-and-drop module placement with pan/zoom canvas
-- Click-drag wiring from port to port with visual preview and invalid connection rejection
-- Bezier curve rendering for professional appearance
-- Save/load wiring configuration with auto-save
-- Execute wiring topology at runtime with topological sort
-- Module lifecycle integration (editor reflects runtime state)
-- Delete nodes and connections with keyboard shortcuts
+
+*Anima Management:*
+- Create/list/switch/delete Animas — core multi-instance capability
+- Independent execution per Anima — separate heartbeat loops, isolated module state
+- Persist Anima configuration — save name, module connections, module configs to JSON per instance
+
+*i18n:*
+- Language switcher UI — dropdown or toggle in header/settings
+- Chinese/English UI text — resource files for all UI strings
+- Persist language preference — localStorage or config file
+- Full page reload on switch — culture switching requires NavigateTo(forceLoad: true)
+
+*Module Management:*
+- Install/uninstall from .oamod — already have package loading (v1.4)
+- Enable/disable toggle — standard plugin pattern (VSCode, JetBrains)
+- Module metadata display — name, version, author, description
+- Module status indicators — enabled/disabled/error states
+
+*Module Configuration:*
+- Click module → detail panel — standard node editor pattern (Blender, Unreal Engine)
+- Edit module-specific settings — dynamic UI based on module schema
+- Persist module config per Anima — save to Anima's config JSON
+- Config validation — prevent invalid states
+
+*Built-in Modules:*
+- Fixed text output — basic data source with editable text field
+- Text concatenation — two inputs → one output
+- Text split by delimiter — common text operation
+- Conditional branching — flow control with condition expression
+- Configurable LLM — API URL, API key, model name in detail panel
 
 **Should have (differentiators):**
-- Undo/redo for graph edits (command pattern)
-- Port tooltips explaining purpose
-- Node search/palette for finding modules
-- Live execution visualization (highlight active connections)
-- Comments/annotations for documenting graph sections
-- Export graph as image for sharing
+- Heartbeat as optional module — flexibility, not all Animas need proactive loops
+- Per-Anima chat interface — each instance has independent conversation
+- Visual module status in editor — real-time feedback on execution state (already exists v1.3)
+- Anima cloning — duplicate existing setup for experimentation
+- Module search/filter — helps when module count grows
 
 **Defer (v2+):**
-- Subgraphs/groups (complex nested execution context)
-- Breakpoints on nodes (requires deep runtime integration)
-- Collaborative editing (conflict resolution complexity)
-- Connection reroute points (manual curve control)
-
-**Anti-features (explicitly avoid):**
-- Automatic layout (users want control)
-- Inline code editing in nodes (scope creep)
-- Visual scripting for module logic (modules are C# code)
-- AI-suggested connections (unreliable, deterministic wiring is core value)
+- Module dependency resolution — complex graph resolution, wait for real patterns
+- Module marketplace backend — infrastructure burden, validate local-first first
+- Nested Anima instances — unclear value, high complexity
+- Cross-Anima config sync — violates isolation, wait for user demand
+- Auto-update modules — breaking changes break workflows, user loses control
 
 ### Architecture Approach
 
-v1.3 integrates three new subsystems with minimal disruption to existing components: Port Type System extends IModule contracts with IPortProvider interface, Wiring Engine replaces direct EventBus usage with topology-driven execution, and Visual Editor adds a new Blazor page using HTML5 + SVG. The key integration principle is augmentation rather than replacement — EventBus remains for internal messaging, wiring engine orchestrates module execution order based on port connections.
+Transform from singleton runtime to multi-instance architecture using factory pattern with scoped context resolution. Each Anima is analogous to a "tenant" in multi-tenant SaaS with isolated runtime state.
 
 **Major components:**
-1. **PortRegistry** — Discovers and catalogs ports from loaded modules via IPortProvider interface
-2. **WiringEngine** — Executes modules in topological order, uses EventBus for data passing between connected ports
-3. **WiringService** — Service facade for load/save/validate wiring configuration operations
-4. **WiringEditor.razor** — Visual drag-and-drop canvas, reuses existing SignalR infrastructure
-5. **Refactored modules** — HeartbeatModule, LLMModule, ChatInputModule, ChatOutputModule implement IModule + IPortProvider
 
-**Critical patterns:**
-- Two-phase initialization: Load all modules first, then wire connections (avoids circular dependencies)
-- Topological sort for execution order: Deterministic, prevents race conditions, detects cycles
-- Port-based EventBus routing: WiringEngine translates port connections into EventBus subscriptions
-- Interface-based port discovery: Explicit IPortProvider.GetPorts() works across AssemblyLoadContext boundaries
+1. **AnimaContext (Scoped)** — Tracks current Anima ID for the circuit, acts as "tenant resolver"
+2. **AnimaRuntimeManager (Singleton Factory)** — Creates/manages Anima instances, Dictionary<string, AnimaRuntime>
+3. **AnimaRuntime (Per-Anima Container)** — Encapsulates one Anima's runtime: EventBus, HeartbeatLoop, WiringEngine, module instances
+4. **AnimaConfigStore (Singleton)** — Persists Anima metadata to JSON files in `animas/` directory
+5. **AnimaModuleRegistry (Per-Anima)** — Per-Anima module instances with isolated state
+6. **EditorStateService (Scoped)** — Already correct, inject AnimaContext to resolve correct AnimaRuntime
+7. **ConfigurationLoader (Per-Anima)** — Load/save from `wiring-configs/{animaId}/` directory
+
+**Key architectural patterns:**
+- **Scoped Context with Singleton Factory** — AnimaContext (scoped) holds tenant ID, AnimaRuntimeManager (singleton) manages all instances
+- **Per-Tenant Directory Isolation** — Each Anima gets subdirectory for configs: `wiring-configs/anima-001/`, `animas/anima-001.json`
+- **Module Instance Cloning** — Each Anima gets own module instances even though types are shared
+- **Service Lifetime Changes** — EventBus/HeartbeatLoop/WiringEngine move from singleton to per-Anima (managed by factory)
+
+**Data flow:**
+```
+Component → AnimaContext (scoped) → AnimaRuntimeManager (singleton)
+                ↓                           ↓
+        EditorStateService (scoped)    AnimaRuntime (per-Anima)
+                ↓                           ↓
+        WiringEngine (per-Anima) ←──────────┤
+                ↓                           ↓
+        EventBus (per-Anima) ←──────────────┤
+                ↓                           ↓
+        Modules (per-Anima instances) ←─────┘
+```
 
 ### Critical Pitfalls
 
-1. **Circular Dependency Deadlock** — Visual editors make cycles trivially easy to create (A → B → C → A). Users don't think in DAGs. Mitigation: Implement topological sort validation before saving, detect cycles using DFS during connection creation, block invalid connections in UI with clear error messages. Address in Phase 2 (Wiring Engine) — validation must be built into connection logic from the start.
+Research identified 10 critical pitfalls with prevention strategies:
 
-2. **SignalR Rendering Bottleneck** — Every node position change triggers StateHasChanged, causing full re-renders. With 10+ modules, dragging becomes laggy (200ms+ delay). SignalR bandwidth saturates with render diffs. Mitigation: Throttle StateHasChanged to 50-100ms during drag, use JS interop for drag rendering (sync to Blazor only on drop), implement ShouldRender() to prevent unnecessary re-renders, use @key directives on node components. Address in Phase 3 (Visual Editor) — must be architected for performance from the start.
+1. **Circuit Memory Leaks from Event Subscriptions** — EventBus subscriptions create strong references from singleton to scoped components. Prevention: Implement IAsyncDisposable, unsubscribe in DisposeAsync(), use WeakReference for subscriptions.
 
-3. **Breaking Existing Features During Modularization** — Refactoring hardcoded LLM/chat/heartbeat into modules breaks existing functionality. Hardcoded features have implicit dependencies and execution order guarantees that aren't obvious until removed. Mitigation: Create integration tests for existing workflows BEFORE refactoring, implement feature flags to toggle between old and new paths, keep old code intact until new modules are validated, test with actual v1.2 configs. Address in Phase 1 (Port System) — establish testing infrastructure before touching existing code.
+2. **AssemblyLoadContext Memory Leaks** — Storing Assembly references in instance fields prevents Unload(). Prevention: Clear all Assembly references before Unload(), use WeakReference<Assembly>, explicitly GC.Collect() after Unload().
 
-4. **Type System Too Rigid or Too Loose** — Port type system either prevents valid connections (too rigid) or allows invalid connections that fail at runtime (too loose). Mitigation: Start with minimal types (Text, Trigger), design for extensibility without breaking configs, use structural typing where possible, provide clear error messages suggesting conversion nodes. Address in Phase 1 (Port System) — foundational design, changing later breaks everything.
+3. **Singleton-to-Scoped Service Lifetime Mismatch** — Migrating from singleton to scoped causes InvalidOperationException. Prevention: Audit all singleton services for scoped dependencies, use IServiceScopeFactory in singletons, convert per-Anima state to scoped.
 
-5. **EventBus Ordering Guarantees Lost** — Current EventBus uses ConcurrentBag which doesn't guarantee ordering. Moving to port-based wiring introduces async execution and parallel module processing. Mitigation: Document EventBus ordering guarantees explicitly, add sequence numbers to messages if ordering matters, implement execution barriers in wiring engine, test with artificial delays to expose race conditions. Address in Phase 2 (Wiring Engine) — execution semantics must be defined before modules depend on them.
+4. **Configuration File Corruption from Concurrent Writes** — Multiple Animas saving simultaneously causes invalid JSON. Prevention: Write-to-temp-then-rename pattern, file-level locking, single-writer queue pattern.
+
+5. **Culture Switching Requires Full Circuit Reconnect** — Changing CultureInfo mid-circuit doesn't update UI. Prevention: Use NavigationManager.NavigateTo(forceLoad: true), store preference in persistent storage, accept page reload.
+
+6. **Shared Static State Across Module Instances** — Static fields are per-AppDomain, not per-instance. Prevention: Ban static mutable state in modules, use instance fields, register modules as scoped.
+
+7. **Heartbeat Loop Concurrent Execution Race Conditions** — Multiple Animas run heartbeats concurrently. Prevention: Ensure EventBus is thread-safe, use SemaphoreSlim for critical sections, make operations idempotent.
+
+8. **Missing Translation Fallback Strategy** — Missing translations show keys instead of text. Prevention: Implement fallback chain (requested → English → key), build-time validation, visual indicator in dev mode.
+
+9. **Module Configuration UI State Desync** — UI form state, module instance state, and persisted config diverge. Prevention: Establish clear state flow (UI → validation → module → persistence), explicit Save button, show dirty state indicator.
+
+10. **RTL Layout Breaks Visual Editor** — Arabic/Hebrew flip entire page but SVG coordinates don't. Prevention: Isolate editor canvas with `<div dir="ltr">`, keep UI chrome in RTL, test early.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on combined research, suggested phase structure with clear dependencies and rationale:
 
-### Phase 1: Port Type System & Testing Foundation
-**Rationale:** Foundation for all wiring functionality. Must establish testing infrastructure before refactoring existing code to avoid breaking v1.2 features (Pitfall #3).
+### Phase 1: Multi-Anima Foundation
+**Rationale:** Core architecture must exist before other features can use it. Establishes per-Anima isolation pattern that all subsequent phases depend on.
 
-**Delivers:**
-- PortType and PortDirection enums (Text, Trigger, Input, Output)
-- PortMetadata record and IPortProvider interface in OpenAnima.Contracts
-- PortRegistry for cataloging ports from loaded modules
-- PortTypeValidator for connection validation (type matching, direction, no cycles)
-- Integration tests for existing v1.2 workflows (chat, LLM, heartbeat)
+**Delivers:** AnimaMetadata, AnimaConfigStore, AnimaRuntime, AnimaRuntimeManager, AnimaContext, Program.cs DI registration
 
-**Addresses features:**
-- Port type system with same-type connection validation (table stakes)
-- Type safety prevents invalid connections (table stakes)
+**Addresses:** 
+- Multi-Anima architecture (FEATURES.md P1: create/list/switch/delete)
+- Independent execution per Anima (FEATURES.md P1)
+- Configuration persistence foundation (FEATURES.md P1)
 
-**Avoids pitfalls:**
-- Pitfall #3: Breaking existing features (integration tests first)
-- Pitfall #4: Type system too rigid/loose (minimal types, extensible design)
-- Pitfall #7: Module initialization order dependencies (two-phase init design)
-- Pitfall #9: Port data serialization assumptions (define contract upfront)
+**Avoids:**
+- Circuit memory leaks (PITFALLS.md #1) — Implement IAsyncDisposable from start
+- Singleton-to-scoped mismatch (PITFALLS.md #3) — Design with scoped services from day one
+- Shared static state (PITFALLS.md #6) — Establish module isolation before building instances
+- Heartbeat race conditions (PITFALLS.md #7) — Verify thread safety before enabling multiple instances
 
-**Research flag:** Standard patterns, skip research-phase. Port systems and type validation are well-documented.
+**Uses:**
+- Scoped services (STACK.md) for per-circuit AnimaContext
+- State container pattern (STACK.md) for reactive updates
+- AnimaRuntimeManager factory (ARCHITECTURE.md Pattern 1)
 
-### Phase 2: Wiring Engine & Execution Orchestration
-**Rationale:** Core execution logic depends on port system being stable. Must implement cycle detection and ordering guarantees before visual editor allows users to create arbitrary connections.
+### Phase 2: Service Migration & i18n
+**Rationale:** Refactor singleton services into AnimaRuntime while adding i18n infrastructure. These are independent changes that can be developed in parallel.
 
-**Delivers:**
-- Wire record and WiringConfig model
-- TopologicalSorter with cycle detection (Kahn's algorithm, ~100 LOC)
-- WiringEngine for topology-driven module execution
-- WiringService facade (load/save/validate config)
-- EventBus integration for data routing between connected ports
-- Modified HeartbeatService delegating to WiringEngine
+**Delivers:** 
+- Refactored EventBus/HeartbeatLoop/WiringEngine (per-Anima)
+- JSON localizer, language switcher UI, preference persistence
+- Updated EditorStateService to use AnimaContext
 
-**Uses stack:**
-- Custom topological sort (avoids QuikGraph dependency)
-- System.Text.Json for config serialization
-- Existing EventBus for data passing
+**Addresses:**
+- i18n (FEATURES.md P1: language switcher, Chinese/English, persistence)
+- Service lifetime migration (ARCHITECTURE.md Phase 2)
 
-**Implements architecture:**
-- Topological sort for execution order pattern
-- Port-based EventBus routing pattern
+**Avoids:**
+- Culture switching issues (PITFALLS.md #5) — Implement full page reload pattern
+- Missing translations (PITFALLS.md #8) — Establish fallback before adding translations
+- RTL layout breaks (PITFALLS.md #10) — Test with Arabic/Hebrew early
 
-**Avoids pitfalls:**
-- Pitfall #1: Circular dependency deadlock (cycle detection in topological sort)
-- Pitfall #5: EventBus ordering guarantees lost (document semantics, add sequence numbers)
-- Pitfall #6: Wiring config deserialization failures (versioning, validation)
+**Uses:**
+- Microsoft.Extensions.Localization 8.0.* (STACK.md)
+- Custom JSON localizer (STACK.md Pattern 2)
+- NavigateTo(forceLoad: true) for culture switching (STACK.md Pattern 4)
 
-**Research flag:** Standard patterns, skip research-phase. Topological sort is textbook algorithm.
+### Phase 3: Module Management
+**Rationale:** Extends existing ModuleRegistry (v1.0) with enable/disable capability. Requires Phase 1 for per-Anima module instances.
 
-### Phase 3: Visual Drag-and-Drop Editor
-**Rationale:** UI layer depends on wiring engine being functional. Performance optimizations (throttling, ShouldRender) must be designed in from start, not retrofitted.
+**Delivers:** Install/uninstall/enable/disable UI, module metadata display, module status indicators
 
-**Delivers:**
-- WiringEditor.razor with HTML5 drag-and-drop canvas
-- SVG rendering for bezier curve connections
-- Pan/zoom canvas navigation
-- Visual connection preview with validation feedback
-- Node selection and deletion
-- Minimal JavaScript interop (~50 LOC) for mouse tracking
-- RuntimeHub extension for wiring operations
+**Addresses:**
+- Module management (FEATURES.md P1: install/uninstall, enable/disable, metadata)
+- Module isolation (ARCHITECTURE.md AnimaModuleRegistry)
 
-**Uses stack:**
-- HTML5 Drag & Drop API (native browser)
-- SVG for connection rendering
-- Blazor JSInterop for mouse coordinates
+**Avoids:**
+- AssemblyLoadContext leaks (PITFALLS.md #2) — Clear Assembly references before Unload()
 
-**Implements architecture:**
-- WiringEditor.razor component
-- Single source of truth (WiringConfig)
+**Uses:**
+- Module instance cloning (ARCHITECTURE.md Pattern 3)
+- Per-Anima module registry (ARCHITECTURE.md)
 
-**Addresses features:**
-- Visual drag-and-drop module placement (table stakes)
-- Click-drag wiring with preview (table stakes)
-- Bezier curve rendering (table stakes)
-- Pan/zoom canvas (table stakes)
-- Delete nodes and connections (table stakes)
+### Phase 4: Module Configuration UI
+**Rationale:** Requires Phase 1 for per-Anima config persistence and Phase 3 for module selection. Implements detail panel pattern from Unreal/Blender.
 
-**Avoids pitfalls:**
-- Pitfall #2: SignalR rendering bottleneck (throttle StateHasChanged, JS interop for drag)
-- Pitfall #8: No undo/redo (command pattern from start, defer implementation to post-MVP)
-- Pitfall #10: Editor/runtime state divergence (single source of truth, clear sync mechanism)
+**Delivers:** ModuleConfigPanel component, click-to-select, detail panel, config persistence, validation
 
-**Research flag:** Needs research-phase for performance optimization. Specific throttling values and ShouldRender patterns need validation with 10+ modules.
+**Addresses:**
+- Module configuration UI (FEATURES.md P1: click module → detail panel, edit settings, persist)
+- Built-in configurable modules (FEATURES.md P1: LLM with API config)
 
-### Phase 4: Module Refactoring & Config Persistence
-**Rationale:** Demonstrates port-based architecture by refactoring existing features. Validates that wiring system actually works for real use cases. Config persistence ensures user work is saved.
+**Avoids:**
+- Config file corruption (PITFALLS.md #4) — Atomic write-to-temp-then-rename pattern
+- Config UI state desync (PITFALLS.md #9) — Establish clear state flow before building UI
 
-**Delivers:**
-- HeartbeatModule (refactored from HeartbeatService)
-- LLMModule (refactored from LLMService)
-- ChatInputModule (new, user input capture)
-- ChatOutputModule (new, response display)
-- Wiring config persistence (save/load/auto-save)
-- Migration path from v1.2 to v1.3
-- Example wiring configurations
+**Uses:**
+- System.Text.Json (STACK.md) for config persistence
+- Detail panel pattern (FEATURES.md from Unreal/Blender)
+- Per-tenant directory isolation (ARCHITECTURE.md Pattern 2)
 
-**Addresses features:**
-- Save/load wiring configuration (table stakes)
-- Auto-save on change (table stakes)
-- Module lifecycle integration (table stakes)
+### Phase 5: Built-in Modules
+**Rationale:** Demonstrates all previous phases working together. Validates multi-Anima architecture with real modules.
 
-**Avoids pitfalls:**
-- Pitfall #3: Breaking existing features (integration tests from Phase 1 validate)
-- Pitfall #6: Wiring config deserialization failures (versioning, graceful degradation)
+**Delivers:** FixedTextModule, TextConcatModule, TextSplitModule, ConditionalModule, ConfigurableLLMModule, optional HeartbeatModule
 
-**Research flag:** Standard patterns, skip research-phase. Module refactoring follows established patterns from v1.0-v1.2.
+**Addresses:**
+- Built-in modules (FEATURES.md P1: fixed text, concat, split, conditional, LLM)
+- Heartbeat as optional module (FEATURES.md differentiator)
+
+**Avoids:**
+- Heartbeat refactor breaking changes — Keep core infrastructure, make it optional
+
+**Uses:**
+- Module SDK (already shipped v1.4)
+- Port system (already shipped v1.3)
+- Configuration UI (Phase 4)
 
 ### Phase Ordering Rationale
 
-- **Phase 1 before Phase 2:** Port type system is foundation for wiring engine. Testing infrastructure must exist before refactoring to avoid breaking v1.2 features.
-- **Phase 2 before Phase 3:** Visual editor needs functional wiring engine to validate connections and show execution state. Cycle detection must exist before users can create arbitrary connections.
-- **Phase 3 before Phase 4:** Module refactoring demonstrates the system works, but visual editor is the primary deliverable. Users can manually edit JSON configs if modules aren't refactored yet.
-- **Phase 4 validates entire system:** Refactoring existing features proves the port-based architecture works for real use cases, not just toy examples.
-
-This ordering follows the dependency graph from ARCHITECTURE.md: PortType → PortMetadata → IPortProvider → PortRegistry → WiringEngine → WiringEditor → Module Refactoring.
+- **Phase 1 is foundation** — All other phases depend on AnimaRuntimeManager and per-Anima isolation
+- **Phase 2 refactors services** — Must happen before Phase 3/4 can use per-Anima instances
+- **Phase 2 i18n is parallel** — Independent of Anima architecture, can develop simultaneously
+- **Phase 3 before Phase 4** — Module management provides selection mechanism for config UI
+- **Phase 4 before Phase 5** — Built-in modules need config UI to be useful
+- **Phase 5 validates everything** — Real modules prove architecture works
 
 ### Research Flags
 
-**Phases needing deeper research during planning:**
-- **Phase 3 (Visual Editor):** Performance optimization needs validation. Specific throttling values (50ms? 100ms?), ShouldRender patterns, and JS interop boundaries need testing with 10+ modules on canvas. Research should focus on Blazor Server rendering performance with SignalR.
+**Phases likely needing deeper research during planning:**
+- **Phase 1** — Service scope lifecycle management (when to create/dispose, memory leak prevention)
+- **Phase 4** — Dynamic UI generation for module config (each module has different schema)
+- **Phase 5** — Conditional module expression evaluation (need safe expression parser, avoid eval() security)
 
 **Phases with standard patterns (skip research-phase):**
-- **Phase 1 (Port System):** Type systems and validation are well-documented. C# enums and records are proven patterns.
-- **Phase 2 (Wiring Engine):** Topological sort is textbook algorithm (Kahn's or DFS-based). Cycle detection is standard graph theory.
-- **Phase 4 (Module Refactoring):** Follows established module patterns from v1.0-v1.2. No new concepts.
+- **Phase 2 i18n** — Well-documented .NET pattern, IStringLocalizer is standard
+- **Phase 3** — Module management follows VSCode/JetBrains patterns, straightforward
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | .NET 8.0 built-ins confirmed via codebase analysis. HTML5 + SVG approach validated in Blazor community articles. No new dependencies = no compatibility issues. |
-| Features | MEDIUM-HIGH | Table stakes features match industry standards (Unreal Blueprint, Node-RED, n8n). MVP prioritization is clear. Differentiators are well-scoped. |
-| Architecture | MEDIUM | Core patterns (topological sort, two-phase init, port-based routing) are well-established. Specific integration with existing EventBus and AssemblyLoadContext needs validation during implementation. |
-| Pitfalls | MEDIUM | Top 10 pitfalls identified from Blazor Server performance issues, module refactoring risks, and node editor UX patterns. Mitigation strategies are concrete. Recovery costs estimated. |
+| Stack | HIGH | Official Microsoft docs confirm IStringLocalizer support, System.Text.Json is built-in and well-documented |
+| Features | HIGH | Table stakes validated by VSCode/JetBrains/Unreal patterns, multi-tenant SaaS patterns are proven |
+| Architecture | HIGH | Multi-tenant isolation patterns are well-documented, factory pattern is industry standard |
+| Pitfalls | MEDIUM | Patterns are well-known (memory leaks, race conditions), but specific to this architecture combination |
 
-**Overall confidence:** MEDIUM-HIGH
-
-Research provides clear direction for implementation. Stack choices are validated, feature scope is well-defined, architecture patterns are proven. Main uncertainty is performance at scale (10+ modules) and specific integration details with existing EventBus/module loading.
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **SignalR rendering performance:** Specific throttling values (50ms vs 100ms) need empirical testing with 10+ modules. Research suggests throttling is necessary but exact values depend on module complexity and connection count. Plan to implement telemetry in Phase 3 to measure actual render times.
-
-- **EventBus ordering semantics:** Current EventBus uses ConcurrentBag which doesn't guarantee ordering. Research identifies this as Pitfall #5 but doesn't specify whether ordering is actually required for v1.3 use cases. Plan to document ordering guarantees (or lack thereof) in Phase 2 and add sequence numbers only if testing reveals race conditions.
-
-- **Module initialization dependencies:** Two-phase initialization pattern is recommended but existing v1.2 modules may have implicit dependencies not captured in code. Plan to audit existing module loading in Phase 1 and document all dependencies before refactoring.
-
-- **Type system extensibility:** Starting with two types (Text, Trigger) is validated, but research doesn't specify how to add new types in v1.4+ without breaking v1.3 wiring configs. Plan to include version field in WiringConfig and design type system with forward compatibility in mind.
+- **Service scope lifecycle:** When to create/dispose child scopes for Animas? Keep all alive or lazy-load? Memory implications need testing with 10+ Animas.
+- **Dynamic config UI generation:** Each module has different config schema. Need pattern for generating UI from schema (JSON Schema? Reflection? Custom attributes?). Research during Phase 4 planning.
+- **Conditional expression evaluation:** ConditionalModule needs safe expression parser. Options: NCalc, DynamicExpresso, or custom parser? Security implications need research during Phase 5 planning.
+- **Anima switching performance:** Switching should be instant. If all Animas run simultaneously, need to test CPU/memory impact with 10+ instances. Mitigation: Lazy instantiation, stop inactive Animas after timeout.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- OpenAnima codebase analysis — Existing EventBus, module loading, AssemblyLoadContext patterns
-- .NET 8.0 documentation — Built-in libraries (System.Text.Json, System.Linq, System.Collections.Concurrent)
-- W3C standards — HTML5 Drag & Drop API, SVG path rendering
-- Microsoft Blazor documentation — JSInterop patterns, SignalR integration
+- [ASP.NET Core Blazor globalization and localization](https://learn.microsoft.com/en-us/aspnet/core/blazor/globalization-localization) — Official Microsoft documentation
+- [ASP.NET Core Blazor state management overview](https://learn.microsoft.com/en-us/aspnet/core/blazor/state-management/) — Official guidance on scoped services
+- [How to Build Multi-Tenant Apps in .NET](https://oneuptime.com/blog/post/2026-01-26-multi-tenant-apps-dotnet/view) — Tenant context pattern
+- [AssemblyLoadContext.Unload silently fails](https://github.com/dotnet/runtime/issues/44679) — Assembly reference cleanup requirements
+- [Concurrent Hosted Service Start and Stop in .NET 8](https://www.stevejgordon.co.uk/concurrent-hosted-service-start-and-stop-in-dotnet-8) — Hosted service concurrency
+- [Details Panel in Unreal Engine](https://dev.epicgames.com/documentation/en-us/unreal-engine/details-panel-in-the-blueprints-visual-scriting-editor-for-unreal-engine) — Detail panel pattern
+- [Managing Extensions in Visual Studio Code](https://code.visualstudio.com/docs/editor/extension-marketplace) — Extension management patterns
 
 ### Secondary (MEDIUM confidence)
-- [Blazor Basics: Building Drag-and-Drop Functionality](https://www.telerik.com/blogs/blazor-basics-building-drag-drop-functionality-blazor-applications) — HTML5 drag-and-drop patterns
-- [Investigating Drag and Drop with Blazor](https://chrissainty.com/investigating-drag-and-drop-with-blazor/) — Native API usage
-- [Topological Sort - Neo4j Graph Data Science](https://neo4j.com/docs/graph-data-science/current/algorithms/dag/topological-sort/) — Algorithm reference
-- [Blazor WASM Drag and Drop Performance Issues - Reddit](https://www.reddit.com/r/Blazor/comments/1i0n9js/blazor_wasm_drag_and_drop_performance_issues/) — Performance pitfalls
-- [.Net6 Blazor SignalR Hub Connection causing high CPU](https://github.com/dotnet/aspnetcore/issues/39482) — SignalR performance issues
-- [Really poor performance and latency of controls with multiple](https://github.com/dotnet/aspnetcore/issues/19739) — Blazor rendering bottlenecks
+- [Blazor Server Memory Management](https://amarozka.dev/blazor-server-memory-management-circuit-leaks/) — Circuit leak patterns
+- [Blazor web app localization culture change exceptions](https://stackoverflow.com/questions/79516530/blazor-web-app-global-interactiveserver-net9-localization-during-culture-ch) — Culture switching issues
+- [What does scoped lifetime mean in Blazor Server](https://stackoverflow.com/questions/76195106/what-does-scoped-lifetime-for-a-service-mean-in-blazor-server) — Service lifetime semantics
+- [PhpStorm Documentation — Enabling and Disabling Plugins](https://www.jetbrains.com/phpstorm/help/enabling-and-disabling-plugins.html) — Plugin patterns
+- [Implementing Custom JSON Localization in ASP.NET Core](https://gauravm.dev/articles/implementing-custom-json-localization-in-aspnet-core-web-api/) — JSON localizer pattern
 
 ### Tertiary (LOW confidence)
-- Training data on Unreal Blueprint, Unity Visual Scripting, Node-RED, n8n, Blender nodes — Industry patterns for node-based editors
-- [2026: The Year of the Node-Based Editor](https://medium.com/@fadimantium/2026-the-year-of-the-node-based-editor-941f0f15d467) — WebSearch only, fetch blocked
-- [Designing your own node-based visual programming language](https://dev.to/cosmomyzrailgorynych/designing-your-own-node-based-visual-programming-language-2mpg) — WebSearch only, fetch blocked
+- [Multi-Agent Coordination Systems Enterprise Guide 2026](https://iterathon.tech/blog/multi-agent-coordination-systems-enterprise-guide-2026) — Multi-agent architecture (enterprise-focused)
+- [Concurrent file write](https://stackoverflow.com/questions/1160233/concurrent-file-write) — File corruption patterns (general topic)
 
 ---
-*Research completed: 2026-02-25*
+*Research completed: 2026-02-28*
 *Ready for roadmap: yes*

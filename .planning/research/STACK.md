@@ -1,23 +1,23 @@
 # Technology Stack
 
-**Project:** OpenAnima v1.4 Module SDK & DevEx
+**Project:** OpenAnima v1.5 Multi-Anima Architecture
 **Researched:** 2026-02-28
 **Confidence:** HIGH
 
 ## Executive Summary
 
-For v1.4's Module SDK and CLI tool development, **one new NuGet package is required**: System.CommandLine 2.0.3 for CLI argument parsing. All other functionality uses built-in .NET 8.0 capabilities:
+For v1.5's multi-Anima architecture, internationalization, and module configuration persistence, **minimal new dependencies are required**. The stack leverages built-in .NET 8.0 capabilities:
 
-- **dotnet new templates:** Native SDK template engine (no packages needed)
-- **CLI tool (oani):** System.CommandLine 2.0.3 + .NET Tool packaging
-- **.oamod package format:** System.IO.Compression (built-in) + System.Security.Cryptography (built-in)
-- **Documentation:** DocFX 2.77.0 (optional global tool)
+- **Internationalization:** Microsoft.Extensions.Localization 8.0.* + custom JSON localizer (no .resx files)
+- **Configuration persistence:** System.Text.Json (built-in) for reading/writing JSON config files
+- **Multi-instance state:** Blazor Server scoped services (built-in) for per-circuit Anima isolation
+- **State management:** State container pattern (20 LOC, no dependencies)
 
-This approach maintains the project's "minimal dependencies" philosophy while adding a single well-supported library for CLI development.
+This approach maintains the project's "minimal dependencies" philosophy while adding only one well-supported library for i18n.
 
 ## Context
 
-OpenAnima v1.3 shipped with ~11,000 LOC using .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, and Markdown.ColorCode. v1.4 adds module developer tooling without changing the core runtime stack.
+OpenAnima v1.4 shipped with ~14,500 LOC using .NET 8.0, Blazor Server, SignalR 8.0.*, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, System.CommandLine 2.0.3. v1.5 adds multi-Anima architecture and i18n without changing the core runtime stack.
 
 **Existing validated stack (UNCHANGED):**
 - .NET 8.0 runtime
@@ -27,553 +27,368 @@ OpenAnima v1.3 shipped with ~11,000 LOC using .NET 8.0, Blazor Server, SignalR, 
 - OpenAI SDK 2.8.0
 - SharpToken 2.0.4
 - Markdig 0.41.3 + Markdown.ColorCode 3.0.1
+- System.CommandLine 2.0.3 (CLI tool)
 - Pure CSS dark theme
 - xUnit test suite
 
 ## Recommended Stack Additions
 
-### Core Framework
+### Internationalization (i18n)
+
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| System.CommandLine | 2.0.3 | CLI argument parsing | Official Microsoft library; stable release (Feb 2026); built-in help, tab completion, POSIX/Windows conventions; trim-friendly for AOT |
+| Microsoft.Extensions.Localization | 8.0.* | Core localization infrastructure | Official .NET localization with IStringLocalizer support for Blazor Server; confirmed supported in official docs |
+| Microsoft.Extensions.Localization.Abstractions | 8.0.* | Localization interfaces | Required for IStringLocalizer<T> injection in Razor components |
+| Custom JSON localizer | N/A | JSON-based resource files | More flexible than .resx for non-technical translators, easier to edit and version control, better for modern web apps |
 
-### Supporting Libraries
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| System.Text.Json | .NET 8.0 (built-in) | Manifest and config parsing | Already used in PluginManifest.cs; .oamod manifest uses same patterns |
-| System.IO.Compression | .NET 8.0 (built-in) | .oamod package creation | ZipArchive class for creating/extracting .oamod files |
-| System.Security.Cryptography | .NET 8.0 (built-in) | Package integrity | SHA256 for checksums in .oamod manifest |
+### Configuration Persistence
 
-### Development Tools
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| dotnet pack | NuGet/template package creation | Template packs use PackageType=Template |
-| dotnet new install | Template installation | Install from local nupkg or directory |
-| DocFX 2.77.0 | Documentation generation | Static site from code comments + markdown |
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| System.Text.Json | Built-in (.NET 8) | JSON serialization/deserialization | Already included in .NET 8, zero additional dependencies, high performance, officially recommended |
+| Microsoft.Extensions.Configuration.Json | Built-in (.NET 8) | JSON configuration provider | Already in use for appsettings.json, no new dependency needed |
+
+### Multi-Instance State Management
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| Scoped services (built-in) | N/A | Per-circuit state isolation | Blazor Server scoped services live for circuit lifetime, perfect for per-Anima state isolation |
+| State container pattern | N/A | Reactive state management | Lightweight pattern (20 LOC) using scoped services + Action<> events for cross-component updates |
 
 ## Installation
 
 ```bash
-# CLI tool dependency (add to OpenAnima.Cli.csproj)
-dotnet add package System.CommandLine --version 2.0.3
+# Add localization support (only new dependencies)
+cd src/OpenAnima.Core
+dotnet add package Microsoft.Extensions.Localization --version 8.0.*
+dotnet add package Microsoft.Extensions.Localization.Abstractions --version 8.0.*
 
-# Documentation tool (global install, optional)
-dotnet tool install -g docfx
-
-# Template development (no package needed - built into SDK)
-# Create .template.config/template.json in template directory
+# No additional packages needed for:
+# - System.Text.Json (built into .NET 8)
+# - Configuration persistence (already using Microsoft.Extensions.Configuration.Json)
+# - State management (built-in Blazor Server DI scopes)
 ```
 
-## Template Stack Details
+## Architecture Integration
 
-### Template Project Structure
+### Existing Architecture (v1.4)
+- **Singleton services:** PluginRegistry, PluginLoader, EventBus, HeartbeatLoop (global runtime)
+- **Scoped services:** ChatSessionState (per-circuit)
+- **SignalR Hub:** RuntimeHub for real-time push to clients
 
-```
-OpenAnima.Templates/
-├── templates/
-│   └── module/
-│       ├── .template.config/
-│       │   └── template.json      # Template manifest
-│       ├── ModuleName.csproj      # Project template
-│       ├── MyModule.cs            # IModule implementation stub
-│       └── module.json            # Plugin manifest template
-├── OpenAnima.Templates.csproj     # Pack as Template package type
-└── README.md
-```
+### New Architecture (v1.5)
+- **Scoped services:** AnimaManager (per-circuit), holds collection of Anima instances
+- **Each AnimaInstance:** Independent HeartbeatLoop, PluginRegistry, EventBus, ChatSessionState
+- **Configuration files:** JSON files in `config/animas/{id}.json`, `config/modules/{moduleId}.json`, `config/user-preferences.json`
+- **Localization files:** JSON files in `Resources/Localization.{culture}.json`
 
-### Template csproj Configuration
+### Migration Strategy
+1. **Phase 1:** Add localization infrastructure (IStringLocalizer, JSON files)
+2. **Phase 2:** Refactor singleton services to be instantiable (remove static dependencies)
+3. **Phase 3:** Create AnimaManager scoped service, instantiate Anima instances
+4. **Phase 4:** Add configuration persistence layer (save/load JSON files)
+5. **Phase 5:** Build module management UI with install/uninstall/enable/disable
 
-```xml
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <!-- Template package settings -->
-    <PackageType>Template</PackageType>
-    <PackageVersion>1.0.0</PackageVersion>
-    <PackageId>OpenAnima.Templates</PackageId>
-    <Title>OpenAnima Module Templates</Title>
-    <Description>Templates for creating OpenAnima modules</Description>
-    <PackageTags>dotnet-new;templates;openanima;module</PackageTags>
+## Implementation Patterns
 
-    <!-- Template projects target netstandard2.0 for SDK compatibility -->
-    <TargetFramework>netstandard2.0</TargetFramework>
+### Pattern 1: Per-Anima Scoped State
 
-    <!-- Include content in package, exclude build output -->
-    <IncludeContentInPack>true</IncludeContentInPack>
-    <IncludeBuildOutput>false</IncludeBuildOutput>
-    <ContentTargetFolders>content</ContentTargetFolders>
-  </PropertyGroup>
+**What:** Each Anima instance is a scoped service with its own heartbeat, modules, and chat state.
 
-  <ItemGroup>
-    <!-- Include all template files, exclude build artifacts -->
-    <Content Include="templates\**\*" Exclude="templates\**\bin\**;templates\**\obj\**" />
-    <Compile Remove="**\*" />
-  </ItemGroup>
-</Project>
-```
+**How:**
+```csharp
+// Register per-circuit Anima manager
+builder.Services.AddScoped<AnimaManager>();
 
-### template.json Configuration
-
-```json
+// AnimaManager holds collection of Anima instances
+public class AnimaManager
 {
-  "$schema": "http://json.schemastore.org/template",
-  "author": "OpenAnima",
-  "classifications": ["OpenAnima", "Module", "Plugin"],
-  "identity": "OpenAnima.Module.CSharp",
-  "name": "OpenAnima Module",
-  "shortName": "oani-module",
-  "description": "Creates a new OpenAnima module with IModule implementation",
-  "sourceName": "ModuleName",
-  "preferNameDirectory": true,
-  "symbols": {
-    "name": {
-      "type": "parameter",
-      "dataType": "text",
-      "description": "The name of the module",
-      "replaces": "ModuleName",
-      "fileRename": "ModuleName"
-    },
-    "description": {
-      "type": "parameter",
-      "dataType": "text",
-      "description": "Module description",
-      "defaultValue": "An OpenAnima module"
-    }
-  },
-  "postActions": [
+    private readonly Dictionary<Guid, AnimaInstance> _animas = new();
+    public event Action? OnChange;
+
+    public AnimaInstance CreateAnima(string name)
     {
-      "description": "Restore NuGet packages",
-      "manualInstructions": [{ "text": "Run 'dotnet restore'" }],
-      "actionId": "210D431B-A78B-4D2F-B762-4ED3E3EA9025",
-      "continueOnError": true
+        var anima = new AnimaInstance(Guid.NewGuid(), name);
+        _animas[anima.Id] = anima;
+        NotifyStateChanged();
+        return anima;
     }
-  ]
+
+    private void NotifyStateChanged() => OnChange?.Invoke();
+}
+
+// Each AnimaInstance has independent state
+public class AnimaInstance
+{
+    public Guid Id { get; }
+    public string Name { get; set; }
+    public HeartbeatLoop Heartbeat { get; }
+    public List<IModule> Modules { get; }
+    public ChatSessionState ChatState { get; }
 }
 ```
 
-### Template Installation
+**Why:** Scoped services in Blazor Server live for the circuit lifetime, providing automatic per-user isolation without manual session management.
 
-```bash
-# Install from local nupkg
-dotnet new install ./bin/Release/OpenAnima.Templates.1.0.0.nupkg
+### Pattern 2: JSON-Based Localization
 
-# Install from directory (development)
-dotnet new install ./templates
+**What:** Store translations in JSON files, load based on culture, inject into components.
 
-# Use the template
-dotnet new oani-module --name MyAwesomeModule
-
-# Uninstall
-dotnet new uninstall OpenAnima.Templates
-```
-
-## CLI Tool Stack Details
-
-### CLI Project Configuration
-
-```xml
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-
-    <!-- .NET Tool settings -->
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>oani</ToolCommandName>
-    <PackageId>OpenAnima.Cli</PackageId>
-    <PackageVersion>1.0.0</PackageVersion>
-    <Description>OpenAnima module development CLI</Description>
-    <PackageOutputPath>./nupkg</PackageOutputPath>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="System.CommandLine" Version="2.0.3" />
-  </ItemGroup>
-</Project>
-```
-
-### CLI Command Structure
-
+**How:**
 ```csharp
-using System.CommandLine;
-
-namespace OpenAnima.Cli;
-
-class Program
+// Resources/Localization.en.json
 {
-    static async Task<int> Main(string[] args)
-    {
-        // Root command
-        var rootCommand = new RootCommand("OpenAnima module development CLI");
+  "AppTitle": "OpenAnima",
+  "CreateAnima": "Create Anima",
+  "ModuleManagement": "Module Management"
+}
 
-        // oani new <name>
-        var newCommand = new Command("new", "Create a new module from template");
-        var nameArgument = new Argument<string>("name", "The module name");
-        var outputOption = new Option<DirectoryInfo?>(["--output", "-o"], "Output directory");
-        newCommand.Arguments.Add(nameArgument);
-        newCommand.Options.Add(outputOption);
-        newCommand.SetAction(async ctx =>
+// Resources/Localization.zh.json
+{
+  "AppTitle": "OpenAnima",
+  "CreateAnima": "创建 Anima",
+  "ModuleManagement": "模块管理"
+}
+
+// Custom JSON localizer
+public class JsonStringLocalizer : IStringLocalizer
+{
+    private readonly Dictionary<string, string> _localizations;
+
+    public JsonStringLocalizer(string cultureName)
+    {
+        var json = File.ReadAllText($"Resources/Localization.{cultureName}.json");
+        _localizations = JsonSerializer.Deserialize<Dictionary<string, string>>(json)!;
+    }
+
+    public LocalizedString this[string name] =>
+        new LocalizedString(name, _localizations.TryGetValue(name, out var value) ? value : name);
+}
+
+// Register in Program.cs
+builder.Services.AddLocalization();
+builder.Services.AddScoped<IStringLocalizer>(sp =>
+{
+    var culture = CultureInfo.CurrentCulture.Name;
+    return new JsonStringLocalizer(culture);
+});
+
+// Use in components
+@inject IStringLocalizer Localizer
+<h1>@Localizer["AppTitle"]</h1>
+```
+
+**Why:** JSON files are easier to edit than .resx, better for version control, and can be edited by non-developers. IStringLocalizer provides standard .NET localization interface.
+
+### Pattern 3: Configuration Persistence
+
+**What:** Save Anima configurations, module settings, and user preferences to JSON files.
+
+**How:**
+```csharp
+public class ConfigurationPersistence
+{
+    private readonly string _configPath;
+
+    public async Task SaveAnimaConfigAsync(AnimaConfig config)
+    {
+        var json = JsonSerializer.Serialize(config, new JsonSerializerOptions
         {
-            var name = ctx.GetValue(nameArgument);
-            var output = ctx.GetValue(outputOption);
-            return await CreateNewModule(name, output);
+            WriteIndented = true
         });
+        await File.WriteAllTextAsync($"{_configPath}/animas/{config.Id}.json", json);
+    }
 
-        // oani pack <path>
-        var packCommand = new Command("pack", "Package a module as .oamod");
-        var pathArgument = new Argument<DirectoryInfo>("path", "Path to module directory");
-        var outputOption2 = new Option<DirectoryInfo?>(["--output", "-o"], "Output directory for .oamod file");
-        packCommand.Arguments.Add(pathArgument);
-        packCommand.Options.Add(outputOption2);
-        packCommand.SetAction(async ctx =>
-        {
-            var path = ctx.GetValue(pathArgument);
-            var output = ctx.GetValue(outputOption2);
-            return await PackModule(path, output);
-        });
+    public async Task<AnimaConfig?> LoadAnimaConfigAsync(Guid id)
+    {
+        var path = $"{_configPath}/animas/{id}.json";
+        if (!File.Exists(path)) return null;
 
-        rootCommand.Subcommands.Add(newCommand);
-        rootCommand.Subcommands.Add(packCommand);
-
-        return await rootCommand.Parse(args).InvokeAsync();
+        var json = await File.ReadAllTextAsync(path);
+        return JsonSerializer.Deserialize<AnimaConfig>(json);
     }
 }
+
+// AnimaConfig model
+public record AnimaConfig(
+    Guid Id,
+    string Name,
+    List<ModuleConnection> Connections,
+    Dictionary<string, object> ModuleSettings
+);
 ```
 
-### CLI Installation
+**Why:** System.Text.Json is built-in, fast, and handles all serialization needs. File-based storage is simple, debuggable, and sufficient for local-first architecture.
 
-```bash
-# Pack as tool
-dotnet pack
+### Pattern 4: Language Preference Persistence
 
-# Install globally
-dotnet tool install --global --add-source ./nupkg OpenAnima.Cli
+**What:** Save user's language choice and restore on next session.
 
-# Install locally (recommended for project-specific tools)
-dotnet new tool-manifest  # Creates .config/dotnet-tools.json
-dotnet tool install --add-source ./nupkg OpenAnima.Cli
-
-# Use
-oani new MyModule
-oani pack ./modules/MyModule
-
-# Restore tools after clone
-dotnet tool restore
-```
-
-## .oamod Package Format
-
-### Package Structure
-
-```
-my-module.oamod (ZIP archive)
-├── manifest.json           # Package manifest
-├── checksums.sha256        # SHA256 hashes for all files
-├── module.json             # Existing plugin manifest format
-├── MyModule.dll            # Compiled assembly
-├── OpenAnima.Contracts.dll # Contracts reference (copied from SDK)
-└── dependencies/           # Additional NuGet dependencies (optional)
-```
-
-### Package Manifest Schema (manifest.json)
-
-```json
-{
-  "$schema": "https://openanima.dev/schemas/oamod-manifest-v1.json",
-  "formatVersion": "1.0",
-  "package": {
-    "id": "MyModule",
-    "version": "1.0.0",
-    "description": "A sample OpenAnima module",
-    "author": "Developer Name",
-    "createdAt": "2026-02-28T12:00:00Z"
-  },
-  "module": {
-    "entryAssembly": "MyModule.dll",
-    "targetFramework": "net8.0",
-    "openAnimaVersion": "1.4.0"
-  },
-  "integrity": {
-    "algorithm": "SHA256",
-    "checksumsFile": "checksums.sha256"
-  }
-}
-```
-
-### Checksums File (checksums.sha256)
-
-```
-a1b2c3d4e5f6...  MyModule.dll
-f6e5d4c3b2a1...  OpenAnima.Contracts.dll
-1234567890ab...  module.json
-```
-
-### Pack Implementation
-
+**How:**
 ```csharp
-public async Task<int> PackModule(DirectoryInfo modulePath, DirectoryInfo? outputPath)
+// Save to user preferences file
+public class UserPreferences
 {
-    // 1. Validate module directory
-    var moduleJsonPath = Path.Combine(modulePath.FullName, "module.json");
-    if (!File.Exists(moduleJsonPath))
+    public string Language { get; set; } = "en";
+}
+
+// In language switcher component
+private async Task SetLanguageAsync(string cultureName)
+{
+    var prefs = new UserPreferences { Language = cultureName };
+    await _configPersistence.SaveUserPreferencesAsync(prefs);
+
+    // Set culture for current request
+    var culture = new CultureInfo(cultureName);
+    CultureInfo.CurrentCulture = culture;
+    CultureInfo.CurrentUICulture = culture;
+
+    // Reload page to apply new culture
+    _navigationManager.NavigateTo(_navigationManager.Uri, forceLoad: true);
+}
+
+// On app startup, load saved preference
+protected override async Task OnInitializedAsync()
+{
+    var prefs = await _configPersistence.LoadUserPreferencesAsync();
+    if (prefs != null)
     {
-        Console.Error.WriteLine("Error: module.json not found");
-        return 1;
+        var culture = new CultureInfo(prefs.Language);
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
     }
-
-    // 2. Parse existing module manifest
-    var moduleManifest = JsonSerializer.Deserialize<PluginManifest>(
-        await File.ReadAllTextAsync(moduleJsonPath));
-
-    // 3. Find DLL
-    var dllPath = Path.Combine(modulePath.FullName, moduleManifest!.EntryAssembly);
-    if (!File.Exists(dllPath))
-    {
-        Console.Error.WriteLine($"Error: {moduleManifest.EntryAssembly} not found");
-        return 1;
-    }
-
-    // 4. Create .oamod package
-    var outputDir = outputPath?.FullName ?? modulePath.Parent?.FullName ?? ".";
-    var oamodPath = Path.Combine(outputDir, $"{moduleManifest.Name}-{moduleManifest.Version}.oamod");
-
-    using var archive = ZipFile.Open(oamodPath, ZipArchiveMode.Create);
-
-    // Add files
-    var filesToPack = new[] { dllPath, moduleJsonPath };
-    var checksums = new List<(string file, string hash)>();
-
-    foreach (var file in filesToPack)
-    {
-        var entry = archive.CreateEntry(Path.GetFileName(file));
-        using var entryStream = entry.Open();
-        using var fileStream = File.OpenRead(file);
-        await fileStream.CopyToAsync(entryStream);
-
-        // Calculate checksum
-        fileStream.Position = 0;
-        using var sha256 = SHA256.Create();
-        var hash = Convert.ToHexString(await sha256.ComputeHashAsync(fileStream));
-        checksums.Add((Path.GetFileName(file), hash));
-    }
-
-    // 5. Create checksums file
-    var checksumsEntry = archive.CreateEntry("checksums.sha256");
-    using (var checksumsStream = new StreamWriter(checksumsEntry.Open()))
-    {
-        foreach (var (file, hash) in checksums)
-        {
-            await checksumsStream.WriteLineAsync($"{hash}  {file}");
-        }
-    }
-
-    // 6. Create manifest
-    var manifest = new OamodManifest
-    {
-        FormatVersion = "1.0",
-        Package = new PackageInfo { Id = moduleManifest.Name, Version = moduleManifest.Version },
-        Module = new ModuleInfo { EntryAssembly = moduleManifest.EntryAssembly, TargetFramework = "net8.0" }
-    };
-
-    var manifestEntry = archive.CreateEntry("manifest.json");
-    using var manifestStream = new StreamWriter(manifestEntry.Open());
-    await manifestStream.WriteAsync(JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
-
-    Console.WriteLine($"Created: {oamodPath}");
-    return 0;
 }
 ```
 
-### Verification Implementation
+**Why:** Simple file-based persistence, no database overhead, works perfectly for local-first architecture.
 
+### Pattern 5: State Container with Notifications
+
+**What:** Scoped service that notifies components when state changes.
+
+**How:**
 ```csharp
-public async Task<bool> VerifyOamod(string oamodPath)
+public class StateContainer
 {
-    using var archive = ZipFile.OpenRead(oamodPath);
+    private string? _savedString;
 
-    // 1. Parse manifest
-    var manifestEntry = archive.GetEntry("manifest.json")
-        ?? throw new InvalidDataException("manifest.json not found");
-
-    using var manifestStream = new StreamReader(manifestEntry.Open());
-    var manifest = JsonSerializer.Deserialize<OamodManifest>(await manifestStream.ReadToEndAsync());
-
-    // 2. Parse checksums
-    var checksumsEntry = archive.GetEntry("checksums.sha256")
-        ?? throw new InvalidDataException("checksums.sha256 not found");
-
-    using var checksumsStream = new StreamReader(checksumsEntry.Open());
-    var expectedChecksums = new Dictionary<string, string>();
-    while (await checksumsStream.ReadLineAsync() is { } line)
+    public string Property
     {
-        var parts = line.Split("  ", 2);
-        if (parts.Length == 2)
-            expectedChecksums[parts[1]] = parts[0];
-    }
-
-    // 3. Verify each file
-    using var sha256 = SHA256.Create();
-    foreach (var entry in archive.Entries.Where(e => !e.FullName.EndsWith("/")))
-    {
-        if (entry.Name is "manifest.json" or "checksums.sha256") continue;
-
-        using var entryStream = entry.Open();
-        var actualHash = Convert.ToHexString(await sha256.ComputeHashAsync(entryStream));
-
-        if (!expectedChecksums.TryGetValue(entry.Name, out var expectedHash))
+        get => _savedString ?? string.Empty;
+        set
         {
-            Console.Error.WriteLine($"Missing checksum for: {entry.Name}");
-            return false;
-        }
-
-        if (actualHash != expectedHash)
-        {
-            Console.Error.WriteLine($"Checksum mismatch for: {entry.Name}");
-            return false;
+            _savedString = value;
+            NotifyStateChanged();
         }
     }
 
-    return true;
+    public event Action? OnChange;
+
+    private void NotifyStateChanged() => OnChange?.Invoke();
 }
-```
 
-## Documentation Stack Details
+// Register as scoped
+builder.Services.AddScoped<StateContainer>();
 
-### DocFX Configuration
+// Use in components
+@inject StateContainer StateContainer
+@implements IDisposable
 
-```
-docs/
-├── docfx.json              # DocFX configuration
-├── index.md                # Landing page
-├── toc.yml                 # Navigation structure
-├── api/                    # API reference (auto-generated from XML docs)
-├── guides/                 # Developer guides
-│   ├── getting-started.md
-│   ├── creating-modules.md
-│   ├── port-types.md
-│   └── debugging.md
-└── examples/               # Example modules
-    └── hello-world/
-```
-
-### docfx.json
-
-```json
+protected override void OnInitialized()
 {
-  "metadata": [
-    {
-      "src": [
-        { "files": ["src/OpenAnima.Contracts/**/*.cs"] }
-      ],
-      "dest": "api",
-      "includePrivate": false
-    }
-  ],
-  "build": {
-    "content": [
-      { "files": ["**/*.md", "**/*.yml"] }
-    ],
-    "resource": [
-      { "files": ["images/**"] }
-    ],
-    "output": "_site",
-    "template": ["default", "modern"]
-  }
+    StateContainer.OnChange += StateHasChanged;
+}
+
+public void Dispose()
+{
+    StateContainer.OnChange -= StateHasChanged;
 }
 ```
 
-### Build Documentation
-
-```bash
-# Install DocFX
-dotnet tool install -g docfx
-
-# Build docs
-docfx docfx.json
-
-# Build and serve locally
-docfx docfx.json --serve
-
-# Output at http://localhost:8080
-```
+**Why:** Lightweight pattern (20 LOC) that enables reactive UI updates without external dependencies. Scoped lifetime ensures per-circuit isolation.
 
 ## Alternatives Considered
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| System.CommandLine 2.0.3 | McMaster.Extensions.CommandLineUtils | If encountering issues with System.CommandLine (unlikely - now stable) |
-| DocFX | Sandcastle Help File Builder | If Windows-only CHM output required (not our case) |
-| Custom .oamod format | Raw NuGet packages (.nupkg) | If distributing via nuget.org (our case: local-first, custom validation) |
-| Built-in template engine | Custom scaffolding code | If extremely complex conditional generation needed (overkill for module template) |
-| .NET Tool packaging | Standalone executable | If tool needs to run without .NET SDK installed (our audience: developers with SDK) |
+| Category | Recommended | Alternative | Why Not Alternative |
+|----------|-------------|-------------|---------------------|
+| i18n | IStringLocalizer + JSON | .resx files | JSON is easier for non-developers to edit, better for version control, more flexible |
+| i18n | Custom JSON localizer | Third-party libraries (Toolbelt.Blazor.I18nText) | Adds dependency for simple use case, built-in IStringLocalizer is sufficient |
+| Config persistence | System.Text.Json | Newtonsoft.Json | System.Text.Json is built-in, faster, and officially recommended for .NET 8+ |
+| Config persistence | Direct JSON file writes | Database (SQLite, LiteDB) | Over-engineering for simple config storage, adds complexity and dependencies |
+| State management | Scoped services | Fluxor/Redux | Over-engineering for per-instance state, scoped services are simpler and sufficient |
+| State management | State container pattern | Third-party state libraries | Adds dependencies for pattern that's trivial to implement (20 lines of code) |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| Microsoft.Extensions.CommandLineUtils | Deprecated; maintenance mode | System.CommandLine 2.0.3 |
-| Custom CLI parsing (string[] args parsing) | Error-prone; no help generation; no tab completion | System.CommandLine |
-| Raw .nupkg for module distribution | NuGet designed for libraries, not runtime plugins; dependency resolution conflicts | Custom .oamod with explicit manifest |
-| Roslyn Source Generators for templates | Too complex for simple scaffolding | Standard dotnet new templates |
-| YARP/CLI framework | Overkill for 2-command tool | Simple System.CommandLine app |
-
-## Integration Points with Existing Stack
-
-| Component | Integration |
-|-----------|-------------|
-| OpenAnima.Contracts | Template references Contracts project; CLI validates IModule implementation |
-| PluginLoader | .oamod extracts to temp directory, then existing LoadModule() works unchanged |
-| PluginManifest | Existing module.json format embedded inside .oamod |
-| Port System | Template generates port declarations in stub module |
-| .NET 8.0 Runtime | CLI tool targets net8.0; templates generate net8.0 projects |
+| IHtmlLocalizer | Not supported in Blazor (MVC-only) | IStringLocalizer |
+| IViewLocalizer | Not supported in Blazor (MVC-only) | IStringLocalizer |
+| Newtonsoft.Json | Legacy library, slower than System.Text.Json | System.Text.Json (built-in) |
+| Singleton services for Anima instances | Shared across all users/circuits | Scoped services (per-circuit isolation) |
+| ProtectedBrowserStorage | Async overhead, not needed for server-side state | Scoped services + JSON file persistence |
+| Database for configuration | Over-engineering, adds complexity | JSON files with System.Text.Json |
+| Third-party state management (Fluxor, Redux) | Over-engineering for simple per-instance state | Scoped services + state container pattern |
 
 ## Version Compatibility
 
 | Package | Version | Compatible With | Notes |
 |---------|---------|-----------------|-------|
-| System.CommandLine | 2.0.3 | .NET 8.0+ | Stable release, no dependencies |
-| DocFX | 2.77.0 | .NET 8.0 SDK | Requires SDK for build |
-| Template packages | netstandard2.0 | All .NET SDK versions | Standard for template projects |
-| .oamod format | N/A (runtime-agnostic) | Any .NET version | ZIP-based, validated by CLI |
+| Microsoft.Extensions.Localization | 8.0.* | .NET 8.0 | Must match .NET runtime version |
+| Microsoft.Extensions.Localization.Abstractions | 8.0.* | .NET 8.0 | Must match .NET runtime version |
+| System.Text.Json | Built-in (.NET 8) | .NET 8.0 | Built into runtime, no version conflicts |
+| SignalR | 8.0.* | .NET 8.0 | Critical: must match runtime version to avoid circuit crashes |
+
+## Integration Points with Existing Stack
+
+| Component | Integration |
+|-----------|-------------|
+| HeartbeatLoop | Refactor to be instantiable (not singleton); each Anima gets its own instance |
+| PluginRegistry | Refactor to be instantiable; each Anima gets its own registry |
+| EventBus | Refactor to be instantiable; each Anima gets its own event bus |
+| ChatSessionState | Already scoped; move to AnimaInstance |
+| SignalR RuntimeHub | Add AnimaId parameter to hub methods for multi-instance push |
+| WiringEngine | Add per-Anima wiring configurations |
 
 ## Files to Create
 
 | File Path | Purpose |
 |-----------|---------|
-| `src/OpenAnima.Cli/Program.cs` | CLI entry point with System.CommandLine |
-| `src/OpenAnima.Cli/OpenAnima.Cli.csproj` | Tool project configuration |
-| `src/OpenAnima.Cli/Commands/NewCommand.cs` | oani new implementation |
-| `src/OpenAnima.Cli/Commands/PackCommand.cs` | oani pack implementation |
-| `src/OpenAnima.Cli/Models/OamodManifest.cs` | .oamod manifest models |
-| `templates/OpenAnima.Templates.csproj` | Template package project |
-| `templates/templates/module/.template.config/template.json` | Template manifest |
-| `templates/templates/module/ModuleName.csproj` | Generated project template |
-| `templates/templates/module/MyModule.cs` | Module stub |
-| `templates/templates/module/module.json` | Plugin manifest template |
-| `docs/docfx.json` | DocFX configuration |
+| `src/OpenAnima.Core/Services/AnimaManager.cs` | Scoped service managing Anima instances |
+| `src/OpenAnima.Core/Services/AnimaInstance.cs` | Per-Anima state container |
+| `src/OpenAnima.Core/Services/ConfigurationPersistence.cs` | JSON file read/write for configs |
+| `src/OpenAnima.Core/Localization/JsonStringLocalizer.cs` | Custom JSON-based localizer |
+| `src/OpenAnima.Core/Models/AnimaConfig.cs` | Anima configuration model |
+| `src/OpenAnima.Core/Models/UserPreferences.cs` | User preferences model |
+| `src/OpenAnima.Core/Resources/Localization.en.json` | English translations |
+| `src/OpenAnima.Core/Resources/Localization.zh.json` | Chinese translations |
+| `config/animas/{id}.json` | Per-Anima configuration files (runtime) |
+| `config/modules/{moduleId}.json` | Per-module configuration files (runtime) |
+| `config/user-preferences.json` | User preferences file (runtime) |
 
 ## Confidence Assessment
 
 | Area | Confidence | Rationale |
 |------|------------|-----------|
-| System.CommandLine | HIGH | Official Microsoft library, stable release, comprehensive docs |
-| Template system | HIGH | Native SDK feature, well-documented, widely used |
-| .oamod format | HIGH | Simple ZIP-based format, built-in .NET support |
-| DocFX | MEDIUM | Well-established but configuration can be complex |
-| CLI tool packaging | HIGH | Standard .NET feature since .NET Core 2.1 |
+| Localization | HIGH | Official Microsoft docs confirm IStringLocalizer support in Blazor Server |
+| JSON config persistence | HIGH | System.Text.Json is built-in, well-documented, widely used |
+| Scoped services | HIGH | Core Blazor Server feature, official docs confirm per-circuit lifetime |
+| State container pattern | HIGH | Industry best practice, documented by Microsoft and community experts |
+| Multi-instance architecture | MEDIUM | Pattern is sound, but refactoring singleton services requires careful testing |
 
 ## Sources
 
-- [Microsoft Learn: Custom templates for dotnet new](https://learn.microsoft.com/en-us/dotnet/core/tools/custom-templates) - HIGH confidence
-- [Microsoft Learn: System.CommandLine tutorial](https://learn.microsoft.com/en-us/dotnet/standard/commandline/get-started-tutorial) - HIGH confidence
-- [Microsoft Learn: Create a .NET tool](https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools-how-to-create) - HIGH confidence
-- [NuGet: System.CommandLine](https://www.nuget.org/packages/System.CommandLine) - HIGH confidence - Version 2.0.3 verified stable
-- [DocFX Documentation](https://dotnet.github.io/docfx/) - HIGH confidence
-- [GitHub: dotnet/templating wiki](https://github.com/dotnet/templating/wiki/Reference-for-template.json) - HIGH confidence
-- [Microsoft Learn: NuGet package creation](https://learn.microsoft.com/en-us/nuget/create-packages/creating-a-package) - HIGH confidence
+**HIGH confidence:**
+- [ASP.NET Core Blazor globalization and localization](https://learn.microsoft.com/en-us/aspnet/core/blazor/globalization-localization) — Official Microsoft documentation confirming IStringLocalizer support
+- [ASP.NET Core Blazor state management overview](https://learn.microsoft.com/en-us/aspnet/core/blazor/state-management/) — Official guidance on scoped services and state container pattern
+- [Blazor 8 State Management](https://blog.lhotka.net/2023/10/12/Blazor-8-State-Management) — Expert analysis of state management patterns
+- [State Management - AppState pattern](https://www.ssw.com.au/rules/blazor-basic-appstate-pattern/) — Industry best practice for scoped state
+
+**MEDIUM confidence:**
+- [Implementing Custom JSON Localization in ASP.NET Core](https://gauravm.dev/articles/implementing-custom-json-localization-in-aspnet-core-web-api/) — Community implementation pattern for JSON-based localization
+- [What does scoped lifetime for a service mean in Blazor (server)?](https://stackoverflow.com/questions/76195106/what-does-scoped-lifetime-for-a-service-mean-in-blazor-server) — Community discussion on scoped service lifetime
 
 ---
-*Stack research for: Module SDK & CLI Tool Development*
+*Stack research for: Multi-Anima architecture, i18n, and module configuration persistence*
 *Researched: 2026-02-28*
 *Confidence: HIGH*

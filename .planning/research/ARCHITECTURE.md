@@ -1,614 +1,424 @@
-# Architecture Research: Module SDK & Developer Experience
+# Architecture Research: Multi-Anima Integration
 
-**Domain:** Module SDK, CLI tools, and package format for OpenAnima extension development
+**Domain:** Multi-instance agent runtime architecture for Blazor Server
 **Researched:** 2026-02-28
 **Confidence:** HIGH
 
 ## Executive Summary
 
-v1.4 adds developer experience tooling to the existing OpenAnima module platform:
+The current OpenAnima architecture uses singleton services (PluginRegistry, EventBus, HeartbeatLoop) that manage a single global runtime. To support multiple independent Anima instances, the architecture must shift from singleton-based global state to scoped-per-Anima state isolation using a factory pattern with tenant-like context resolution.
 
-1. **dotnet new Templates** - Project scaffolding for new modules
-2. **OpenAnima CLI (oani)** - Developer tool for creating and packaging modules
-3. **.oamod Package Format** - Self-contained module distribution format
-4. **OpenAnima.Sdk** - Shared library for module development utilities
+The multi-tenant SaaS pattern provides the architectural blueprint: each Anima is analogous to a "tenant" with isolated runtime state, while shared infrastructure (PluginLoader, PortRegistry) remains singleton. The key integration point is an `AnimaContext` scoped service that identifies which Anima the current Blazor circuit is viewing, allowing scoped services to resolve the correct Anima-specific runtime instances.
 
-**Key integration principle:** New tooling produces artifacts compatible with existing PluginLoader and PluginLoadContext. No changes to core runtime loading logic - only addition of extraction layer for .oamod files.
+This approach requires minimal changes to existing module code while enabling clean state isolation. The visual editor (EditorStateService) already uses scoped services correctly and will naturally support per-Anima configurations once wiring configurations include an `AnimaId` field.
 
-## Existing Architecture (v1.0-v1.3)
+## Current Architecture Analysis
 
-```
-+------------------------------------------------------------------+
-|                    OpenAnima.Core (Blazor Server)                |
-+------------------------------------------------------------------+
-|  +-------------+  +-------------+  +-------------+  +---------+ |
-|  | PluginLoader|  |WiringEngine |  | EventBus    |  |RuntimeHub| |
-|  +------+------+  +------+------+  +------+------+  +----+----+ |
-|         |                |                |              |      |
-|         v                v                v              v      |
-|  +-------------+  +-------------+  +-------------+  +---------+ |
-|  |PluginRegistry| |PortRegistry |  | Subscribers |  |SignalR  | |
-|  +------+------+  +-------------+  +-------------+  +---------+ |
-|         |                                                        |
-+---------|--------------------------------------------------------+
-          | loads into isolated contexts
-          v
-+------------------------------------------------------------------+
-|                    PluginLoadContext (per module)                 |
-|  +-------------------------------------------------------------+ |
-|  | Module Assembly (IModule, IModuleExecutor, ITickable)      | |
-|  | Port attributes: [InputPort], [OutputPort]                 | |
-|  +-------------------------------------------------------------+ |
-+------------------------------------------------------------------+
-          | depends on
-          v
-+------------------------------------------------------------------+
-|                    OpenAnima.Contracts (shared)                   |
-|  +-------------+  +-------------+  +-------------+  +---------+ |
-|  | IModule     |  | IEventBus   |  | PortMetadata|  |PortTypes| |
-|  | ITickable   |  | IModuleExec |  | Input/Output|  | Attributes| |
-|  +-------------+  +-------------+  +-------------+  +---------+ |
-+------------------------------------------------------------------+
-```
+### Existing Service Lifetimes
 
-## New v1.4 Components
+| Service | Current Lifetime | State Scope | Issue for Multi-Anima |
+|---------|------------------|-------------|----------------------|
+| PluginRegistry | Singleton | Global module list | ✓ OK — modules are shared across Animas |
+| PluginLoader | Singleton | Stateless loader | ✓ OK — loading logic is shared |
+| EventBus | Singleton | Global event subscriptions | ✗ PROBLEM — events cross Anima boundaries |
+| HeartbeatLoop | Singleton | Single tick loop | ✗ PROBLEM — only one Anima can tick |
+| PortRegistry | Singleton | Global port metadata | ✓ OK — port definitions are shared |
+| EditorStateService | Scoped | Per-circuit editor state | ✓ OK — already isolated per user |
+| ChatSessionState | Scoped | Per-circuit chat history | ✗ PROBLEM — needs per-Anima persistence |
+| WiringEngine | Scoped | Per-circuit wiring graph | ✗ PROBLEM — needs per-Anima persistence |
+| ConfigurationLoader | Scoped | Stateless file I/O | ✗ PROBLEM — needs Anima-scoped directory |
+
+### Current Data Flow
 
 ```
-+------------------------------------------------------------------+
-|                    NEW: OpenAnima.Sdk Project                     |
-+------------------------------------------------------------------+
-|  +-------------------+  +-------------------+  +---------------+ |
-|  | ManifestBuilder   |  | PackValidator     |  | OamodPackager | |
-|  | (module.json)     |  | (pre-pack check)  |  | (.oamod create)| |
-|  +-------------------+  +-------------------+  +---------------+ |
-+------------------------------------------------------------------+
-          | used by
-          v
-+------------------------------------------------------------------+
-|                    NEW: OpenAnima.Cli Tool                        |
-+------------------------------------------------------------------+
-|  +-------------------+  +-------------------+  +---------------+ |
-|  | oani new          |  | oani pack         |  | oani validate | |
-|  | (from template)   |  | (.oamod package)  |  | (pre-check)   | |
-|  +-------------------+  +-------------------+  +---------------+ |
-+------------------------------------------------------------------+
-          | produces
-          v
-+------------------------------------------------------------------+
-|                    NEW: .oamod Package Format                     |
-+------------------------------------------------------------------+
-|  module.json (manifest)                                          |
-|  <ModuleName>.dll (entry assembly)                               |
-|  dependencies/ (transitively resolved)                           |
-+------------------------------------------------------------------+
+User Browser (SignalR Circuit)
+    ↓
+Blazor Component (Scoped)
+    ↓
+EditorStateService (Scoped) ←→ WiringEngine (Scoped)
+    ↓                               ↓
+HeartbeatLoop (Singleton) ←→ EventBus (Singleton) ←→ Modules (Singleton)
+    ↓
+PluginRegistry (Singleton)
 ```
 
-## Component Responsibilities
+**Problem:** Singleton services at the bottom create a single shared runtime. Multiple circuits viewing different Animas would interfere with each other.
 
-### Existing Components (Unchanged for v1.4)
+## Recommended Multi-Anima Architecture
 
-| Component | Responsibility | Implementation |
-|-----------|----------------|----------------|
-| OpenAnima.Core | Runtime host, Blazor UI, module orchestration | Blazor Server app |
-| OpenAnima.Contracts | Shared interfaces for module contracts | net8.0 class library |
-| PluginLoader | Load modules from directories into isolated contexts | Uses PluginLoadContext |
-| PluginLoadContext | Assembly isolation with isCollectible:true for unloading | AssemblyLoadContext |
-| PluginManifest | Parse module.json from module directory | System.Text.Json |
-| PluginRegistry | Thread-safe registry of loaded modules | ConcurrentDictionary |
-| PortDiscovery | Scan module types for port attributes | Reflection |
-| PortRegistry | Store port metadata per module | ConcurrentDictionary |
-| WiringEngine | Topological execution of module graph | EventBus-based routing |
-| EventBus | Inter-module communication | MediatR-like pub/sub |
-
-### New Components (v1.4)
-
-| Component | Responsibility | Implementation |
-|-----------|----------------|----------------|
-| OpenAnima.Sdk | SDK library for module development utilities | net8.0 class library |
-| OpenAnima.Cli | CLI tool for module creation and packaging | .NET Tool (System.CommandLine) |
-| OpenAnima.Templates | dotnet new template pack for module projects | NuGet package (PackageType=Template) |
-| .oamod format | Self-contained module package for distribution | ZIP archive with manifest |
-| OamodExtractor | Extract .oamod files for PluginLoader (in Core) | System.IO.Compression |
-
-## Recommended Project Structure
+### System Overview
 
 ```
-src/
-+-- OpenAnima.Contracts/          # Existing - shared contracts (unchanged)
-|   +-- IModule.cs
-|   +-- IModuleExecutor.cs
-|   +-- ITickable.cs
-|   +-- IEventBus.cs
-|   +-- Ports/
-|       +-- PortType.cs
-|       +-- PortMetadata.cs
-|       +-- InputPortAttribute.cs
-|       +-- OutputPortAttribute.cs
-|
-+-- OpenAnima.Core/               # Existing - runtime host (minor addition)
-|   +-- Plugins/
-|   |   +-- PluginLoader.cs       # MODIFIED: detect .oamod vs directory
-|   |   +-- PluginManifest.cs
-|   |   +-- OamodExtractor.cs     # NEW: extract .oamod to temp
-|   +-- Ports/
-|   +-- Wiring/
-|   +-- Events/
-|   +-- Modules/
-|
-+-- OpenAnima.Sdk/                # NEW - SDK library
-|   +-- Manifest/
-|   |   +-- ModuleManifest.cs     # Fluent builder for module.json
-|   |   +-- ManifestValidator.cs  # Validate required fields
-|   +-- Packaging/
-|   |   +-- OamodPackager.cs      # Create .oamod from build output
-|   |   +-- OamodReader.cs        # Read/validate .oamod
-|   |   +-- DependencyResolver.cs # Resolve deps from .deps.json
-|   +-- PortBuilding/
-|       +-- PortDefinition.cs     # Helper for port declarations
-|
-+-- OpenAnima.Cli/                # NEW - CLI tool
-    +-- Program.cs                # Entry point (System.CommandLine)
-    +-- Commands/
-    |   +-- NewCommand.cs         # oani new <name>
-    |   +-- PackCommand.cs        # oani pack
-    |   +-- ValidateCommand.cs    # oani validate
-    +-- Templates/
-        +-- ModuleTemplate.cs     # Embedded module template
-
-templates/
-+-- OpenAnima.Module/             # NEW - dotnet new template
-    +-- .template.config/
-    |   +-- template.json         # Template metadata
-    +-- content/
-    |   +-- ModuleName.cs         # Template source with placeholders
-    |   +-- ModuleName.csproj     # Template project file
-    |   +-- module.json           # Template manifest
-    +-- .template.config/
-        +-- template.json
+┌─────────────────────────────────────────────────────────────┐
+│                    Presentation Layer                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │ Circuit A    │  │ Circuit B    │  │ Circuit C    │       │
+│  │ (Anima 1)    │  │ (Anima 2)    │  │ (Anima 1)    │       │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │
+├─────────┴──────────────────┴──────────────────┴──────────────┤
+│                    Scoped Services Layer                      │
+│  ┌──────────────────────────────────────────────────────┐    │
+│  │ AnimaContext (identifies current Anima)              │    │
+│  └────────────────────┬─────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────────────────┐    │
+│  │ EditorStateService, ChatSessionState (per-circuit)   │    │
+│  └──────────────────────────────────────────────────────┘    │
+├──────────────────────────────────────────────────────────────┤
+│                  Anima Instance Layer                         │
+│  ┌─────────────────────────────────────────────────────┐     │
+│  │ AnimaRuntimeManager (singleton factory)             │     │
+│  │   ├─ Anima 1: EventBus, HeartbeatLoop, Modules      │     │
+│  │   ├─ Anima 2: EventBus, HeartbeatLoop, Modules      │     │
+│  │   └─ Anima 3: EventBus, HeartbeatLoop, Modules      │     │
+│  └─────────────────────────────────────────────────────┘     │
+├──────────────────────────────────────────────────────────────┤
+│                  Shared Infrastructure                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │ PluginLoader │  │ PortRegistry │  │ PluginRegistry│       │
+│  │ (singleton)  │  │ (singleton)  │  │ (singleton)   │       │
+│  └──────────────┘  └──────────────┘  └──────────────┘       │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-## Integration Points
+### Component Responsibilities
 
-### 1. Dependency Chain
+| Component | Responsibility | Lifetime | Implementation |
+|-----------|----------------|----------|----------------|
+| AnimaContext | Tracks current Anima ID for the circuit | Scoped | Simple POCO with AnimaId property |
+| AnimaRuntimeManager | Factory that creates/manages Anima instances | Singleton | Dictionary<string, AnimaRuntime> |
+| AnimaRuntime | Encapsulates one Anima's runtime (EventBus, HeartbeatLoop, WiringEngine, module instances) | Managed by factory | Record with all per-Anima state |
+| AnimaConfigStore | Persists Anima metadata (name, created date) | Singleton | JSON file per Anima in `animas/` directory |
+| AnimaModuleRegistry | Per-Anima module instances with isolated state | Per-Anima | Dictionary<string, IModule> within AnimaRuntime |
 
-```
-OpenAnima.Templates
-    +-- References: OpenAnima.Contracts (Private=false to exclude from package)
-    +-- No project references (pure NuGet package)
+## Integration Points with Existing Architecture
 
-OpenAnima.Cli
-    +-- References: OpenAnima.Sdk
-    +-- Packages: System.CommandLine 4.0.0+
+### 1. Service Lifetime Changes
 
-OpenAnima.Sdk
-    +-- References: OpenAnima.Contracts
-    +-- Packages: System.Text.Json, System.IO.Compression
+**Singleton → Per-Anima (managed by factory):**
+- EventBus: Each Anima gets its own EventBus instance
+- HeartbeatLoop: Each Anima gets its own loop running independently
+- WiringEngine: Each Anima gets its own wiring graph
+- Module instances: Each Anima instantiates its own copies of modules
 
-OpenAnima.Core (existing, minor change)
-    +-- References: OpenAnima.Contracts (existing)
-    +-- NEW: OamodExtractor class (internal)
-```
+**Stays Singleton (shared infrastructure):**
+- PluginRegistry: Module type definitions are shared
+- PluginLoader: Assembly loading logic is shared
+- PortRegistry: Port metadata is shared
+- PortTypeValidator: Validation logic is stateless
 
-### 2. Module Loading Flow (Existing + New)
+**Stays Scoped (per-circuit UI state):**
+- EditorStateService: Already correct, just needs AnimaContext injection
+- ChatSessionState: Already correct, but needs persistence layer
 
-```
-EXISTING FLOW (unchanged):
-1. PluginLoader.LoadModule(directory)
-2. Parse module.json --> PluginManifest
-3. Create PluginLoadContext(dllPath)
-4. Load assembly, find IModule implementation
-5. Instantiate, call InitializeAsync()
+### 2. New Components Required
 
-NEW .oamod FLOW (extends existing):
-1. User places .oamod in modules/ directory
-2. PluginLoader detects .oamod extension
-3. OamodExtractor extracts to temp directory
-4. PluginLoader.LoadModule(extractedPath)  <-- same as before
-5. (rest unchanged)
-```
-
-### 3. Developer Workflow
-
-```
-Developer runs: dotnet new install OpenAnima.Templates
-                dotnet new oanimodule -n MyModule
-
-+----------------+     creates      +----------------+
-| dotnet new     | ---------------> | Module Project |
-| oanimodule     |                  | (MyModule/)    |
-+----------------+                  +----------------+
-                                           |
-         developer codes module            |
-         implements IModuleExecutor        |
-         adds [InputPort]/[OutputPort]     |
-                                           v
-+----------------+     produces     +----------------+
-|  oani pack     | ---------------> | .oamod file    |
-+----------------+                  +----------------+
-                                           |
-         user copies to modules/           |
-                                           v
-+----------------+     loads        +----------------+
-| OpenAnima.Core | <--------------- | .oamod in      |
-| (PluginLoader) |                  | modules/ dir   |
-+----------------+                  +----------------+
-```
-
-## Data Flow
-
-### oani new Command Flow
-
-```
-User runs: oani new MyModule
-
-1. Validate module name (valid C# identifier, no spaces)
-2. Create directory structure:
-   MyModule/
-   +-- module.json (generated manifest)
-   +-- MyModule.csproj (references OpenAnima.Contracts)
-   +-- MyModule.cs (template with IModuleExecutor, sample ports)
-3. Write files to disk
-4. Print next steps:
-   "Module created! Next steps:
-    1. cd MyModule
-    2. Implement your module logic
-    3. Run 'oani pack' to create .oamod package"
-```
-
-### oani pack Command Flow
-
-```
-User runs: oani pack (from module project directory)
-
-1. Read module.json, validate required fields (name, version, entryAssembly)
-2. Check bin/Debug/net8.0/ or bin/Release/net8.0/ for entry assembly
-3. Read .deps.json to resolve dependencies:
-   - Exclude: OpenAnima.Contracts (shared with runtime)
-   - Exclude: System.*, Microsoft.* (framework assemblies)
-   - Include: all other dependencies
-4. Create .oamod archive (ZIP):
-   - module.json (at root)
-   - <EntryAssembly>.dll (at root)
-   - dependencies/*.dll (in subfolder)
-5. Output to: ./dist/<ModuleName>-<Version>.oamod
-6. Print summary: "Packed MyModule-1.0.0.oamod (3 files, 150KB)"
-```
-
-### .oamod Package Structure
-
-```
-MyModule-1.0.0.oamod (ZIP archive, .oamod extension)
-|
-+-- module.json                   # Required: module manifest
-+-- MyModule.dll                  # Required: entry assembly
-+-- dependencies/                 # Optional: non-shared dependencies
-    +-- Newtonsoft.Json.dll      # If module uses it
-    +-- Serilog.dll              # If module uses it
-
-NOT INCLUDED:
-- OpenAnima.Contracts.dll         # Shared with runtime, not packaged
-- System.*.dll                    # Framework assemblies
-- Microsoft.*.dll                 # Framework assemblies
-```
-
-### module.json Schema
-
-```json
-{
-  "name": "MyModule",
-  "version": "1.0.0",
-  "description": "A sample module",
-  "entryAssembly": "MyModule.dll",
-  "author": "Developer Name",
-  "minRuntimeVersion": "1.3.0"
-}
-```
-
-Note: Port declarations come from attributes on the module class, not the manifest. This ensures compile-time validation and avoids manifest/module drift.
-
-### PluginLoader Integration
-
+**AnimaContext (Scoped Service)**
 ```csharp
-// In PluginLoader.cs - minimal change
-public LoadResult LoadModule(string moduleDirectory)
+public class AnimaContext
 {
-    // NEW: Handle .oamod files
-    if (moduleDirectory.EndsWith(".oamod", StringComparison.OrdinalIgnoreCase))
-    {
-        var extractor = new OamodExtractor();
-        moduleDirectory = extractor.ExtractToTemp(moduleDirectory);
-    }
-
-    // EXISTING: Rest unchanged
-    try
-    {
-        PluginManifest manifest = PluginManifest.LoadFromDirectory(moduleDirectory);
-        // ... existing logic ...
-    }
-    // ...
+    public string? CurrentAnimaId { get; set; }
+    public AnimaMetadata? CurrentAnima { get; set; }
 }
 ```
+
+**AnimaRuntimeManager (Singleton Factory)**
+```csharp
+public class AnimaRuntimeManager
+{
+    private readonly ConcurrentDictionary<string, AnimaRuntime> _runtimes = new();
+
+    public AnimaRuntime GetOrCreateRuntime(string animaId);
+    public void StopRuntime(string animaId);
+    public IReadOnlyList<AnimaMetadata> ListAnimas();
+}
+```
+
+**AnimaRuntime (Per-Anima State Container)**
+```csharp
+public record AnimaRuntime(
+    string AnimaId,
+    EventBus EventBus,
+    HeartbeatLoop HeartbeatLoop,
+    WiringEngine WiringEngine,
+    Dictionary<string, IModule> ModuleInstances,
+    DateTime CreatedAt,
+    bool IsRunning
+);
+```
+
+**AnimaConfigStore (Singleton Persistence)**
+```csharp
+public class AnimaConfigStore
+{
+    public Task<AnimaMetadata> LoadAsync(string animaId);
+    public Task SaveAsync(AnimaMetadata metadata);
+    public Task<List<AnimaMetadata>> ListAllAsync();
+    public Task DeleteAsync(string animaId);
+}
+```
+
+### 3. Modified Components
+
+**EditorStateService**
+- Add: `AnimaContext` injection to constructor
+- Change: Load/save configurations from `wiring-configs/{animaId}/` instead of global directory
+- No other changes needed — already scoped correctly
+
+**ConfigurationLoader**
+- Change: Constructor takes `animaId` parameter
+- Change: Config directory becomes `wiring-configs/{animaId}/`
+- Change: WiringConfiguration adds `AnimaId` field
+- No other changes needed
+
+**Program.cs DI Registration**
+- Remove: Singleton registrations for EventBus, HeartbeatLoop
+- Add: Singleton registration for AnimaRuntimeManager
+- Add: Scoped registration for AnimaContext
+- Change: WiringEngine factory resolves from AnimaRuntimeManager instead of singleton EventBus
+
+**ChatPanel.razor**
+- Add: AnimaContext injection
+- Change: Load/save chat history from AnimaRuntime instead of scoped ChatSessionState
+- Add: Display current Anima name in header
+
+### 4. Data Flow Changes
+
+**Before (Single Runtime):**
+```
+Component → EditorStateService → WiringEngine (scoped)
+                                      ↓
+                                  EventBus (singleton)
+                                      ↓
+                                  Modules (singleton)
+```
+
+**After (Multi-Anima):**
+```
+Component → AnimaContext (scoped) → AnimaRuntimeManager (singleton)
+                ↓                           ↓
+        EditorStateService (scoped)    AnimaRuntime (per-Anima)
+                ↓                           ↓
+        WiringEngine (per-Anima) ←──────────┤
+                ↓                           ↓
+        EventBus (per-Anima) ←──────────────┤
+                ↓                           ↓
+        Modules (per-Anima instances) ←─────┘
+```
+
+**Key insight:** AnimaContext acts as the "tenant resolver" in multi-tenant terminology. It's set once when the user selects an Anima, then all subsequent service resolutions use it to fetch the correct AnimaRuntime.
 
 ## Architectural Patterns
 
-### Pattern 1: .NET Tool Pattern
+### Pattern 1: Scoped Context with Singleton Factory
 
-**What:** Console app packaged as NuGet tool with `PackAsTool=true`.
+**What:** A scoped service (AnimaContext) holds the current "tenant" ID, while a singleton factory (AnimaRuntimeManager) manages all tenant instances.
 
-**When to use:** CLI distribution for developers who have .NET SDK installed.
-
-**Trade-offs:**
-- PRO: Global or local installation via `dotnet tool install`
-- PRO: Version management via NuGet
-- PRO: Automatic PATH configuration
-- CON: Requires .NET SDK on developer machine
-
-**Example:**
-```xml
-<!-- OpenAnima.Cli.csproj -->
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>oani</ToolCommandName>
-    <PackageId>OpenAnima.Cli</PackageId>
-    <Version>1.0.0</Version>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="System.CommandLine" Version="4.0.0" />
-  </ItemGroup>
-</Project>
-```
-
-### Pattern 2: Template Pack Pattern
-
-**What:** NuGet package with `PackageType=Template` containing runnable project templates.
-
-**When to use:** Project scaffolding via `dotnet new`.
+**When to use:** When you need multiple isolated instances of stateful services but want to share infrastructure.
 
 **Trade-offs:**
-- PRO: Uses standard `dotnet new` workflow developers already know
-- PRO: Templates are runnable projects (testable before packaging)
-- PRO: Placeholder replacement via `sourceName` in template.json
-- CON: Learning curve for template.json configuration
-
-**Example:**
-```xml
-<!-- OpenAnima.Templates.csproj -->
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <PackageType>Template</PackageType>
-    <PackageVersion>1.0.0</PackageVersion>
-    <PackageId>OpenAnima.Templates</PackageId>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <IncludeContentInPack>true</IncludeContentInPack>
-    <IncludeBuildOutput>false</IncludeBuildOutput>
-    <ContentTargetFolders>content</ContentTargetFolders>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <Content Include="templates\**\*" Exclude="templates\**\bin\**;templates\**\obj\**" />
-    <Compile Remove="**\*" />
-  </ItemGroup>
-</Project>
-```
-
-```json
-// templates/OpenAnima.Module/.template.config/template.json
-{
-  "$schema": "http://json.schemastore.org/template",
-  "author": "OpenAnima",
-  "classifications": [ "OpenAnima", "Module", "Plugin" ],
-  "identity": "OpenAnima.Module.CSharp",
-  "name": "OpenAnima Module",
-  "shortName": "oanimodule",
-  "sourceName": "ModuleName",
-  "preferNameDirectory": true,
-  "tags": {
-    "language": "C#",
-    "type": "project"
-  }
-}
-```
-
-### Pattern 3: Extract-and-Load Pattern
-
-**What:** .oamod is a ZIP archive that extracts to a temp directory, then loaded by existing PluginLoader.
-
-**When to use:** Module packaging without breaking existing loading infrastructure.
-
-**Trade-offs:**
-- PRO: Zero changes to PluginLoader core logic
-- PRO: Supports both .oamod files and unpacked directories
-- PRO: Easy debugging (can inspect extracted files)
-- CON: Temp directory management required
-- CON: Slightly slower first load (extraction time)
+- ✓ Clean separation: UI layer (scoped) doesn't know about factory internals
+- ✓ Testable: Can inject mock AnimaRuntimeManager
+- ✗ Indirection: Services must resolve through factory instead of direct DI
 
 **Example:**
 ```csharp
-// OamodExtractor.cs
-public class OamodExtractor
+public class EditorStateService
 {
-    private readonly string _tempBasePath = Path.Combine(Path.GetTempPath(), "OpenAnima", "modules");
+    private readonly AnimaContext _context;
+    private readonly AnimaRuntimeManager _manager;
 
-    public string ExtractToTemp(string oamodPath)
+    public EditorStateService(AnimaContext context, AnimaRuntimeManager manager)
     {
-        var manifest = ReadManifest(oamodPath);
-        var targetPath = Path.Combine(_tempBasePath, $"{manifest.Name}-{manifest.Version}");
+        _context = context;
+        _manager = manager;
+    }
 
-        // Clean up previous extraction if exists
-        if (Directory.Exists(targetPath))
-            Directory.Delete(targetPath, recursive: true);
-
-        Directory.CreateDirectory(targetPath);
-
-        // Extract ZIP
-        ZipFile.ExtractToDirectory(oamodPath, targetPath);
-
-        return targetPath;
+    public async Task SaveConfiguration(WiringConfiguration config)
+    {
+        var runtime = _manager.GetOrCreateRuntime(_context.CurrentAnimaId!);
+        await runtime.ConfigLoader.SaveAsync(config);
     }
 }
 ```
 
-### Pattern 4: Shared Contracts Exclusion
+### Pattern 2: Per-Tenant Directory Isolation
 
-**What:** Module projects reference OpenAnima.Contracts with `<Private>false</Private>` to exclude from output.
+**What:** Each Anima gets its own subdirectory for configurations and state files.
 
-**When to use:** Cross-AssemblyLoadContext scenarios where shared types must come from a single source.
+**When to use:** When you need file-based persistence with clear isolation boundaries.
 
 **Trade-offs:**
-- PRO: Prevents type identity issues (InvalidCastException)
-- PRO: Reduces package size
-- PRO: Ensures runtime version of Contracts is used
-- CON: Requires explicit project configuration
+- ✓ Simple: No database required
+- ✓ Debuggable: Can inspect files directly
+- ✗ No transactions: File operations aren't atomic across Animas
+- ✗ Scaling limit: File I/O doesn't scale to thousands of Animas
 
 **Example:**
-```xml
-<!-- In module's .csproj -->
-<ItemGroup>
-  <ProjectReference Include="path/to/OpenAnima.Contracts.csproj">
-    <Private>false</Private>
-  </ProjectReference>
-</ItemGroup>
 ```
+wiring-configs/
+├── anima-001/
+│   ├── default.json
+│   └── .lastconfig
+├── anima-002/
+│   ├── default.json
+│   └── experimental.json
+└── anima-003/
+    └── default.json
+
+animas/
+├── anima-001.json  # AnimaMetadata
+├── anima-002.json
+└── anima-003.json
+```
+
+### Pattern 3: Module Instance Cloning
+
+**What:** Each Anima gets its own instances of modules, even though module types are shared.
+
+**When to use:** When modules hold per-instance state (e.g., LLMModule caches conversation context).
+
+**Trade-offs:**
+- ✓ True isolation: No shared state between Animas
+- ✓ Independent configuration: Each Anima can configure modules differently
+- ✗ Memory cost: N Animas × M modules instances
+- ✗ Initialization cost: Must instantiate modules for each Anima
+
+**Example:**
+```csharp
+public AnimaRuntime CreateRuntime(string animaId)
+{
+    var eventBus = new EventBus();
+    var moduleInstances = new Dictionary<string, IModule>();
+
+    // Clone each registered module type
+    foreach (var entry in _pluginRegistry.GetAllModules())
+    {
+        var moduleType = entry.Module.GetType();
+        var instance = (IModule)Activator.CreateInstance(moduleType)!;
+
+        // Inject EventBus via property
+        if (instance is IEventBusAware aware)
+            aware.EventBus = eventBus;
+
+        moduleInstances[entry.Manifest.Name] = instance;
+    }
+
+    var heartbeat = new HeartbeatLoop(eventBus, ...);
+    var wiringEngine = new WiringEngine(eventBus, ...);
+
+    return new AnimaRuntime(animaId, eventBus, heartbeat, wiringEngine, moduleInstances, DateTime.UtcNow, false);
+}
+```
+
+## Build Order and Dependencies
+
+### Phase 1: Foundation (No UI Changes)
+**Goal:** Establish multi-Anima infrastructure without breaking existing single-Anima behavior.
+
+1. **AnimaMetadata record** — Simple POCO for Anima name, ID, created date
+2. **AnimaConfigStore** — File-based persistence for Anima metadata
+3. **AnimaRuntime record** — Container for per-Anima state
+4. **AnimaRuntimeManager** — Factory with GetOrCreateRuntime, StopRuntime, ListAnimas
+5. **AnimaContext** — Scoped service with CurrentAnimaId property
+6. **Update Program.cs** — Register new services, keep backward compatibility with default Anima
+
+**Validation:** Existing single-Anima behavior still works. AnimaRuntimeManager creates one default Anima on startup.
+
+### Phase 2: Service Migration (Refactor Existing)
+**Goal:** Move singleton services into AnimaRuntime without changing behavior.
+
+7. **Refactor EventBus** — Remove singleton registration, create per-Anima in factory
+8. **Refactor HeartbeatLoop** — Remove singleton registration, create per-Anima in factory
+9. **Refactor WiringEngine** — Change from scoped to per-Anima, resolve via AnimaRuntimeManager
+10. **Refactor ConfigurationLoader** — Add animaId parameter, change directory to `wiring-configs/{animaId}/`
+11. **Update EditorStateService** — Inject AnimaContext, resolve WiringEngine from AnimaRuntimeManager
+
+**Validation:** Single default Anima still works. All existing tests pass.
+
+### Phase 3: UI Integration (New Features)
+**Goal:** Add UI for creating/switching Animas.
+
+12. **Anima list sidebar** — Component showing all Animas with create/delete buttons
+13. **Anima switcher** — Set AnimaContext.CurrentAnimaId when user clicks Anima
+14. **Update ChatPanel** — Display current Anima name, load/save per-Anima chat history
+15. **Update Editor** — Load/save configurations from current Anima's directory
+16. **Module detail panel** — Right-side panel for per-module configuration (new feature, not refactor)
+
+**Validation:** User can create multiple Animas, switch between them, each has independent state.
+
+### Phase 4: Persistence & Polish
+**Goal:** Ensure state survives restarts.
+
+17. **Auto-load last viewed Anima** — Store last AnimaId in `.lastanima` file per circuit
+18. **Anima configuration persistence** — Save/load AnimaMetadata on create/delete
+19. **Chat history persistence** — Save chat messages to `animas/{animaId}/chat-history.json`
+20. **Module configuration persistence** — Save per-module config to `animas/{animaId}/module-config.json`
+
+**Validation:** Restart app, all Animas and their state are restored.
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Including Contracts in .oamod
+### Anti-Pattern 1: Shared EventBus with AnimaId Filtering
 
-**What people do:** Pack OpenAnima.Contracts.dll inside the .oamod package.
+**What people might do:** Keep EventBus as singleton, add `AnimaId` field to events, filter in subscribers.
 
-**Why it's wrong:** Breaks type identity - PluginLoadContext loads its own copy, causing InvalidCastException when Core tries to cast to its IModule interface.
+**Why it's wrong:**
+- Event routing becomes complex and error-prone
+- Easy to forget filtering in one subscriber → cross-Anima contamination
+- Performance cost of filtering every event
+- Doesn't solve HeartbeatLoop isolation (still only one loop)
 
-**Do this instead:**
-1. Mark Contracts reference as `<Private>false</Private>` in module project
-2. OamodPackager excludes Contracts from dependencies folder
-3. Runtime provides Contracts from its own loaded copy
+**Do this instead:** Separate EventBus instance per Anima. Clean isolation, no filtering needed.
 
-### Anti-Pattern 2: Manifest Port Declarations
+### Anti-Pattern 2: Scoped Services for Runtime State
 
-**What people do:** Declare ports in module.json instead of using attributes.
+**What people might do:** Make EventBus, HeartbeatLoop scoped instead of per-Anima.
 
-**Why it's wrong:** Manifest and code can drift. No compile-time validation. Runtime must reconcile two sources of truth.
+**Why it's wrong:**
+- Scoped = per-circuit, not per-Anima
+- Two circuits viewing the same Anima would get different EventBus instances
+- Modules subscribed in one circuit wouldn't receive events from another circuit
+- HeartbeatLoop would run twice for the same Anima (once per circuit)
 
-**Do this instead:** Use `[InputPort]` and `[OutputPort]` attributes on module class. PortDiscovery extracts at load time. Manifest only contains metadata (name, version, entryAssembly).
+**Do this instead:** Use singleton factory pattern. Scoped services resolve the correct per-Anima instance from the factory.
 
-### Anti-Pattern 3: Rebuilding PluginLoader
+### Anti-Pattern 3: Global Configuration Directory with AnimaId Prefix
 
-**What people do:** Create a new module loading system for .oamod instead of extending existing.
+**What people might do:** Keep `wiring-configs/` flat, name files `anima-001-default.json`.
 
-**Why it's wrong:** Duplicate code paths, testing burden, potential behavior divergence between .oamod and directory loading.
+**Why it's wrong:**
+- Doesn't scale: Listing configs for one Anima requires filtering all files
+- Collision risk: Two Animas with same config name would conflict
+- Harder to delete: Must find all files with prefix
+- Doesn't match mental model: Animas are containers, not prefixes
 
-**Do this instead:** Add extraction layer (OamodExtractor) that converts .oamod to directory, then use existing PluginLoader unchanged.
-
-### Anti-Pattern 4: Global Tool Only
-
-**What people do:** Only support global tool installation, ignoring local tools.
-
-**Why it's wrong:** Teams can't pin CLI version per project. Global tool version conflicts between projects.
-
-**Do this instead:** Support both global and local tool installation. Document local tool workflow for teams:
-
-```bash
-# Local installation (recommended for teams)
-dotnet new tool-manifest
-dotnet tool install OpenAnima.Cli
-dotnet tool run oani pack
-
-# Global installation (for individual developers)
-dotnet tool install -g OpenAnima.Cli
-oani pack
-```
-
-## Build Order & Dependencies
-
-### Phase 1: SDK Library (prerequisite for CLI)
-
-```
-OpenAnima.Sdk
-  +-- no dependencies on other NEW projects
-  +-- references: OpenAnima.Contracts
-  +-- packages: System.Text.Json, System.IO.Compression
-
-Build order within SDK:
-1. Manifest/ModuleManifest.cs        (data structure)
-2. Manifest/ManifestValidator.cs     (validates manifest)
-3. Packaging/DependencyResolver.cs   (parses .deps.json)
-4. Packaging/OamodPackager.cs        (creates .oamod)
-5. Packaging/OamodReader.cs          (reads .oamod)
-```
-
-### Phase 2: CLI Tool
-
-```
-OpenAnima.Cli
-  +-- references: OpenAnima.Sdk
-  +-- packages: System.CommandLine 4.0.0+
-
-Build order within CLI:
-1. Commands/NewCommand.cs       (oani new)
-2. Commands/PackCommand.cs      (oani pack)
-3. Commands/ValidateCommand.cs  (oani validate)
-4. Program.cs                   (root command setup)
-```
-
-### Phase 3: Template Pack
-
-```
-OpenAnima.Templates
-  +-- no project references
-  +-- contains: runnable module project template
-  +-- template.json defines placeholder replacement
-
-Template files:
-1. templates/OpenAnima.Module/content/ModuleName.csproj
-2. templates/OpenAnima.Module/content/ModuleName.cs
-3. templates/OpenAnima.Module/content/module.json
-4. templates/OpenAnima.Module/.template.config/template.json
-```
-
-### Phase 4: Core Integration (minimal)
-
-```
-OpenAnima.Core modification:
-  +-- Plugins/OamodExtractor.cs (NEW)
-  +-- Plugins/PluginLoader.cs (MODIFIED: add .oamod detection)
-
-Changes:
-1. Add OamodExtractor class
-2. Modify PluginLoader.LoadModule to detect .oamod
-3. Test with sample .oamod files
-```
+**Do this instead:** Subdirectory per Anima. Clean namespace isolation, easy to list/delete.
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| 1-10 modules | Local templates, simple .oamod, CLI from source |
-| 10-50 modules | Publish templates to NuGet, signed .oamod packages |
-| 50-100 modules | Template variants (different module types), dependency caching in CLI |
-| 100+ modules | Module marketplace, version constraint resolution, signed packages |
+| 1-10 Animas | Current file-based approach is fine. In-memory AnimaRuntime dictionary is sufficient. |
+| 10-100 Animas | Consider lazy loading: Don't create AnimaRuntime until first access. Stop inactive Animas after timeout. |
+| 100+ Animas | Move to database for Anima metadata. Consider process-per-Anima for memory isolation. File-based configs still OK. |
 
-### Phase-Specific Notes
+### Scaling Priorities
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| dotnet new templates | sourceName not replacing | Use exact match, test with `-n` flag |
-| CLI tool | System.CommandLine API changes | Pin to 4.0.0+ stable, avoid preview features |
-| .oamod packaging | Missing dependencies | Use .deps.json parser, test on clean machine |
-| Contracts versioning | Breaking changes break modules | Use semantic versioning, add minRuntimeVersion to manifest |
-| Temp extraction | Disk space growth | Implement cleanup on startup, track extractions |
+1. **First bottleneck:** Memory usage from N × M module instances. Mitigation: Lazy instantiation, stop inactive Animas after 5 minutes of no circuit connections.
+
+2. **Second bottleneck:** File I/O for configuration loading. Mitigation: In-memory cache with file watcher for invalidation.
 
 ## Sources
 
-- [.NET Tool Creation Tutorial](https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools-how-to-create) - HIGH confidence (official docs)
-- [Custom Templates for dotnet new](https://learn.microsoft.com/en-us/dotnet/core/tools/custom-templates) - HIGH confidence (official docs)
-- [System.CommandLine Overview](https://learn.microsoft.com/en-us/dotnet/standard/commandline/) - HIGH confidence (official docs)
-- Existing OpenAnima source code (PluginLoader.cs, PluginManifest.cs, PortDiscovery.cs) - HIGH confidence (project code)
+Multi-tenant architecture patterns:
+- [How to Build Multi-Tenant Apps in .NET](https://oneuptime.com/blog/post/2026-01-26-multi-tenant-apps-dotnet/view) — Tenant context pattern, per-tenant state isolation
+- [Designing Multi-Tenant Architecture in ASP.NET Core using EF Core](https://www.c-sharpcorner.com/article/designing-multi-tenant-architecture-in-asp-net-core-using-ef-core/) — Directory isolation strategies
+- [Factory Pattern + Dependency Injection in .NET](https://www.csharp.com/article/factory-pattern-dependency-injection-in-net/) — Factory pattern for dynamic instance creation
+
+Blazor Server service lifetimes:
+- [How to Use Blazor United for Full Stack Web Development](https://www.csharp.com/article/how-to-use-blazor-united-for-full-stack-web-development/) — Scoped vs singleton in Blazor Server
+- [How to Use Dependency Injection in .NET Core With Practical Example?](https://www.csharp.com/article/how-to-use-dependency-injection-in-net-core-with-practical-example/) — Service lifetime patterns
 
 ---
-*Architecture research for: Module SDK & DevEx (v1.4)*
+*Architecture research for: Multi-Anima integration with existing Blazor Server runtime*
 *Researched: 2026-02-28*
-*Confidence: HIGH (patterns well-established in .NET ecosystem)*

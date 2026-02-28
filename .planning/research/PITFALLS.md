@@ -1,373 +1,388 @@
 # Pitfalls Research
 
-**Domain:** Module SDK & CLI Tool Development for Plugin Systems
+**Domain:** Multi-Anima Architecture, i18n, and Module Management in Blazor Server
 **Researched:** 2026-02-28
-**Confidence:** HIGH
+**Confidence:** MEDIUM
 
 ## Critical Pitfalls
 
-### Pitfall 1: The "Works on My Machine" Template Syndrome
+### Pitfall 1: Circuit Memory Leaks from Event Subscriptions
 
 **What goes wrong:**
-A dotnet new template works for the author but fails for other developers due to hardcoded paths, missing prerequisites, or environment-specific configurations.
+When Anima instances subscribe to singleton EventBus events without unsubscribing, every Anima instance stays in memory indefinitely. The circuit never gets garbage collected because the singleton EventBus holds references to all subscribers through event delegates.
 
 **Why it happens:**
-Template authors test only in their own environment and don't account for different .NET SDK versions, OS configurations, or missing tools.
+Blazor Server circuits are scoped per-user connection, but the EventBus is a singleton. When an Anima component subscribes to events in `OnInitialized`, the subscription creates a strong reference from the singleton back to the scoped component. When the user disconnects, the circuit should be collected, but the event subscription keeps it alive.
 
 **How to avoid:**
-- Include a `prerequisites` check that validates .NET SDK version before template instantiation
-- Use `sourceName` in template.json for all project/namespace names, not hardcoded values
-- Test templates in clean VMs/containers before releasing
-- Never hardcode absolute paths - use relative paths and project variables
+- Implement `IAsyncDisposable` on all components that subscribe to EventBus events
+- Unsubscribe in `DisposeAsync()` method
+- Consider using `WeakReference` for event subscriptions if multiple Animas will exist simultaneously
+- Configure `CircuitOptions.DisconnectedCircuitMaxRetained` and `DisconnectedCircuitRetentionPeriod` to reasonable limits
 
 **Warning signs:**
-- Template contains hardcoded "MyProject" or similar placeholder strings
-- Template fails on different .NET SDK versions
-- Generated project requires manual configuration after `dotnet new`
+- Memory usage grows continuously as users connect/disconnect
+- Task Manager shows memory not being released after users close browser tabs
+- Multiple Anima instances remain in memory after switching between them
+- EventBus subscriber count grows without decreasing
 
 **Phase to address:**
-Phase 1 (CLI & Template) - Build validation into the template itself
+Phase 1 (Multi-Anima Architecture) — Must establish proper disposal pattern before building multiple instances
 
 ---
 
-### Pitfall 2: CLI Exit Code Confusion
+### Pitfall 2: AssemblyLoadContext Memory Leaks from Retained Assembly References
 
 **What goes wrong:**
-CLI tool returns zero exit code on failure (or non-zero on success), breaking script automation and CI/CD pipelines that expect standard Unix conventions.
+When unloading modules, the AssemblyLoadContext.Unload() call doesn't actually unload assemblies if you store Assembly references in instance fields (like `Dictionary<string, Assembly>`). File handles remain open, memory isn't released, and repeated load/unload cycles cause memory leaks.
 
 **Why it happens:**
-Developers unfamiliar with CLI conventions treat exit codes as afterthoughts or use them for debug information instead of success/failure signaling.
+AssemblyLoadContext.Unload() is cooperative, not immediate. The runtime keeps the context alive via a strong GC handle during unload. If your context stores Assembly references in instance fields, those references create a circular dependency that prevents garbage collection. The unload process needs to keep the context alive, but the context keeps assemblies alive, creating a deadlock.
 
 **How to avoid:**
-- Return zero on success, non-zero on failure - ALWAYS
-- Use different non-zero codes for different failure types (1 for user error, 2 for system error, etc.)
-- Document exit codes in help text
-- Test CLI in shell scripts that check `$?`
+- Clear all Assembly references before calling Unload(): `LoadedAssemblies.Clear(); Unload();`
+- Use `WeakReference<Assembly>` instead of strong references for caching
+- Don't store Assembly objects in instance fields of the AssemblyLoadContext
+- Explicitly call GC.Collect() and GC.WaitForPendingFinalizers() after Unload() to verify cleanup
+- Monitor with `AssemblyLoadContext.Unloading` event to detect when unload completes
 
 **Warning signs:**
-- CLI prints "Error:" but returns exit code 0
-- CI/CD pipelines pass even when CLI commands fail
-- No documentation of exit codes
+- File handles remain open after module unload (check with Process Explorer)
+- Memory usage grows with each module load/unload cycle
+- `AssemblyLoadContext.Unloading` event never fires
+- Modules can't be reloaded because DLL files are locked
 
 **Phase to address:**
-Phase 1 (CLI & Template) - Establish exit code contract from day one
+Phase 3 (Module Management) — Critical before implementing install/uninstall functionality
 
 ---
 
-### Pitfall 3: Streaming Errors to Wrong Output
+### Pitfall 3: Singleton-to-Scoped Service Lifetime Mismatch
 
 **What goes wrong:**
-CLI tool sends primary output to `stderr` or logs errors to `stdout`, breaking pipes and making the tool unusable in scripts.
+When migrating from single-Anima (singleton services) to multi-Anima (scoped services per circuit), you get `InvalidOperationException: Cannot consume scoped service from singleton`. Existing singleton services that depend on scoped services (like NavigationManager, IJSRuntime, or per-Anima state) break completely.
 
 **Why it happens:**
-Developers treat `stderr` as a general "logging" stream instead of reserving it for diagnostic/error messages.
+In Blazor Server, "scoped" means per-circuit, not per-request. Each SignalR circuit is a scope. When you have multiple Animas, each needs its own scoped services, but singleton services are shared across all circuits. If a singleton tries to inject a scoped service, the DI container throws because the singleton outlives any individual scope.
 
 **How to avoid:**
-- Send program output to `stdout` - this is what gets piped
-- Send errors/progress/logging to `stderr` - this is what humans see
-- Provide `--quiet`, `--json`, and `--plain` flags for different use cases
-- Never print "info" messages to `stdout` when in piped mode
+- Audit all singleton services for dependencies on scoped services
+- Convert per-Anima state services from singleton to scoped
+- Use `IServiceScopeFactory` in singletons to create scopes when needed
+- For EventBus: Keep as singleton but ensure it doesn't hold per-Anima state
+- For module instances: Change from singleton to scoped so each Anima gets its own instances
 
 **Warning signs:**
-- `oani pack | cat` shows progress bars or logging
-- Scripts receive mixed output/error content
-- `--quiet` doesn't suppress all non-essential output
+- `InvalidOperationException` during DI resolution
+- Services that work in single-Anima mode break when adding second Anima
+- State leaking between different Anima instances
+- Modules executing in wrong Anima context
 
 **Phase to address:**
-Phase 1 (CLI & Template) - Define output stream contract early
+Phase 1 (Multi-Anima Architecture) — Must resolve before implementing multiple instances
 
 ---
 
-### Pitfall 4: Missing Manifest Validation
+### Pitfall 4: Configuration File Corruption from Concurrent Writes
 
 **What goes wrong:**
-.oamod packages with invalid manifests are created and distributed, causing cryptic load failures in the runtime that blame the wrong component.
+When multiple Animas save configuration simultaneously (e.g., user changes settings in two Animas at once), concurrent writes to the same JSON file cause corruption. The file ends up with partial writes, invalid JSON, or complete data loss. On next load, the application crashes or loses all configuration.
 
 **Why it happens:**
-Manifest validation is often an afterthought - developers assume "it works when I test it" without comprehensive schema validation.
+File I/O is not atomic. When two threads write to the same file simultaneously, their writes interleave at the byte level. JSON serialization writes the file sequentially, so concurrent writes produce invalid JSON like `{"anima1": {"na{"anima2": {"name": "B"}}me": "A"}}`.
 
 **How to avoid:**
-- Define a strict JSON schema for the manifest (like NuGet's nuspec.xsd)
-- Validate manifest at `oani pack` time - fail fast with clear errors
-- Include required fields: id, version, entryPoint, compatibleRuntime, description
-- Add checksums for all included assemblies in the manifest
-- Provide `oani validate` command for pre-distribution verification
+- Use write-through-temp-file-then-rename pattern for atomic writes:
+  ```csharp
+  var tempFile = Path.GetTempFileName();
+  await File.WriteAllTextAsync(tempFile, json);
+  File.Move(tempFile, targetPath, overwrite: true);
+  ```
+- Implement file-level locking with `FileStream` and `FileShare.None`
+- Use a single-writer queue pattern: all saves go through a `Channel<T>` processed by one background task
+- Add retry logic with exponential backoff for transient failures
+- Keep in-memory cache and only persist on explicit save or periodic intervals
 
 **Warning signs:**
-- Modules load successfully in dev but fail in production
-- Error messages say "module not found" when the issue is corrupt manifest
-- No checksum validation when loading packages
+- `JsonException` on application startup
+- Configuration resets to defaults unexpectedly
+- Partial data loss (some Animas saved, others not)
+- File corruption errors in logs
+- Race condition exceptions during high-frequency saves
 
 **Phase to address:**
-Phase 2 (Package Format) - Build validation into pack command
+Phase 2 (Configuration Persistence) — Must implement before multi-Anima configuration saving
 
 ---
 
-### Pitfall 5: Version Compatibility Hell
+### Pitfall 5: Culture Switching Requires Full Circuit Reconnect
 
 **What goes wrong:**
-A module built for runtime v1.3 doesn't work with v1.4, but the error message doesn't explain why. Users blame the module author or the platform.
+When user switches language in Blazor Server, changing `CultureInfo.CurrentCulture` doesn't update the UI. Components continue showing old language. Forcing `StateHasChanged()` causes exceptions or inconsistent rendering. The only reliable way is full page reload, which loses all circuit state.
 
 **Why it happens:**
-No explicit version compatibility declaration in the package format. The runtime tries to load incompatible assemblies and fails with confusing errors.
+Blazor Server caches localized strings at circuit initialization. The `IStringLocalizer` resolves resources once per circuit based on the initial culture. Changing culture mid-circuit doesn't invalidate these caches. Additionally, SignalR circuit state is tied to the initial culture, and changing it mid-flight causes synchronization issues.
 
 **How to avoid:**
-- Require `compatibleRuntime` field in manifest (e.g., ">=1.3.0 <2.0.0")
-- Check compatibility BEFORE loading assemblies - fail with clear message
-- Use semantic versioning: major = breaking changes, minor = features, patch = fixes
-- Document version compatibility requirements in module template
-- Provide `oani check-compat` command for testing
+- Use `NavigationManager.NavigateTo(uri, forceLoad: true)` to trigger full page reload
+- Store language preference in persistent storage (localStorage via JS interop or cookie)
+- Set culture on server-side before circuit initialization using middleware
+- Accept that language switching requires page reload — don't try to make it seamless
+- Show clear UI feedback: "Switching language..." with loading indicator during reload
 
 **Warning signs:**
-- Modules load in one runtime version but crash in another
-- Type conversion errors (same type name, different assembly context)
-- Error messages mention "AssemblyLoadContext" without explaining version mismatch
+- UI shows mixed languages after culture switch
+- `InvalidOperationException` during culture change
+- Components render with wrong culture after `StateHasChanged()`
+- Localized strings don't update despite culture change
+- Circuit disconnects unexpectedly after culture change
 
 **Phase to address:**
-Phase 2 (Package Format) - Version contract must be defined early
+Phase 2 (i18n Integration) — Must establish pattern before implementing language switcher
 
 ---
 
-### Pitfall 6: AssemblyLoadContext Type Identity Issues
+### Pitfall 6: Shared Static State Across Module Instances
 
 **What goes wrong:**
-Module passes an object to runtime, runtime tries to cast it to an interface, but cast fails with "Object of type 'X' cannot be converted to type 'X'" - same name, different contexts.
+When modules use static fields for state (e.g., `static int _counter`), all instances of that module across all Animas share the same state. Anima A's module execution affects Anima B's module state, causing unpredictable behavior and data corruption.
 
 **Why it happens:**
-When assemblies are loaded in different AssemblyLoadContext instances, types with the same name are NOT the same type. This is the most common plugin architecture pitfall in .NET.
+Static fields are per-AppDomain, not per-instance. Even though each Anima gets its own module instance via DI, static fields are shared across all instances. Developers coming from singleton patterns naturally use static fields for "module-level" state, not realizing it's actually "application-level" state.
 
 **How to avoid:**
-- All shared interfaces MUST be in a shared contract assembly loaded in Default context
-- Use duck-typing (reflection) for cross-context type checking (OpenAnima already does this for ITickable)
-- Never pass implementation types across context boundaries - use interfaces or serialized data
-- Document this clearly for module developers
+- Ban static mutable state in module guidelines
+- Use instance fields for all module state
+- Register modules as scoped services so each circuit gets its own instances
+- Add static analysis rules to detect static mutable fields in modules
+- Document this pitfall prominently in module SDK documentation
 
 **Warning signs:**
-- "Object of type 'X' cannot be converted to type 'X'" errors
-- Module works in isolation but fails when loaded with other modules
-- Type casts that should work mysteriously fail
+- Module behavior changes based on execution order
+- State from one Anima appears in another Anima
+- Race conditions in module execution
+- Intermittent test failures that disappear when running modules in isolation
+- Module state persists across Anima restarts
 
 **Phase to address:**
-Phase 3 (Documentation) - This MUST be documented prominently for module developers
+Phase 1 (Multi-Anima Architecture) — Must establish module isolation before building multiple instances
 
 ---
 
-### Pitfall 7: Documentation That Assumes Expert Knowledge
+### Pitfall 7: Heartbeat Loop Concurrent Execution Race Conditions
 
 **What goes wrong:**
-Documentation jumps straight to advanced concepts without explaining basics. New developers give up and abandon the platform.
+When multiple Animas run heartbeat loops simultaneously, they execute modules concurrently. If modules access shared resources (EventBus, file system, database) without synchronization, race conditions cause data corruption, duplicate events, or deadlocks.
 
 **Why it happens:**
-Documentation written by experts who forgot what it's like to be a beginner. "Getting Started" becomes "Reference Guide."
+Each Anima's heartbeat runs on its own background thread via `IHostedService`. By default in .NET 8+, hosted services start concurrently. If two heartbeats execute the same module type simultaneously (different instances but same code), and that code accesses shared resources, classic race conditions occur.
 
 **How to avoid:**
-- Lead with examples, not concepts (users copy examples first, read docs second)
-- Provide a "5-minute quickstart" that produces a working module
-- Explain the "why" before the "how"
-- Include troubleshooting section for common errors
-- Test docs with actual new users
+- Ensure EventBus is thread-safe (already using `ConcurrentDictionary` + `ConcurrentBag`)
+- Use `SemaphoreSlim` for critical sections in modules that access shared resources
+- Make module execution idempotent where possible
+- Consider sequential hosted service startup if Animas have dependencies: `services.Configure<HostOptions>(o => o.ServicesStartConcurrently = false)`
+- Add integration tests that run multiple Animas concurrently to catch race conditions
 
 **Warning signs:**
-- Quickstart takes more than 10 minutes
-- First documentation page mentions advanced concepts
-- No working code example in the first 3 paragraphs
-- Documentation assumes knowledge of AssemblyLoadContext, dependency injection, etc.
+- Intermittent exceptions during module execution
+- Events published multiple times
+- Deadlocks during high-frequency execution
+- State corruption that only appears with multiple Animas
+- Test failures that only occur when running multiple Animas
 
 **Phase to address:**
-Phase 3 (Documentation) - Documentation should be tested with new developers
+Phase 1 (Multi-Anima Architecture) — Must verify thread safety before enabling multiple instances
 
 ---
 
-### Pitfall 8: Overly Verbose or Silent CLI Output
+### Pitfall 8: Missing Translation Fallback Strategy
 
 **What goes wrong:**
-CLI either floods the terminal with information or provides no feedback, leaving users confused about whether commands succeeded or what they did.
+When translations are missing for a language, the UI shows translation keys (e.g., `"Anima.Name.Label"`) or throws exceptions. Users see broken UI with technical strings instead of readable text. Partially translated features look unprofessional.
 
 **Why it happens:**
-No clear philosophy on output verbosity. Developers add logging for debugging and never remove it, or follow "UNIX tradition of silence" too literally.
+Translation files are maintained separately from code. New features add strings to English but forget to update Chinese. Translators miss strings. Resource files get out of sync. Without a fallback strategy, missing translations surface directly to users.
 
 **How to avoid:**
-- Default output: brief confirmation of what happened
-- `--verbose` flag: show detailed progress
-- `--quiet` flag: suppress all non-error output
-- Always confirm state changes ("Created module 'MyModule' at ./MyModule")
-- Show progress for long operations (packing large assemblies)
+- Implement fallback chain: requested language → English → key itself
+- Use `IStringLocalizer` with `ResourceNotFound` set to return key instead of throwing
+- Add build-time validation: fail CI if translation files have mismatched keys
+- Show visual indicator in dev mode for missing translations (e.g., `[MISSING: key]`)
+- Maintain translation coverage report: track percentage translated per language
 
 **Warning signs:**
-- CLI command completes with no output (user wonders "did it work?")
-- CLI prints more than 5 lines for a simple operation
-- No indication of what files were created/modified
+- Users report seeing technical strings like `"Module.Status.Running"`
+- UI shows empty labels or buttons
+- Exceptions in logs about missing resources
+- Inconsistent language mixing (some English, some Chinese)
+- New features only work in English
 
 **Phase to address:**
-Phase 1 (CLI & Template) - Define output philosophy early
+Phase 2 (i18n Integration) — Must establish fallback before adding translations
 
 ---
 
-### Pitfall 9: Template Version Drift
+### Pitfall 9: Module Configuration UI State Desync
 
 **What goes wrong:**
-The dotnet new template generates code that's incompatible with the current runtime because the template wasn't updated when the runtime changed.
+When user edits module configuration in the detail panel, the changes don't apply to the running module. Or changes apply immediately but aren't persisted, so they're lost on restart. Or the UI shows stale configuration while the module runs with different settings.
 
 **Why it happens:**
-Templates are often maintained separately from the main codebase and fall out of sync.
+Three separate states exist: (1) UI form state, (2) running module instance state, (3) persisted configuration file. Without careful synchronization, these diverge. Blazor's two-way binding updates UI state, but doesn't automatically update module state or persist to disk.
 
 **How to avoid:**
-- Store templates in the same repository as the runtime
-- Add template update to the PR checklist when changing module interfaces
-- Include runtime version in template manifest
-- Test template-generated modules against latest runtime in CI
-- Version templates alongside runtime releases
+- Establish clear state flow: UI → validation → module update → persistence
+- Use explicit "Save" button, not auto-save, to make persistence intentional
+- Show visual indicator when configuration is dirty (unsaved changes)
+- Reload module instance after configuration change (or require Anima restart)
+- Add confirmation dialog: "Configuration changed. Restart Anima to apply?"
+- Keep single source of truth: load from persistence, update module, then update UI
 
 **Warning signs:**
-- Generated module doesn't compile with latest SDK
-- Generated module compiles but crashes at runtime
-- Template produces code referencing deprecated APIs
+- Users report configuration changes not taking effect
+- Module behavior doesn't match UI settings
+- Configuration resets after restart
+- Conflicting configuration between UI and module
+- Race conditions during rapid configuration changes
 
 **Phase to address:**
-Phase 1 (CLI & Template) - Establish template maintenance process
+Phase 4 (Module Configuration UI) — Must establish state management before building detail panel
 
 ---
 
-### Pitfall 10: No Graceful Degradation for Missing Features
+### Pitfall 10: RTL Layout Breaks Visual Editor
 
 **What goes wrong:**
-CLI or template fails with cryptic error when a feature isn't available in the user's environment, instead of offering alternatives.
+When user switches to Arabic/Hebrew, the visual wiring editor breaks. Nodes appear mirrored, connections draw backwards, drag-and-drop goes in wrong direction. The SVG canvas becomes unusable.
 
 **Why it happens:**
-Error handling focuses on "what went wrong" internally, not "what can the user do about it."
+RTL languages flip the entire page layout via `dir="rtl"` on `<html>`. CSS transforms apply, but SVG coordinate systems don't automatically flip. Mouse coordinates, drag offsets, and connection paths calculate based on LTR assumptions. The editor's pan/zoom logic breaks because it assumes left-to-right coordinate space.
 
 **How to avoid:**
-- Check prerequisites early and provide clear guidance
-- Suggest alternatives when possible ("SDK 8.0 not found. Install from https://...")
-- Provide helpful error messages, not stack traces
-- Include "what to try next" in error output
+- Isolate editor canvas from RTL: wrap in `<div dir="ltr">` to force LTR coordinate system
+- Keep UI chrome (buttons, labels) in RTL, but canvas in LTR
+- Test with Arabic/Hebrew early in development, not as afterthought
+- Use logical properties (`inline-start` instead of `left`) for UI elements
+- Document that visual editor is always LTR regardless of UI language
 
 **Warning signs:**
-- Errors show stack traces instead of actionable messages
-- Errors don't suggest how to fix the problem
-- Users need to search the web to understand errors
+- Editor unusable in RTL languages
+- Nodes jump to wrong positions when dragging
+- Connections draw backwards or upside-down
+- Pan/zoom behaves erratically in RTL
+- Mouse coordinates don't match visual position
 
 **Phase to address:**
-All phases - This is an ongoing quality requirement
+Phase 2 (i18n Integration) — Must test RTL before declaring i18n complete
 
 ---
 
 ## Technical Debt Patterns
 
-Shortcuts that seem reasonable but create long-term problems.
-
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Skip manifest validation | Faster pack command | Cryptic runtime failures | Never |
-| Copy internal types to template | Easier template creation | Breaking changes affect all modules | Never |
-| Use string-based type matching | Simpler cross-context code | Runtime errors, no compile safety | Only for truly dynamic scenarios |
-| Skip version compatibility check | Load any module | Incompatibility crashes | Never |
-| No --verbose flag | Less code to write | Debugging nightmare | Never |
-| Skip checksums in manifest | Simpler package format | No tamper detection, load corrupted modules | Never |
-| Assume .NET SDK installed | Skip prerequisite check | Confusing errors for new users | MVP only - add checks before release |
+| Storing Anima config in single JSON file | Simple implementation, easy to read/write | Concurrent write corruption, no transaction support | Never — use atomic write pattern from start |
+| Using singleton services for per-Anima state | Works fine with single Anima | Breaks completely when adding second Anima, requires refactor | Never — use scoped from start |
+| Skipping IDisposable on event subscriptions | Less boilerplate code | Memory leaks, circuits never collected | Never — implement disposal from start |
+| Auto-save configuration on every change | Feels responsive, no "Save" button needed | File I/O on every keystroke, corruption risk, no undo | Only for non-critical settings with debouncing |
+| Seamless culture switching without reload | Better UX, feels modern | Extremely complex, fragile, many edge cases | Never — full reload is acceptable |
+| Shared module instances across Animas | Saves memory, simpler DI setup | State leaks, race conditions, impossible to debug | Never — isolation is critical |
 
 ## Integration Gotchas
 
-Common mistakes when connecting SDK to existing plugin system.
-
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Module interface | Exposing runtime internals to modules | Use contract interfaces only, keep implementation private |
-| Dependency injection | Each module gets new service instances | Register modules as singletons, use shared EventBus |
-| Assembly loading | Loading all dependencies in same context | Use PluginLoadContext with isCollectible:true for isolation |
-| Configuration | Putting config in template-generated code | Use appsettings.json pattern, inject IConfiguration |
-| Logging | Modules log directly to console | Inject ILogger, let runtime control output format |
-| Error handling | Modules throw exceptions for all errors | Return Result types for expected failures, throw for unexpected |
+| EventBus subscriptions | Subscribe in `OnInitialized`, forget to unsubscribe | Implement `IAsyncDisposable`, unsubscribe in `DisposeAsync()` |
+| Module loading | Store Assembly references in context fields | Clear references before `Unload()`, use `WeakReference` |
+| Configuration persistence | Direct `File.WriteAllText` with concurrent access | Write-to-temp-then-rename pattern with file locking |
+| Culture switching | Change `CultureInfo.CurrentCulture` and call `StateHasChanged()` | Use `NavigationManager.NavigateTo(forceLoad: true)` |
+| Module state | Use static fields for "module-level" state | Use instance fields, register as scoped services |
+| Heartbeat loops | Assume single-threaded execution | Design for concurrent execution, use synchronization |
 
 ## Performance Traps
 
-Patterns that work at small scale but fail as usage grows.
-
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Large assemblies in package | Slow load times, memory usage | Strip debug symbols, use trimming | Package > 10MB |
-| No module dependency resolution | Missing dependency errors | Include transitive dependencies in manifest | Modules with 3+ dependencies |
-| Sync loading all modules at startup | Slow app startup | Lazy load on-demand, parallel load | 10+ modules installed |
-| No module caching | Re-download on every load | Cache .oamod files locally | Network-based module source |
+| EventBus with thousands of subscribers | Slow event publishing, high CPU during Publish() | Implement subscriber cleanup, use weak references | >1000 Animas with active subscriptions |
+| Loading all Anima configs on startup | Slow application start, high memory usage | Lazy-load configs on demand, cache in memory | >100 Animas |
+| Saving config on every UI change | High disk I/O, file corruption, UI lag | Debounce saves (500ms), batch multiple changes | Any high-frequency editing |
+| Module execution without throttling | 100% CPU usage, UI becomes unresponsive | Add configurable tick interval, skip ticks if behind | >10 Animas with complex modules |
+| SignalR updates on every tick | Network saturation, browser lag | Throttle UI updates (every 5th tick), batch changes | >5 Animas with real-time updates |
 
 ## Security Mistakes
 
-Domain-specific security issues beyond general web security.
-
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Unsigned packages | Tampering, supply chain attacks | Sign .oamod packages, verify signature on load |
-| No sandbox for modules | Malicious code execution | Already addressed: modules run in-process but can be limited |
-| Secrets in manifest | Credential exposure | Never include secrets in .oamod, use runtime configuration |
-| Arbitrary code in templates | Template security | `dotnet new` already warns about untrusted templates |
-| Module ID collision | Impersonation | Verify unique ID, consider namespacing convention |
+| Loading modules from untrusted sources | Arbitrary code execution, data theft | Validate module signatures, sandbox execution, require user confirmation |
+| Storing API keys in plain text config | Credential theft if config file accessed | Use Data Protection API, encrypt sensitive fields |
+| No validation on module configuration | Injection attacks via config values | Validate and sanitize all config inputs |
+| Shared EventBus across security boundaries | Cross-Anima information leakage | Implement per-Anima EventBus or add security context checks |
+| Module access to file system | Modules can read/write arbitrary files | Implement permission system, restrict module file access |
 
 ## UX Pitfalls
 
-Common user experience mistakes in CLI/SDK development.
-
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| No default values for CLI args | User must provide everything | Provide sensible defaults, prompt only when necessary |
-| Inconsistent flag names (-v vs --verbose) | Confusion, mistakes | Use standard flags: -h, -v, -q, -n, --help, --verbose, --quiet |
-| No --dry-run for destructive operations | Fear of running commands | Add --dry-run to oani pack, oani install |
-| Help text without examples | User must read docs to use tool | Lead help text with 1-2 examples |
-| Error messages in English only | International users | Support localization (dotnet templates support this) |
-| No confirmation for overwrite | Accidental data loss | Confirm before overwriting existing files |
+| Language switch without warning | Unexpected page reload, lost unsaved work | Show confirmation: "Switching language will reload the page. Continue?" |
+| No visual feedback during config save | User doesn't know if save succeeded | Show toast notification: "Configuration saved" or error message |
+| Module errors crash entire Anima | All modules stop, user loses work | Isolate module failures, show error in UI, keep other modules running |
+| No indication which Anima is active | User edits wrong Anima by mistake | Highlight active Anima in sidebar, show name in header |
+| Configuration changes require manual restart | User doesn't know changes won't apply | Auto-prompt: "Restart Anima to apply changes?" with button |
 
 ## "Looks Done But Isn't" Checklist
 
-Things that appear complete but are missing critical pieces.
-
-- [ ] **CLI Tool:** Often missing proper exit codes - verify `echo $?` returns 0 on success, non-zero on failure
-- [ ] **CLI Tool:** Often missing TTY detection - verify output differs when piped vs interactive
-- [ ] **Template:** Often missing version compatibility - verify generated module specifies runtime version
-- [ ] **Template:** Often missing localization support - verify template.json has localization structure
-- [ ] **Package Format:** Often missing checksums - verify manifest includes SHA256 for assemblies
-- [ ] **Package Format:** Often missing signature verification - verify tampered package fails to load
-- [ ] **Documentation:** Often missing troubleshooting section - verify common errors are documented
-- [ ] **Documentation:** Often missing API reference - verify all public interfaces are documented
-- [ ] **Documentation:** Often missing version compatibility guide - verify breaking changes are listed
+- [ ] **Multi-Anima:** Often missing proper disposal — verify `IAsyncDisposable` implemented and EventBus unsubscribed
+- [ ] **Module unloading:** Often missing Assembly reference cleanup — verify file handles released and memory freed
+- [ ] **Configuration persistence:** Often missing atomic write pattern — verify no corruption under concurrent writes
+- [ ] **i18n:** Often missing fallback strategy — verify UI shows readable text when translations missing
+- [ ] **RTL support:** Often missing editor isolation — verify visual editor works in Arabic/Hebrew
+- [ ] **Module isolation:** Often missing static state audit — verify no shared state across instances
+- [ ] **Heartbeat concurrency:** Often missing thread safety — verify no race conditions with multiple Animas
+- [ ] **Culture switching:** Often missing full reload — verify culture change actually updates all UI
 
 ## Recovery Strategies
 
-When pitfalls occur despite prevention, how to recover.
-
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Template version drift | MEDIUM | Update template, regenerate affected modules, release new runtime |
-| Missing manifest validation | HIGH | Add validation, reject invalid packages, update all existing packages |
-| Type identity issues | HIGH | Refactor to use shared interfaces, may require runtime changes |
-| Documentation gaps | LOW | Add missing docs incrementally, prioritize by error frequency |
-| CLI output philosophy | MEDIUM | Add --verbose/--quiet flags, adjust default output |
-| No checksum validation | MEDIUM | Add checksums to manifest, version bump package format |
+| Circuit memory leaks | MEDIUM | Add `IAsyncDisposable` to components, unsubscribe from events, restart application to clear leaked circuits |
+| AssemblyLoadContext leaks | MEDIUM | Refactor to clear Assembly references before Unload(), restart to release file handles |
+| Singleton-to-scoped mismatch | HIGH | Audit all services, change registrations, refactor singletons to use `IServiceScopeFactory`, extensive testing |
+| Config file corruption | LOW | Restore from backup, implement atomic write pattern, add validation on load |
+| Culture switching issues | LOW | Implement full page reload pattern, add confirmation dialog, test with both languages |
+| Shared static state | HIGH | Refactor modules to use instance fields, change to scoped registration, extensive testing |
+| Heartbeat race conditions | MEDIUM | Add synchronization primitives, make operations idempotent, add concurrency tests |
+| Missing translations | LOW | Add fallback to English, implement build-time validation, create translation coverage report |
+| Config UI desync | MEDIUM | Establish clear state flow, add explicit save, implement dirty state tracking |
+| RTL layout breaks | LOW | Wrap editor in `dir="ltr"`, test with RTL languages, document LTR-only canvas |
 
 ## Pitfall-to-Phase Mapping
 
-How roadmap phases should address these pitfalls.
-
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Template "works on my machine" | Phase 1 (CLI & Template) | Test template in clean VM |
-| CLI exit code confusion | Phase 1 (CLI & Template) | Test in shell scripts checking $? |
-| Wrong output stream | Phase 1 (CLI & Template) | Test `oani pack \| cat` for clean output |
-| Missing manifest validation | Phase 2 (Package Format) | Attempt to load invalid manifest |
-| Version compatibility hell | Phase 2 (Package Format) | Load module with wrong runtime version |
-| AssemblyLoadContext issues | Phase 3 (Documentation) | Verify module docs explain this clearly |
-| Documentation assumes experts | Phase 3 (Documentation) | Test docs with new developers |
-| Verbose/silent CLI output | Phase 1 (CLI & Template) | User testing with default, --verbose, --quiet |
-| Template version drift | Phase 1 (CLI & Template) | CI test template against latest runtime |
-| No graceful degradation | All phases | Error message review in PR checklist |
+| Circuit memory leaks | Phase 1 (Multi-Anima) | Run memory profiler, verify circuits collected after disconnect |
+| AssemblyLoadContext leaks | Phase 3 (Module Management) | Check file handles with Process Explorer, verify memory released |
+| Singleton-to-scoped mismatch | Phase 1 (Multi-Anima) | Run with 2+ Animas, verify no DI exceptions |
+| Config file corruption | Phase 2 (Config Persistence) | Concurrent write test, verify JSON always valid |
+| Culture switching issues | Phase 2 (i18n) | Switch languages multiple times, verify UI updates completely |
+| Shared static state | Phase 1 (Multi-Anima) | Run 2+ Animas, verify state isolation |
+| Heartbeat race conditions | Phase 1 (Multi-Anima) | Run 10+ Animas concurrently, verify no exceptions |
+| Missing translations | Phase 2 (i18n) | Check both languages, verify no keys shown |
+| Config UI desync | Phase 4 (Module Config UI) | Edit config, restart, verify changes persisted |
+| RTL layout breaks | Phase 2 (i18n) | Test with Arabic, verify editor usable |
 
 ## Sources
 
-- [Command Line Interface Guidelines (clig.dev)](https://clig.dev/) - Comprehensive CLI design best practices and anti-patterns (HIGH confidence)
-- [Custom templates for dotnet new - Microsoft Learn](https://learn.microsoft.com/en-us/dotnet/core/tools/custom-templates) - Template authoring reference (HIGH confidence)
-- [.nuspec File Reference - Microsoft Learn](https://learn.microsoft.com/en-us/nuget/reference/nuspec) - Package manifest design patterns (HIGH confidence)
-- [About AssemblyLoadContext - Microsoft Learn](https://learn.microsoft.com/en-us/dotnet/core/dependency-loading/understanding-assemblyloadcontext) - Plugin isolation and type identity issues (HIGH confidence)
-- [What is NuGet - Microsoft Learn](https://learn.microsoft.com/en-us/nuget/what-is-nuget) - Package management lessons learned (HIGH confidence)
-- OpenAnima PROJECT.md - Existing architecture decisions and validated requirements
+- [Blazor Server Memory Management](https://amarozka.dev/blazor-server-memory-management-circuit-leaks/) — Circuit leak patterns and disposal (MEDIUM confidence)
+- [AssemblyLoadContext.Unload silently fails](https://github.com/dotnet/runtime/issues/44679) — Assembly reference cleanup requirements (HIGH confidence)
+- [Concurrent Hosted Service Start and Stop in .NET 8](https://www.stevejgordon.co.uk/concurrent-hosted-service-start-and-stop-in-dotnet-8) — Hosted service concurrency changes (HIGH confidence)
+- [Blazor web app localization culture change exceptions](https://stackoverflow.com/questions/79516530/blazor-web-app-global-interactiveserver-net9-localization-during-culture-ch) — Culture switching issues (MEDIUM confidence)
+- [Resolving RTL Display Issues in Blazor](https://learn.microsoft.com/en-us/answers/questions/1186552/resolving-right-to-left-(rtl)-display-issues-in-bl) — RTL layout problems (MEDIUM confidence)
+- [Blazor concurrency problem using Entity Framework Core](https://stackoverflow.com/questions/59747983/blazor-concurrency-problem-using-entity-framework-core) — Concurrent execution issues (MEDIUM confidence)
+- [What does scoped lifetime mean in Blazor Server](https://stackoverflow.com/questions/76195106/what-does-scoped-lifetime-for-a-service-mean-in-blazor-server) — Service lifetime semantics (MEDIUM confidence)
+- [Concurrent file write](https://stackoverflow.com/questions/1160233/concurrent-file-write) — File corruption patterns (LOW confidence - general topic)
+- OpenAnima PROJECT.md — Existing architecture and decisions (HIGH confidence)
 
 ---
-*Pitfalls research for: Module SDK & CLI Tool Development*
+*Pitfalls research for: Multi-Anima Architecture, i18n, and Module Management*
 *Researched: 2026-02-28*
