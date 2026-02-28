@@ -18,7 +18,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 23. Multi-Anima Foundation | 2/2 | Complete    | 2026-02-28 |
-| 24. Service Migration & i18n | 0/? | Not started | - |
+| 24. Service Migration & i18n | 2/2 | Planned | - |
 | 25. Module Management | 0/? | Not started | - |
 | 26. Module Configuration UI | 0/? | Not started | - |
 | 27. Built-in Modules | 0/? | Not started | - |
@@ -50,7 +50,9 @@
   3. User can switch UI language between Chinese and English
   4. Language preference persists across sessions
   5. Missing translations fall back to English gracefully
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 24-01-PLAN.md — Per-Anima runtime isolation (AnimaRuntime container, DI refactoring, SignalR filtering)
+- [ ] 24-02-PLAN.md — i18n (LanguageService, .resx resources, Settings page, component localization)
 
 ### Phase 25: Module Management
 **Goal**: Users can install, uninstall, enable, and disable modules with metadata display
