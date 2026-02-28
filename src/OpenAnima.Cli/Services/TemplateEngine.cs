@@ -237,7 +237,7 @@ public class TemplateEngine
         // Read from input ports (via EventBus subscriptions set up in InitializeAsync)
         // Process the data
         // Write to output ports (via EventBus publish)
-        _state = ModuleExecutionState.Processing;
+        _state = ModuleExecutionState.Running;
         try
         {
             // Example: Read input, process, write output
