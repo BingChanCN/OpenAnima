@@ -206,6 +206,39 @@
   <data name="Modules.UnloadConfirm" xml:space="preserve">
     <value>Are you sure you want to unload</value>
   </data>
+  <data name="Modules.Install" xml:space="preserve">
+    <value>Install Module</value>
+  </data>
+  <data name="Modules.Installing" xml:space="preserve">
+    <value>Installing...</value>
+  </data>
+  <data name="Modules.InstallSuccess" xml:space="preserve">
+    <value>Module installed successfully</value>
+  </data>
+  <data name="Modules.InstallFailed" xml:space="preserve">
+    <value>Module installation failed</value>
+  </data>
+  <data name="Modules.Uninstall" xml:space="preserve">
+    <value>Uninstall</value>
+  </data>
+  <data name="Modules.UninstallConfirm" xml:space="preserve">
+    <value>Are you sure you want to uninstall this module? This will delete the module files.</value>
+  </data>
+  <data name="Modules.UninstallSuccess" xml:space="preserve">
+    <value>Module uninstalled successfully</value>
+  </data>
+  <data name="Modules.EmptyState" xml:space="preserve">
+    <value>No modules installed. Click the install button to get started.</value>
+  </data>
+  <data name="Modules.Search" xml:space="preserve">
+    <value>Search modules...</value>
+  </data>
+  <data name="Modules.Enabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="Modules.Disabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
   <data name="Modules.Detail.Version" xml:space="preserve">
     <value>Version</value>
   </data>
