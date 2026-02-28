@@ -7,12 +7,12 @@
 
 ### Anima Management (ANIMA)
 
-- [ ] **ANIMA-01**: User can create new Anima with custom name
-- [ ] **ANIMA-02**: User can view list of all Animas in global sidebar
-- [ ] **ANIMA-03**: User can switch between different Animas
-- [ ] **ANIMA-04**: User can delete Anima
-- [ ] **ANIMA-05**: User can rename Anima
-- [ ] **ANIMA-06**: User can clone existing Anima (duplicate configuration)
+- [x] **ANIMA-01**: User can create new Anima with custom name
+- [x] **ANIMA-02**: User can view list of all Animas in global sidebar
+- [x] **ANIMA-03**: User can switch between different Animas
+- [x] **ANIMA-04**: User can delete Anima
+- [x] **ANIMA-05**: User can rename Anima
+- [x] **ANIMA-06**: User can clone existing Anima (duplicate configuration)
 - [ ] **ANIMA-07**: Each Anima has independent heartbeat loop
 - [ ] **ANIMA-08**: Each Anima has independent module instances
 - [ ] **ANIMA-09**: Each Anima has independent chat interface
@@ -93,12 +93,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ANIMA-01 | Phase 23 | Pending |
-| ANIMA-02 | Phase 23 | Pending |
-| ANIMA-03 | Phase 23 | Pending |
-| ANIMA-04 | Phase 23 | Pending |
-| ANIMA-05 | Phase 23 | Pending |
-| ANIMA-06 | Phase 23 | Pending |
+| ANIMA-01 | Phase 23 | Complete |
+| ANIMA-02 | Phase 23 | Complete |
+| ANIMA-03 | Phase 23 | Complete |
+| ANIMA-04 | Phase 23 | Complete |
+| ANIMA-05 | Phase 23 | Complete |
+| ANIMA-06 | Phase 23 | Complete |
 | ANIMA-10 | Phase 23 | Complete |
 | ARCH-01 | Phase 23 | Complete |
 | ARCH-02 | Phase 23 | Complete |

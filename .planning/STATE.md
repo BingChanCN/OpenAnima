@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-status: Ready to begin
-last_updated: "2026-02-28T12:55:46.546Z"
-last_activity: 2026-02-28 — Roadmap created for v1.5
+status: executing
+last_updated: "2026-02-28T13:01:03.025Z"
+last_activity: "2026-02-28 — Completed 23-01: AnimaRuntimeManager + AnimaContext core services"
 progress:
   total_phases: 11
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 23
-  completed_plans: 22
-  percent: 96
+  completed_plans: 23
+  percent: 100
 ---
 
 # Project State: OpenAnima v1.5 Multi-Anima Architecture
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 ## Current Position
 
 **Phase:** 23 - Multi-Anima Foundation
-**Plan:** 01 complete (2/N plans)
-**Status:** In progress
-**Last activity:** 2026-02-28 — Completed 23-01: AnimaRuntimeManager + AnimaContext core services
+**Plan:** 02 complete (all plans done)
+**Status:** Phase complete
+**Last activity:** 2026-02-28 — Completed 23-02: AnimaListPanel sidebar UI + AnimaInitializationService
 
-**Progress:** [██████████] 96%
+**Progress:** [██████████] 100%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 - Last 5 plans: Consistent ~5 min execution
 - Trend: Stable
 | Phase 23-multi-anima-foundation P01 | 3 | 2 tasks | 8 files |
+| Phase 23-multi-anima-foundation P02 | 3 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 - **Phase 23-01:** Short 8-char hex ID from Guid.NewGuid().ToString("N")[..8] for Anima directory names — readable, effectively collision-free for single-user app
 - **Phase 23-01:** AnimaContext is a plain singleton with event (not CascadingValue) to avoid full layout re-render on every active-Anima change
 - **Phase 23-01:** Clone copies only anima.json (not runtime state files) to prevent inheriting runtime state in cloned Anima
+- **Phase 23-02:** AnimaInitializationService registered before OpenAnimaHostedService to ensure Anima data ready before module scanning
+- **Phase 23-02:** CascadingValue wraps only anima-list-section to minimize re-render scope on sidebar collapse toggle
 
 ### Key Decisions (v1.4)
 
@@ -111,8 +114,8 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 ### Active TODOs
 
 - [x] Begin Phase 23 execution with plan 23-01
-- [ ] Plan 23-02: AnimaListPanel sidebar UI
-- [ ] AnimaRuntimeManager.InitializeAsync() needs startup hook (hosted service)
+- [x] Plan 23-02: AnimaListPanel sidebar UI
+- [x] AnimaRuntimeManager.InitializeAsync() needs startup hook (hosted service)
 
 ### Known Blockers
 
