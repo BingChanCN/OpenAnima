@@ -8,7 +8,7 @@
 ## Phases
 
 - [x] **Phase 23: Multi-Anima Foundation** - Core architecture for independent Anima instances (completed 2026-02-28)
-- [ ] **Phase 24: Service Migration & i18n** - Refactor singleton services and add internationalization
+- [x] **Phase 24: Service Migration & i18n** - Refactor singleton services and add internationalization (completed 2026-02-28)
 - [ ] **Phase 25: Module Management** - Install/uninstall/enable/disable module capabilities
 - [ ] **Phase 26: Module Configuration UI** - Detail panel for per-module configuration
 - [ ] **Phase 27: Built-in Modules** - Rich module ecosystem with text processing and flow control
@@ -18,7 +18,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 23. Multi-Anima Foundation | 2/2 | Complete    | 2026-02-28 |
-| 24. Service Migration & i18n | 2/3 | In Progress|  |
+| 24. Service Migration & i18n | 3/3 | Complete   | 2026-02-28 |
 | 25. Module Management | 0/? | Not started | - |
 | 26. Module Configuration UI | 0/? | Not started | - |
 | 27. Built-in Modules | 0/? | Not started | - |
