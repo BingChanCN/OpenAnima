@@ -1,6 +1,8 @@
 using Xunit;
 using OpenAnima.Cli.Services;
 using OpenAnima.Cli.Models;
+using System.IO.Compression;
+using System.Text.Json;
 
 namespace OpenAnima.Cli.Tests;
 
@@ -563,6 +565,234 @@ public class ValidateCommandTests
         {
             Console.SetOut(originalOut);
             Console.SetError(originalError);
+        }
+    }
+}
+
+/// <summary>
+/// Unit tests for PackService.
+/// </summary>
+public class PackServiceTests
+{
+    [Fact]
+    public void Pack_ValidModuleWithNoBuild_ProducesOamodFile()
+    {
+        // Arrange - Create a temp module directory with module.json and a fake DLL
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-module-{Guid.NewGuid()}");
+        var binDir = Path.Combine(tempDir, "bin", "Release", "net8.0");
+        var outputDir = Path.Combine(Path.GetTempPath(), $"test-output-{Guid.NewGuid()}");
+
+        try
+        {
+            Directory.CreateDirectory(binDir);
+            Directory.CreateDirectory(outputDir);
+
+            var manifestJson = @"{
+                ""id"": ""TestModule"",
+                ""name"": ""TestModule"",
+                ""version"": ""1.0.0""
+            }";
+
+            File.WriteAllText(Path.Combine(tempDir, "module.json"), manifestJson);
+            File.WriteAllText(Path.Combine(binDir, "TestModule.dll"), "fake dll content");
+
+            var packService = new PackService();
+
+            // Act
+            var exitCode = packService.Pack(tempDir, outputDir, noBuild: true);
+
+            // Assert
+            Assert.Equal(ExitCodes.Success, exitCode);
+            var oamodPath = Path.Combine(outputDir, "TestModule.oamod");
+            Assert.True(File.Exists(oamodPath), "Expected .oamod file to exist");
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
+        }
+    }
+
+    [Fact]
+    public void Pack_CreatedOamodIsValidZip_ContainsModuleJsonAndDll()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-module-{Guid.NewGuid()}");
+        var binDir = Path.Combine(tempDir, "bin", "Release", "net8.0");
+        var outputDir = Path.Combine(Path.GetTempPath(), $"test-output-{Guid.NewGuid()}");
+
+        try
+        {
+            Directory.CreateDirectory(binDir);
+            Directory.CreateDirectory(outputDir);
+
+            var manifestJson = @"{
+                ""id"": ""TestModule"",
+                ""name"": ""TestModule"",
+                ""version"": ""1.0.0""
+            }";
+
+            File.WriteAllText(Path.Combine(tempDir, "module.json"), manifestJson);
+            File.WriteAllText(Path.Combine(binDir, "TestModule.dll"), "fake dll content");
+
+            var packService = new PackService();
+            packService.Pack(tempDir, outputDir, noBuild: true);
+
+            // Act - Open the .oamod as a ZIP
+            var oamodPath = Path.Combine(outputDir, "TestModule.oamod");
+            using var archive = ZipFile.OpenRead(oamodPath);
+
+            // Assert
+            Assert.NotNull(archive.GetEntry("module.json"));
+            Assert.NotNull(archive.GetEntry("TestModule.dll"));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
+        }
+    }
+
+    [Fact]
+    public void Pack_EmbeddedManifestContainsChecksum()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-module-{Guid.NewGuid()}");
+        var binDir = Path.Combine(tempDir, "bin", "Release", "net8.0");
+        var outputDir = Path.Combine(Path.GetTempPath(), $"test-output-{Guid.NewGuid()}");
+
+        try
+        {
+            Directory.CreateDirectory(binDir);
+            Directory.CreateDirectory(outputDir);
+
+            var manifestJson = @"{
+                ""id"": ""TestModule"",
+                ""name"": ""TestModule"",
+                ""version"": ""1.0.0""
+            }";
+
+            File.WriteAllText(Path.Combine(tempDir, "module.json"), manifestJson);
+            File.WriteAllText(Path.Combine(binDir, "TestModule.dll"), "fake dll content");
+
+            var packService = new PackService();
+            packService.Pack(tempDir, outputDir, noBuild: true);
+
+            // Act - Read module.json from the .oamod
+            var oamodPath = Path.Combine(outputDir, "TestModule.oamod");
+            using var archive = ZipFile.OpenRead(oamodPath);
+            var manifestEntry = archive.GetEntry("module.json");
+            using var stream = manifestEntry!.Open();
+            using var reader = new StreamReader(stream);
+            var embeddedJson = reader.ReadToEnd();
+            var manifest = JsonSerializer.Deserialize<ModuleManifest>(embeddedJson);
+
+            // Assert
+            Assert.NotNull(manifest);
+            Assert.NotNull(manifest.Checksum);
+            Assert.Equal("md5", manifest.Checksum.Algorithm);
+            Assert.NotEmpty(manifest.Checksum.Value);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
+        }
+    }
+
+    [Fact]
+    public void Pack_EmbeddedManifestContainsTargetFramework()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-module-{Guid.NewGuid()}");
+        var binDir = Path.Combine(tempDir, "bin", "Release", "net8.0");
+        var outputDir = Path.Combine(Path.GetTempPath(), $"test-output-{Guid.NewGuid()}");
+
+        try
+        {
+            Directory.CreateDirectory(binDir);
+            Directory.CreateDirectory(outputDir);
+
+            var manifestJson = @"{
+                ""id"": ""TestModule"",
+                ""name"": ""TestModule"",
+                ""version"": ""1.0.0""
+            }";
+
+            File.WriteAllText(Path.Combine(tempDir, "module.json"), manifestJson);
+            File.WriteAllText(Path.Combine(binDir, "TestModule.dll"), "fake dll content");
+
+            var packService = new PackService();
+            packService.Pack(tempDir, outputDir, noBuild: true);
+
+            // Act - Read module.json from the .oamod
+            var oamodPath = Path.Combine(outputDir, "TestModule.oamod");
+            using var archive = ZipFile.OpenRead(oamodPath);
+            var manifestEntry = archive.GetEntry("module.json");
+            using var stream = manifestEntry!.Open();
+            using var reader = new StreamReader(stream);
+            var embeddedJson = reader.ReadToEnd();
+            var manifest = JsonSerializer.Deserialize<ModuleManifest>(embeddedJson);
+
+            // Assert
+            Assert.NotNull(manifest);
+            Assert.Equal("net8.0", manifest.TargetFramework);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
+        }
+    }
+
+    [Fact]
+    public void Pack_MissingModuleJson_ReturnsGeneralError()
+    {
+        // Arrange - Create directory without module.json
+        var tempDir = Path.Combine(Path.GetTempPath(), $"test-module-{Guid.NewGuid()}");
+        var outputDir = Path.Combine(Path.GetTempPath(), $"test-output-{Guid.NewGuid()}");
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            Directory.CreateDirectory(outputDir);
+
+            var packService = new PackService();
+
+            // Act
+            var exitCode = packService.Pack(tempDir, outputDir, noBuild: true);
+
+            // Assert
+            Assert.Equal(ExitCodes.GeneralError, exitCode);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
+        }
+    }
+
+    [Fact]
+    public void Pack_NonExistentDirectory_ReturnsGeneralError()
+    {
+        // Arrange
+        var nonExistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent-{Guid.NewGuid()}");
+        var outputDir = Path.Combine(Path.GetTempPath(), $"test-output-{Guid.NewGuid()}");
+
+        try
+        {
+            Directory.CreateDirectory(outputDir);
+            var packService = new PackService();
+
+            // Act
+            var exitCode = packService.Pack(nonExistentPath, outputDir, noBuild: true);
+
+            // Assert
+            Assert.Equal(ExitCodes.GeneralError, exitCode);
+        }
+        finally
+        {
+            if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
         }
     }
 }

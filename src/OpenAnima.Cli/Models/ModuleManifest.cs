@@ -62,6 +62,18 @@ public class ModuleManifest
     public PortDeclarations Ports { get; set; } = new();
 
     /// <summary>
+    /// Target framework for the module (e.g., "net8.0").
+    /// </summary>
+    [JsonPropertyName("targetFramework")]
+    public string TargetFramework { get; set; } = "net8.0";
+
+    /// <summary>
+    /// Checksum information for integrity verification.
+    /// </summary>
+    [JsonPropertyName("checksum")]
+    public ChecksumInfo? Checksum { get; set; }
+
+    /// <summary>
     /// Gets the entry assembly name, computing from module name if not specified.
     /// </summary>
     public string GetEntryAssembly()
@@ -104,4 +116,22 @@ public class PortDeclarations
     /// </summary>
     [JsonPropertyName("outputs")]
     public List<PortDeclaration> Outputs { get; set; } = new();
+}
+
+/// <summary>
+/// Checksum information for integrity verification.
+/// </summary>
+public class ChecksumInfo
+{
+    /// <summary>
+    /// Checksum algorithm (e.g., "md5").
+    /// </summary>
+    [JsonPropertyName("algorithm")]
+    public string Algorithm { get; set; } = "md5";
+
+    /// <summary>
+    /// Checksum value as hex string.
+    /// </summary>
+    [JsonPropertyName("value")]
+    public string Value { get; set; } = string.Empty;
 }
