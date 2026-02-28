@@ -4,88 +4,100 @@
 @using OpenAnima.Contracts.Ports
 @using OpenAnima.Core.Ports
 @using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.AspNetCore.Components.Forms
 @inject IModuleService ModuleService
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResources> L
 @inject LanguageService LangSvc
+@inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<h1 class="page-title">@L["Modules.Title"]</h1>
-
-<!-- Available Modules Section -->
-<div class="modules-section">
-    <h2 class="section-title">@L["Modules.Available"]</h2>
-    @if (availableModules.Count == 0)
-    {
-        <p class="text-muted">@L["Modules.NoAvailable"]</p>
-    }
-    else
-    {
-        @foreach (var name in availableModules)
-        {
-            <div class="module-item card">
-                <div class="module-item-info">
-                    <span class="module-item-name">@name</span>
-                    <span class="status-indicator available"><span class="status-dot"></span>@L["Modules.StatusAvailable"]</span>
-                </div>
-                <button class="btn btn-primary @(operatingModule == name ? "loading" : "")"
-                        disabled="@isOperating"
-                        @onclick="() => LoadModule(name)">
-                    @if (operatingModule == name) { <span class="spinner"></span> }
-                    @L["Modules.Load"]
-                </button>
-                @if (moduleErrors.TryGetValue(name, out var availErr))
-                {
-                    <div class="error-inline">@availErr</div>
-                }
-            </div>
-        }
-    }
+<div class="page-header">
+    <h1 class="page-title">@L["Modules.Title"]</h1>
+    <button class="btn btn-primary" @onclick="TriggerInstall">@L["Modules.Install"]</button>
 </div>
 
-<!-- Loaded Modules Section -->
-<div class="modules-section">
-    <h2 class="section-title">@L["Modules.Loaded"]</h2>
-    @if (ModuleService.Count == 0)
-    {
-        <p class="text-muted">@L["Modules.NoLoaded"]</p>
-    }
-    else
-    {
-        @foreach (var entry in ModuleService.GetAllModules())
+<!-- Hidden InputFile for .oamod upload -->
+<InputFile @ref="inputFileRef"
+           OnChange="HandleFileSelected"
+           accept=".oamod"
+           style="display: none;"
+           id="oamod-file-input" />
+
+<!-- Search box -->
+@if (ModuleService.Count > 0)
+{
+    <div class="search-box">
+        <input type="text"
+               class="search-input"
+               placeholder="@L["Modules.Search"]"
+               @bind="searchFilter"
+               @bind:event="oninput" />
+    </div>
+}
+
+<!-- Loading indicator during installation -->
+@if (isInstalling)
+{
+    <div class="installing-banner">
+        <span class="spinner"></span>
+        <span>@L["Modules.Installing"]</span>
+    </div>
+}
+
+<!-- Module cards grid -->
+@if (ModuleService.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-state-icon">📦</div>
+        <p class="empty-state-text">@L["Modules.EmptyState"]</p>
+        <button class="btn btn-primary" @onclick="TriggerInstall">@L["Modules.Install"]</button>
+    </div>
+}
+else
+{
+    <div class="module-grid">
+        @foreach (var entry in FilteredModules)
         {
             var moduleName = entry.Manifest.Name;
-            <div class="module-item card">
-                <div class="module-item-info" @onclick="() => ShowDetails(entry)" style="cursor:pointer">
-                    <span class="module-item-name">@entry.Module.Metadata.Name</span>
-                    <span class="module-item-version">v@(entry.Module.Metadata.Version)</span>
-                    <span class="status-indicator loaded"><span class="status-dot"></span>@L["Modules.StatusLoaded"]</span>
+            <div class="module-card card" @onclick="() => ShowDetails(entry)">
+                <div class="module-card-header">
+                    <span class="module-card-name">@entry.Module.Metadata.Name</span>
+                    <span class="status-badge enabled">@L["Modules.Enabled"]</span>
                 </div>
-                <button class="btn btn-danger @(operatingModule == moduleName ? "loading" : "")"
-                        disabled="@isOperating"
-                        @onclick="() => UnloadModule(moduleName)">
-                    @if (operatingModule == moduleName) { <span class="spinner"></span> }
-                    @L["Modules.Unload"]
-                </button>
-                @if (moduleErrors.TryGetValue(moduleName, out var loadedErr))
-                {
-                    <div class="error-inline">@loadedErr</div>
-                }
+                <div class="module-card-body">
+                    <span class="module-version">v@(entry.Module.Metadata.Version)</span>
+                </div>
+                <div class="module-card-actions" @onclick:stopPropagation="true">
+                    <button class="btn btn-sm btn-danger"
+                            disabled="@isOperating"
+                            @onclick="() => UninstallModule(moduleName)">
+                        @L["Modules.Uninstall"]
+                    </button>
+                </div>
             </div>
         }
-    }
-</div>
+    </div>
+}
+
+<!-- Error display -->
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="error-banner">
+        @errorMessage
+    </div>
+}
 
 <!-- Confirmation Dialog -->
-<ConfirmDialog IsVisible="@showUnloadConfirm"
-               Title="@L["Modules.UnloadTitle"]"
-               Message="@($"{L["Modules.UnloadConfirm"].Value} {moduleToUnload}?")"
-               ConfirmText="@L["Modules.Unload"]"
+<ConfirmDialog IsVisible="@showUninstallConfirm"
+               Title="@L["Modules.Uninstall"]"
+               Message="@L["Modules.UninstallConfirm"]"
+               ConfirmText="@L["Modules.Uninstall"]"
                ConfirmButtonClass="btn-danger"
-               OnConfirm="@ConfirmUnload"
-               OnCancel="@CancelUnload" />
+               OnConfirm="@ConfirmUninstall"
+               OnCancel="@CancelUninstall" />
 
-<!-- Keep existing ModuleDetailModal -->
+<!-- Module Detail Modal -->
 <ModuleDetailModal IsVisible="@showModal"
                    Title="@(selectedModule?.Module.Metadata.Name ?? "")"
                    OnClose="@CloseModal">
@@ -160,14 +172,20 @@
 
 @code {
     private HubConnection? hubConnection;
-    private List<string> availableModules = new();
+    private InputFile? inputFileRef;
+    private bool isInstalling = false;
     private bool isOperating = false;
-    private string? operatingModule = null;
-    private Dictionary<string, string> moduleErrors = new();
+    private string searchFilter = "";
+    private string? errorMessage = null;
     private PluginRegistryEntry? selectedModule;
     private bool showModal;
-    private bool showUnloadConfirm = false;
-    private string? moduleToUnload = null;
+    private bool showUninstallConfirm = false;
+    private string? moduleToUninstall = null;
+
+    private IEnumerable<PluginRegistryEntry> FilteredModules =>
+        ModuleService.GetAllModules()
+            .Where(m => string.IsNullOrWhiteSpace(searchFilter) ||
+                       m.Manifest.Name.Contains(searchFilter, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
@@ -180,92 +198,99 @@
 
         hubConnection.On<string, int>("ReceiveModuleCountChanged", async (animaId, count) =>
         {
-            await RefreshAvailableModules();
             await InvokeAsync(StateHasChanged);
         });
 
         await hubConnection.StartAsync();
-        await RefreshAvailableModules();
     }
 
-    private async Task RefreshAvailableModules()
+    private async Task TriggerInstall()
     {
-        if (hubConnection != null)
-            availableModules = await hubConnection.InvokeAsync<List<string>>("GetAvailableModules");
+        await JS.InvokeVoidAsync("eval", "document.getElementById('oamod-file-input').click()");
     }
 
-    private async Task LoadModule(string name)
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
     {
-        isOperating = true;
-        operatingModule = name;
-        moduleErrors.Remove(name);
+        var file = e.File;
+        if (file == null) return;
+
+        isInstalling = true;
+        errorMessage = null;
         StateHasChanged();
 
         try
         {
-            var result = await hubConnection!.InvokeAsync<ModuleOperationResult>("LoadModule", name);
-            if (!result.Success)
+            // Read file data (max 50MB)
+            const long maxFileSize = 50 * 1024 * 1024;
+            using var stream = file.OpenReadStream(maxFileSize);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            var fileData = memoryStream.ToArray();
+
+            // Call RuntimeHub.InstallModule
+            var result = await hubConnection!.InvokeAsync<ModuleOperationResult>("InstallModule", file.Name, fileData);
+
+            if (result.Success)
             {
-                moduleErrors[name] = result.Error ?? "Load failed";
+                errorMessage = null;
+            }
+            else
+            {
+                errorMessage = $"{L["Modules.InstallFailed"]}: {result.Error}";
             }
         }
         catch (Exception ex)
         {
-            moduleErrors[name] = $"Connection error: {ex.Message}";
+            errorMessage = $"{L["Modules.InstallFailed"]}: {ex.Message}";
         }
         finally
         {
-            isOperating = false;
-            operatingModule = null;
-            await RefreshAvailableModules();
+            isInstalling = false;
             StateHasChanged();
         }
     }
 
-    private async Task UnloadModule(string name)
+    private async Task UninstallModule(string name)
     {
-        moduleToUnload = name;
-        showUnloadConfirm = true;
+        moduleToUninstall = name;
+        showUninstallConfirm = true;
     }
 
-    private async Task ConfirmUnload()
+    private async Task ConfirmUninstall()
     {
-        showUnloadConfirm = false;
-        if (moduleToUnload == null) return;
+        showUninstallConfirm = false;
+        if (moduleToUninstall == null) return;
 
-        var name = moduleToUnload;
-        moduleToUnload = null;
+        var name = moduleToUninstall;
+        moduleToUninstall = null;
 
         isOperating = true;
-        operatingModule = name;
-        moduleErrors.Remove(name);
+        errorMessage = null;
         StateHasChanged();
 
         try
         {
-            var result = await hubConnection!.InvokeAsync<ModuleOperationResult>("UnloadModule", name);
+            var result = await hubConnection!.InvokeAsync<ModuleOperationResult>("UninstallModule", name);
             if (!result.Success)
             {
-                moduleErrors[name] = result.Error ?? "Unload failed";
+                errorMessage = $"Uninstall failed: {result.Error}";
             }
         }
         catch (Exception ex)
         {
-            moduleErrors[name] = $"Connection error: {ex.Message}";
+            errorMessage = $"Connection error: {ex.Message}";
         }
         finally
         {
             isOperating = false;
-            operatingModule = null;
-            await RefreshAvailableModules();
             StateHasChanged();
         }
     }
 
-    private void CancelUnload()
+    private void CancelUninstall()
     {
-        showUnloadConfirm = false;
-        moduleToUnload = null;
+        showUninstallConfirm = false;
+        moduleToUninstall = null;
     }
 
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
