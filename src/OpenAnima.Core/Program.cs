@@ -72,6 +72,10 @@ builder.Services.AddWiringServices();
 builder.Services.AddHostedService<AnimaInitializationService>();
 builder.Services.AddHostedService<OpenAnimaHostedService>();
 
+// --- Register i18n services ---
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.AddSingleton<LanguageService>();
+
 // --- Add Blazor Server ---
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -94,6 +98,13 @@ builder.Services.AddSignalR(options =>
 var app = builder.Build();
 
 // --- Configure middleware pipeline ---
+var supportedCultures = new[] { "zh-CN", "en-US" };
+var localizationOptions = new RequestLocalizationOptions()
+    .SetDefaultCulture("zh-CN")
+    .AddSupportedCultures(supportedCultures)
+    .AddSupportedUICultures(supportedCultures);
+app.UseRequestLocalization(localizationOptions);
+
 app.UseStaticFiles();
 app.UseAntiforgery();
 

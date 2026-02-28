@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Nav.Dashboard" xml:space="preserve">
+    <value>仪表盘</value>
+  </data>
+  <data name="Nav.Modules" xml:space="preserve">
+    <value>模块</value>
+  </data>
+  <data name="Nav.Heartbeat" xml:space="preserve">
+    <value>心跳</value>
+  </data>
+  <data name="Nav.Monitor" xml:space="preserve">
+    <value>监控</value>
+  </data>
+  <data name="Nav.Editor" xml:space="preserve">
+    <value>编辑器</value>
+  </data>
+  <data name="Nav.Settings" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Anima.Create" xml:space="preserve">
+    <value>创建 Anima</value>
+  </data>
+  <data name="Anima.Delete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Anima.Rename" xml:space="preserve">
+    <value>重命名</value>
+  </data>
+  <data name="Anima.Clone" xml:space="preserve">
+    <value>克隆</value>
+  </data>
+  <data name="Anima.NewName" xml:space="preserve">
+    <value>新建 Anima</value>
+  </data>
+  <data name="Anima.ConfirmDelete" xml:space="preserve">
+    <value>确定要删除此 Anima 吗？</value>
+  </data>
+  <data name="Anima.Start" xml:space="preserve">
+    <value>启动</value>
+  </data>
+  <data name="Anima.Stop" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="Settings.Title" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Settings.Language" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="Settings.LanguageZh" xml:space="preserve">
+    <value>中文</value>
+  </data>
+  <data name="Settings.LanguageEn" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="Chat.Placeholder" xml:space="preserve">
+    <value>输入消息...</value>
+  </data>
+  <data name="Chat.Send" xml:space="preserve">
+    <value>发送</value>
+  </data>
+  <data name="Chat.Regenerate" xml:space="preserve">
+    <value>重新生成</value>
+  </data>
+  <data name="Common.Confirm" xml:space="preserve">
+    <value>确认</value>
+  </data>
+  <data name="Common.Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Common.Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Common.Close" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="Dashboard.Title" xml:space="preserve">
+    <value>仪表盘</value>
+  </data>
+  <data name="Dashboard.RuntimeStatus" xml:space="preserve">
+    <value>运行状态</value>
+  </data>
+  <data name="Dashboard.ModuleCount" xml:space="preserve">
+    <value>模块数量</value>
+  </data>
+  <data name="Dashboard.HeartbeatStatus" xml:space="preserve">
+    <value>心跳状态</value>
+  </data>
+  <data name="Heartbeat.Title" xml:space="preserve">
+    <value>心跳监控</value>
+  </data>
+  <data name="Heartbeat.TickCount" xml:space="preserve">
+    <value>心跳次数</value>
+  </data>
+  <data name="Heartbeat.Latency" xml:space="preserve">
+    <value>延迟</value>
+  </data>
+  <data name="Heartbeat.Skipped" xml:space="preserve">
+    <value>跳过</value>
+  </data>
+  <data name="Heartbeat.Running" xml:space="preserve">
+    <value>运行中</value>
+  </data>
+  <data name="Heartbeat.Stopped" xml:space="preserve">
+    <value>已停止</value>
+  </data>
+  <data name="Monitor.Title" xml:space="preserve">
+    <value>系统监控</value>
+  </data>
+  <data name="Modules.Title" xml:space="preserve">
+    <value>模块管理</value>
+  </data>
+  <data name="Editor.Title" xml:space="preserve">
+    <value>编辑器</value>
+  </data>
+</root>

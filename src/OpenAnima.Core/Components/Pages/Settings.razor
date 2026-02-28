@@ -1,0 +1,65 @@
+@page "/settings"
+@inject LanguageService LanguageService
+@inject IStringLocalizer<SharedResources> L
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="settings-container">
+    <h1 class="page-title">@L["Settings.Title"]</h1>
+
+    <div class="settings-section card">
+        <h2 class="section-title">@L["Settings.Language"]</h2>
+        <div class="setting-row">
+            <label class="setting-label" for="language-select">@L["Settings.Language"]</label>
+            <select id="language-select"
+                    class="language-select"
+                    value="@_selectedCulture"
+                    @onchange="OnLanguageChanged">
+                <option value="zh-CN">@L["Settings.LanguageZh"]</option>
+                <option value="en-US">@L["Settings.LanguageEn"]</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _selectedCulture = "zh-CN";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            LanguageService.LanguageChanged += OnLanguageChanged;
+            var saved = await JS.InvokeAsync<string?>("localStorage.getItem", "openanima-language");
+            if (!string.IsNullOrEmpty(saved))
+            {
+                _selectedCulture = saved;
+                LanguageService.SetLanguage(saved);
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                _selectedCulture = LanguageService.Current.Name;
+            }
+        }
+    }
+
+    private async Task OnLanguageChanged(ChangeEventArgs e)
+    {
+        var culture = e.Value?.ToString() ?? "zh-CN";
+        _selectedCulture = culture;
+        LanguageService.SetLanguage(culture);
+        await JS.InvokeVoidAsync("localStorage.setItem", "openanima-language", culture);
+    }
+
+    private void OnLanguageChanged()
+    {
+        _selectedCulture = LanguageService.Current.Name;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        LanguageService.LanguageChanged -= OnLanguageChanged;
+    }
+}

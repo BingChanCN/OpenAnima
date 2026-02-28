@@ -1,0 +1,54 @@
+.settings-container {
+    padding: 1.5rem;
+    max-width: 600px;
+}
+
+.page-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary, #e0e0e0);
+}
+
+.settings-section {
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    border-radius: 6px;
+}
+
+.section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-primary, #e0e0e0);
+    border-bottom: 1px solid var(--border-color, #333);
+    padding-bottom: 0.5rem;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.setting-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary, #aaa);
+    min-width: 80px;
+}
+
+.language-select {
+    background: var(--bg-secondary, #1e1e1e);
+    color: var(--text-primary, #e0e0e0);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 4px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 140px;
+}
+
+.language-select:focus {
+    outline: none;
+    border-color: var(--accent-color, #4a9eff);
+}
