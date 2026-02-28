@@ -65,7 +65,10 @@
   4. User can enable/disable module per Anima independently
   5. User can view module metadata (name, version, author, description)
   6. User can search and filter modules by name
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 25-01-PLAN.md — AnimaModuleStateService for per-Anima enable/disable tracking
+- [ ] 25-02-PLAN.md — Enhanced Modules.razor with card layout, .oamod installation, search
+- [ ] 25-03-PLAN.md — Module detail sidebar and right-click context menu
 
 ### Phase 26: Module Configuration UI
 **Goal**: Users can configure module-specific settings through detail panel in editor
