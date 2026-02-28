@@ -137,6 +137,7 @@ public class PluginLoader
 
     /// <summary>
     /// Scans a modules directory and attempts to load all subdirectories as modules.
+    /// Also scans for .oamod packages and extracts them before loading.
     /// </summary>
     /// <param name="modulesPath">Path to the modules directory</param>
     /// <returns>List of all load results (successes and failures)</returns>
@@ -148,9 +149,28 @@ public class PluginLoader
         }
 
         var results = new List<LoadResult>();
+
+        // Scan subdirectories (skip .extracted to avoid double-loading)
         foreach (string subdirectory in Directory.GetDirectories(modulesPath))
         {
+            if (Path.GetFileName(subdirectory) == ".extracted")
+                continue;
+
             results.Add(LoadModule(subdirectory));
+        }
+
+        // Also scan for .oamod packages
+        foreach (string oamodFile in Directory.GetFiles(modulesPath, "*.oamod"))
+        {
+            try
+            {
+                var extractedDir = OamodExtractor.Extract(oamodFile, modulesPath);
+                results.Add(LoadModule(extractedDir));
+            }
+            catch (Exception ex)
+            {
+                results.Add(new LoadResult(null, null, null, ex, false));
+            }
         }
 
         return results;
