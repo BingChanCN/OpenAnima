@@ -55,16 +55,23 @@ public class TemplateEngine
         List<PortDeclaration>? inputs = null,
         List<PortDeclaration>? outputs = null)
     {
-        var template = LoadTemplate("Module.cs.template");
+        var template = LoadTemplate("module-cs.tmpl");
 
         var portAttributes = GeneratePortAttributes(inputs, outputs);
+        var hasPorts = (inputs != null && inputs.Count > 0) || (outputs != null && outputs.Count > 0);
+
+        // Generate IModuleExecutor implementation if module has ports
+        var implementsExecutor = hasPorts ? ", IModuleExecutor" : "";
+        var executeMethod = hasPorts ? GenerateExecuteMethod() : "";
 
         return template
             .Replace("{{ModuleName}}", moduleName)
             .Replace("{{Namespace}}", moduleName)
             .Replace("{{ModuleVersion}}", version ?? DefaultModuleVersion)
             .Replace("{{ModuleDescription}}", description ?? DefaultDescription)
-            .Replace("{{PortAttributes}}", portAttributes);
+            .Replace("{{PortAttributes}}", portAttributes)
+            .Replace("{{ImplementsExecutor}}", implementsExecutor)
+            .Replace("{{ExecuteMethod}}", executeMethod);
     }
 
     /// <summary>
@@ -74,7 +81,7 @@ public class TemplateEngine
     /// <returns>The rendered project file content.</returns>
     public string RenderModuleCsproj(string moduleName)
     {
-        var template = LoadTemplate("Module.csproj.template");
+        var template = LoadTemplate("module-csproj.tmpl");
 
         return template
             .Replace("{{ModuleName}}", moduleName);
@@ -87,7 +94,11 @@ public class TemplateEngine
     /// <returns>The rendered JSON content.</returns>
     public string RenderModuleJson(ModuleManifest manifest)
     {
-        var template = LoadTemplate("module.json.template");
+        var template = LoadTemplate("module-json.tmpl");
+
+        // Generate ports JSON arrays
+        var inputsJson = GeneratePortsJson(manifest.Ports?.Inputs);
+        var outputsJson = GeneratePortsJson(manifest.Ports?.Outputs);
 
         return template
             .Replace("{{ModuleId}}", manifest.Id ?? manifest.Name ?? "Module")
@@ -96,7 +107,9 @@ public class TemplateEngine
             .Replace("{{ModuleDescription}}", manifest.Description ?? DefaultDescription)
             .Replace("{{ModuleAuthor}}", manifest.Author ?? DefaultAuthor)
             .Replace("{{EntryAssembly}}", manifest.GetEntryAssembly())
-            .Replace("{{OpenAnimaMinVersion}}", manifest.OpenAnima?.MinVersion ?? DefaultOpenAnimaMinVersion);
+            .Replace("{{OpenAnimaMinVersion}}", manifest.OpenAnima?.MinVersion ?? DefaultOpenAnimaMinVersion)
+            .Replace("{{InputsJson}}", inputsJson)
+            .Replace("{{OutputsJson}}", outputsJson);
     }
 
     /// <summary>
@@ -106,12 +119,16 @@ public class TemplateEngine
     /// <param name="version">Module version.</param>
     /// <param name="description">Module description.</param>
     /// <param name="author">Module author.</param>
+    /// <param name="inputs">Input port declarations.</param>
+    /// <param name="outputs">Output port declarations.</param>
     /// <returns>The rendered JSON content.</returns>
     public string RenderModuleJson(
         string moduleName,
         string? version = null,
         string? description = null,
-        string? author = null)
+        string? author = null,
+        List<PortDeclaration>? inputs = null,
+        List<PortDeclaration>? outputs = null)
     {
         var manifest = new ModuleManifest
         {
@@ -123,6 +140,11 @@ public class TemplateEngine
             OpenAnima = new OpenAnimaCompatibility
             {
                 MinVersion = DefaultOpenAnimaMinVersion
+            },
+            Ports = new PortDeclarations
+            {
+                Inputs = inputs ?? new List<PortDeclaration>(),
+                Outputs = outputs ?? new List<PortDeclaration>()
             }
         };
 
@@ -194,5 +216,61 @@ public class TemplateEngine
         }
 
         return sb.ToString().TrimEnd();
+    }
+
+    /// <summary>
+    /// Generates the ExecuteAsync method for modules with ports.
+    /// </summary>
+    private static string GenerateExecuteMethod()
+    {
+        return @"
+
+    private ModuleExecutionState _state = ModuleExecutionState.Idle;
+    private Exception? _lastError;
+
+    public ModuleExecutionState GetState() => _state;
+    public Exception? GetLastError() => _lastError;
+
+    public async Task ExecuteAsync(CancellationToken ct = default)
+    {
+        // TODO: Implement your module's core logic here
+        // Read from input ports (via EventBus subscriptions set up in InitializeAsync)
+        // Process the data
+        // Write to output ports (via EventBus publish)
+        _state = ModuleExecutionState.Processing;
+        try
+        {
+            // Example: Read input, process, write output
+            // await ProcessAndPublishAsync(ct);
+            _state = ModuleExecutionState.Completed;
+        }
+        catch (Exception ex)
+        {
+            _lastError = ex;
+            _state = ModuleExecutionState.Error;
+            throw;
+        }
+    }";
+    }
+
+    /// <summary>
+    /// Generates JSON array for port declarations.
+    /// </summary>
+    private static string GeneratePortsJson(List<PortDeclaration>? ports)
+    {
+        if (ports == null || ports.Count == 0)
+        {
+            return "[]";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("[");
+        for (int i = 0; i < ports.Count; i++)
+        {
+            var port = ports[i];
+            sb.AppendLine($"      {{ \"name\": \"{port.Name}\", \"type\": \"{port.GetNormalizedType()}\" }}{(i < ports.Count - 1 ? "," : "")}");
+        }
+        sb.Append("    ]");
+        return sb.ToString();
     }
 }
