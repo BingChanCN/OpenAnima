@@ -3,6 +3,7 @@
 @using OpenAnima.Core.Plugins
 @using OpenAnima.Contracts.Ports
 @using OpenAnima.Core.Ports
+@using OpenAnima.Core.Anima
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.AspNetCore.Components.Forms
 @inject IModuleService ModuleService
@@ -10,6 +11,8 @@
 @inject IStringLocalizer<SharedResources> L
 @inject LanguageService LangSvc
 @inject IJSRuntime JS
+@inject IAnimaModuleStateService ModuleStateService
+@inject IAnimaContext AnimaContext
 @implements IAsyncDisposable
 
 <div class="page-header">
@@ -60,10 +63,19 @@ else
         @foreach (var entry in FilteredModules)
         {
             var moduleName = entry.Manifest.Name;
-            <div class="module-card card" @onclick="() => ShowDetails(entry)">
+            <div class="module-card card"
+                 @onclick="() => ShowSidebar(entry)"
+                 @oncontextmenu="(e) => OpenContextMenu(e, entry)"
+                 @oncontextmenu:preventDefault="true">
                 <div class="module-card-header">
                     <span class="module-card-name">@entry.Module.Metadata.Name</span>
-                    <span class="status-badge enabled">@L["Modules.Enabled"]</span>
+                    @{
+                        var isEnabled = AnimaContext.ActiveAnimaId != null
+                            && ModuleStateService.IsModuleEnabled(AnimaContext.ActiveAnimaId, entry.Manifest.Name);
+                    }
+                    <span class="status-badge @(isEnabled ? "enabled" : "disabled")">
+                        @(isEnabled ? L["Modules.Enabled"] : L["Modules.Disabled"])
+                    </span>
                 </div>
                 <div class="module-card-body">
                     <span class="module-version">v@(entry.Module.Metadata.Version)</span>
@@ -170,6 +182,23 @@ else
     }
 </ModuleDetailModal>
 
+<ModuleContextMenu IsVisible="_showContextMenu"
+                  X="_contextMenuX"
+                  Y="_contextMenuY"
+                  ModuleName="@(_contextModuleName ?? "")"
+                  IsEnabled="_contextModuleEnabled"
+                  OnEnable="HandleEnable"
+                  OnDisable="HandleDisable"
+                  OnUninstall="async () => { if (_contextModuleName != null) await UninstallModule(_contextModuleName); }"
+                  OnViewDetails="HandleViewDetailsFromMenu"
+                  OnClose="() => _showContextMenu = false" />
+
+<ModuleDetailSidebar IsVisible="_showSidebar"
+                     SelectedModule="_sidebarModule"
+                     OnClose="CloseSidebar"
+                     OnEnableDisable="HandleSidebarEnableDisable"
+                     OnUninstall="async () => { if (_sidebarModule?.Manifest.Name != null) await UninstallModule(_sidebarModule.Manifest.Name); }" />
+
 @code {
     private HubConnection? hubConnection;
     private InputFile? inputFileRef;
@@ -182,6 +211,16 @@ else
     private bool showUninstallConfirm = false;
     private string? moduleToUninstall = null;
 
+    // Context menu state
+    private bool _showContextMenu;
+    private double _contextMenuX, _contextMenuY;
+    private string? _contextModuleName;
+    private bool _contextModuleEnabled;
+
+    // Sidebar state
+    private bool _showSidebar;
+    private PluginRegistryEntry? _sidebarModule;
+
     private IEnumerable<PluginRegistryEntry> FilteredModules =>
         ModuleService.GetAllModules()
             .Where(m => string.IsNullOrWhiteSpace(searchFilter) ||
@@ -190,6 +229,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         LangSvc.LanguageChanged += OnLanguageChanged;
+        AnimaContext.ActiveAnimaChanged += HandleActiveAnimaChanged;
 
         hubConnection = new HubConnectionBuilder()
             .WithUrl(Navigation.ToAbsoluteUri("/hubs/runtime"))
@@ -312,9 +352,71 @@ else
         return discovery.DiscoverPorts(entry.Module.GetType());
     }
 
+    private void OpenContextMenu(MouseEventArgs e, PluginRegistryEntry module)
+    {
+        _contextModuleName = module.Manifest.Name;
+        _contextModuleEnabled = AnimaContext.ActiveAnimaId != null
+            && ModuleStateService.IsModuleEnabled(AnimaContext.ActiveAnimaId, module.Manifest.Name);
+        _contextMenuX = e.ClientX;
+        _contextMenuY = e.ClientY;
+        _showContextMenu = true;
+    }
+
+    private async Task HandleEnable()
+    {
+        _showContextMenu = false;
+        if (AnimaContext.ActiveAnimaId == null || _contextModuleName == null) return;
+        await ModuleStateService.SetModuleEnabled(AnimaContext.ActiveAnimaId, _contextModuleName, true);
+        StateHasChanged();
+    }
+
+    private async Task HandleDisable()
+    {
+        _showContextMenu = false;
+        if (AnimaContext.ActiveAnimaId == null || _contextModuleName == null) return;
+        await ModuleStateService.SetModuleEnabled(AnimaContext.ActiveAnimaId, _contextModuleName, false);
+        StateHasChanged();
+    }
+
+    private void HandleViewDetailsFromMenu()
+    {
+        _showContextMenu = false;
+        var module = ModuleService.GetAllModules().FirstOrDefault(m => m.Manifest.Name == _contextModuleName);
+        if (module != null)
+        {
+            _sidebarModule = module;
+            _showSidebar = true;
+        }
+    }
+
+    private void ShowSidebar(PluginRegistryEntry module)
+    {
+        _sidebarModule = module;
+        _showSidebar = true;
+    }
+
+    private void CloseSidebar()
+    {
+        _showSidebar = false;
+    }
+
+    private async Task HandleSidebarEnableDisable()
+    {
+        if (AnimaContext.ActiveAnimaId == null || _sidebarModule == null) return;
+        var isEnabled = ModuleStateService.IsModuleEnabled(AnimaContext.ActiveAnimaId, _sidebarModule.Manifest.Name);
+        await ModuleStateService.SetModuleEnabled(AnimaContext.ActiveAnimaId, _sidebarModule.Manifest.Name, !isEnabled);
+        StateHasChanged();
+    }
+
+    private void HandleActiveAnimaChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
     public async ValueTask DisposeAsync()
     {
         LangSvc.LanguageChanged -= OnLanguageChanged;
+        AnimaContext.ActiveAnimaChanged -= HandleActiveAnimaChanged;
         if (hubConnection is not null)
             await hubConnection.DisposeAsync();
     }
