@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Module SDK & DevEx
 status: completed
-last_updated: "2026-02-28T09:33:23.672Z"
+last_updated: "2026-02-28T09:49:57.183Z"
 last_activity: 2026-02-28 — Completed 21-03-PLAN.md (Runtime Integration for .oamod Packages)
 progress:
   total_phases: 12
   completed_phases: 11
   total_plans: 27
-  completed_plans: 24
-  percent: 93
+  completed_plans: 26
+  percent: 96
 ---
 
 # Project State: OpenAnima v1.4 Module SDK & DevEx
@@ -22,18 +22,18 @@ progress:
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
 
-**Current focus:** Phase 21: Pack, Validate & Runtime Integration
+**Current focus:** Phase 20: CLI Foundation & Templates
 
 See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ## Current Position
 
-**Phase:** 21 of 22 (Pack, Validate & Runtime Integration)
-**Plan:** 3 of 3 in current phase (Complete)
-**Status:** Milestone complete
-**Last activity:** 2026-02-28 — Completed 21-03-PLAN.md (Runtime Integration for .oamod Packages)
+**Phase:** 20 of 22 (CLI Foundation & Templates)
+**Plan:** 2 of 3 in current phase (In Progress)
+**Status:** In Progress
+**Last activity:** 2026-02-28 — Completed 20-02-PLAN.md (Manifest Schema and Templates)
 
-**Progress:** [█████████░] 93%
+**Progress:** [██████████] 96%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 | Phase 21 P01 | 3 | 2 tasks | 3 files |
 | Phase 21 P02 | 10 | 2 tasks | 5 files |
 | Phase 21 P03 | 5 | 2 tasks | 5 files |
+| Phase 20 P02 | 2 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,11 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ### Key Decisions (v1.4)
 
+- **Phase 20:** Use System.Text.Json for manifest serialization
+- **Phase 20:** Aggregate all validation errors before reporting
+- **Phase 20:** Use embedded resources for templates (not file paths)
+- **Phase 20:** Simple string.Replace() for template substitution
+- **Phase 20:** Rename template files to .tmpl extension for clarity
 - **Phase 21:** Use name-based type comparison for IModule detection to avoid type identity issues across AssemblyLoadContext boundaries
 - **Phase 21:** Accumulate all validation errors before reporting for better developer experience
 - **Phase 21:** Make assembly validation optional (warning only) if module not built yet

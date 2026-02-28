@@ -10,8 +10,8 @@
 - [ ] **SDK-01**: Developer can create new module project with `oani new <ModuleName>` command
 - [ ] **SDK-02**: Developer can specify output directory with `oani new <ModuleName> -o <path>` option
 - [ ] **SDK-03**: Developer can preview generated files with `oani new <ModuleName> --dry-run` option
-- [ ] **SDK-04**: Generated module project compiles without errors
-- [ ] **SDK-05**: Generated module implements IModule and IModuleMetadata interfaces
+- [x] **SDK-04**: Generated module project compiles without errors
+- [x] **SDK-05**: Generated module implements IModule and IModuleMetadata interfaces
 
 ### CLI Tool
 
@@ -40,19 +40,19 @@
 
 ### Manifest Schema
 
-- [ ] **MAN-01**: module.json supports id, version, name, description, author fields
-- [ ] **MAN-02**: module.json supports openanima version compatibility (minVersion, maxVersion)
-- [ ] **MAN-03**: module.json supports port declarations (inputs, outputs)
-- [ ] **MAN-04**: Manifest validation rejects invalid JSON with clear error messages
-- [ ] **MAN-05**: Manifest schema is versioned for future compatibility
+- [x] **MAN-01**: module.json supports id, version, name, description, author fields
+- [x] **MAN-02**: module.json supports openanima version compatibility (minVersion, maxVersion)
+- [x] **MAN-03**: module.json supports port declarations (inputs, outputs)
+- [x] **MAN-04**: Manifest validation rejects invalid JSON with clear error messages
+- [x] **MAN-05**: Manifest schema is versioned for future compatibility
 
 ### Template Customization
 
 - [ ] **TEMP-01**: Developer can specify module type with `--type` option (default: standard)
 - [ ] **TEMP-02**: Developer can specify input ports with `--inputs` option (e.g., --inputs Text,Trigger)
 - [ ] **TEMP-03**: Developer can specify output ports with `--outputs` option (e.g., --outputs Text)
-- [ ] **TEMP-04**: Template generates port attributes based on specified ports
-- [ ] **TEMP-05**: Template generates working ExecuteAsync method with port handling stubs
+- [x] **TEMP-04**: Template generates port attributes based on specified ports
+- [x] **TEMP-05**: Template generates working ExecuteAsync method with port handling stubs
 
 ### Documentation
 
@@ -101,8 +101,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SDK-01 | Phase 20 | Pending |
 | SDK-02 | Phase 20 | Pending |
 | SDK-03 | Phase 20 | Pending |
-| SDK-04 | Phase 20 | Pending |
-| SDK-05 | Phase 20 | Pending |
+| SDK-04 | Phase 20 | Complete |
+| SDK-05 | Phase 20 | Complete |
 | CLI-01 | Phase 20 | Pending |
 | CLI-02 | Phase 20 | Pending |
 | CLI-03 | Phase 20 | Pending |
@@ -119,16 +119,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VAL-03 | Phase 21 | Complete |
 | VAL-04 | Phase 21 | Complete |
 | VAL-05 | Phase 21 | Complete |
-| MAN-01 | Phase 20 | Pending |
-| MAN-02 | Phase 20 | Pending |
-| MAN-03 | Phase 20 | Pending |
-| MAN-04 | Phase 20 | Pending |
-| MAN-05 | Phase 20 | Pending |
+| MAN-01 | Phase 20 | Complete |
+| MAN-02 | Phase 20 | Complete |
+| MAN-03 | Phase 20 | Complete |
+| MAN-04 | Phase 20 | Complete |
+| MAN-05 | Phase 20 | Complete |
 | TEMP-01 | Phase 20 | Pending |
 | TEMP-02 | Phase 20 | Pending |
 | TEMP-03 | Phase 20 | Pending |
-| TEMP-04 | Phase 20 | Pending |
-| TEMP-05 | Phase 20 | Pending |
+| TEMP-04 | Phase 20 | Complete |
+| TEMP-05 | Phase 20 | Complete |
 | DOC-01 | Phase 22 | Pending |
 | DOC-02 | Phase 22 | Pending |
 | DOC-03 | Phase 22 | Pending |
