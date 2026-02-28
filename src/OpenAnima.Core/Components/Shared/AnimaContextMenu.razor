@@ -1,0 +1,42 @@
+@if (IsVisible)
+{
+    <div class="context-menu-backdrop" @onclick="HandleClose"></div>
+    <div class="context-menu" style="left: @(X)px; top: @(Y)px;" @onclick:stopPropagation="true">
+        <button class="context-menu-item" @onclick="HandleRename">Rename</button>
+        <button class="context-menu-item" @onclick="HandleClone">Clone</button>
+        <button class="context-menu-item context-menu-item--danger" @onclick="HandleDelete">Delete</button>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public double X { get; set; }
+    [Parameter] public double Y { get; set; }
+    [Parameter] public EventCallback OnRename { get; set; }
+    [Parameter] public EventCallback OnClone { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private async Task HandleRename()
+    {
+        await OnClose.InvokeAsync();
+        await OnRename.InvokeAsync();
+    }
+
+    private async Task HandleClone()
+    {
+        await OnClose.InvokeAsync();
+        await OnClone.InvokeAsync();
+    }
+
+    private async Task HandleDelete()
+    {
+        await OnClose.InvokeAsync();
+        await OnDelete.InvokeAsync();
+    }
+
+    private async Task HandleClose()
+    {
+        await OnClose.InvokeAsync();
+    }
+}

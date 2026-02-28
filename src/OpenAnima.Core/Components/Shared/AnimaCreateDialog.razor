@@ -1,0 +1,60 @@
+@if (IsVisible)
+{
+    <div class="modal-backdrop" @onclick="HandleCancel"></div>
+    <div class="modal-dialog" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <h2>Create New Anima</h2>
+        </div>
+        <div class="modal-body">
+            <label class="input-label" for="anima-name-input">Name</label>
+            <input id="anima-name-input"
+                   class="anima-name-input"
+                   type="text"
+                   placeholder="Enter Anima name..."
+                   @bind="_name"
+                   @bind:event="oninput"
+                   @onkeydown="HandleKeyDown"
+                   autofocus />
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" @onclick="HandleCancel">Cancel</button>
+            <button class="btn btn-primary"
+                    @onclick="HandleCreate"
+                    disabled="@(string.IsNullOrWhiteSpace(_name))">
+                Create
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<string> OnCreate { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string _name = "";
+
+    private async Task HandleCreate()
+    {
+        if (string.IsNullOrWhiteSpace(_name))
+            return;
+
+        var name = _name.Trim();
+        _name = "";
+        await OnCreate.InvokeAsync(name);
+    }
+
+    private async Task HandleCancel()
+    {
+        _name = "";
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_name))
+            await HandleCreate();
+        else if (e.Key == "Escape")
+            await HandleCancel();
+    }
+}

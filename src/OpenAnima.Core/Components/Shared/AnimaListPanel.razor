@@ -1,0 +1,207 @@
+@using OpenAnima.Core.Anima
+@implements IAsyncDisposable
+@inject IAnimaRuntimeManager AnimaManager
+@inject IAnimaContext AnimaContext
+
+<div class="anima-list-panel">
+    @if (!SidebarCollapsed)
+    {
+        <div class="anima-list-header">
+            <span class="anima-list-title">Animas</span>
+            <button class="add-anima-btn" @onclick="OpenCreateDialog" title="Create new Anima">+</button>
+        </div>
+    }
+
+    <div class="anima-cards">
+        @foreach (var anima in AnimaManager.GetAll())
+        {
+            var isActive = AnimaContext.ActiveAnimaId == anima.Id;
+            var isRenaming = _renamingId == anima.Id;
+
+            @if (SidebarCollapsed)
+            {
+                <div class="anima-avatar @(isActive ? "active" : "")"
+                     title="@anima.Name"
+                     @onclick="() => AnimaContext.SetActive(anima.Id)">
+                    @anima.Name[0]
+                </div>
+            }
+            else
+            {
+                <div class="anima-card @(isActive ? "active" : "")"
+                     @onclick="() => AnimaContext.SetActive(anima.Id)"
+                     @oncontextmenu="(e) => OpenContextMenu(e, anima.Id)"
+                     @oncontextmenu:preventDefault="true">
+                    @if (isRenaming)
+                    {
+                        <input class="rename-input"
+                               @bind="_renameValue"
+                               @bind:event="oninput"
+                               @onkeydown="HandleRenameKeyDown"
+                               @onblur="CancelRename"
+                               @onclick:stopPropagation="true"
+                               autofocus />
+                    }
+                    else
+                    {
+                        <span class="anima-card-name">@anima.Name</span>
+                        <span class="anima-status-dot @(isActive ? "active" : "")"></span>
+                    }
+                </div>
+            }
+        }
+    </div>
+
+    @if (SidebarCollapsed)
+    {
+        <button class="add-anima-btn-collapsed" @onclick="OpenCreateDialog" title="Create new Anima">+</button>
+    }
+</div>
+
+<AnimaCreateDialog IsVisible="_showCreateDialog"
+                   OnCreate="HandleCreate"
+                   OnCancel="CloseCreateDialog" />
+
+<AnimaContextMenu IsVisible="_showContextMenu"
+                  X="_contextMenuX"
+                  Y="_contextMenuY"
+                  OnRename="StartRename"
+                  OnClone="HandleClone"
+                  OnDelete="ShowDeleteConfirm"
+                  OnClose="CloseContextMenu" />
+
+<ConfirmDialog IsVisible="_showDeleteConfirm"
+               Title="Delete Anima"
+               Message="@($"Delete \"{_contextMenuAnimaName}\"? This cannot be undone.")"
+               ConfirmText="Delete"
+               ConfirmButtonClass="btn-danger"
+               OnConfirm="HandleDelete"
+               OnCancel="CloseDeleteConfirm" />
+
+@code {
+    [CascadingParameter(Name = "SidebarCollapsed")]
+    public bool SidebarCollapsed { get; set; }
+
+    private bool _showCreateDialog;
+    private bool _showContextMenu;
+    private bool _showDeleteConfirm;
+    private double _contextMenuX;
+    private double _contextMenuY;
+    private string? _contextMenuAnimaId;
+    private string _contextMenuAnimaName = "";
+    private string? _renamingId;
+    private string _renameValue = "";
+
+    protected override void OnInitialized()
+    {
+        AnimaManager.StateChanged += HandleStateChanged;
+        AnimaContext.ActiveAnimaChanged += HandleStateChanged;
+    }
+
+    private void HandleStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    // --- Create ---
+
+    private void OpenCreateDialog() => _showCreateDialog = true;
+    private void CloseCreateDialog() => _showCreateDialog = false;
+
+    private async Task HandleCreate(string name)
+    {
+        _showCreateDialog = false;
+        var anima = await AnimaManager.CreateAsync(name);
+        AnimaContext.SetActive(anima.Id);
+    }
+
+    // --- Context menu ---
+
+    private void OpenContextMenu(MouseEventArgs e, string animaId)
+    {
+        _contextMenuAnimaId = animaId;
+        var descriptor = AnimaManager.GetById(animaId);
+        _contextMenuAnimaName = descriptor?.Name ?? "";
+        _contextMenuX = e.ClientX;
+        _contextMenuY = e.ClientY;
+        _showContextMenu = true;
+    }
+
+    private void CloseContextMenu() => _showContextMenu = false;
+
+    // --- Rename ---
+
+    private void StartRename()
+    {
+        if (_contextMenuAnimaId == null) return;
+        var descriptor = AnimaManager.GetById(_contextMenuAnimaId);
+        if (descriptor == null) return;
+        _renamingId = _contextMenuAnimaId;
+        _renameValue = descriptor.Name;
+    }
+
+    private async Task HandleRenameKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await CommitRename();
+        else if (e.Key == "Escape")
+            CancelRename();
+    }
+
+    private async Task CommitRename()
+    {
+        if (_renamingId == null || string.IsNullOrWhiteSpace(_renameValue))
+        {
+            CancelRename();
+            return;
+        }
+        var id = _renamingId;
+        _renamingId = null;
+        await AnimaManager.RenameAsync(id, _renameValue.Trim());
+    }
+
+    private void CancelRename()
+    {
+        _renamingId = null;
+        _renameValue = "";
+    }
+
+    // --- Clone ---
+
+    private async Task HandleClone()
+    {
+        if (_contextMenuAnimaId == null) return;
+        var cloned = await AnimaManager.CloneAsync(_contextMenuAnimaId);
+        AnimaContext.SetActive(cloned.Id);
+    }
+
+    // --- Delete ---
+
+    private void ShowDeleteConfirm() => _showDeleteConfirm = true;
+    private void CloseDeleteConfirm() => _showDeleteConfirm = false;
+
+    private async Task HandleDelete()
+    {
+        _showDeleteConfirm = false;
+        if (_contextMenuAnimaId == null) return;
+
+        var deletedId = _contextMenuAnimaId;
+        var wasActive = AnimaContext.ActiveAnimaId == deletedId;
+
+        await AnimaManager.DeleteAsync(deletedId);
+
+        if (wasActive)
+        {
+            var remaining = AnimaManager.GetAll();
+            if (remaining.Count > 0)
+                AnimaContext.SetActive(remaining[0].Id);
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        AnimaManager.StateChanged -= HandleStateChanged;
+        AnimaContext.ActiveAnimaChanged -= HandleStateChanged;
+        return ValueTask.CompletedTask;
+    }
+}
