@@ -17,7 +17,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 23. Multi-Anima Foundation | 0/? | Not started | - |
+| 23. Multi-Anima Foundation | 0/2 | Planned | - |
 | 24. Service Migration & i18n | 0/? | Not started | - |
 | 25. Module Management | 0/? | Not started | - |
 | 26. Module Configuration UI | 0/? | Not started | - |
@@ -36,7 +36,9 @@
   4. User can delete Anima and its configuration is removed
   5. User can rename or clone existing Anima
   6. Anima configuration persists across application restarts
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 23-01-PLAN.md — Core Anima services (AnimaRuntimeManager, AnimaContext, DI) + TDD tests
+- [ ] 23-02-PLAN.md — Sidebar UI (AnimaListPanel, create/rename/clone/delete) + startup initialization
 
 ### Phase 24: Service Migration & i18n
 **Goal**: Each Anima has isolated EventBus/HeartbeatLoop/WiringEngine, and users can switch UI language
