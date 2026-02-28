@@ -16,7 +16,7 @@
 - [ ] **ANIMA-07**: Each Anima has independent heartbeat loop
 - [ ] **ANIMA-08**: Each Anima has independent module instances
 - [ ] **ANIMA-09**: Each Anima has independent chat interface
-- [ ] **ANIMA-10**: Anima configuration persists across sessions
+- [x] **ANIMA-10**: Anima configuration persists across sessions
 
 ### Internationalization (I18N)
 
@@ -57,12 +57,12 @@
 
 ### Architecture (ARCH)
 
-- [ ] **ARCH-01**: AnimaRuntimeManager manages all Anima instances
-- [ ] **ARCH-02**: AnimaContext identifies current Anima for scoped services
+- [x] **ARCH-01**: AnimaRuntimeManager manages all Anima instances
+- [x] **ARCH-02**: AnimaContext identifies current Anima for scoped services
 - [ ] **ARCH-03**: Each Anima has isolated EventBus instance
 - [ ] **ARCH-04**: Each Anima has isolated WiringEngine instance
-- [ ] **ARCH-05**: Configuration files stored per Anima in separate directories
-- [ ] **ARCH-06**: Service disposal prevents memory leaks (IAsyncDisposable)
+- [x] **ARCH-05**: Configuration files stored per Anima in separate directories
+- [x] **ARCH-06**: Service disposal prevents memory leaks (IAsyncDisposable)
 
 ## v2 Requirements
 
@@ -99,11 +99,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ANIMA-04 | Phase 23 | Pending |
 | ANIMA-05 | Phase 23 | Pending |
 | ANIMA-06 | Phase 23 | Pending |
-| ANIMA-10 | Phase 23 | Pending |
-| ARCH-01 | Phase 23 | Pending |
-| ARCH-02 | Phase 23 | Pending |
-| ARCH-05 | Phase 23 | Pending |
-| ARCH-06 | Phase 23 | Pending |
+| ANIMA-10 | Phase 23 | Complete |
+| ARCH-01 | Phase 23 | Complete |
+| ARCH-02 | Phase 23 | Complete |
+| ARCH-05 | Phase 23 | Complete |
+| ARCH-06 | Phase 23 | Complete |
 | ANIMA-07 | Phase 24 | Pending |
 | ANIMA-08 | Phase 24 | Pending |
 | I18N-01 | Phase 24 | Pending |

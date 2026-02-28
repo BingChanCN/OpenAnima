@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.5
-milestone_name: Multi-Anima Architecture
-status: roadmap_created
-last_updated: "2026-02-28T12:00:00.000Z"
+milestone_name: milestone
+status: Ready to begin
+last_updated: "2026-02-28T12:55:46.546Z"
 last_activity: 2026-02-28 — Roadmap created for v1.5
 progress:
-  total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 11
+  completed_phases: 10
+  total_plans: 23
+  completed_plans: 22
+  percent: 96
 ---
 
 # Project State: OpenAnima v1.5 Multi-Anima Architecture
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 ## Current Position
 
 **Phase:** 23 - Multi-Anima Foundation
-**Plan:** Not started
-**Status:** Ready to begin
-**Last activity:** 2026-02-28 — Roadmap created for v1.5
+**Plan:** 01 complete (2/N plans)
+**Status:** In progress
+**Last activity:** 2026-02-28 — Completed 23-01: AnimaRuntimeManager + AnimaContext core services
 
-**Progress:** ░░░░░░░░░░░░░░░░░░░░ 0% (0/5 phases)
+**Progress:** [██████████] 96%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 **Recent Trend:**
 - Last 5 plans: Consistent ~5 min execution
 - Trend: Stable
+| Phase 23-multi-anima-foundation P01 | 3 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -72,7 +73,9 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ### Key Decisions (v1.5)
 
-*No decisions yet — milestone just started*
+- **Phase 23-01:** Short 8-char hex ID from Guid.NewGuid().ToString("N")[..8] for Anima directory names — readable, effectively collision-free for single-user app
+- **Phase 23-01:** AnimaContext is a plain singleton with event (not CascadingValue) to avoid full layout re-render on every active-Anima change
+- **Phase 23-01:** Clone copies only anima.json (not runtime state files) to prevent inheriting runtime state in cloned Anima
 
 ### Key Decisions (v1.4)
 
@@ -107,9 +110,9 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ### Active TODOs
 
-- [ ] Begin Phase 23 planning with `/gsd:plan-phase 23`
-- [ ] Review research summary for architecture guidance
-- [ ] Validate AnimaRuntimeManager factory pattern during planning
+- [x] Begin Phase 23 execution with plan 23-01
+- [ ] Plan 23-02: AnimaListPanel sidebar UI
+- [ ] AnimaRuntimeManager.InitializeAsync() needs startup hook (hosted service)
 
 ### Known Blockers
 
