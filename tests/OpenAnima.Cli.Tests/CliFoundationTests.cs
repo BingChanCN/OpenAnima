@@ -519,21 +519,25 @@ public class ValidateCommandTests
         var originalOut = Console.Out;
         var originalError = Console.Error;
 
+        var outWriter = new StringWriter();
+        var errorWriter = new StringWriter();
+
         try
         {
-            using var outWriter = new StringWriter();
-            using var errorWriter = new StringWriter();
-
             Console.SetOut(outWriter);
             Console.SetError(errorWriter);
 
             var exitCode = Program.Main(args);
-            return (exitCode, errorWriter.ToString());
+            var stderr = errorWriter.ToString();
+
+            return (exitCode, stderr);
         }
         finally
         {
             Console.SetOut(originalOut);
             Console.SetError(originalError);
+            outWriter.Dispose();
+            errorWriter.Dispose();
         }
     }
 
