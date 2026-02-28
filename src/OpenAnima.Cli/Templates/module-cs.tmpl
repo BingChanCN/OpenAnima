@@ -4,7 +4,7 @@ using OpenAnima.Contracts.Ports;
 namespace {{Namespace}};
 
 {{PortAttributes}}
-public class {{ModuleName}} : IModule
+public class {{ModuleName}} : IModule{{ImplementsExecutor}}
 {
     public IModuleMetadata Metadata { get; } = new {{ModuleName}}Metadata();
 
@@ -12,6 +12,7 @@ public class {{ModuleName}} : IModule
     {
         // TODO: Add initialization logic here
         // This is called when the module is loaded by the OpenAnima runtime
+        // Set up any event subscriptions for input ports here
         return Task.CompletedTask;
     }
 
@@ -21,6 +22,7 @@ public class {{ModuleName}} : IModule
         // This is called before the module is unloaded
         return Task.CompletedTask;
     }
+{{ExecuteMethod}}
 }
 
 internal class {{ModuleName}}Metadata : IModuleMetadata
