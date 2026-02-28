@@ -20,10 +20,10 @@
 
 ### Internationalization (I18N)
 
-- [ ] **I18N-01**: User can switch UI language between Chinese and English
-- [ ] **I18N-02**: All UI text displays in selected language
-- [ ] **I18N-03**: Language preference persists across sessions
-- [ ] **I18N-04**: Missing translations fall back to English
+- [x] **I18N-01**: User can switch UI language between Chinese and English
+- [x] **I18N-02**: All UI text displays in selected language
+- [x] **I18N-03**: Language preference persists across sessions
+- [x] **I18N-04**: Missing translations fall back to English
 
 ### Module Management (MODMGMT)
 
@@ -106,10 +106,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ARCH-06 | Phase 23 | Complete |
 | ANIMA-07 | Phase 24 | Complete |
 | ANIMA-08 | Phase 24 | Pending |
-| I18N-01 | Phase 24 | Pending |
-| I18N-02 | Phase 24 | Pending |
-| I18N-03 | Phase 24 | Pending |
-| I18N-04 | Phase 24 | Pending |
+| I18N-01 | Phase 24 | Complete |
+| I18N-02 | Phase 24 | Complete |
+| I18N-03 | Phase 24 | Complete |
+| I18N-04 | Phase 24 | Complete |
 | ARCH-03 | Phase 24 | Complete |
 | ARCH-04 | Phase 24 | Complete |
 | MODMGMT-01 | Phase 25 | Pending |

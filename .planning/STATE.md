@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-status: completed
-last_updated: "2026-02-28T15:20:16.075Z"
+status: executing
+last_updated: "2026-02-28T15:28:35.112Z"
 last_activity: "2026-02-28 — Completed 24-01: Per-Anima runtime isolation (AnimaRuntime container)"
 progress:
   total_phases: 12
   completed_phases: 11
   total_plans: 26
-  completed_plans: 24
-  percent: 92
+  completed_plans: 25
+  percent: 96
 ---
 
 # Project State: OpenAnima v1.5 Multi-Anima Architecture
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 ## Current Position
 
 **Phase:** 24 - Service Migration i18n
-**Plan:** 01 complete
-**Status:** In progress (2 plans remain)
-**Last activity:** 2026-02-28 — Completed 24-01: Per-Anima runtime isolation (AnimaRuntime container)
+**Plan:** 02 complete
+**Status:** In progress (1 plan remains)
+**Last activity:** 2026-02-28 — Completed 24-02: i18n language switching with LanguageService and Settings page
 
-**Progress:** [█████████░] 92%
+**Progress:** [██████████] 96%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 | Phase 23-multi-anima-foundation P01 | 3 | 2 tasks | 8 files |
 | Phase 23-multi-anima-foundation P02 | 3 | 2 tasks | 10 files |
 | Phase 24-service-migration-i18n P01 | 90 | 6 tasks | 23 files |
+| Phase 24-service-migration-i18n P02 | 3 | 1 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,10 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 - **Phase 24-01:** IAnimaRuntimeManager implements both IAsyncDisposable and IDisposable to satisfy .NET DI disposal requirements
 - **Phase 24-01:** IRuntimeClient methods all include animaId as first parameter so UI can filter SignalR push events by active Anima
 - **Phase 24-01:** DeleteAsync auto-switches active Anima via AnimaContext.SetActive() when deleted Anima was active
+- **Phase 24-02:** SDK auto-includes .resx as EmbeddedResource — explicit ItemGroup not needed (causes NETSDK1022 duplicate error)
+- **Phase 24-02:** LanguageService is a plain singleton with Action event (not CascadingValue) to avoid full layout re-render on every culture change
+- **Phase 24-02:** MainLayout reads localStorage on first render to restore language preference on app load
+- **Phase 24-02:** Chinese (zh-CN) is default and fallback language per CONTEXT.md locked decision
 
 ### Key Decisions (v1.4)
 

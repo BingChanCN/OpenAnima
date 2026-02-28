@@ -18,7 +18,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 23. Multi-Anima Foundation | 2/2 | Complete    | 2026-02-28 |
-| 24. Service Migration & i18n | 1/3 | In Progress|  |
+| 24. Service Migration & i18n | 2/3 | In Progress|  |
 | 25. Module Management | 0/? | Not started | - |
 | 26. Module Configuration UI | 0/? | Not started | - |
 | 27. Built-in Modules | 0/? | Not started | - |
