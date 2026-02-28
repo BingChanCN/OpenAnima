@@ -68,6 +68,10 @@ builder.Services.AddSingleton<TokenCounter>(sp =>
 });
 
 builder.Services.AddSingleton<ChatContextManager>();
+builder.Services.AddScoped<ChatSessionState>();
+
+// --- Register Anima services ---
+builder.Services.AddAnimaServices();
 
 // --- Register wiring services ---
 builder.Services.AddWiringServices();
