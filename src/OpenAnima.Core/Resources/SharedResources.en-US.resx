@@ -269,6 +269,27 @@
   <data name="Modules.Detail.None" xml:space="preserve">
     <value>None</value>
   </data>
+  <data name="Modules.Enable" xml:space="preserve">
+    <value>Enable</value>
+  </data>
+  <data name="Modules.Disable" xml:space="preserve">
+    <value>Disable</value>
+  </data>
+  <data name="Modules.ViewDetails" xml:space="preserve">
+    <value>View Details</value>
+  </data>
+  <data name="Modules.Detail.Author" xml:space="preserve">
+    <value>Author</value>
+  </data>
+  <data name="Modules.Detail.Unknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="Modules.Detail.EnabledIn" xml:space="preserve">
+    <value>Enabled in</value>
+  </data>
+  <data name="Modules.Detail.NotEnabled" xml:space="preserve">
+    <value>Not enabled in any Anima</value>
+  </data>
   <data name="Anima.NameLabel" xml:space="preserve">
     <value>Name</value>
   </data>

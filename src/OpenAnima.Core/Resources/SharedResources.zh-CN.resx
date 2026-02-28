@@ -269,6 +269,27 @@
   <data name="Modules.Detail.None" xml:space="preserve">
     <value>无</value>
   </data>
+  <data name="Modules.Enable" xml:space="preserve">
+    <value>启用</value>
+  </data>
+  <data name="Modules.Disable" xml:space="preserve">
+    <value>禁用</value>
+  </data>
+  <data name="Modules.ViewDetails" xml:space="preserve">
+    <value>查看详情</value>
+  </data>
+  <data name="Modules.Detail.Author" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="Modules.Detail.Unknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="Modules.Detail.EnabledIn" xml:space="preserve">
+    <value>已启用于</value>
+  </data>
+  <data name="Modules.Detail.NotEnabled" xml:space="preserve">
+    <value>未在任何 Anima 中启用</value>
+  </data>
   <data name="Anima.NameLabel" xml:space="preserve">
     <value>名称</value>
   </data>
