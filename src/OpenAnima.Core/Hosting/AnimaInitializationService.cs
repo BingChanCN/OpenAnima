@@ -15,17 +15,20 @@ public class AnimaInitializationService : IHostedService
     private readonly IAnimaRuntimeManager _animaManager;
     private readonly IAnimaContext _animaContext;
     private readonly IAnimaModuleStateService _moduleStateService;
+    private readonly IAnimaModuleConfigService _moduleConfigService;
     private readonly ILogger<AnimaInitializationService> _logger;
 
     public AnimaInitializationService(
         IAnimaRuntimeManager animaManager,
         IAnimaContext animaContext,
         IAnimaModuleStateService moduleStateService,
+        IAnimaModuleConfigService moduleConfigService,
         ILogger<AnimaInitializationService> logger)
     {
         _animaManager = animaManager;
         _animaContext = animaContext;
         _moduleStateService = moduleStateService;
+        _moduleConfigService = moduleConfigService;
         _logger = logger;
     }
 
@@ -35,6 +38,7 @@ public class AnimaInitializationService : IHostedService
 
         await _animaManager.InitializeAsync(ct);
         await _moduleStateService.InitializeAsync();
+        await _moduleConfigService.InitializeAsync();
 
         var all = _animaManager.GetAll();
         string activeId;
