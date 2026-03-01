@@ -20,7 +20,7 @@
 | 23. Multi-Anima Foundation | 2/2 | Complete    | 2026-02-28 |
 | 24. Service Migration & i18n | 3/3 | Complete   | 2026-02-28 |
 | 25. Module Management | 3/3 | Complete    | 2026-02-28 |
-| 26. Module Configuration UI | 0/? | Not started | - |
+| 26. Module Configuration UI | 0/3 | Not started | - |
 | 27. Built-in Modules | 0/? | Not started | - |
 
 ## Phase Details
@@ -81,7 +81,10 @@
   4. Configuration changes validate before saving with clear error messages
   5. Detail panel shows module status and metadata
   6. Each Anima has independent chat interface with isolated conversation
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 26-01-PLAN.md — AnimaModuleConfigService for per-Anima module config persistence (TDD)
+- [ ] 26-02-PLAN.md — EditorConfigSidebar UI with metadata display, config form, validation, auto-save
+- [ ] 26-03-PLAN.md — Per-Anima chat isolation (clear messages on Anima switch)
 
 ### Phase 27: Built-in Modules
 **Goal**: Rich module ecosystem with text processing, flow control, and configurable LLM
@@ -98,4 +101,4 @@
 **Plans**: TBD
 
 ---
-*Last updated: 2026-02-28*
+*Last updated: 2026-03-01*
