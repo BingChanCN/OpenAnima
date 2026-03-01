@@ -39,6 +39,9 @@ public static class AnimaServiceExtensions
         services.AddSingleton<IAnimaModuleStateService>(sp =>
             new AnimaModuleStateService(animasRoot));
 
+        services.AddSingleton<IAnimaModuleConfigService>(sp =>
+            new AnimaModuleConfigService(animasRoot));
+
         return services;
     }
 }
