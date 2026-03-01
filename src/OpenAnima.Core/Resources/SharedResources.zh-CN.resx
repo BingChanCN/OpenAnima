@@ -311,4 +311,52 @@
   <data name="Chat.EmptyState" xml:space="preserve">
     <value>开始对话</value>
   </data>
+  <data name="Editor.Config.Title" xml:space="preserve">
+    <value>模块配置</value>
+  </data>
+  <data name="Editor.Config.NoSelection" xml:space="preserve">
+    <value>点击模块节点查看配置</value>
+  </data>
+  <data name="Editor.Config.SavedToast" xml:space="preserve">
+    <value>已保存</value>
+  </data>
+  <data name="Editor.Config.ValidationError" xml:space="preserve">
+    <value>此字段不能为空</value>
+  </data>
+  <data name="Editor.Config.Status" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="Editor.Config.Version" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="Editor.Config.Description" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="Editor.Config.NoConfigFields" xml:space="preserve">
+    <value>该模块无可配置字段</value>
+  </data>
+  <data name="Editor.Config.NoDescription" xml:space="preserve">
+    <value>暂无描述</value>
+  </data>
+  <data name="Editor.Config.Idle" xml:space="preserve">
+    <value>空闲</value>
+  </data>
+  <data name="Editor.Config.Running" xml:space="preserve">
+    <value>运行中</value>
+  </data>
+  <data name="Editor.Config.Error" xml:space="preserve">
+    <value>错误</value>
+  </data>
+  <data name="Editor.Config.Ports" xml:space="preserve">
+    <value>端口</value>
+  </data>
+  <data name="Editor.Config.Inputs" xml:space="preserve">
+    <value>输入</value>
+  </data>
+  <data name="Editor.Config.Outputs" xml:space="preserve">
+    <value>输出</value>
+  </data>
+  <data name="Editor.Config.None" xml:space="preserve">
+    <value>无</value>
+  </data>
 </root>

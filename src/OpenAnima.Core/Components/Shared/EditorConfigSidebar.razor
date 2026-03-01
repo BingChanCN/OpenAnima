@@ -1,0 +1,282 @@
+@using OpenAnima.Core.Services
+@using OpenAnima.Core.Anima
+@using OpenAnima.Core.Ports
+@using OpenAnima.Core.Wiring
+@using OpenAnima.Contracts.Ports
+@implements IDisposable
+@inject EditorStateService _editorState
+@inject IAnimaModuleConfigService _configService
+@inject IAnimaContext _animaContext
+@inject IPortRegistry _portRegistry
+@inject LanguageService LangSvc
+@inject IStringLocalizer<SharedResources> L
+
+<div class="editor-config-sidebar @(_editorState.SelectedNodeId != null ? "visible" : "")">
+    @if (_selectedNode != null)
+    {
+        <div class="sidebar-header">
+            <h3>@_selectedNode.ModuleName</h3>
+            <button class="close-btn" @onclick="HandleClose">×</button>
+        </div>
+        <div class="sidebar-content">
+            <!-- Metadata Section -->
+            <div class="info-section">
+                <label>@L["Editor.Config.Version"]</label>
+                <span>1.0.0</span>
+            </div>
+            <div class="info-section">
+                <label>@L["Editor.Config.Description"]</label>
+                <span>@L["Editor.Config.NoDescription"]</span>
+            </div>
+
+            <!-- Ports Section -->
+            <div class="info-section">
+                <label>@L["Editor.Config.Ports"]</label>
+                @{
+                    var ports = _portRegistry.GetPorts(_selectedNode.ModuleName);
+                    var inputs = ports.Where(p => p.Direction == PortDirection.Input).ToList();
+                    var outputs = ports.Where(p => p.Direction == PortDirection.Output).ToList();
+                }
+                @if (ports.Count == 0)
+                {
+                    <span class="text-muted">@L["Editor.Config.None"]</span>
+                }
+                else
+                {
+                    <div class="port-columns">
+                        <div class="port-column">
+                            <div class="port-column-header">@L["Editor.Config.Inputs"]</div>
+                            @if (inputs.Count == 0)
+                            {
+                                <span class="text-muted">@L["Editor.Config.None"]</span>
+                            }
+                            else
+                            {
+                                @foreach (var port in inputs)
+                                {
+                                    <span class="port-item">@port.Name (@port.Type)</span>
+                                }
+                            }
+                        </div>
+                        <div class="port-column">
+                            <div class="port-column-header">@L["Editor.Config.Outputs"]</div>
+                            @if (outputs.Count == 0)
+                            {
+                                <span class="text-muted">@L["Editor.Config.None"]</span>
+                            }
+                            else
+                            {
+                                @foreach (var port in outputs)
+                                {
+                                    <span class="port-item">@port.Name (@port.Type)</span>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Runtime Status Section -->
+            <div class="info-section">
+                <label>@L["Editor.Config.Status"]</label>
+                @{
+                    var runtimeState = _editorState.GetModuleState(_editorState.SelectedNodeId!);
+                    var stateText = runtimeState?.State switch
+                    {
+                        "Running" => L["Editor.Config.Running"].Value,
+                        "Error" => L["Editor.Config.Error"].Value,
+                        _ => L["Editor.Config.Idle"].Value
+                    };
+                    var stateClass = runtimeState?.State switch
+                    {
+                        "Running" => "status-running",
+                        "Error" => "status-error",
+                        _ => "status-idle"
+                    };
+                }
+                <div class="status-display">
+                    <span class="status-dot @stateClass"></span>
+                    <span>@stateText</span>
+                </div>
+                @if (runtimeState?.State == "Error" && runtimeState.ErrorMessage != null)
+                {
+                    <p class="error-message">@runtimeState.ErrorMessage</p>
+                }
+            </div>
+
+            <!-- Configuration Form Section -->
+            <div class="config-section">
+                <label class="section-header">@L["Editor.Config.Title"]</label>
+                @if (_currentConfig.Count == 0)
+                {
+                    <p class="text-muted">@L["Editor.Config.NoConfigFields"]</p>
+                }
+                else
+                {
+                    <div class="config-form">
+                        @foreach (var kvp in _currentConfig)
+                        {
+                            <div class="config-field">
+                                <label>@kvp.Key</label>
+                                <input type="text"
+                                       value="@kvp.Value"
+                                       @oninput="@(e => HandleConfigChanged(kvp.Key, e.Value?.ToString() ?? string.Empty))" />
+                                @if (_validationErrors.ContainsKey(kvp.Key))
+                                {
+                                    <span class="field-error">@L["Editor.Config.ValidationError"]</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Toast Notification -->
+<div class="toast-notification @(_showToast ? "visible" : "")">
+    @L["Editor.Config.SavedToast"]
+</div>
+
+@code {
+    private ModuleNode? _selectedNode;
+    private Dictionary<string, string> _currentConfig = new();
+    private Dictionary<string, string> _validationErrors = new();
+    private string? _lastSelectedNodeId;
+    private string? _lastAnimaId;
+    private bool _showToast;
+    private CancellationTokenSource? _autoSaveDebounce;
+
+    protected override void OnInitialized()
+    {
+        _editorState.OnStateChanged += OnEditorStateChanged;
+        _animaContext.ActiveAnimaChanged += OnAnimaChanged;
+        LangSvc.LanguageChanged += OnLanguageChanged;
+
+        LoadSelectedNode();
+    }
+
+    private void OnEditorStateChanged()
+    {
+        var currentNodeId = _editorState.SelectedNodeId;
+        if (currentNodeId != _lastSelectedNodeId)
+        {
+            _lastSelectedNodeId = currentNodeId;
+            LoadSelectedNode();
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnAnimaChanged()
+    {
+        var currentAnimaId = _animaContext.ActiveAnimaId;
+        if (currentAnimaId != _lastAnimaId)
+        {
+            _lastAnimaId = currentAnimaId;
+            LoadConfig();
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    private void LoadSelectedNode()
+    {
+        var nodeId = _editorState.SelectedNodeId;
+        if (nodeId == null)
+        {
+            _selectedNode = null;
+            _currentConfig = new Dictionary<string, string>();
+            _validationErrors.Clear();
+            return;
+        }
+
+        _selectedNode = _editorState.Configuration.Nodes
+            .FirstOrDefault(n => n.ModuleId == nodeId);
+
+        LoadConfig();
+    }
+
+    private void LoadConfig()
+    {
+        if (_selectedNode == null || _animaContext.ActiveAnimaId == null)
+        {
+            _currentConfig = new Dictionary<string, string>();
+            return;
+        }
+
+        _currentConfig = _configService.GetConfig(
+            _animaContext.ActiveAnimaId,
+            _selectedNode.ModuleName);
+        _validationErrors.Clear();
+        _lastAnimaId = _animaContext.ActiveAnimaId;
+    }
+
+    private void HandleConfigChanged(string key, string newValue)
+    {
+        _currentConfig[key] = newValue;
+
+        // Validate: non-empty
+        if (string.IsNullOrWhiteSpace(newValue))
+        {
+            _validationErrors[key] = "empty";
+        }
+        else
+        {
+            _validationErrors.Remove(key);
+        }
+
+        // Trigger auto-save with debounce if no validation errors
+        if (_validationErrors.Count == 0)
+        {
+            TriggerAutoSave();
+        }
+    }
+
+    private async void TriggerAutoSave()
+    {
+        _autoSaveDebounce?.Cancel();
+        _autoSaveDebounce?.Dispose();
+        _autoSaveDebounce = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(500, _autoSaveDebounce.Token);
+
+            if (_selectedNode != null && _animaContext.ActiveAnimaId != null)
+            {
+                await _configService.SetConfigAsync(
+                    _animaContext.ActiveAnimaId,
+                    _selectedNode.ModuleName,
+                    new Dictionary<string, string>(_currentConfig));
+
+                // Show toast
+                _showToast = true;
+                await InvokeAsync(StateHasChanged);
+
+                await Task.Delay(2000, _autoSaveDebounce.Token);
+                _showToast = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Debounce cancelled, ignore
+        }
+    }
+
+    private void HandleClose()
+    {
+        _editorState.ClearSelection();
+    }
+
+    public void Dispose()
+    {
+        _editorState.OnStateChanged -= OnEditorStateChanged;
+        _animaContext.ActiveAnimaChanged -= OnAnimaChanged;
+        LangSvc.LanguageChanged -= OnLanguageChanged;
+        _autoSaveDebounce?.Cancel();
+        _autoSaveDebounce?.Dispose();
+    }
+}

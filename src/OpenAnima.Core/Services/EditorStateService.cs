@@ -52,6 +52,13 @@ public class EditorStateService
     public HashSet<string> SelectedNodeIds { get; } = new();
     public HashSet<string> SelectedConnectionIds { get; } = new();
 
+    /// <summary>
+    /// Returns the single selected node ID, or null if zero or multiple nodes selected.
+    /// Used by EditorConfigSidebar to determine which node's config to show.
+    /// </summary>
+    public string? SelectedNodeId =>
+        SelectedNodeIds.Count == 1 ? SelectedNodeIds.First() : null;
+
     // Node drag tracking
     public bool IsDraggingNode { get; set; }
     public string? DraggingNodeId { get; set; }
