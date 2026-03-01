@@ -68,6 +68,7 @@
         _contextManager.OnStateChanged += HandleContextManagerChanged;
         _chatOutputModule.OnMessageReceived += HandleChatOutputReceived;
         LangSvc.LanguageChanged += OnLanguageChanged;
+        _animaContext.ActiveAnimaChanged += OnAnimaChanged;
     }
 
     private void HandleContextManagerChanged()
@@ -76,6 +77,12 @@
     }
 
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnAnimaChanged()
+    {
+        _chatSessionState.Messages.Clear();
+        InvokeAsync(StateHasChanged);
+    }
 
     private void HandleChatOutputReceived(string assistantText)
     {
@@ -302,6 +309,7 @@
         _chatOutputModule.OnMessageReceived -= HandleChatOutputReceived;
         _contextManager.OnStateChanged -= HandleContextManagerChanged;
         LangSvc.LanguageChanged -= OnLanguageChanged;
+        _animaContext.ActiveAnimaChanged -= OnAnimaChanged;
 
         _generationCts.Cancel();
         _generationCts.Dispose();
