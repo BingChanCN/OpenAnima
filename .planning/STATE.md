@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-status: completed
-last_updated: "2026-02-28T17:23:50.011Z"
-last_activity: "2026-03-01 — Completed 25-03: Module detail UI and per-Anima controls"
+status: in_progress
+last_updated: "2026-03-01T00:00:00.000Z"
+last_activity: "2026-03-01 — Completed 26-01 and 26-03: AnimaModuleConfigService and per-Anima chat isolation"
 progress:
   total_phases: 13
   completed_phases: 13
@@ -28,10 +28,10 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ## Current Position
 
-**Phase:** 25 - Module Management
-**Plan:** 03 complete (phase complete)
-**Status:** Milestone complete
-**Last activity:** 2026-03-01 — Completed 25-03: Module detail UI and per-Anima controls
+**Phase:** 26 - Module Configuration UI
+**Plan:** 01 and 03 complete, 02 in progress
+**Status:** In Progress
+**Last activity:** 2026-03-01 — Completed 26-01 and 26-03: AnimaModuleConfigService and per-Anima chat isolation
 
 **Progress:** [██████████] 100%
 
