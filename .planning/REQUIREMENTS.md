@@ -15,7 +15,7 @@
 - [x] **ANIMA-06**: User can clone existing Anima (duplicate configuration)
 - [x] **ANIMA-07**: Each Anima has independent heartbeat loop
 - [ ] **ANIMA-08**: Each Anima has independent module instances
-- [ ] **ANIMA-09**: Each Anima has independent chat interface
+- [x] **ANIMA-09**: Each Anima has independent chat interface
 - [x] **ANIMA-10**: Anima configuration persists across sessions
 
 ### Internationalization (I18N)
@@ -36,11 +36,11 @@
 
 ### Module Configuration (MODCFG)
 
-- [ ] **MODCFG-01**: User can click module in editor to show detail panel on right
-- [ ] **MODCFG-02**: User can edit module-specific configuration in detail panel
-- [ ] **MODCFG-03**: Module configuration persists per Anima
-- [ ] **MODCFG-04**: Configuration changes validate before saving
-- [ ] **MODCFG-05**: Detail panel shows module status and metadata
+- [x] **MODCFG-01**: User can click module in editor to show detail panel on right
+- [x] **MODCFG-02**: User can edit module-specific configuration in detail panel
+- [x] **MODCFG-03**: Module configuration persists per Anima
+- [x] **MODCFG-04**: Configuration changes validate before saving
+- [x] **MODCFG-05**: Detail panel shows module status and metadata
 
 ### Built-in Modules (BUILTIN)
 
@@ -118,12 +118,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MODMGMT-04 | Phase 25 | Complete |
 | MODMGMT-05 | Phase 25 | Complete |
 | MODMGMT-06 | Phase 25 | Pending |
-| MODCFG-01 | Phase 26 | Pending |
-| MODCFG-02 | Phase 26 | Pending |
-| MODCFG-03 | Phase 26 | Pending |
-| MODCFG-04 | Phase 26 | Pending |
-| MODCFG-05 | Phase 26 | Pending |
-| ANIMA-09 | Phase 26 | Pending |
+| MODCFG-01 | Phase 26 | Complete |
+| MODCFG-02 | Phase 26 | Complete |
+| MODCFG-03 | Phase 26 | Complete |
+| MODCFG-04 | Phase 26 | Complete |
+| MODCFG-05 | Phase 26 | Complete |
+| ANIMA-09 | Phase 26 | Complete |
 | BUILTIN-01 | Phase 27 | Pending |
 | BUILTIN-02 | Phase 27 | Pending |
 | BUILTIN-03 | Phase 27 | Pending |
