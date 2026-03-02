@@ -21,12 +21,35 @@ public class WiringInitializationService : IHostedService
     private readonly ILogger<WiringInitializationService> _logger;
     private readonly string _configDirectory;
 
-    private static readonly Type[] ModuleTypes =
+    /// <summary>
+    /// All module types whose ports should be registered in PortRegistry.
+    /// Includes HeartbeatModule so it appears in ModulePalette for manual addition.
+    /// </summary>
+    private static readonly Type[] PortRegistrationTypes =
     {
         typeof(LLMModule),
         typeof(ChatInputModule),
         typeof(ChatOutputModule),
-        typeof(HeartbeatModule)
+        typeof(HeartbeatModule),
+        typeof(FixedTextModule),
+        typeof(TextJoinModule),
+        typeof(TextSplitModule),
+        typeof(ConditionalBranchModule)
+    };
+
+    /// <summary>
+    /// Module types that are auto-initialized at startup.
+    /// HeartbeatModule excluded — BUILTIN-10 requires it to be optional.
+    /// </summary>
+    private static readonly Type[] AutoInitModuleTypes =
+    {
+        typeof(LLMModule),
+        typeof(ChatInputModule),
+        typeof(ChatOutputModule),
+        typeof(FixedTextModule),
+        typeof(TextJoinModule),
+        typeof(TextSplitModule),
+        typeof(ConditionalBranchModule)
     };
 
     public WiringInitializationService(
@@ -105,7 +128,7 @@ public class WiringInitializationService : IHostedService
         var portDiscovery = _serviceProvider.GetRequiredService<PortDiscovery>();
         var portRegistry = _serviceProvider.GetRequiredService<IPortRegistry>();
 
-        foreach (var moduleType in ModuleTypes)
+        foreach (var moduleType in PortRegistrationTypes)
         {
             try
             {
@@ -122,7 +145,7 @@ public class WiringInitializationService : IHostedService
 
     private async Task InitializeModulesAsync(CancellationToken cancellationToken)
     {
-        foreach (var moduleType in ModuleTypes)
+        foreach (var moduleType in AutoInitModuleTypes)
         {
             try
             {

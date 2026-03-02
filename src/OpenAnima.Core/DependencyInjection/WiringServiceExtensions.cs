@@ -53,6 +53,10 @@ public static class WiringServiceExtensions
         services.AddSingleton<ChatInputModule>();
         services.AddSingleton<ChatOutputModule>();
         services.AddSingleton<HeartbeatModule>();
+        services.AddSingleton<FixedTextModule>();
+        services.AddSingleton<TextJoinModule>();
+        services.AddSingleton<TextSplitModule>();
+        services.AddSingleton<ConditionalBranchModule>();
 
         return services;
     }
