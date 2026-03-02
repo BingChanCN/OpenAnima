@@ -11,7 +11,7 @@
 - [x] **Phase 24: Service Migration & i18n** - Refactor singleton services and add internationalization (completed 2026-02-28)
 - [x] **Phase 25: Module Management** - Install/uninstall/enable/disable module capabilities (completed 2026-02-28)
 - [x] **Phase 26: Module Configuration UI** - Detail panel for per-module configuration (completed 2026-03-01)
-- [ ] **Phase 27: Built-in Modules** - Rich module ecosystem with text processing and flow control
+- [x] **Phase 27: Built-in Modules** - Rich module ecosystem with text processing and flow control (completed 2026-03-02)
 
 ## Progress
 
@@ -21,7 +21,7 @@
 | 24. Service Migration & i18n | 3/3 | Complete   | 2026-02-28 |
 | 25. Module Management | 3/3 | Complete    | 2026-02-28 |
 | 26. Module Configuration UI | 3/3 | Complete    | 2026-03-01 |
-| 27. Built-in Modules | 1/2 | In Progress|  |
+| 27. Built-in Modules | 2/2 | Complete   | 2026-03-02 |
 
 ## Phase Details
 

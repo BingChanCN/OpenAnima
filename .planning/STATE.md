@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: completed
-last_updated: "2026-03-02T13:05:31.875Z"
-last_activity: "2026-03-01 — Completed Phase 26: Module Configuration UI (all 3 plans)"
+last_updated: "2026-03-02T13:12:28Z"
+last_activity: "2026-03-02 — Completed Phase 27 Plan 02: EditorConfigSidebar field-type-aware rendering + LLMModule per-Anima config override"
 progress:
   total_phases: 15
-  completed_phases: 14
+  completed_phases: 15
   total_plans: 34
-  completed_plans: 33
-  percent: 97
+  completed_plans: 34
+  percent: 100
 ---
 
 # Project State: OpenAnima v1.5 Multi-Anima Architecture
@@ -29,11 +29,11 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 ## Current Position
 
 **Phase:** 27 - Built-in Modules
-**Plan:** 1 of 2 complete (in progress)
-**Status:** In progress
-**Last activity:** 2026-03-02 — Completed Phase 27 Plan 01: Four built-in modules (FixedText, TextJoin, TextSplit, ConditionalBranch) + HeartbeatModule made optional
+**Plan:** 2 of 2 complete
+**Status:** Complete
+**Last activity:** 2026-03-02 — Completed Phase 27 Plan 02: EditorConfigSidebar field-type-aware rendering + LLMModule per-Anima config override
 
-**Progress:** [██████████] 97%
+**Progress:** [██████████] 100%
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 | Phase 24-service-migration-i18n P03 | 12 | 1 tasks | 14 files |
 | Phase 25 P03 | 5 | 4 tasks | 7 files |
 | Phase 27-built-in-modules P01 | 5 | 2 tasks | 6 files |
+| Phase 27-built-in-modules P02 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,9 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 - **Phase 27-01:** TextJoinModule uses fixed 3 input ports — static port system cannot support dynamic port counts without major architectural change
 - **Phase 27-01:** FixedTextModule subscribes to .execute event (v1) — dynamic input-as-variable is deferred enhancement
 - **Phase 27-01:** ConditionalBranchModule expression evaluator is pragmatic recursive descent (~150 lines) for well-defined operator set
+- **Phase 27-02:** Per-Anima ChatClient created per-execution (not cached) — LLMModule is a singleton but multiple Animas can have different configs
+- **Phase 27-02:** All three LLM fields (apiUrl, apiKey, modelName) must be non-empty to use per-Anima config — partial config falls back entirely to global ILLMService
+- **Phase 27-02:** template key exempted from empty validation in EditorConfigSidebar — empty template is valid for FixedTextModule
 
 ### Key Decisions (v1.4)
 
