@@ -118,9 +118,23 @@
                         {
                             <div class="config-field">
                                 <label>@kvp.Key</label>
-                                <input type="text"
-                                       value="@kvp.Value"
-                                       @oninput="@(e => HandleConfigChanged(kvp.Key, e.Value?.ToString() ?? string.Empty))" />
+                                @if (kvp.Key == "template")
+                                {
+                                    <textarea rows="6"
+                                              @oninput="@(e => HandleConfigChanged(kvp.Key, e.Value?.ToString() ?? string.Empty))">@kvp.Value</textarea>
+                                }
+                                else if (kvp.Key == "apiKey")
+                                {
+                                    <input type="password"
+                                           value="@kvp.Value"
+                                           @oninput="@(e => HandleConfigChanged(kvp.Key, e.Value?.ToString() ?? string.Empty))" />
+                                }
+                                else
+                                {
+                                    <input type="text"
+                                           value="@kvp.Value"
+                                           @oninput="@(e => HandleConfigChanged(kvp.Key, e.Value?.ToString() ?? string.Empty))" />
+                                }
                                 @if (_validationErrors.ContainsKey(kvp.Key))
                                 {
                                     <span class="field-error">@L["Editor.Config.ValidationError"]</span>
@@ -217,8 +231,8 @@
     {
         _currentConfig[key] = newValue;
 
-        // Validate: non-empty
-        if (string.IsNullOrWhiteSpace(newValue))
+        // Allow empty values for "template" key (valid state for FixedTextModule)
+        if (key != "template" && string.IsNullOrWhiteSpace(newValue))
         {
             _validationErrors[key] = "empty";
         }

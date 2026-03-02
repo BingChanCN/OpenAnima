@@ -183,6 +183,25 @@
     border-color: var(--accent-color, #667eea);
 }
 
+.config-field textarea {
+    background: var(--surface-dark);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-family: monospace;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.config-field textarea:focus {
+    border-color: var(--accent-color, #667eea);
+}
+
 .field-error {
     color: #ff5a5a;
     font-size: 0.75rem;
