@@ -44,16 +44,16 @@
 
 ### Built-in Modules (BUILTIN)
 
-- [ ] **BUILTIN-01**: Fixed text module outputs configurable text content
+- [x] **BUILTIN-01**: Fixed text module outputs configurable text content
 - [ ] **BUILTIN-02**: User can edit fixed text content in detail panel
-- [ ] **BUILTIN-03**: Text concat module concatenates two text inputs
-- [ ] **BUILTIN-04**: Text split module splits text by delimiter
-- [ ] **BUILTIN-05**: Text merge module merges multiple inputs into one output
-- [ ] **BUILTIN-06**: Conditional branch module routes based on condition expression
+- [x] **BUILTIN-03**: Text concat module concatenates two text inputs
+- [x] **BUILTIN-04**: Text split module splits text by delimiter
+- [x] **BUILTIN-05**: Text merge module merges multiple inputs into one output
+- [x] **BUILTIN-06**: Conditional branch module routes based on condition expression
 - [ ] **BUILTIN-07**: LLM module allows configuration of API URL in detail panel
 - [ ] **BUILTIN-08**: LLM module allows configuration of API key in detail panel
 - [ ] **BUILTIN-09**: LLM module allows configuration of model name in detail panel
-- [ ] **BUILTIN-10**: Heartbeat module is optional (not required for Anima to run)
+- [x] **BUILTIN-10**: Heartbeat module is optional (not required for Anima to run)
 
 ### Architecture (ARCH)
 
@@ -124,16 +124,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MODCFG-04 | Phase 26 | Complete |
 | MODCFG-05 | Phase 26 | Complete |
 | ANIMA-09 | Phase 26 | Complete |
-| BUILTIN-01 | Phase 27 | Pending |
+| BUILTIN-01 | Phase 27 | Complete |
 | BUILTIN-02 | Phase 27 | Pending |
-| BUILTIN-03 | Phase 27 | Pending |
-| BUILTIN-04 | Phase 27 | Pending |
-| BUILTIN-05 | Phase 27 | Pending |
-| BUILTIN-06 | Phase 27 | Pending |
+| BUILTIN-03 | Phase 27 | Complete |
+| BUILTIN-04 | Phase 27 | Complete |
+| BUILTIN-05 | Phase 27 | Complete |
+| BUILTIN-06 | Phase 27 | Complete |
 | BUILTIN-07 | Phase 27 | Pending |
 | BUILTIN-08 | Phase 27 | Pending |
 | BUILTIN-09 | Phase 27 | Pending |
-| BUILTIN-10 | Phase 27 | Pending |
+| BUILTIN-10 | Phase 27 | Complete |
 
 **Coverage:**
 - v1.5 requirements: 47 total

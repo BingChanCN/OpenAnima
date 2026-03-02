@@ -21,7 +21,7 @@
 | 24. Service Migration & i18n | 3/3 | Complete   | 2026-02-28 |
 | 25. Module Management | 3/3 | Complete    | 2026-02-28 |
 | 26. Module Configuration UI | 3/3 | Complete    | 2026-03-01 |
-| 27. Built-in Modules | 0/? | Not started | - |
+| 27. Built-in Modules | 1/2 | In Progress|  |
 
 ## Phase Details
 

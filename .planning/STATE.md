@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: completed
-last_updated: "2026-03-01T11:09:48.466Z"
+last_updated: "2026-03-02T13:05:31.875Z"
 last_activity: "2026-03-01 — Completed Phase 26: Module Configuration UI (all 3 plans)"
 progress:
-  total_phases: 14
+  total_phases: 15
   completed_phases: 14
-  total_plans: 32
-  completed_plans: 32
-  percent: 100
+  total_plans: 34
+  completed_plans: 33
+  percent: 97
 ---
 
 # Project State: OpenAnima v1.5 Multi-Anima Architecture
 
-**Last updated:** 2026-03-01
+**Last updated:** 2026-03-02
 **Current milestone:** v1.5 Multi-Anima Architecture
 
 ## Project Reference
@@ -28,12 +28,12 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 ## Current Position
 
-**Phase:** 26 - Module Configuration UI
-**Plan:** All 3 plans complete (phase complete)
-**Status:** Milestone complete
-**Last activity:** 2026-03-01 — Completed Phase 26: Module Configuration UI (all 3 plans)
+**Phase:** 27 - Built-in Modules
+**Plan:** 1 of 2 complete (in progress)
+**Status:** In progress
+**Last activity:** 2026-03-02 — Completed Phase 27 Plan 01: Four built-in modules (FixedText, TextJoin, TextSplit, ConditionalBranch) + HeartbeatModule made optional
 
-**Progress:** [██████████] 100%
+**Progress:** [██████████] 97%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 | Phase 24-service-migration-i18n P02 | 3 | 1 tasks | 10 files |
 | Phase 24-service-migration-i18n P03 | 12 | 1 tasks | 14 files |
 | Phase 25 P03 | 5 | 4 tasks | 7 files |
+| Phase 27-built-in-modules P01 | 5 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,10 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 - **Phase 25-03:** ModuleContextMenu follows AnimaContextMenu pattern with backdrop and button-based menu items
 - **Phase 25-03:** ModuleDetailSidebar displays 'Unknown' for author since PluginManifest lacks Author property
 - **Phase 25-03:** Status badges update automatically on ActiveAnimaChanged event to reflect per-Anima state
+- **Phase 27-01:** PortRegistrationTypes (8 types incl. HeartbeatModule) vs AutoInitModuleTypes (7 types excl. HeartbeatModule) — heartbeat appears in ModulePalette but does not auto-start
+- **Phase 27-01:** TextJoinModule uses fixed 3 input ports — static port system cannot support dynamic port counts without major architectural change
+- **Phase 27-01:** FixedTextModule subscribes to .execute event (v1) — dynamic input-as-variable is deferred enhancement
+- **Phase 27-01:** ConditionalBranchModule expression evaluator is pragmatic recursive descent (~150 lines) for well-defined operator set
 
 ### Key Decisions (v1.4)
 
