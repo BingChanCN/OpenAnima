@@ -2,28 +2,19 @@
 
 ## Current Status
 
-**Latest milestone:** v1.4 Module SDK & DevEx (shipped 2026-02-28)
+**Latest milestone:** v1.5 Multi-Anima Architecture (shipped 2026-03-09)
 
 **What shipped:**
-- Installable .NET global tool (oani) with create, validate, and pack commands
-- Module project templates with customizable ports and types
-- .oamod package format with MD5 checksums and manifest validation
-- Complete documentation: 5-minute quick-start + API reference + common patterns
-
-## Current Milestone: v1.5 Multi-Anima Architecture
-
-**Goal:** Transform from single-runtime dashboard to multi-instance Anima architecture with i18n support and rich module ecosystem.
-
-**Target features:**
-- Multi-Anima architecture: Each Anima is an independent agent instance with its own heartbeat, modules, and chat interface
-- Internationalization: Chinese/English UI with language preference persistence
-- Module ecosystem: Rebuilt module management page with install/uninstall/enable/disable capabilities
-- Rich built-in modules: Fixed text, text processing (concat/split/merge), conditional branching, configurable LLM, optional heartbeat
-- Module configuration UI: Right-side detail panel in editor for per-module configuration
+- Multi-Anima architecture: Independent agent instances with create/list/switch/delete/rename/clone
+- Per-Anima runtime isolation: Each Anima runs independent HeartbeatLoop, WiringEngine, EventBus
+- Full i18n: Chinese/English UI with LanguageService, .resx resources, persistent preferences
+- Module management: Card-layout UI with .oamod installation, per-Anima enable/disable, context menu, detail sidebar
+- Module configuration: EditorConfigSidebar with metadata display, typed config form, auto-save, validation
+- Built-in modules: FixedText, TextJoin, TextSplit, ConditionalBranch, configurable LLM with per-Anima overrides
 
 ## What This Is
 
-A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based monitoring dashboard, real-time control panel, LLM-powered chat interface, and visual drag-and-drop wiring editor.
+A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Users create multiple independent Anima instances — each with its own heartbeat, module wiring, chat interface, and configuration. Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based dashboard, visual drag-and-drop wiring editor, LLM-powered chat, and full Chinese/English internationalization.
 
 ## Core Value
 
@@ -91,32 +82,50 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ API reference documents all public interfaces (IModule, IModuleExecutor, ITickable, IEventBus) (DOC-03) — v1.4
 - ✓ API reference documents port system (PortType, PortMetadata, InputPortAttribute, OutputPortAttribute) (DOC-04) — v1.4
 - ✓ API reference includes code examples for common patterns (DOC-05) — v1.4
+- ✓ User can create new Anima with custom name (ANIMA-01) — v1.5
+- ✓ User can view list of all Animas in global sidebar (ANIMA-02) — v1.5
+- ✓ User can switch between different Animas (ANIMA-03) — v1.5
+- ✓ User can delete Anima (ANIMA-04) — v1.5
+- ✓ User can rename Anima (ANIMA-05) — v1.5
+- ✓ User can clone existing Anima (ANIMA-06) — v1.5
+- ✓ Each Anima has independent heartbeat loop (ANIMA-07) — v1.5
+- ✓ Each Anima has independent chat interface (ANIMA-09) — v1.5
+- ✓ Anima configuration persists across sessions (ANIMA-10) — v1.5
+- ✓ User can switch UI language between Chinese and English (I18N-01) — v1.5
+- ✓ All UI text displays in selected language (I18N-02) — v1.5
+- ✓ Language preference persists across sessions (I18N-03) — v1.5
+- ✓ Missing translations fall back to English (I18N-04) — v1.5
+- ✓ User can enable/disable module per Anima (MODMGMT-04) — v1.5
+- ✓ User can view module information (MODMGMT-05) — v1.5
+- ✓ User can click module in editor to show detail panel (MODCFG-01) — v1.5
+- ✓ User can edit module-specific configuration in detail panel (MODCFG-02) — v1.5
+- ✓ Module configuration persists per Anima (MODCFG-03) — v1.5
+- ✓ Configuration changes validate before saving (MODCFG-04) — v1.5
+- ✓ Detail panel shows module status and metadata (MODCFG-05) — v1.5
+- ✓ Fixed text module outputs configurable text content (BUILTIN-01) — v1.5
+- ✓ User can edit fixed text content in detail panel (BUILTIN-02) — v1.5
+- ✓ Text concat module concatenates two text inputs (BUILTIN-03) — v1.5
+- ✓ Text split module splits text by delimiter (BUILTIN-04) — v1.5
+- ✓ Text merge module merges multiple inputs (BUILTIN-05) — v1.5
+- ✓ Conditional branch module routes based on condition expression (BUILTIN-06) — v1.5
+- ✓ LLM module allows configuration of API URL in detail panel (BUILTIN-07) — v1.5
+- ✓ LLM module allows configuration of API key in detail panel (BUILTIN-08) — v1.5
+- ✓ LLM module allows configuration of model name in detail panel (BUILTIN-09) — v1.5
+- ✓ Heartbeat module is optional (BUILTIN-10) — v1.5
+- ✓ AnimaRuntimeManager manages all Anima instances (ARCH-01) — v1.5
+- ✓ AnimaContext identifies current Anima for scoped services (ARCH-02) — v1.5
+- ✓ Each Anima has isolated EventBus instance (ARCH-03) — v1.5
+- ✓ Each Anima has isolated WiringEngine instance (ARCH-04) — v1.5
+- ✓ Configuration files stored per Anima in separate directories (ARCH-05) — v1.5
+- ✓ Service disposal prevents memory leaks (ARCH-06) — v1.5
 
 ### Active
 
-- [ ] User can switch UI language between Chinese and English
-- [ ] User's language preference persists across sessions
-- [ ] User can create new Anima instances
-- [ ] User can view list of all Animas in global sidebar
-- [ ] Each Anima has independent heartbeat loop
-- [ ] Each Anima has independent module instances
-- [ ] Each Anima has independent chat interface
-- [ ] User can switch between Animas
-- [ ] Anima configuration (name, module connections) persists across sessions
-- [ ] User can view module list (built-in + third-party)
-- [ ] User can install/uninstall modules
-- [ ] User can enable/disable modules
-- [ ] User can view module information (author, version, description)
-- [ ] User can click module in editor to show detail panel on right
-- [ ] User can edit module configuration in detail panel
-- [ ] Module configuration persists across sessions
-- [ ] Fixed text module: User can edit text content in detail panel
-- [ ] Text concat module: Concatenates two text inputs
-- [ ] Text split module: Splits text by delimiter
-- [ ] Text merge module: Merges multiple inputs into one output
-- [ ] Conditional branch module: Routes to different outputs based on condition
-- [ ] LLM module: User can configure API URL and key in detail panel
-- [ ] Heartbeat module: Optional module (no longer core requirement)
+- [ ] Each Anima has independent module instances (ANIMA-08 — global singleton kept for DI compatibility)
+- [ ] User can view list of all installed modules (MODMGMT-01)
+- [ ] User can install module from .oamod package (MODMGMT-02)
+- [ ] User can uninstall module (MODMGMT-03)
+- [ ] User can search and filter modules by name (MODMGMT-06)
 
 ### Future
 
@@ -127,6 +136,13 @@ Agents that proactively think and act on their own, while module connections rem
 - Permission system with autonomy levels (manual / assist / auto)
 - Agent memory and conversation history persistence (beyond session)
 - Additional port types (Stream, Media, etc.) for richer module communication
+- Anima background execution (run in background while viewing different Anima)
+- Anima execution statistics (uptime, module execution count)
+- Module dependency resolution and auto-install
+- Module marketplace integration
+- Loop control module for iterative execution
+- Variable storage module for state persistence
+- Additional language support (Japanese, Korean, etc.)
 
 ### Out of Scope
 
@@ -134,21 +150,30 @@ Agents that proactively think and act on their own, while module connections rem
 - Mobile app — Windows desktop first
 - Local model hosting (llama.cpp etc.) — v1 uses cloud LLM only, architecture allows future addition
 - Module marketplace backend/infrastructure — v1 supports loading local module packages only
-- Multi-agent orchestration — v1 focuses on single-agent experience
-- Module configuration editor — each module has different config schema, use appsettings.json
-- Historical data persistence — database complexity, current session only
+- Nested Anima instances — unclear value proposition, high complexity
+- Cross-Anima communication — violates isolation principle, wait for user demand
+- Auto-update modules — breaking changes risk, user loses control
+- Real-time collaboration — multi-user complexity, single-user focus
+- Cloud sync — privacy concerns, local-first principle
 
 ## Context
 
-Shipped v1.4 with ~1,747 LOC C# CLI + ~1,408 lines documentation (total ~14,500 LOC across all source files).
+Shipped v1.5 with ~21,155 LOC across all source files (C#, Razor, CSS, JS).
 Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4.
 
-v1.4 delivered the module SDK:
-- CLI tool: Installable .NET global tool (oani) with System.CommandLine, exit codes, verbosity control
-- Module validation: Manifest JSON checking and IModule implementation verification via isolated assembly reflection
-- Pack command: Creates .oamod ZIP archives with MD5 checksums and target framework metadata
-- Documentation: 5-minute quick-start tutorial + complete API reference for all public interfaces
-- E2E verified: Developer can create, validate, pack, and load custom modules in under 5 minutes
+v1.5 delivered multi-Anima architecture:
+- AnimaRuntimeManager + AnimaContext for independent instance lifecycle
+- Per-Anima runtime containers (HeartbeatLoop, WiringEngine, EventBus)
+- Full i18n with LanguageService, .resx embedded resources, 11+ components localized
+- Module management UI with card layout, .oamod install, per-Anima enable/disable
+- EditorConfigSidebar with metadata, typed config form (text/textarea/password), auto-save
+- 5 built-in modules: FixedText, TextJoin, TextSplit, ConditionalBranch, LLM (per-Anima config)
+
+Known tech debt:
+- ANIMA-08: Global IEventBus singleton kept for module constructor DI — full module instance isolation deferred
+- MODMGMT-01/02/03/06: Full install/uninstall/search UI deferred — basic card UI with .oamod install works
+- Schema mismatch between CLI and Runtime (extended manifest fields)
+- Pre-existing test isolation issues
 
 ## Key Decisions
 
@@ -190,6 +215,14 @@ v1.4 delivered the module SDK:
 | MD5 for checksum algorithm | Sufficient for integrity verification (not cryptographic security) | ✓ Good — fast and adequate |
 | In-memory manifest enrichment | Source module.json unchanged, only packed version has checksum/targetFramework | ✓ Good — clean developer experience |
 | Name-based type comparison for IModule | Avoids type identity issues across AssemblyLoadContext boundaries | ✓ Good — critical for plugin isolation |
+| 8-char hex Anima ID | Guid.NewGuid().ToString("N")[..8] for directory names — readable, collision-free for single-user | ✓ Good — v1.5 |
+| AnimaContext as singleton with event | Avoids full layout re-render vs CascadingValue approach | ✓ Good — v1.5 |
+| AnimaRuntime container pattern | Per-Anima HeartbeatLoop + WiringEngine + EventBus in single container | ✓ Good — clean isolation |
+| LanguageService singleton with Action event | Same pattern as AnimaContext — avoids CascadingValue re-renders | ✓ Good — v1.5 |
+| Chinese (zh-CN) as default language | Primary user base is Chinese-speaking | ✓ Good — v1.5 |
+| Per-Anima ChatClient per-execution | LLMModule singleton but creates new ChatClient per execution for config isolation | ✓ Good — v1.5 |
+| Pragmatic expression evaluator | ~150 LOC recursive descent for ConditionalBranchModule — avoids external dependency | ✓ Good — v1.5 |
+| Fixed 3 input ports for TextJoin | Static port system cannot support dynamic port counts without major change | ⚠️ Revisit — limits flexibility |
 
 ## Constraints
 
@@ -200,4 +233,4 @@ v1.4 delivered the module SDK:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-02-28 after v1.5 milestone started*
+*Last updated: 2026-03-09 after v1.5 milestone*

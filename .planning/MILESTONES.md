@@ -1,5 +1,26 @@
 # Milestones
 
+## v1.5 Multi-Anima Architecture (Shipped: 2026-03-09)
+
+**Phases:** 23-27 | **Plans:** 13 | **LOC:** ~6,600 C#/Razor/CSS added (+11,753 insertions)
+**Git range:** feat(23-01)..feat(27-02) | **Timeline:** 2026-02-28 → 2026-03-02 (3 days)
+
+**Delivered:** Multi-instance Anima architecture with independent runtimes, full Chinese/English i18n, module management UI, per-module configuration, and rich built-in modules — transforming from a single-runtime dashboard to a multi-agent platform.
+
+**Key accomplishments:**
+- Multi-Anima architecture: Create, list, switch, delete, rename, clone independent Anima instances with isolated state
+- Per-Anima runtime isolation: Each Anima runs independent HeartbeatLoop, WiringEngine, and EventBus
+- Full i18n: Chinese/English UI with LanguageService, .resx resources, persistent preferences, all components localized
+- Module management: Card-layout UI with .oamod installation, per-Anima enable/disable, context menu, detail sidebar
+- Module configuration: EditorConfigSidebar with metadata display, typed config form (text/textarea/password), auto-save, validation
+- Built-in modules: FixedText (template interpolation), TextJoin, TextSplit, ConditionalBranch (expression evaluator), configurable LLM with per-Anima API overrides
+
+**Known gaps (accepted):** ANIMA-08 (independent module instances — global singleton kept for DI), MODMGMT-01/02/03/06 (full install/uninstall/search deferred — card UI with .oamod install implemented)
+
+**Archive:** [milestones/v1.5-ROADMAP.md](milestones/v1.5-ROADMAP.md) | [milestones/v1.5-REQUIREMENTS.md](milestones/v1.5-REQUIREMENTS.md) | [milestones/v1.5-MILESTONE-AUDIT.md](milestones/v1.5-MILESTONE-AUDIT.md)
+
+---
+
 ## v1.4 Module SDK & DevEx (Shipped: 2026-02-28)
 
 **Phases:** 20-22 | **Plans:** 8 | **Tasks:** 16 | **LOC:** ~1,747 C# CLI + ~1,408 lines docs

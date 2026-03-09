@@ -1,158 +1,68 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.5
-milestone_name: milestone
-status: completed
-last_updated: "2026-03-02T13:23:02.693Z"
-last_activity: "2026-03-02 — Completed Phase 27 Plan 02: EditorConfigSidebar field-type-aware rendering + LLMModule per-Anima config override"
+milestone_name: Multi-Anima Architecture
+status: archived
+last_updated: "2026-03-09"
+last_activity: "2026-03-09 — Milestone v1.5 archived, ready for next milestone"
 progress:
-  total_phases: 15
-  completed_phases: 15
-  total_plans: 34
-  completed_plans: 34
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 13
+  completed_plans: 13
   percent: 100
 ---
 
-# Project State: OpenAnima v1.5 Multi-Anima Architecture
+# Project State: OpenAnima
 
-**Last updated:** 2026-03-02
-**Current milestone:** v1.5 Multi-Anima Architecture
+**Last updated:** 2026-03-09
+**Current milestone:** v1.5 Multi-Anima Architecture (SHIPPED)
 
 ## Project Reference
 
+See: `.planning/PROJECT.md` (updated 2026-03-09)
+
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-
-**Current focus:** Transform from single-runtime dashboard to multi-instance Anima architecture with i18n support and rich module ecosystem.
-
-See: `.planning/PROJECT.md` (updated 2026-02-28)
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-**Phase:** 27 - Built-in Modules
-**Plan:** 2 of 2 complete
-**Status:** Milestone complete
-**Last activity:** 2026-03-02 — Completed Phase 27 Plan 02: EditorConfigSidebar field-type-aware rendering + LLMModule per-Anima config override
+**Status:** Between milestones — v1.5 shipped, next milestone not started
+**Last activity:** 2026-03-09 — Milestone v1.5 archived
 
-**Progress:** [██████████] 100%
+**Progress:** All milestones v1.0-v1.5 shipped (27 phases, 63 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 39 (across v1.0-v1.4)
-- Average duration: ~30 min
-- Total execution time: ~19.5 hours
+- Total plans completed: 63 (across v1.0-v1.5)
 
 **By Milestone:**
 
-| Milestone | Phases | Plans | Total Time |
-|-----------|--------|-------|--------------|
-| v1.0 Core Platform | 2 | 5 | ~2.5 hrs |
-| v1.1 WebUI Dashboard | 5 | 10 | ~5 hrs |
-| v1.2 LLM Integration | 3 | 6 | ~3 hrs |
-| v1.3 Visual Wiring | 9 | 18 | ~9 hrs |
-| v1.4 Module SDK | 3 | 8 | TBD |
-| v1.5 Multi-Anima | 5 | 0 | 0 hrs |
-
-**Recent Trend:**
-- Last 5 plans: Consistent ~5 min execution
-- Trend: Stable
-| Phase 23-multi-anima-foundation P01 | 3 | 2 tasks | 8 files |
-| Phase 23-multi-anima-foundation P02 | 3 | 2 tasks | 10 files |
-| Phase 24-service-migration-i18n P01 | 90 | 6 tasks | 23 files |
-| Phase 24-service-migration-i18n P02 | 3 | 1 tasks | 10 files |
-| Phase 24-service-migration-i18n P03 | 12 | 1 tasks | 14 files |
-| Phase 25 P03 | 5 | 4 tasks | 7 files |
-| Phase 27-built-in-modules P01 | 5 | 2 tasks | 6 files |
-| Phase 27-built-in-modules P02 | 3 | 2 tasks | 3 files |
+| Milestone | Phases | Plans | Shipped |
+|-----------|--------|-------|---------|
+| v1.0 Core Platform | 2 | 5 | 2026-02-21 |
+| v1.1 WebUI Dashboard | 5 | 10 | 2026-02-23 |
+| v1.2 LLM Integration | 3 | 6 | 2026-02-25 |
+| v1.3 Visual Wiring | 10 | 21 | 2026-02-28 |
+| v1.4 Module SDK | 3 | 8 | 2026-02-28 |
+| v1.5 Multi-Anima | 5 | 13 | 2026-03-09 |
 
 ## Accumulated Context
 
-### v1.5 Scope Decisions
-
-- **Architecture shift:** From single runtime to multi-Anima instances (each with independent heartbeat, modules, chat)
-- **UI layout:** Three-column layout (global sidebar + Anima list/Editor + detail panel)
-- **i18n scope:** UI text only (Chinese/English), not module content or conversations
-- **Module detail panel:** Right-side panel in editor for configuration
-- **Data persistence:** Anima configs, module configs, language preference (not conversation history)
-- **Built-in modules:** Fixed text, text concat/split/merge, conditional branch, configurable LLM, optional heartbeat
-- **Module page:** Real implementation replacing placeholder (list, install/uninstall, enable/disable, info display)
-- **Implementation order:** Architecture → Modules → i18n
-
-### Key Decisions (v1.5)
-
-- **Phase 23-01:** Short 8-char hex ID from Guid.NewGuid().ToString("N")[..8] for Anima directory names — readable, effectively collision-free for single-user app
-- **Phase 23-01:** AnimaContext is a plain singleton with event (not CascadingValue) to avoid full layout re-render on every active-Anima change
-- **Phase 23-01:** Clone copies only anima.json (not runtime state files) to prevent inheriting runtime state in cloned Anima
-- **Phase 24-01:** Global IEventBus singleton kept for module constructors (ANIMA-08 partial) — full module instance isolation deferred to next phase
-- **Phase 24-01:** IAnimaRuntimeManager implements both IAsyncDisposable and IDisposable to satisfy .NET DI disposal requirements
-- **Phase 24-01:** IRuntimeClient methods all include animaId as first parameter so UI can filter SignalR push events by active Anima
-- **Phase 24-01:** DeleteAsync auto-switches active Anima via AnimaContext.SetActive() when deleted Anima was active
-- **Phase 24-02:** SDK auto-includes .resx as EmbeddedResource — explicit ItemGroup not needed (causes NETSDK1022 duplicate error)
-- **Phase 24-02:** LanguageService is a plain singleton with Action event (not CascadingValue) to avoid full layout re-render on every culture change
-- **Phase 24-02:** MainLayout reads localStorage on first render to restore language preference on app load
-- **Phase 24-02:** Chinese (zh-CN) is default and fallback language per CONTEXT.md locked decision
-- **Phase 24-03:** Monitor partial class pattern — IStringLocalizer injected in Monitor.razor.cs to avoid CS0102 duplicate definition with @inject directive
-- **Phase 25-03:** ModuleContextMenu follows AnimaContextMenu pattern with backdrop and button-based menu items
-- **Phase 25-03:** ModuleDetailSidebar displays 'Unknown' for author since PluginManifest lacks Author property
-- **Phase 25-03:** Status badges update automatically on ActiveAnimaChanged event to reflect per-Anima state
-- **Phase 27-01:** PortRegistrationTypes (8 types incl. HeartbeatModule) vs AutoInitModuleTypes (7 types excl. HeartbeatModule) — heartbeat appears in ModulePalette but does not auto-start
-- **Phase 27-01:** TextJoinModule uses fixed 3 input ports — static port system cannot support dynamic port counts without major architectural change
-- **Phase 27-01:** FixedTextModule subscribes to .execute event (v1) — dynamic input-as-variable is deferred enhancement
-- **Phase 27-01:** ConditionalBranchModule expression evaluator is pragmatic recursive descent (~150 lines) for well-defined operator set
-- **Phase 27-02:** Per-Anima ChatClient created per-execution (not cached) — LLMModule is a singleton but multiple Animas can have different configs
-- **Phase 27-02:** All three LLM fields (apiUrl, apiKey, modelName) must be non-empty to use per-Anima config — partial config falls back entirely to global ILLMService
-- **Phase 27-02:** template key exempted from empty validation in EditorConfigSidebar — empty template is valid for FixedTextModule
-
-### Key Decisions (v1.4)
-
-- **Phase 20:** Silent-first output: Default verbosity is "quiet" with no output unless errors occur or --verbosity is set
-- **Phase 20:** Exit code discipline: 0=success, 1=general error, 2=validation error for consistent CLI error reporting
-- **Phase 20:** Stream separation: stderr for errors, stdout for normal output
-- **Phase 20:** Use System.Text.Json for manifest serialization
-- **Phase 20:** Aggregate all validation errors before reporting
-- **Phase 20:** Use embedded resources for templates (not file paths)
-- **Phase 20:** Simple string.Replace() for template substitution
-- **Phase 20:** Rename template files to .tmpl extension for clarity
-- **Phase 20:** Module name validation with friendly suggestions (e.g., "Did you mean 'Module123Invalid'?")
-- **Phase 20:** Port specification format: "Name" or "Name:Type" with default type Text
-- **Phase 21:** Use name-based type comparison for IModule detection to avoid type identity issues across AssemblyLoadContext boundaries
-- **Phase 21:** Accumulate all validation errors before reporting for better developer experience
-- **Phase 21:** Make assembly validation optional (warning only) if module not built yet
-- **Phase 21:** MD5 for checksum algorithm (sufficient for integrity verification, not cryptographic security)
-- **Phase 21:** In-memory manifest enrichment (source module.json unchanged, only packed version has checksum/targetFramework)
-- **Phase 21:** Search Release then Debug for DLL (supports both --no-build and post-build scenarios)
-- **Phase 21:** Extract to .extracted/ subdirectory to avoid conflicts with regular modules
-- **Phase 21:** Skip .extracted/ directory during PluginLoader.ScanDirectory to prevent double-loading
-
-### Key Decisions (v1.3)
-
-- Zero new dependencies: Use .NET 8.0 built-ins for port system
-- Custom topological sort: ~100 LOC implementation avoids 500KB+ QuikGraph dependency
-- HTML5 + SVG editor: Native browser APIs with Blazor, no JavaScript framework
-- Two-phase initialization: Load modules first, then wire connections
-- Scoped EditorStateService: Per-circuit isolation in Blazor Server
-- Port types fixed to Text and Trigger (not extensible by design)
-- Level-parallel execution: Task.WhenAll within level, sequential between levels
-
-### Active TODOs
-
-- [x] Begin Phase 23 execution with plan 23-01
-- [x] Plan 23-02: AnimaListPanel sidebar UI
-- [x] AnimaRuntimeManager.InitializeAsync() needs startup hook (hosted service)
-
 ### Known Blockers
 
-None — ready to start
+None
 
 ### Technical Debt
 
-*Inherited from v1.4:*
+- ANIMA-08: Global IEventBus singleton kept for module constructor DI — full module instance isolation deferred
+- MODMGMT-01/02/03/06: Full install/uninstall/search UI deferred — basic card UI with .oamod install works
 - Schema mismatch between CLI and Runtime (extended manifest fields)
-- SUMMARY metadata gaps (documentation only)
-- Test isolation issues (pre-existing infrastructure)
+- Pre-existing test isolation issues
+- TextJoin fixed 3 input ports — static port system limitation
 
 ---
 
-*State initialized: 2026-02-28*
-*Last updated: 2026-02-28*
-*Roadmap created, ready for Phase 23 planning*
+*State updated: 2026-03-09*
+*Milestone v1.5 archived*
