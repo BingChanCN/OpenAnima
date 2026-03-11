@@ -9,10 +9,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Cross-Anima Routing Infrastructure (ROUTE)
 
-- [ ] **ROUTE-01**: CrossAnimaRouter singleton manages port registry with compound-key addressing (animaId::portName)
-- [ ] **ROUTE-02**: Cross-Anima requests use full Guid correlation IDs with expiry timestamps
-- [ ] **ROUTE-03**: CrossAnimaRouter enforces configurable timeout on pending requests (default 30s)
-- [ ] **ROUTE-04**: Periodic cleanup removes expired correlation entries from pending map
+- [x] **ROUTE-01**: CrossAnimaRouter singleton manages port registry with compound-key addressing (animaId::portName)
+- [x] **ROUTE-02**: Cross-Anima requests use full Guid correlation IDs with expiry timestamps
+- [x] **ROUTE-03**: CrossAnimaRouter enforces configurable timeout on pending requests (default 30s)
+- [x] **ROUTE-04**: Periodic cleanup removes expired correlation entries from pending map
 - [ ] **ROUTE-05**: Anima deletion triggers CancelPendingForAnima to fail pending requests cleanly
 - [ ] **ROUTE-06**: CrossAnimaRouter hooks into AnimaRuntimeManager.DeleteAsync lifecycle
 
@@ -90,10 +90,10 @@ Deferred to future releases. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ROUTE-01 | Phase 28 | Pending |
-| ROUTE-02 | Phase 28 | Pending |
-| ROUTE-03 | Phase 28 | Pending |
-| ROUTE-04 | Phase 28 | Pending |
+| ROUTE-01 | Phase 28 | Complete |
+| ROUTE-02 | Phase 28 | Complete |
+| ROUTE-03 | Phase 28 | Complete |
+| ROUTE-04 | Phase 28 | Complete |
 | ROUTE-05 | Phase 28 | Pending |
 | ROUTE-06 | Phase 28 | Pending |
 | RMOD-01 | Phase 29 | Pending |

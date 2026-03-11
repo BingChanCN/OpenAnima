@@ -82,7 +82,7 @@
 
 - [ ] **Phase 28: Routing Infrastructure** — CrossAnimaRouter singleton with correlation ID lifecycle and Anima deletion hooks
   Plans:
-  - [ ] 28-01-PLAN.md — CrossAnimaRouter core: types, interface, port registry, request correlation, timeout, cleanup, unit tests
+  - [x] 28-01-PLAN.md — CrossAnimaRouter core: types, interface, port registry, request correlation, timeout, cleanup, unit tests
   - [ ] 28-02-PLAN.md — Lifecycle integration: DI registration, AnimaRuntimeManager deletion hooks, EventBus isolation test
 - [ ] **Phase 29: Routing Modules** — AnimaInputPort, AnimaOutputPort, and AnimaRoute as wiring-editor modules
 - [ ] **Phase 30: Prompt Injection and Format Detection** — LLMModule auto-injects service list and detects routing markers in output
@@ -189,12 +189,12 @@
 | 25. Module Management | v1.5 | 3/3 | Complete | 2026-02-28 |
 | 26. Module Configuration UI | v1.5 | 3/3 | Complete | 2026-03-01 |
 | 27. Built-in Modules | v1.5 | 2/2 | Complete | 2026-03-02 |
-| 28. Routing Infrastructure | v1.6 | 0/2 | In Progress | - |
+| 28. Routing Infrastructure | v1.6 | 1/2 | In Progress | - |
 | 29. Routing Modules | v1.6 | 0/? | Not started | - |
 | 30. Prompt Injection and Format Detection | v1.6 | 0/? | Not started | - |
 | 31. HTTP Request Module | v1.6 | 0/? | Not started | - |
 
-**Total shipped: 27 phases, 63 plans across 6 milestones**
+**Total shipped: 27 phases, 64 plans across 6 milestones (v1.6 in progress)**
 
 ---
-*Last updated: 2026-03-11 after Phase 28 planning*
+*Last updated: 2026-03-11 after Phase 28-01 completion*
