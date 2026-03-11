@@ -80,7 +80,7 @@
 
 **Milestone Goal:** Enable Anima-to-Anima communication through request-response routing channels with prompt auto-injection, plus an HTTP request tool module.
 
-- [ ] **Phase 28: Routing Infrastructure** — CrossAnimaRouter singleton with correlation ID lifecycle and Anima deletion hooks
+- [x] **Phase 28: Routing Infrastructure** — CrossAnimaRouter singleton with correlation ID lifecycle and Anima deletion hooks (completed 2026-03-11)
   Plans:
   - [x] 28-01-PLAN.md — CrossAnimaRouter core: types, interface, port registry, request correlation, timeout, cleanup, unit tests
   - [ ] 28-02-PLAN.md — Lifecycle integration: DI registration, AnimaRuntimeManager deletion hooks, EventBus isolation test
@@ -100,7 +100,7 @@
   3. A RouteRequestAsync call with a valid target times out cleanly after the configured timeout (default 30s) without hanging the calling thread
   4. Deleting an Anima with in-flight pending requests causes those requests to fail immediately with a cancellation error rather than waiting for timeout
   5. Periodic cleanup removes expired correlation entries so the pending map does not grow unboundedly
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 **Key Risks**:
 - Isolation boundary: cross-Anima delivery must go through CrossAnimaRouter, never through the global IEventBus singleton (ANIMA-08 tech debt). Add isolation integration test verifying Anima A events do not arrive at Anima B.
@@ -189,7 +189,7 @@
 | 25. Module Management | v1.5 | 3/3 | Complete | 2026-02-28 |
 | 26. Module Configuration UI | v1.5 | 3/3 | Complete | 2026-03-01 |
 | 27. Built-in Modules | v1.5 | 2/2 | Complete | 2026-03-02 |
-| 28. Routing Infrastructure | v1.6 | 1/2 | In Progress | - |
+| 28. Routing Infrastructure | 2/2 | Complete   | 2026-03-11 | - |
 | 29. Routing Modules | v1.6 | 0/? | Not started | - |
 | 30. Prompt Injection and Format Detection | v1.6 | 0/? | Not started | - |
 | 31. HTTP Request Module | v1.6 | 0/? | Not started | - |
