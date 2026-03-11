@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
-using Microsoft.Extensions.Logging;
 
 [assembly: InternalsVisibleTo("OpenAnima.Tests")]
 

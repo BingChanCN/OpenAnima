@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 using OpenAnima.Core.Hubs;
 using OpenAnima.Core.Routing;
 
