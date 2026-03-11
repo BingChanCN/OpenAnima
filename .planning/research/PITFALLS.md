@@ -1,280 +1,491 @@
 # Pitfalls Research
 
-**Domain:** Multi-Anima Architecture, i18n, and Module Management in Blazor Server
-**Researched:** 2026-02-28
-**Confidence:** MEDIUM
+**Domain:** Cross-Anima Routing, HTTP Request Module, LLM Format Detection
+**Researched:** 2026-03-11
+**Confidence:** HIGH
+
+## Context
+
+This document covers pitfalls specific to adding cross-Anima request-response routing and an
+HTTP Request module to OpenAnima v1.6. The system has enforced strict per-Anima isolation since
+v1.5 (separate EventBus, HeartbeatLoop, WiringEngine per Anima). These features deliberately
+pierce that isolation boundary in a controlled way, which is the central tension driving most
+pitfalls here.
+
+The six primary pitfall domains for v1.6:
+
+1. Isolation boundary — breaking guarantees while enabling controlled communication
+2. Async request-response — correlation ID tracking in a heartbeat-driven system
+3. Deadlock — synchronous-looking request-response between agents with shared runtime
+4. LLM format injection — prompt bloat and format reliability for service awareness
+5. Format detection in streaming LLM output — regex fragility and partial token spans
+6. HTTP Request module — SSRF, credential exposure, timeout propagation
+
+---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Circuit Memory Leaks from Event Subscriptions
+### Pitfall 1: Cross-Anima Routing Leaking Through the Shared EventBus Singleton
 
 **What goes wrong:**
-When Anima instances subscribe to singleton EventBus events without unsubscribing, every Anima instance stays in memory indefinitely. The circuit never gets garbage collected because the singleton EventBus holds references to all subscribers through event delegates.
+AnimaRoute/AnimaInputPort modules are registered per-Anima, but the global IEventBus singleton
+(kept for DI compatibility per tech debt ANIMA-08) is still accessible to all module constructors.
+A developer implementing cross-Anima routing uses the singleton EventBus to route messages between
+Animas because it is visible from all contexts. This appears to work but silently breaks per-Anima
+isolation: any Anima can now receive events from any other Anima by knowing an event name, and the
+cross-Anima channel bypasses all correlation ID tracking.
 
 **Why it happens:**
-Blazor Server circuits are scoped per-user connection, but the EventBus is a singleton. When an Anima component subscribes to events in `OnInitialized`, the subscription creates a strong reference from the singleton back to the scoped component. When the user disconnects, the circuit should be collected, but the event subscription keeps it alive.
+The v1.5 tech debt item ANIMA-08 explicitly states that a global IEventBus singleton is kept for
+DI compatibility. When building AnimaRoute, the temptation is to use this visible singleton as the
+cross-Anima transport since it already spans all Animas. The per-Anima EventBus instances inside
+AnimaRuntime are the correct transport for within-Anima messages; only the cross-Anima routing
+layer (AnimaRuntimeManager or a new CrossAnimaRouter service) should bridge between them.
 
 **How to avoid:**
-- Implement `IAsyncDisposable` on all components that subscribe to EventBus events
-- Unsubscribe in `DisposeAsync()` method
-- Consider using `WeakReference` for event subscriptions if multiple Animas will exist simultaneously
-- Configure `CircuitOptions.DisconnectedCircuitMaxRetained` and `DisconnectedCircuitRetentionPeriod` to reasonable limits
+- Cross-Anima routing MUST go through AnimaRuntimeManager, not through any EventBus instance
+- AnimaRuntimeManager.GetRuntime(targetAnimaId) is the only sanctioned cross-boundary call
+- AnimaInputPort registers its handler on its own Anima's per-Anima EventBus only
+- AnimaRoute delivers to the target Anima by calling the target AnimaRuntime's EventBus directly
+  via AnimaRuntimeManager — never via the global singleton
+- Add an integration test: verify that an event published to Anima A's EventBus does NOT arrive
+  at Anima B's subscribers
 
 **Warning signs:**
-- Memory usage grows continuously as users connect/disconnect
-- Task Manager shows memory not being released after users close browser tabs
-- Multiple Anima instances remain in memory after switching between them
-- EventBus subscriber count grows without decreasing
+- AnimaRoute module constructor receives IEventBus via DI (receives the singleton, not per-Anima)
+- Cross-Anima test passes even when AnimaRuntimeManager lookup is bypassed
+- Events arriving at AnimaInputPort without a correlation ID in headers
+- Multiple Animas receiving the same event when only one was targeted
 
 **Phase to address:**
-Phase 1 (Multi-Anima Architecture) — Must establish proper disposal pattern before building multiple instances
+Cross-Anima Routing Infrastructure phase — routing boundary design must be explicit before any
+AnimaRoute/AnimaInputPort implementation begins.
 
 ---
 
-### Pitfall 2: AssemblyLoadContext Memory Leaks from Retained Assembly References
+### Pitfall 2: Deadlock from Synchronous-Style Request-Response Inside the Heartbeat Tick
 
 **What goes wrong:**
-When unloading modules, the AssemblyLoadContext.Unload() call doesn't actually unload assemblies if you store Assembly references in instance fields (like `Dictionary<string, Assembly>`). File handles remain open, memory isn't released, and repeated load/unload cycles cause memory leaks.
+AnimaRoute sends a request to another Anima and awaits a response within the same heartbeat tick
+execution. The target Anima's AnimaInputPort processes the request and publishes the response via
+AnimaOutputPort — but the response is routed back through the caller's per-Anima EventBus. If the
+caller's HeartbeatLoop is blocked on `await` inside the tick, the tick's SemaphoreSlim
+(_tickLock) is still held. The response handler on the calling Anima's EventBus tries to execute,
+but it is also invoked from within the same tick context. This does not deadlock on the
+SemaphoreSlim (events execute inline via Task.WhenAll inside the tick), but it CAN deadlock if
+the response is routed through an intermediate layer that also awaits the calling Anima's
+heartbeat to advance.
 
 **Why it happens:**
-AssemblyLoadContext.Unload() is cooperative, not immediate. The runtime keeps the context alive via a strong GC handle during unload. If your context stores Assembly references in instance fields, those references create a circular dependency that prevents garbage collection. The unload process needs to keep the context alive, but the context keeps assemblies alive, creating a deadlock.
+The HeartbeatLoop's `_tickLock` uses `SemaphoreSlim(1, 1)` with a non-blocking check
+(`Wait(0)`) to skip ticks, not to block on re-entry. However, the tick executes module tasks via
+`Task.WhenAll`, which means all module tasks within a tick run concurrently on the same thread
+pool. If AnimaRoute's `ExecuteAsync` calls into the target Anima synchronously (via
+`AnimaRuntimeManager.GetRuntime(targetId).EventBus.PublishAsync(...)`) AND the target Anima is
+not running its own heartbeat (e.g., because it is also mid-tick), then `PublishAsync` on the
+target returns immediately (it fans out handlers as tasks). The response arrives back as an event
+on the source Anima — but the source Anima is still inside `Task.WhenAll` waiting for AnimaRoute
+to finish. The response handler fires as a new task inside the ongoing `Task.WhenAll` fan-out.
+This creates a logical deadlock: AnimaRoute awaits `TaskCompletionSource<string>` for the
+response, but the response handler that would complete that TCS is blocked waiting for the
+original `Task.WhenAll` to settle, which cannot settle until AnimaRoute completes.
 
 **How to avoid:**
-- Clear all Assembly references before calling Unload(): `LoadedAssemblies.Clear(); Unload();`
-- Use `WeakReference<Assembly>` instead of strong references for caching
-- Don't store Assembly objects in instance fields of the AssemblyLoadContext
-- Explicitly call GC.Collect() and GC.WaitForPendingFinalizers() after Unload() to verify cleanup
-- Monitor with `AssemblyLoadContext.Unloading` event to detect when unload completes
+- NEVER await a cross-Anima response within the same synchronous-style execution path
+- Use fire-and-forget for the outbound request; the inbound response must arrive in a FUTURE tick
+  or via a separate callback that is NOT nested in the originating await chain
+- Use `TaskCompletionSource<T>` with a timeout and register the completion callback as a separate
+  EventBus subscription that fires independently of the requesting module's ExecuteAsync
+- The requesting module stores the pending TCS in a dictionary keyed by correlationId
+- In a SUBSEQUENT tick or callback, the response arrives, the dictionary lookup completes the TCS
+- Always set a timeout on the TCS: `CancellationTokenSource` with 5–30 second default
+- Document clearly: AnimaRoute is asynchronous — callers receive a "request submitted" signal,
+  not a synchronous response
 
 **Warning signs:**
-- File handles remain open after module unload (check with Process Explorer)
-- Memory usage grows with each module load/unload cycle
-- `AssemblyLoadContext.Unloading` event never fires
-- Modules can't be reloaded because DLL files are locked
+- AnimaRoute.ExecuteAsync hangs indefinitely during testing
+- HeartbeatLoop tick latency spikes to thousands of milliseconds
+- Multiple ticks skipped consecutively after a cross-Anima call
+- Response event arrives but pending request dictionary lookup finds no entry (TCS already
+  abandoned due to timeout)
 
 **Phase to address:**
-Phase 3 (Module Management) — Critical before implementing install/uninstall functionality
+Cross-Anima Routing Infrastructure — correlation ID and async callback design must be decided
+before module implementation.
 
 ---
 
-### Pitfall 3: Singleton-to-Scoped Service Lifetime Mismatch
+### Pitfall 3: Correlation ID Collisions and Orphaned Pending Requests
 
 **What goes wrong:**
-When migrating from single-Anima (singleton services) to multi-Anima (scoped services per circuit), you get `InvalidOperationException: Cannot consume scoped service from singleton`. Existing singleton services that depend on scoped services (like NavigationManager, IJSRuntime, or per-Anima state) break completely.
+AnimaRoute generates a correlation ID (e.g., `Guid.NewGuid().ToString("N")[..8]`) and registers a
+`TaskCompletionSource` in a dictionary keyed by that ID. The response from the target Anima comes
+back on a different EventBus with the same correlation ID in the payload. If the correlation ID
+is not globally unique enough, two concurrent requests from different Animas to the same target
+produce the same ID, causing response misrouting. More dangerously, if the target Anima is
+deleted or crashes before responding, the pending TCS entry is never removed. Over time, the
+pending requests dictionary grows unboundedly, holding references to module state and preventing
+garbage collection.
 
 **Why it happens:**
-In Blazor Server, "scoped" means per-circuit, not per-request. Each SignalR circuit is a scope. When you have multiple Animas, each needs its own scoped services, but singleton services are shared across all circuits. If a singleton tries to inject a scoped service, the DI container throws because the singleton outlives any individual scope.
+8-character hex IDs (the pattern used for Anima IDs) produce 16^8 = ~4 billion possibilities,
+which is sufficient for Anima names but low for concurrent in-flight requests under high load.
+More critically, there is no eviction mechanism for completed or abandoned requests because
+heartbeat-driven systems don't have a natural request lifecycle with guaranteed cleanup.
 
 **How to avoid:**
-- Audit all singleton services for dependencies on scoped services
-- Convert per-Anima state services from singleton to scoped
-- Use `IServiceScopeFactory` in singletons to create scopes when needed
-- For EventBus: Keep as singleton but ensure it doesn't hold per-Anima state
-- For module instances: Change from singleton to scoped so each Anima gets its own instances
+- Use `Guid.NewGuid().ToString("N")` (full 32-char hex) for correlation IDs — not truncated
+- Maintain a concurrent dictionary: `ConcurrentDictionary<string, (TaskCompletionSource<string>,
+  DateTime expiry)>` for pending requests
+- Run a periodic cleanup scan (every N ticks or on a timer) to remove entries past their expiry
+- On AnimaRuntime disposal, cancel and remove ALL pending requests belonging to that Anima
+- When target Anima is deleted, publish a "routing-failed" event to the source Anima's EventBus
+  for all pending correlation IDs associated with that target
+- Log all orphaned correlation IDs at WARN level with their age for debugging
 
 **Warning signs:**
-- `InvalidOperationException` during DI resolution
-- Services that work in single-Anima mode break when adding second Anima
-- State leaking between different Anima instances
-- Modules executing in wrong Anima context
+- Pending request count grows monotonically and never decreases
+- Memory usage climbs over hours of operation
+- AnimaRuntime disposal hangs because pending TCS callbacks reference disposed objects
+- Duplicate correlation IDs appearing in logs
 
 **Phase to address:**
-Phase 1 (Multi-Anima Architecture) — Must resolve before implementing multiple instances
+Cross-Anima Routing Infrastructure — cleanup and expiry design must be built alongside the
+correlation ID mechanism, not added later.
 
 ---
 
-### Pitfall 4: Configuration File Corruption from Concurrent Writes
+### Pitfall 4: Prompt Auto-Injection Bloating the LLM Context Window
 
 **What goes wrong:**
-When multiple Animas save configuration simultaneously (e.g., user changes settings in two Animas at once), concurrent writes to the same JSON file cause corruption. The file ends up with partial writes, invalid JSON, or complete data loss. On next load, the application crashes or loses all configuration.
+When an Anima has AnimaRoute modules configured, the system injects descriptions of available
+downstream services into the LLM's system prompt. As the number of configured routes grows, the
+injected service descriptions consume an increasing proportion of the context window. With 10
+routes, each with a description, available arguments, and example usage, the injection can consume
+500–2000 tokens. This degrades LLM performance (less context for conversation history), increases
+cost, and can push long conversations past the context limit.
 
 **Why it happens:**
-File I/O is not atomic. When two threads write to the same file simultaneously, their writes interleave at the byte level. JSON serialization writes the file sequentially, so concurrent writes produce invalid JSON like `{"anima1": {"na{"anima2": {"name": "B"}}me": "A"}}`.
+Naive prompt injection concatenates all service descriptions unconditionally into the system
+prompt on every request. This is common because it is simple and deterministic. The problem
+compounds when service descriptions include examples, argument schemas, and natural-language
+explanations. The LLMModule currently sends a single user message with no system prompt; adding
+injected service descriptions requires extending the message list, and there is no budget
+enforcement to prevent unconstrained growth.
 
 **How to avoid:**
-- Use write-through-temp-file-then-rename pattern for atomic writes:
-  ```csharp
-  var tempFile = Path.GetTempFileName();
-  await File.WriteAllTextAsync(tempFile, json);
-  File.Move(tempFile, targetPath, overwrite: true);
-  ```
-- Implement file-level locking with `FileStream` and `FileShare.None`
-- Use a single-writer queue pattern: all saves go through a `Channel<T>` processed by one background task
-- Add retry logic with exponential backoff for transient failures
-- Keep in-memory cache and only persist on explicit save or periodic intervals
+- Enforce a hard token budget for the service-awareness injection: max 200–300 tokens total
+  regardless of how many routes are configured
+- Use concise, structured descriptions: one line per service, not paragraphs
+  Example format: `[ServiceName]: <one-sentence description>. Call with: {input field}`
+- If token budget is exceeded, truncate with "... and N more services" rather than silently
+  overflowing
+- Inject service descriptions as a separate system message, not appended to user content
+- Consider lazy injection: only inject services when conversation context suggests a routing
+  decision is needed (e.g., detect question patterns that match service capabilities)
+- Track injected token cost in ChatContextManager so it counts against the 90% send-block
+  threshold alongside conversation history
 
 **Warning signs:**
-- `JsonException` on application startup
-- Configuration resets to defaults unexpectedly
-- Partial data loss (some Animas saved, others not)
-- File corruption errors in logs
-- Race condition exceptions during high-frequency saves
+- Context capacity percentage jumps significantly when routing modules are configured
+- Chat send blocking triggered earlier than expected in conversations with many routes
+- LLM responses degrade in quality or become less responsive to conversation content
+- Per-message token cost significantly higher than baseline for same conversation length
 
 **Phase to address:**
-Phase 2 (Configuration Persistence) — Must implement before multi-Anima configuration saving
+Prompt Auto-Injection phase — token budget enforcement must be built in from the start, not
+retrofitted after observing context exhaustion.
 
 ---
 
-### Pitfall 5: Culture Switching Requires Full Circuit Reconnect
+### Pitfall 5: LLM Format Detection Breaking on Partial Tokens During Streaming
 
 **What goes wrong:**
-When user switches language in Blazor Server, changing `CultureInfo.CurrentCulture` doesn't update the UI. Components continue showing old language. Forcing `StateHasChanged()` causes exceptions or inconsistent rendering. The only reliable way is full page reload, which loses all circuit state.
+The format detector monitors the LLM output stream for a routing trigger format (e.g.,
+`[ROUTE:ServiceName|payload]`). The LLM streams tokens incrementally. The format marker spans
+multiple token boundaries — e.g., `[ROUTE` arrives in one chunk, `:ServiceName` in another,
+`|payload]` in a third. A simple regex applied to each chunk independently misses the match
+because no single chunk contains the complete pattern. Worse, the closing `]` token may contain
+conversational text that follows the route command, causing the detector to silently discard the
+routing instruction or misparse the payload.
 
 **Why it happens:**
-Blazor Server caches localized strings at circuit initialization. The `IStringLocalizer` resolves resources once per circuit based on the initial culture. Changing culture mid-circuit doesn't invalidate these caches. Additionally, SignalR circuit state is tied to the initial culture, and changing it mid-flight causes synchronization issues.
+The current LLMModule calls `CompleteAsync` (non-streaming, buffered response) so this is not
+currently an issue. But the current architecture comment in ChatOutputModule and LLMModule shows
+that streaming is a stated capability. If format detection is layered on top of the streaming path,
+and the implementer applies the regex to each streaming chunk rather than to a rolling buffer, the
+split-token problem is guaranteed to manifest. This is a known pitfall in LLM structured output
+parsing: tokens do not align with string boundaries meaningful to parsers.
 
 **How to avoid:**
-- Use `NavigationManager.NavigateTo(uri, forceLoad: true)` to trigger full page reload
-- Store language preference in persistent storage (localStorage via JS interop or cookie)
-- Set culture on server-side before circuit initialization using middleware
-- Accept that language switching requires page reload — don't try to make it seamless
-- Show clear UI feedback: "Switching language..." with loading indicator during reload
+- Maintain a rolling character buffer across all streaming chunks; apply the detection regex to
+  the full buffer, not to individual chunks
+- Only emit buffered content downstream AFTER confirming it does not start an incomplete pattern
+  (i.e., use a "lookahead flush" approach: flush content only when the buffer prefix cannot be
+  the start of a trigger pattern)
+- Use a deterministic bracket-counting state machine rather than a pure regex for detection:
+  track whether a `[ROUTE:` prefix has been seen and buffer until the closing `]` arrives
+- Split the output into two streams: normal text output (to ChatOutput port) and routing
+  instructions (to AnimaRoute), emitting from the buffer as each section is fully confirmed
+- Test with models that produce verbose streaming (many small chunks) and terse models (few large
+  chunks) to verify buffer behavior at both extremes
 
 **Warning signs:**
-- UI shows mixed languages after culture switch
-- `InvalidOperationException` during culture change
-- Components render with wrong culture after `StateHasChanged()`
-- Localized strings don't update despite culture change
-- Circuit disconnects unexpectedly after culture change
+- Route instructions intermittently fail to trigger when LLM responds with them
+- Routing works reliably in unit tests (which use mock full-response returns) but fails in
+  integration with real LLM streaming
+- Format detector fires on partial matches, triggering routing with incomplete payloads
+- Conversational text is accidentally consumed as part of a route payload
 
 **Phase to address:**
-Phase 2 (i18n Integration) — Must establish pattern before implementing language switcher
+Format Detection phase — the rolling buffer approach must be the only implementation path;
+chunk-by-chunk regex must be explicitly rejected in the design document.
 
 ---
 
-### Pitfall 6: Shared Static State Across Module Instances
+### Pitfall 6: Regex Fragility from LLM Format Non-Compliance
 
 **What goes wrong:**
-When modules use static fields for state (e.g., `static int _counter`), all instances of that module across all Animas share the same state. Anima A's module execution affects Anima B's module state, causing unpredictable behavior and data corruption.
+The routing trigger format chosen (e.g., `[ROUTE:ServiceName|payload]`) assumes the LLM reliably
+produces this exact syntax. In practice, LLMs trained on general text have never seen this custom
+format in training data. Under variations in temperature, context, model version, or instruction
+phrasing, the LLM produces near-misses: `[Route:ServiceName|payload]` (wrong casing), `[ROUTE:
+ServiceName|payload]` (space after colon), `ROUTE: ServiceName - payload` (no brackets, dash
+separator), or `I'll route to ServiceName with payload` (no format at all). The regex matches
+none of these, silently dropping the routing instruction.
 
 **Why it happens:**
-Static fields are per-AppDomain, not per-instance. Even though each Anima gets its own module instance via DI, static fields are shared across all instances. Developers coming from singleton patterns naturally use static fields for "module-level" state, not realizing it's actually "application-level" state.
+LLMs do not follow format instructions with 100% reliability — research shows prompt-based format
+compliance at 80–95%, not 100%. This is especially true for custom non-standard formats with no
+training-data precedent. The closer the format is to patterns the model has seen (like JSON, or
+markdown), the more reliable compliance becomes. Novel bracket syntax with pipe separators is
+uncommon enough that model compliance degrades under pressure (long context, complex task, high
+temperature).
 
 **How to avoid:**
-- Ban static mutable state in module guidelines
-- Use instance fields for all module state
-- Register modules as scoped services so each circuit gets its own instances
-- Add static analysis rules to detect static mutable fields in modules
-- Document this pitfall prominently in module SDK documentation
+- Choose a format that maps to a training-data pattern the model knows well: structured JSON
+  inline in the output (`{"route": "ServiceName", "payload": "..."}`) is far more reliable than
+  novel bracket syntax
+- Alternatively, use function calling / tool use APIs (e.g., OpenAI's tool_call feature) which
+  enforce structured output at the token generation level — this is the highest-reliability path
+- If using a custom format, write the detection regex with leniency:
+  case-insensitive, optional whitespace, multiple delimiter alternatives
+- Implement fuzzy match fallback: if no exact match but output starts with recognizable prefix,
+  log and attempt recovery
+- Empirically test format compliance across temperature=0, 0.5, 1.0 and record failure rates
+  before committing to a format
+- Document that routing is "best effort" when using prompt-injection approach; tool_call approach
+  is required for production-reliability routing
 
 **Warning signs:**
-- Module behavior changes based on execution order
-- State from one Anima appears in another Anima
-- Race conditions in module execution
-- Intermittent test failures that disappear when running modules in isolation
-- Module state persists across Anima restarts
+- Format detection works in deterministic tests (temperature=0) but fails intermittently in
+  production (temperature=0.7+)
+- Different LLM providers (OpenAI vs local models) produce significantly different compliance rates
+- LLM output contains routing intent in natural language but not in the expected format
+- Format compliance drops after model version upgrades with no code changes
 
 **Phase to address:**
-Phase 1 (Multi-Anima Architecture) — Must establish module isolation before building multiple instances
+Format Detection phase — format choice is a critical decision that must be made before implementing
+the detection layer; revisit in integration testing with real model calls.
 
 ---
 
-### Pitfall 7: Heartbeat Loop Concurrent Execution Race Conditions
+### Pitfall 7: HTTP Request Module SSRF via User-Controlled URLs
 
 **What goes wrong:**
-When multiple Animas run heartbeat loops simultaneously, they execute modules concurrently. If modules access shared resources (EventBus, file system, database) without synchronization, race conditions cause data corruption, duplicate events, or deadlocks.
+The HTTP Request module accepts a URL from its input port (wired from LLM output or user
+configuration). A malicious input — or a compromised LLM response — supplies a URL that targets
+internal services: `http://localhost:5050/admin`, `http://169.254.169.254/latest/meta-data/` (AWS
+metadata endpoint), or `file:///C:/Windows/System32/drivers/etc/hosts`. The module faithfully
+executes the request, leaking internal service responses or local file contents to the LLM output
+stream or through the OutputPort.
 
 **Why it happens:**
-Each Anima's heartbeat runs on its own background thread via `IHostedService`. By default in .NET 8+, hosted services start concurrently. If two heartbeats execute the same module type simultaneously (different instances but same code), and that code accesses shared resources, classic race conditions occur.
+SSRF is OWASP Top 10 and occurs when a server makes HTTP requests to attacker-controlled
+destinations. In OpenAnima, the attack surface is LLM output → HTTP module input. If the LLM is
+manipulated via prompt injection to generate a malicious URL, the HTTP Request module becomes the
+attack's execution vector. The application runs as a local process on Windows, so internal
+Windows services (IIS, SQL Server, local APIs) and file URLs are all reachable.
 
 **How to avoid:**
-- Ensure EventBus is thread-safe (already using `ConcurrentDictionary` + `ConcurrentBag`)
-- Use `SemaphoreSlim` for critical sections in modules that access shared resources
-- Make module execution idempotent where possible
-- Consider sequential hosted service startup if Animas have dependencies: `services.Configure<HostOptions>(o => o.ServicesStartConcurrently = false)`
-- Add integration tests that run multiple Animas concurrently to catch race conditions
+- Validate all URLs before execution against a configurable allowlist (the MOST effective defense)
+- Default to allowlist-empty: no URLs permitted unless the user explicitly adds them in module
+  configuration
+- Block all non-HTTPS schemes: reject `http://`, `file://`, `ftp://`, `dict://` at parse time
+- Reject private/loopback IP ranges after DNS resolution: 127.x.x.x, 10.x.x.x, 172.16-31.x.x,
+  192.168.x.x, ::1, fc00::/7
+- Re-resolve hostname after initial resolution to prevent DNS rebinding attacks
+- Never log full request/response bodies by default — only log URL, status code, and duration
+- Add a `requireHttps` module config field defaulting to `true`
 
 **Warning signs:**
-- Intermittent exceptions during module execution
-- Events published multiple times
-- Deadlocks during high-frequency execution
-- State corruption that only appears with multiple Animas
-- Test failures that only occur when running multiple Animas
+- HTTP module accepts URLs containing `localhost`, `127.0.0.1`, or private IP ranges
+- Module can request `file://` or `ftp://` scheme URLs
+- URL validation only checks for obvious bad patterns without DNS resolution check
+- LLM-generated URLs are accepted without allowlist verification
 
 **Phase to address:**
-Phase 1 (Multi-Anima Architecture) — Must verify thread safety before enabling multiple instances
+HTTP Request Module phase — URL validation and allowlist enforcement must be implemented before
+the module can make any real network calls; security cannot be bolted on after.
 
 ---
 
-### Pitfall 8: Missing Translation Fallback Strategy
+### Pitfall 8: API Keys and Credentials Leaking Through HTTP Module Outputs
 
 **What goes wrong:**
-When translations are missing for a language, the UI shows translation keys (e.g., `"Anima.Name.Label"`) or throws exceptions. Users see broken UI with technical strings instead of readable text. Partially translated features look unprofessional.
+The HTTP Request module is configured with bearer tokens, API keys, or basic auth credentials.
+The response (which may include these credentials echoed back, or the request details in error
+responses) flows through the wiring OutputPort as plain text. It then enters the LLM's context
+window or the chat display. LLM error descriptions, verbose API responses, or debugging logs can
+expose credentials in logs or in the UI visible to all users.
 
 **Why it happens:**
-Translation files are maintained separately from code. New features add strings to English but forget to update Chinese. Translators miss strings. Resource files get out of sync. Without a fallback strategy, missing translations surface directly to users.
+The module configuration stores credentials (e.g., Authorization header value) in the same
+`Dictionary<string, string>` config store used by LLMModule. The config store does not
+differentiate between safe-to-display and sensitive fields. The LLMModule already has this issue
+but masks the API key in log output (4 chars + `***`). The HTTP module's output flows as raw text
+into downstream modules, including potentially ChatOutputModule which renders it in the browser.
 
 **How to avoid:**
-- Implement fallback chain: requested language → English → key itself
-- Use `IStringLocalizer` with `ResourceNotFound` set to return key instead of throwing
-- Add build-time validation: fail CI if translation files have mismatched keys
-- Show visual indicator in dev mode for missing translations (e.g., `[MISSING: key]`)
-- Maintain translation coverage report: track percentage translated per language
+- Mark credential config fields as `type: "password"` in the config schema — the existing
+  EditorConfigSidebar already renders password fields as `<input type="password">` and suppresses
+  display; extend this to HTTP module config
+- Headers containing Authorization, API-Key, or X-*-Token patterns must never appear in
+  OutputPort payloads — strip them before forwarding response content
+- Never log full request headers; the existing mask pattern (`key[..4] + "***"`) must apply to
+  all credential-type fields in HTTP module
+- Response bodies that echo back request headers (common in debugging endpoints) should be
+  configurable to strip before forwarding downstream
+- Add a "sanitize response" config option that removes any line containing known header patterns
 
 **Warning signs:**
-- Users report seeing technical strings like `"Module.Status.Running"`
-- UI shows empty labels or buttons
-- Exceptions in logs about missing resources
-- Inconsistent language mixing (some English, some Chinese)
-- New features only work in English
+- HTTP module response OutputPort contains `Authorization:` or `Bearer ` prefixes
+- Module configuration editor shows API keys in plain text in the browser
+- Logs contain full Authorization header values
+- LLM context window shows API key values in conversation history
 
 **Phase to address:**
-Phase 2 (i18n Integration) — Must establish fallback before adding translations
+HTTP Request Module phase — credential handling must use the existing password field type from
+day one; never store or display credentials as plain text.
 
 ---
 
-### Pitfall 9: Module Configuration UI State Desync
+### Pitfall 9: HTTP Request Module Timeout Blocking the Heartbeat Tick
 
 **What goes wrong:**
-When user edits module configuration in the detail panel, the changes don't apply to the running module. Or changes apply immediately but aren't persisted, so they're lost on restart. Or the UI shows stale configuration while the module runs with different settings.
+The HTTP Request module uses `HttpClient` with no configured timeout (or a long default). When
+the target endpoint is slow or unresponsive, the module's `ExecuteAsync` method awaits the HTTP
+call. This blocks the module's task slot in the HeartbeatLoop's `Task.WhenAll`. Since the
+heartbeat tick holds `_tickLock` while all module tasks run, a blocked HTTP call delays all
+subsequent ticks. With the default `HttpClient` timeout of 100 seconds, a single slow HTTP call
+stalls the entire Anima's heartbeat for nearly two minutes.
 
 **Why it happens:**
-Three separate states exist: (1) UI form state, (2) running module instance state, (3) persisted configuration file. Without careful synchronization, these diverge. Blazor's two-way binding updates UI state, but doesn't automatically update module state or persist to disk.
+`HttpClient.Timeout` defaults to 100 seconds if not explicitly set. This is appropriate for
+user-initiated requests where the user is waiting, but disastrous for a module running inside a
+heartbeat loop that must complete within 100ms to maintain tempo. The HeartbeatLoop already has a
+tick-skip mechanism (`_tickLock.Wait(0)`), but this only skips if the PREVIOUS tick is still
+running — it does not interrupt an in-progress slow module.
 
 **How to avoid:**
-- Establish clear state flow: UI → validation → module update → persistence
-- Use explicit "Save" button, not auto-save, to make persistence intentional
-- Show visual indicator when configuration is dirty (unsaved changes)
-- Reload module instance after configuration change (or require Anima restart)
-- Add confirmation dialog: "Configuration changed. Restart Anima to apply?"
-- Keep single source of truth: load from persistence, update module, then update UI
+- Set `HttpClient.Timeout` to 10 seconds maximum for HTTP Request modules; expose this as a
+  configurable field with a 10s default and a 30s maximum
+- Use `CancellationToken` from the heartbeat tick's `ct` parameter to cancel HTTP calls when the
+  heartbeat is stopping: pass `ct` to `HttpClient.SendAsync(request, ct)`
+- Add a per-request timeout using `CancellationTokenSource.CreateLinkedTokenSource(ct,
+  CancellationTokenSource.CreateLinkedTokenSource(TimeSpan).Token)` to enforce a hard deadline
+- Log a warning if HTTP call latency exceeds 5 seconds: this indicates the endpoint is slow and
+  may cause tick accumulation
+- Consider making HTTP calls fire-and-forget with response delivered in a subsequent tick rather
+  than blocking the initiating tick
 
 **Warning signs:**
-- Users report configuration changes not taking effect
-- Module behavior doesn't match UI settings
-- Configuration resets after restart
-- Conflicting configuration between UI and module
-- Race conditions during rapid configuration changes
+- HeartbeatLoop shows high LastTickLatencyMs (>100ms) correlated with HTTP module execution
+- SkippedCount grows rapidly when HTTP module is active
+- Application becomes unresponsive to user interactions during HTTP module execution
+- No `HttpClient.Timeout` set on the HTTP module's client instance
 
 **Phase to address:**
-Phase 4 (Module Configuration UI) — Must establish state management before building detail panel
+HTTP Request Module phase — timeout configuration must be set in the constructor, not added as
+a followup; default should be short (10s), not the HttpClient default (100s).
 
 ---
 
-### Pitfall 10: RTL Layout Breaks Visual Editor
+### Pitfall 10: AnimaInputPort Name Collisions Across Animas
 
 **What goes wrong:**
-When user switches to Arabic/Hebrew, the visual wiring editor breaks. Nodes appear mirrored, connections draw backwards, drag-and-drop goes in wrong direction. The SVG canvas becomes unusable.
+Two different Animas both declare an AnimaInputPort with the name "Summarizer". AnimaRoute in a
+third Anima is configured to route to "Summarizer" (by service name) without specifying the
+target Anima ID. The routing layer resolves this ambiguously — it may route to either the first
+or second "Summarizer" depending on registration order, non-deterministically. When one of the
+Animas is deleted or restarted, routing silently shifts to the other without any notification.
 
 **Why it happens:**
-RTL languages flip the entire page layout via `dir="rtl"` on `<html>`. CSS transforms apply, but SVG coordinate systems don't automatically flip. Mouse coordinates, drag offsets, and connection paths calculate based on LTR assumptions. The editor's pan/zoom logic breaks because it assumes left-to-right coordinate space.
+If the routing system uses a global service registry (service name → target Anima ID), name
+conflicts are possible when multiple Animas declare ports with the same name. The system may
+resolve by "last write wins" in a ConcurrentDictionary, silently overwriting earlier
+registrations. This is the same class of problem as global event name collisions in a shared
+EventBus.
 
 **How to avoid:**
-- Isolate editor canvas from RTL: wrap in `<div dir="ltr">` to force LTR coordinate system
-- Keep UI chrome (buttons, labels) in RTL, but canvas in LTR
-- Test with Arabic/Hebrew early in development, not as afterthought
-- Use logical properties (`inline-start` instead of `left`) for UI elements
-- Document that visual editor is always LTR regardless of UI language
+- Route addressing MUST use both Anima ID and service name: `{animaId}/{serviceName}` as a
+  compound key — never just service name alone
+- The service registry (if one exists) should store entries as `(animaId, serviceName) →
+  AnimaRuntime` with the animaId as the primary discriminator
+- AnimaRoute configuration in the editor must require selecting the TARGET ANIMA explicitly
+  before the service name dropdown is populated from that Anima's registered ports
+- Log a warning (not an error) if two Animas register ports with the same service name; allow it
+  but require full qualified addressing
+- Display the full `{AnimaName}/{ServiceName}` label in the editor, not just the service name
 
 **Warning signs:**
-- Editor unusable in RTL languages
-- Nodes jump to wrong positions when dragging
-- Connections draw backwards or upside-down
-- Pan/zoom behaves erratically in RTL
-- Mouse coordinates don't match visual position
+- Routing works but sporadically delivers to the wrong Anima
+- Deleting an Anima causes routing from other Animas to silently reroute to a different target
+- Service registry entry count is less than the sum of InputPort registrations across all Animas
+  (entries are being overwritten)
 
 **Phase to address:**
-Phase 2 (i18n Integration) — Must test RTL before declaring i18n complete
+Cross-Anima Routing Infrastructure — addressing scheme (animaId + serviceName) must be the data
+model for the registry from the start; retrofitting compound keys later requires breaking changes.
+
+---
+
+### Pitfall 11: AnimaRuntime Disposal Leaving Pending Cross-Anima Requests Hanging
+
+**What goes wrong:**
+Anima A has an in-flight request to Anima B (pending TCS with correlation ID). The user deletes
+Anima B. AnimaRuntimeManager calls `runtime.DisposeAsync()` on Anima B's runtime — this stops
+the heartbeat and disposes the EventBus. Anima A's pending request TCS is never completed; it
+sits in the pending dictionary until the configured timeout (5–30 seconds). During this window,
+Anima A's heartbeat ticks accumulate pending entries, and if AnimaRoute is triggered again (next
+heartbeat tick), another request is submitted to a now-deleted Anima, creating more orphaned TCS
+entries.
+
+**Why it happens:**
+`AnimaRuntimeManager.DeleteAsync` disposes the runtime but has no mechanism to notify other
+Animas that were communicating with the deleted Anima. The correlation ID tracking in the source
+Anima is not aware of the target's lifecycle. This is the distributed systems problem of
+"subscriber departure without notification" applied to in-process agents.
+
+**How to avoid:**
+- AnimaRuntimeManager.DeleteAsync must broadcast a `AnimaDeleted` event BEFORE disposing the
+  runtime, so other Animas have a chance to cancel pending requests
+- All Animas with pending requests to the deleted Anima must receive this notification and call
+  `TCS.TrySetException(new AnimaUnavailableException(...))` to fail pending requests cleanly
+- AnimaRoute should catch `AnimaUnavailableException` and surface a routing failure on its
+  output port (a text error payload or a dedicated error output port)
+- Consider adding an `OnAnimaDeleted` event to IAnimaRuntimeManager so any module can subscribe
+  and clean up cross-Anima state
+
+**Warning signs:**
+- Deleting an Anima causes the source Anima's heartbeat to show increased tick latency for up to
+  the timeout duration afterward
+- Pending request dictionary holds entries for Anima IDs that no longer exist
+- AnimaRoute error output never fires when the target Anima is unavailable
+
+**Phase to address:**
+Cross-Anima Routing Infrastructure — deletion notification must be designed alongside creation;
+cannot be an afterthought.
 
 ---
 
@@ -282,107 +493,120 @@ Phase 2 (i18n Integration) — Must test RTL before declaring i18n complete
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Storing Anima config in single JSON file | Simple implementation, easy to read/write | Concurrent write corruption, no transaction support | Never — use atomic write pattern from start |
-| Using singleton services for per-Anima state | Works fine with single Anima | Breaks completely when adding second Anima, requires refactor | Never — use scoped from start |
-| Skipping IDisposable on event subscriptions | Less boilerplate code | Memory leaks, circuits never collected | Never — implement disposal from start |
-| Auto-save configuration on every change | Feels responsive, no "Save" button needed | File I/O on every keystroke, corruption risk, no undo | Only for non-critical settings with debouncing |
-| Seamless culture switching without reload | Better UX, feels modern | Extremely complex, fragile, many edge cases | Never — full reload is acceptable |
-| Shared module instances across Animas | Saves memory, simpler DI setup | State leaks, race conditions, impossible to debug | Never — isolation is critical |
+| Using global IEventBus singleton for cross-Anima routing | Avoids implementing CrossAnimaRouter | Silent isolation breakage; impossible to audit cross-Anima traffic | Never |
+| Applying format detection regex per-chunk | Simpler implementation | Misses patterns split across token boundaries | Never — use rolling buffer |
+| No URL allowlist on HTTP module (validate input only) | Faster to ship | SSRF via LLM-injected URLs; internal service exposure | Never — allowlist-first |
+| Blocking HTTP call inside heartbeat tick with long timeout | Simple await pattern | Heartbeat stall; tick accumulation; unresponsive UI | Never — use short timeout + cancellation |
+| Using short correlation IDs (8 hex chars) | Matches existing Anima ID pattern | ID collision under concurrent load | Acceptable only if max concurrent requests guaranteed < 100 |
+| Injecting full service descriptions without token budget | Complete service context for LLM | Context window exhaustion; increased cost; send blocking | Never — enforce token budget from start |
+| Storing HTTP credentials in plain-text config values | Consistent with existing config store | Credentials visible in editor UI and logs | Never — use password field type |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| EventBus subscriptions | Subscribe in `OnInitialized`, forget to unsubscribe | Implement `IAsyncDisposable`, unsubscribe in `DisposeAsync()` |
-| Module loading | Store Assembly references in context fields | Clear references before `Unload()`, use `WeakReference` |
-| Configuration persistence | Direct `File.WriteAllText` with concurrent access | Write-to-temp-then-rename pattern with file locking |
-| Culture switching | Change `CultureInfo.CurrentCulture` and call `StateHasChanged()` | Use `NavigationManager.NavigateTo(forceLoad: true)` |
-| Module state | Use static fields for "module-level" state | Use instance fields, register as scoped services |
-| Heartbeat loops | Assume single-threaded execution | Design for concurrent execution, use synchronization |
+| AnimaRoute → AnimaInputPort | Route using global EventBus singleton | Route via AnimaRuntimeManager.GetRuntime(targetId).EventBus |
+| Correlation ID tracking | Never expire pending TCS entries | Periodic cleanup with expiry timestamps; cancel on AnimaRuntime disposal |
+| Format detection on streaming output | Apply regex to each chunk independently | Maintain rolling buffer; apply regex to cumulative text |
+| HTTP module timeout | Use HttpClient default (100s) | Configure 10s timeout; pass heartbeat CancellationToken |
+| Service name addressing | Route to service by name only | Route by animaId + serviceName compound key |
+| LLM service injection | Inject all service descriptions unconditionally | Enforce 200–300 token budget; use concise one-line descriptions |
+| HTTP response forwarding | Forward raw response body including headers | Strip credential-pattern headers before emitting on OutputPort |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| EventBus with thousands of subscribers | Slow event publishing, high CPU during Publish() | Implement subscriber cleanup, use weak references | >1000 Animas with active subscriptions |
-| Loading all Anima configs on startup | Slow application start, high memory usage | Lazy-load configs on demand, cache in memory | >100 Animas |
-| Saving config on every UI change | High disk I/O, file corruption, UI lag | Debounce saves (500ms), batch multiple changes | Any high-frequency editing |
-| Module execution without throttling | 100% CPU usage, UI becomes unresponsive | Add configurable tick interval, skip ticks if behind | >10 Animas with complex modules |
-| SignalR updates on every tick | Network saturation, browser lag | Throttle UI updates (every 5th tick), batch changes | >5 Animas with real-time updates |
+| HTTP calls inside heartbeat tick with long timeout | Tick latency >100ms; skipped ticks accumulate | Short timeout (10s); fire-and-forget with response-on-next-tick | Any HTTP endpoint with >100ms response time |
+| Unbounded pending request dictionary | Memory grows over hours; GC pressure | Periodic expiry scan; hard limit on concurrent pending requests per Anima | >100 concurrent cross-Anima requests |
+| Full service description injection per LLM call | Context window fills early; send blocking | Token budget cap (200–300 tokens); one-line descriptions | >5 configured routes with verbose descriptions |
+| Rolling buffer accumulating without flush | Memory grows during long LLM responses | Flush confirmed-clean portions; set max buffer size | LLM responses >10KB without triggering format patterns |
+| Cross-Anima routing on every heartbeat tick | Excessive inter-Anima traffic; EventBus churn | Only route when explicitly triggered; don't poll via heartbeat | More than 2 Animas with always-on routes |
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Loading modules from untrusted sources | Arbitrary code execution, data theft | Validate module signatures, sandbox execution, require user confirmation |
-| Storing API keys in plain text config | Credential theft if config file accessed | Use Data Protection API, encrypt sensitive fields |
-| No validation on module configuration | Injection attacks via config values | Validate and sanitize all config inputs |
-| Shared EventBus across security boundaries | Cross-Anima information leakage | Implement per-Anima EventBus or add security context checks |
-| Module access to file system | Modules can read/write arbitrary files | Implement permission system, restrict module file access |
+| HTTP module fetches user-supplied or LLM-supplied URLs without allowlist | SSRF to internal services, AWS metadata, local files | Allowlist-only with empty default; block private IP ranges after DNS resolution |
+| HTTP module accepts `file://` or `http://` schemes | Local file read; unencrypted credential transmission | Reject all non-HTTPS schemes at URL parse time |
+| Forwarding API keys / Authorization headers in HTTP response body downstream | Credential exposure in LLM context window and UI | Strip credential-pattern headers from response before emitting OutputPort |
+| LLM format injection revealing system prompt structure | Attack surface discovery; prompt injection amplification | Never inject internal system details; describe services without revealing implementation |
+| No HTTPS validation on HTTP module | Man-in-the-middle on LAN | Never disable SSL validation; use system certificate store |
+| Logging full HTTP request/response bodies | Credential and PII leakage in log files | Log only URL, status code, duration; never log Authorization headers |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Language switch without warning | Unexpected page reload, lost unsaved work | Show confirmation: "Switching language will reload the page. Continue?" |
-| No visual feedback during config save | User doesn't know if save succeeded | Show toast notification: "Configuration saved" or error message |
-| Module errors crash entire Anima | All modules stop, user loses work | Isolate module failures, show error in UI, keep other modules running |
-| No indication which Anima is active | User edits wrong Anima by mistake | Highlight active Anima in sidebar, show name in header |
-| Configuration changes require manual restart | User doesn't know changes won't apply | Auto-prompt: "Restart Anima to apply changes?" with button |
+| Routing failure appears as silence (no response) | User thinks nothing happened; submits duplicate requests | AnimaRoute must output an error text payload on timeout or unavailable target |
+| Service injection changes wiring behavior invisibly | User adds a route module; LLM starts routing to services without realizing why | Show injected service count in module status; allow preview of injected prompt text |
+| HTTP module request shows no progress | User adds HTTP module to wiring; clicks execute; waits silently | Add module status: "Requesting..." with elapsed seconds, "Response received" on completion |
+| Credentials in module config visible in wiring editor | Any user at the machine can see API keys | Config fields marked `type: password` render masked in the editor |
+| Deleting an Anima leaves other Animas in ambiguous state | Routing from Anima A fails after Anima B deleted, no explanation | Show routing error in Anima A: "Target Anima B was deleted" |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Multi-Anima:** Often missing proper disposal — verify `IAsyncDisposable` implemented and EventBus unsubscribed
-- [ ] **Module unloading:** Often missing Assembly reference cleanup — verify file handles released and memory freed
-- [ ] **Configuration persistence:** Often missing atomic write pattern — verify no corruption under concurrent writes
-- [ ] **i18n:** Often missing fallback strategy — verify UI shows readable text when translations missing
-- [ ] **RTL support:** Often missing editor isolation — verify visual editor works in Arabic/Hebrew
-- [ ] **Module isolation:** Often missing static state audit — verify no shared state across instances
-- [ ] **Heartbeat concurrency:** Often missing thread safety — verify no race conditions with multiple Animas
-- [ ] **Culture switching:** Often missing full reload — verify culture change actually updates all UI
+- [ ] **Cross-Anima routing:** Looks done when messages reach target. Verify: isolation still
+  holds — Anima A's non-routed events do NOT arrive at Anima B. Run isolation integration test.
+- [ ] **Correlation ID tracking:** Looks done when requests complete. Verify: pending dictionary
+  is empty after all responses received; no entries accumulate over extended operation.
+- [ ] **Format detection:** Looks done when unit tests pass with mock responses. Verify: detection
+  works with real streaming LLM output where pattern spans multiple chunks.
+- [ ] **HTTP module SSRF:** Looks done when localhost URLs fail. Verify: `http://169.254.169.254`
+  (cloud metadata) and DNS-resolved private IPs are also blocked.
+- [ ] **HTTP timeout:** Looks done when fast endpoints work. Verify: slow endpoint (>10s) causes
+  controlled error, NOT heartbeat stall; tick latency stays normal.
+- [ ] **Credential masking:** Looks done when editor shows `***`. Verify: logs contain no
+  Authorization header values; HTTP response OutputPort contains no credential patterns.
+- [ ] **AnimaRuntime deletion with pending requests:** Looks done when deletion works. Verify:
+  source Anima receives routing failure notification within timeout period, not after timeout.
+- [ ] **Service name collision:** Looks done with single-Anima routing tests. Verify: two Animas
+  with identically-named ports route to the correct target when addressed by animaId.
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Circuit memory leaks | MEDIUM | Add `IAsyncDisposable` to components, unsubscribe from events, restart application to clear leaked circuits |
-| AssemblyLoadContext leaks | MEDIUM | Refactor to clear Assembly references before Unload(), restart to release file handles |
-| Singleton-to-scoped mismatch | HIGH | Audit all services, change registrations, refactor singletons to use `IServiceScopeFactory`, extensive testing |
-| Config file corruption | LOW | Restore from backup, implement atomic write pattern, add validation on load |
-| Culture switching issues | LOW | Implement full page reload pattern, add confirmation dialog, test with both languages |
-| Shared static state | HIGH | Refactor modules to use instance fields, change to scoped registration, extensive testing |
-| Heartbeat race conditions | MEDIUM | Add synchronization primitives, make operations idempotent, add concurrency tests |
-| Missing translations | LOW | Add fallback to English, implement build-time validation, create translation coverage report |
-| Config UI desync | MEDIUM | Establish clear state flow, add explicit save, implement dirty state tracking |
-| RTL layout breaks | LOW | Wrap editor in `dir="ltr"`, test with RTL languages, document LTR-only canvas |
+| Global EventBus used for cross-Anima routing | HIGH | Refactor routing layer to use AnimaRuntimeManager; audit all AnimaRoute/InputPort code paths for IEventBus singleton use; re-test isolation guarantees |
+| Deadlock from sync request-response in tick | HIGH | Convert AnimaRoute.ExecuteAsync to fire-and-forget; implement TCS-based async response callback; add integration test for round-trip timing |
+| Orphaned pending requests | MEDIUM | Add expiry field to pending entry; add periodic cleanup task; add AnimaRuntime disposal notification |
+| Prompt bloat exhausting context window | MEDIUM | Add token counting to injected service descriptions; implement budget enforcement; trim descriptions to one-line format |
+| Chunk-by-chunk format detection misses split patterns | MEDIUM | Replace chunk regex with rolling buffer state machine; add streaming integration test with chunked mock responses |
+| HTTP module SSRF | HIGH | Implement URL allowlist before enabling any network calls; add DNS resolution check; write security test cases |
+| HTTP timeout stalling heartbeat | MEDIUM | Set HttpClient.Timeout to 10s; pass CancellationToken from heartbeat; add tick latency alert |
+| Credential exposure in logs | MEDIUM | Audit all logging statements in HTTP module; apply mask pattern; verify with log search for `Authorization:` |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Circuit memory leaks | Phase 1 (Multi-Anima) | Run memory profiler, verify circuits collected after disconnect |
-| AssemblyLoadContext leaks | Phase 3 (Module Management) | Check file handles with Process Explorer, verify memory released |
-| Singleton-to-scoped mismatch | Phase 1 (Multi-Anima) | Run with 2+ Animas, verify no DI exceptions |
-| Config file corruption | Phase 2 (Config Persistence) | Concurrent write test, verify JSON always valid |
-| Culture switching issues | Phase 2 (i18n) | Switch languages multiple times, verify UI updates completely |
-| Shared static state | Phase 1 (Multi-Anima) | Run 2+ Animas, verify state isolation |
-| Heartbeat race conditions | Phase 1 (Multi-Anima) | Run 10+ Animas concurrently, verify no exceptions |
-| Missing translations | Phase 2 (i18n) | Check both languages, verify no keys shown |
-| Config UI desync | Phase 4 (Module Config UI) | Edit config, restart, verify changes persisted |
-| RTL layout breaks | Phase 2 (i18n) | Test with Arabic, verify editor usable |
+| Global EventBus routing bypass | Cross-Anima Routing Infrastructure | Integration test: Anima A event does NOT arrive at Anima B |
+| Deadlock in sync request-response | Cross-Anima Routing Infrastructure | Timing test: AnimaRoute.ExecuteAsync returns within one tick cycle |
+| Orphaned correlation IDs | Cross-Anima Routing Infrastructure | 30-minute soak test: pending dictionary count stays bounded |
+| Prompt bloat | Prompt Auto-Injection | Token budget test: injected text never exceeds 300 tokens |
+| Streaming format detection failure | Format Detection | Streaming test: pattern detected when split across 3+ chunks |
+| Regex fragility | Format Detection | Compliance test: detection succeeds across temperature=0, 0.5, 1.0 |
+| SSRF via HTTP module | HTTP Request Module | Security test: localhost, 169.254.x.x, file:// all rejected |
+| Credential exposure | HTTP Request Module | Log audit: no Authorization values in output; editor shows masked fields |
+| HTTP timeout blocking heartbeat | HTTP Request Module | Slow endpoint test: tick latency stays <200ms during 10s+ HTTP call |
+| Service name collisions | Cross-Anima Routing Infrastructure | Multi-Anima test: two Animas with same port name route correctly when addressed by ID |
+| Deletion with pending requests | Cross-Anima Routing Infrastructure | Delete test: source Anima receives failure notification within timeout |
 
 ## Sources
 
-- [Blazor Server Memory Management](https://amarozka.dev/blazor-server-memory-management-circuit-leaks/) — Circuit leak patterns and disposal (MEDIUM confidence)
-- [AssemblyLoadContext.Unload silently fails](https://github.com/dotnet/runtime/issues/44679) — Assembly reference cleanup requirements (HIGH confidence)
-- [Concurrent Hosted Service Start and Stop in .NET 8](https://www.stevejgordon.co.uk/concurrent-hosted-service-start-and-stop-in-dotnet-8) — Hosted service concurrency changes (HIGH confidence)
-- [Blazor web app localization culture change exceptions](https://stackoverflow.com/questions/79516530/blazor-web-app-global-interactiveserver-net9-localization-during-culture-ch) — Culture switching issues (MEDIUM confidence)
-- [Resolving RTL Display Issues in Blazor](https://learn.microsoft.com/en-us/answers/questions/1186552/resolving-right-to-left-(rtl)-display-issues-in-bl) — RTL layout problems (MEDIUM confidence)
-- [Blazor concurrency problem using Entity Framework Core](https://stackoverflow.com/questions/59747983/blazor-concurrency-problem-using-entity-framework-core) — Concurrent execution issues (MEDIUM confidence)
-- [What does scoped lifetime mean in Blazor Server](https://stackoverflow.com/questions/76195106/what-does-scoped-lifetime-for-a-service-mean-in-blazor-server) — Service lifetime semantics (MEDIUM confidence)
-- [Concurrent file write](https://stackoverflow.com/questions/1160233/concurrent-file-write) — File corruption patterns (LOW confidence - general topic)
-- OpenAnima PROJECT.md — Existing architecture and decisions (HIGH confidence)
+- [LLM Structured Output in 2026: Stop Parsing JSON with Regex](https://dev.to/pockit_tools/llm-structured-output-in-2026-stop-parsing-json-with-regex-and-do-it-right-34pk) — Format reliability levels: prompt engineering 80-95%, tool_call 99%+ (MEDIUM confidence)
+- [OWASP SSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html) — Allowlist strategy, DNS rebinding prevention (HIGH confidence)
+- [C# HttpClient Security Pitfalls](https://xygeni.io/blog/c-httpclient-common-security-pitfalls-and-safe-practices/) — SSRF in HttpClient, SSL validation, timeout handling (HIGH confidence)
+- [Fixing deadlock in request-response pattern — Rust Forum](https://users.rust-lang.org/t/fixing-deadlock-in-request-response-pattern/115229) — Pattern applicable to any async request-response system (MEDIUM confidence)
+- [Structured Output Streaming for LLMs](https://medium.com/@prestonblckbrn/structured-output-streaming-for-llms-a836fc0d35a2) — Incremental parsing, rolling buffer approach (MEDIUM confidence)
+- [Prompt Injection Attacks: Complete Guide 2026](https://www.getastra.com/blog/ai-security/prompt-injection-attacks/) — Service discovery via injection, attack surface exposure (HIGH confidence)
+- [Multi-Agent System Patterns 2025](https://medium.com/@mjgmario/multi-agent-system-patterns-a-unified-guide-to-designing-agentic-architectures-04bb31ab9c41) — Isolation vs communication tradeoffs, synthesis failure patterns (MEDIUM confidence)
+- [Microsoft Correlation IDs Engineering Playbook](https://microsoft.github.io/code-with-engineering-playbook/observability/correlation-id/) — Correlation ID design, orphaned request handling (HIGH confidence)
+- [How to Handle Timeout Exceptions in HttpClient](https://oneuptime.com/blog/post/2025-12-23-handle-httpclient-timeout-exceptions/view) — HttpClient.Timeout default 100s, retry strategies (HIGH confidence)
+- [Every Way To Get Structured Output From LLMs — BAML Blog](https://boundaryml.com/blog/structured-output-from-llms) — Comparison of prompt-based vs constrained decoding reliability (MEDIUM confidence)
+- OpenAnima source code — AnimaRuntime, HeartbeatLoop, EventBus, LLMModule, WiringEngine (HIGH confidence — direct inspection)
+- OpenAnima PROJECT.md — ANIMA-08 tech debt, v1.6 target features, architectural decisions (HIGH confidence)
 
 ---
-*Pitfalls research for: Multi-Anima Architecture, i18n, and Module Management*
-*Researched: 2026-02-28*
+*Pitfalls research for: Cross-Anima Routing and HTTP Request Module — OpenAnima v1.6*
+*Researched: 2026-03-11*

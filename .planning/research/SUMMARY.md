@@ -1,298 +1,202 @@
 # Project Research Summary
 
-**Project:** OpenAnima v1.5 Multi-Anima Architecture
-**Domain:** Multi-instance agent runtime with i18n and module ecosystem
-**Researched:** 2026-02-28
+**Project:** OpenAnima v1.6 — Cross-Anima Routing + HTTP Request Module
+**Domain:** In-process multi-agent routing and HTTP tooling for a Blazor Server LLM wiring platform
+**Researched:** 2026-03-11
 **Confidence:** HIGH
 
 ## Executive Summary
 
-OpenAnima v1.5 transforms the single-instance agent runtime into a multi-Anima architecture where users can create, manage, and run multiple independent AI agents simultaneously. The research reveals this requires shifting from singleton-based global state to a factory pattern with per-Anima isolation, analogous to multi-tenant SaaS architecture where each Anima is a "tenant" with isolated runtime state.
+OpenAnima v1.6 extends the existing per-Anima isolation model to enable controlled cross-agent communication. The v1.5 architecture is deliberately isolated — each Anima has its own `EventBus`, `WiringEngine`, and `HeartbeatLoop`. V1.6 adds a `CrossAnimaRouter` singleton that sits above all `AnimaRuntime` instances (alongside `AnimaRuntimeManager`) and acts as the only sanctioned bridge between them. Cross-Anima request-response is implemented via the standard .NET `TaskCompletionSource<string>` + `ConcurrentDictionary<string, TCS>` correlation pattern — a zero-dependency approach used by SignalR internals and RabbitMQ .NET clients. The HTTP Request module requires one new NuGet package (`Microsoft.Extensions.Http.Resilience 8.7.0`); all other capabilities are BCL built-ins.
 
-The recommended approach leverages Blazor Server's built-in scoped services with minimal new dependencies: Microsoft.Extensions.Localization 8.0.* for i18n with custom JSON localizer, System.Text.Json (built-in) for configuration persistence, and an AnimaRuntimeManager singleton factory to manage per-Anima instances. Each Anima gets its own EventBus, HeartbeatLoop, WiringEngine, and module instances, while shared infrastructure (PluginRegistry, PortRegistry) remains singleton. An AnimaContext scoped service acts as the "tenant resolver" identifying which Anima the current circuit is viewing.
+The key design tension is that `AnimaRouteModule.ExecuteAsync` must `await` the cross-Anima response while suspended inside the calling Anima's `HeartbeatLoop` tick. This is architecturally correct — the WiringEngine needs the response before executing downstream modules — but means the calling Anima's heartbeat is blocked during cross-Anima LLM calls (typically 2–10 seconds). This is an accepted trade-off for v1.6. All four new modules (`AnimaInputPort`, `AnimaOutputPort`, `AnimaRoute`, `HttpRequest`) are standard `IModuleExecutor` implementations, so they plug into the wiring editor, config sidebar, and port system without any framework changes.
 
-Critical risks center on memory leaks from improper disposal (EventBus subscriptions, AssemblyLoadContext), service lifetime mismatches (singleton-to-scoped), concurrent configuration file writes, and culture switching requiring full page reload. Prevention requires implementing IAsyncDisposable for all event subscriptions, clearing Assembly references before Unload(), using atomic write-to-temp-then-rename pattern for file persistence, and establishing clear per-Anima state boundaries from the start. The architecture is well-documented with high confidence in stack choices and patterns.
+The highest-risk areas are: (1) isolation boundary integrity — the global `IEventBus` singleton (tech debt ANIMA-08) must never be used as the cross-Anima transport; (2) LLM format detection reliability — XML-tag or `@@ROUTE:..@@` markers achieve only 80–95% compliance via prompt engineering versus 99%+ with tool-call APIs; (3) HTTP module security — URL allowlists and SSRF prevention must be built in from day one, not retrofitted. With those risks addressed upfront, the implementation is straightforward: 9 new files in `Core/Routing/` and `Core/Modules/`, one modified file (`LLMModule.cs`), and two DI registration changes.
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
 
-The v1.5 stack maintains OpenAnima's "minimal dependencies" philosophy while adding only essential i18n support. Core runtime (.NET 8.0, Blazor Server, SignalR 8.0.x, OpenAI SDK 2.8.0) remains unchanged.
+V1.6 requires minimal stack additions. One new NuGet package adds HTTP resilience: `Microsoft.Extensions.Http.Resilience 8.7.0`, which wraps Polly v8 with `AddStandardResilienceHandler()` (retry + circuit breaker + 10s timeout in one call). It replaces the deprecated `Microsoft.Extensions.Http.Polly`. Everything else — correlation tracking, async request-response, in-process messaging, format detection via regex, prompt string assembly — uses .NET 8 BCL with no additional dependencies. The zero-dependency principle holds for the routing layer entirely.
 
 **Core technologies:**
-- **Microsoft.Extensions.Localization 8.0.*** — Official .NET localization with IStringLocalizer support for Blazor Server
-- **Custom JSON localizer** — JSON-based resource files (more flexible than .resx for translators, easier version control)
-- **System.Text.Json (built-in)** — JSON serialization for configuration persistence, zero additional dependencies
-- **Scoped services (built-in)** — Per-circuit state isolation, perfect for per-Anima state
-- **State container pattern** — Lightweight reactive state management (20 LOC, no dependencies)
-
-**Why minimal dependencies:** Built-in .NET 8 capabilities handle all requirements. JSON localizer avoids .resx complexity. Scoped services provide natural per-Anima isolation without external state management libraries.
+- `.NET 8 BCL` (`TaskCompletionSource<string>` + `ConcurrentDictionary`): cross-Anima request-response correlation — idiomatic .NET in-process async RPC, used by SignalR internals
+- `IHttpClientFactory` (built-in via `Microsoft.Extensions.DependencyInjection`): HTTP socket pooling — avoids socket exhaustion in heartbeat-driven execution
+- `Microsoft.Extensions.Http.Resilience 8.7.0`: HTTP retry/timeout pipeline — official Polly wrapper, `.NET 8` train, `AddStandardResilienceHandler` one-liner
+- `[GeneratedRegex]` (built-in, `.NET 8`): zero-allocation format detection — source-generated, no runtime compilation overhead
+- Existing `IEventBus` / `AnimaRuntimeManager`: per-Anima and cross-Anima event delivery — already established, no changes needed to these components
 
 ### Expected Features
 
-Research across VSCode, JetBrains, Unreal Engine, and multi-tenant SaaS patterns reveals clear table stakes and differentiators.
+All seven v1.6 features are P1 (must-have). Six are required for cross-Anima routing to function end-to-end; the HTTP Request module is independent and parallelizable.
 
 **Must have (table stakes):**
+- `AnimaInputPortModule` — declares a named service on an Anima; registers with `CrossAnimaRouter` on init; single output port `request`
+- `AnimaOutputPortModule` — returns cross-Anima response; calls `CrossAnimaRouter.CompleteRequest`; single input port `response`
+- `AnimaRouteModule` — selects target Anima + port; generates correlation ID; awaits response via TCS; configurable timeout; input `request` / output `response`
+- `CrossAnimaRouter` singleton — global correlation map; compound key addressing; timeout cleanup; `CancelPendingForAnima` on Anima deletion; `GetAllRegisteredPorts` for injection
+- Prompt auto-injection in `LLMModule` — reads registered ports, appends token-budgeted service list to system prompt; skips if no routes registered
+- Format detection in `LLMModule` — post-stream scan for route markers using rolling buffer; splits passthrough text from payload; dispatches routing calls fire-and-forget
+- `HttpRequestModule` — URL/method/headers/body-template config; `IHttpClientFactory`; response + status code output ports; 10s default timeout; SSRF allowlist
 
-*Anima Management:*
-- Create/list/switch/delete Animas — core multi-instance capability
-- Independent execution per Anima — separate heartbeat loops, isolated module state
-- Persist Anima configuration — save name, module connections, module configs to JSON per instance
-
-*i18n:*
-- Language switcher UI — dropdown or toggle in header/settings
-- Chinese/English UI text — resource files for all UI strings
-- Persist language preference — localStorage or config file
-- Full page reload on switch — culture switching requires NavigateTo(forceLoad: true)
-
-*Module Management:*
-- Install/uninstall from .oamod — already have package loading (v1.4)
-- Enable/disable toggle — standard plugin pattern (VSCode, JetBrains)
-- Module metadata display — name, version, author, description
-- Module status indicators — enabled/disabled/error states
-
-*Module Configuration:*
-- Click module → detail panel — standard node editor pattern (Blender, Unreal Engine)
-- Edit module-specific settings — dynamic UI based on module schema
-- Persist module config per Anima — save to Anima's config JSON
-- Config validation — prevent invalid states
-
-*Built-in Modules:*
-- Fixed text output — basic data source with editable text field
-- Text concatenation — two inputs → one output
-- Text split by delimiter — common text operation
-- Conditional branching — flow control with condition expression
-- Configurable LLM — API URL, API key, model name in detail panel
-
-**Should have (differentiators):**
-- Heartbeat as optional module — flexibility, not all Animas need proactive loops
-- Per-Anima chat interface — each instance has independent conversation
-- Visual module status in editor — real-time feedback on execution state (already exists v1.3)
-- Anima cloning — duplicate existing setup for experimentation
-- Module search/filter — helps when module count grows
+**Should have (competitive, v1.7+):**
+- Route error/timeout output port — lets wiring handle routing failures gracefully
+- Streaming display with parallel detection — buffer copy for detection while streaming to chat
+- HTTP auth fields (Bearer/Basic) — first-class config, not manual header entry
+- `AnimaRoute` dynamic target — target Anima supplied via input port at runtime
 
 **Defer (v2+):**
-- Module dependency resolution — complex graph resolution, wait for real patterns
-- Module marketplace backend — infrastructure burden, validate local-first first
-- Nested Anima instances — unclear value, high complexity
-- Cross-Anima config sync — violates isolation, wait for user demand
-- Auto-update modules — breaking changes break workflows, user loses control
+- Multi-hop routing chains — nested correlation IDs, timeout propagation
+- Fan-out routing — scatter-gather correlation pattern
+- HTTP response streaming to downstream modules
 
 ### Architecture Approach
 
-Transform from singleton runtime to multi-instance architecture using factory pattern with scoped context resolution. Each Anima is analogous to a "tenant" in multi-tenant SaaS with isolated runtime state.
+The architecture adds one new directory (`Core/Routing/`) containing the singleton broker and stateless utilities, and four new module files in `Core/Modules/`. The `CrossAnimaRouter` is a peer to `AnimaRuntimeManager` — both are application-layer singletons. `CrossAnimaRouter` holds the `_ports` registry (compound key `"{animaId}::{portName}"`) and the `_pending` correlation map. `LLMModule` gains two lightweight additions: a `BuildSystemPrompt` helper that queries `CrossAnimaRouter.GetAllRegisteredPorts()`, and a `FormatDetector.Parse()` call post-response. `WiringEngine` and per-Anima `EventBus` instances are completely unchanged. Per-Anima isolation invariants are preserved by design.
 
 **Major components:**
+1. `CrossAnimaRouter` (`Core/Routing/CrossAnimaRouter.cs`) — singleton broker; port registry with compound key; correlation ID map with expiry; timeout enforcement; deletion cleanup via `CancelPendingForAnima`
+2. `FormatDetector` (`Core/Routing/FormatDetector.cs`) — stateless parser; extracts routing calls from buffered LLM output; returns `FormatDetectorResult(PassthroughText, List<RoutingCall>)`
+3. `AnimaInputPortModule` / `AnimaOutputPortModule` / `AnimaRouteModule` — standard `IModuleExecutor` modules; register/complete/send cross-Anima requests via `CrossAnimaRouter`; invisible to `WiringEngine`
+4. `HttpRequestModule` (`Core/Modules/HttpRequestModule.cs`) — standard `IModuleExecutor`; typed `IHttpClientFactory` client with resilience handler; 10s timeout; error-to-output-port pattern
+5. Modified `LLMModule` (`Core/Modules/LLMModule.cs`) — prompt injection before API call; `FormatDetector.Parse` after response; `CrossAnimaRouter` injected as nullable (optional, backward-compatible)
 
-1. **AnimaContext (Scoped)** — Tracks current Anima ID for the circuit, acts as "tenant resolver"
-2. **AnimaRuntimeManager (Singleton Factory)** — Creates/manages Anima instances, Dictionary<string, AnimaRuntime>
-3. **AnimaRuntime (Per-Anima Container)** — Encapsulates one Anima's runtime: EventBus, HeartbeatLoop, WiringEngine, module instances
-4. **AnimaConfigStore (Singleton)** — Persists Anima metadata to JSON files in `animas/` directory
-5. **AnimaModuleRegistry (Per-Anima)** — Per-Anima module instances with isolated state
-6. **EditorStateService (Scoped)** — Already correct, inject AnimaContext to resolve correct AnimaRuntime
-7. **ConfigurationLoader (Per-Anima)** — Load/save from `wiring-configs/{animaId}/` directory
-
-**Key architectural patterns:**
-- **Scoped Context with Singleton Factory** — AnimaContext (scoped) holds tenant ID, AnimaRuntimeManager (singleton) manages all instances
-- **Per-Tenant Directory Isolation** — Each Anima gets subdirectory for configs: `wiring-configs/anima-001/`, `animas/anima-001.json`
-- **Module Instance Cloning** — Each Anima gets own module instances even though types are shared
-- **Service Lifetime Changes** — EventBus/HeartbeatLoop/WiringEngine move from singleton to per-Anima (managed by factory)
-
-**Data flow:**
-```
-Component → AnimaContext (scoped) → AnimaRuntimeManager (singleton)
-                ↓                           ↓
-        EditorStateService (scoped)    AnimaRuntime (per-Anima)
-                ↓                           ↓
-        WiringEngine (per-Anima) ←──────────┤
-                ↓                           ↓
-        EventBus (per-Anima) ←──────────────┤
-                ↓                           ↓
-        Modules (per-Anima instances) ←─────┘
-```
+**Build order:** DTOs + `FormatDetector` + `CrossAnimaRouter` (Stage 1) → routing modules + `HttpRequestModule` (Stage 2) → `LLMModule` modifications (Stage 3) → DI registration + `AnimaRuntimeManager.DeleteAsync` hook (Stage 4).
 
 ### Critical Pitfalls
 
-Research identified 10 critical pitfalls with prevention strategies:
+1. **Using the global `IEventBus` singleton for cross-Anima routing** — silently breaks per-Anima isolation (ANIMA-08 tech debt); all cross-Anima delivery MUST go through `AnimaRuntimeManager.GetRuntime(targetId)` → `CrossAnimaRouter`. Add an isolation integration test verifying Anima A events do NOT arrive at Anima B.
 
-1. **Circuit Memory Leaks from Event Subscriptions** — EventBus subscriptions create strong references from singleton to scoped components. Prevention: Implement IAsyncDisposable, unsubscribe in DisposeAsync(), use WeakReference for subscriptions.
+2. **`AnimaRouteModule` fire-and-forget instead of awaiting response** — WiringEngine downstream modules execute in the same tick with empty data; route response arrives after tick completes and is never delivered. Fix: `AnimaRouteModule.ExecuteAsync` MUST `await CrossAnimaRouter.RouteRequestAsync(...)`.
 
-2. **AssemblyLoadContext Memory Leaks** — Storing Assembly references in instance fields prevents Unload(). Prevention: Clear all Assembly references before Unload(), use WeakReference<Assembly>, explicitly GC.Collect() after Unload().
+3. **LLM format non-compliance at runtime** — prompt-engineering-based format markers achieve only 80–95% compliance; temperature > 0, model version changes, and long context all reduce this. Use XML-style tags or `@@ROUTE:port|payload@@` (mapped to training-data patterns); implement lenient regex (case-insensitive, optional whitespace); document as best-effort.
 
-3. **Singleton-to-Scoped Service Lifetime Mismatch** — Migrating from singleton to scoped causes InvalidOperationException. Prevention: Audit all singleton services for scoped dependencies, use IServiceScopeFactory in singletons, convert per-Anima state to scoped.
+4. **HTTP module SSRF via LLM-injected URLs** — the HTTP module's URL input is a direct execution path for LLM output. Default to an empty allowlist; block non-HTTPS schemes at parse time; reject private/loopback IP ranges after DNS resolution. Security cannot be added after the fact.
 
-4. **Configuration File Corruption from Concurrent Writes** — Multiple Animas saving simultaneously causes invalid JSON. Prevention: Write-to-temp-then-rename pattern, file-level locking, single-writer queue pattern.
+5. **`AnimaRuntime` deletion leaving in-flight TCS entries hanging** — `AnimaRuntimeManager.DeleteAsync` must broadcast an `AnimaDeleted` signal before disposing, so `CrossAnimaRouter` can call `CancelPendingForAnima(animaId)` and fail pending requests with a clean error, not a silent timeout.
 
-5. **Culture Switching Requires Full Circuit Reconnect** — Changing CultureInfo mid-circuit doesn't update UI. Prevention: Use NavigationManager.NavigateTo(forceLoad: true), store preference in persistent storage, accept page reload.
+6. **Short correlation IDs colliding under concurrent load** — use full `Guid.NewGuid().ToString("N")` (32-char), not truncated 8-char hex. Include expiry timestamps in pending entries; run periodic cleanup to prevent unbounded dictionary growth.
 
-6. **Shared Static State Across Module Instances** — Static fields are per-AppDomain, not per-instance. Prevention: Ban static mutable state in modules, use instance fields, register modules as scoped.
-
-7. **Heartbeat Loop Concurrent Execution Race Conditions** — Multiple Animas run heartbeats concurrently. Prevention: Ensure EventBus is thread-safe, use SemaphoreSlim for critical sections, make operations idempotent.
-
-8. **Missing Translation Fallback Strategy** — Missing translations show keys instead of text. Prevention: Implement fallback chain (requested → English → key), build-time validation, visual indicator in dev mode.
-
-9. **Module Configuration UI State Desync** — UI form state, module instance state, and persisted config diverge. Prevention: Establish clear state flow (UI → validation → module → persistence), explicit Save button, show dirty state indicator.
-
-10. **RTL Layout Breaks Visual Editor** — Arabic/Hebrew flip entire page but SVG coordinates don't. Prevention: Isolate editor canvas with `<div dir="ltr">`, keep UI chrome in RTL, test early.
+---
 
 ## Implications for Roadmap
 
-Based on combined research, suggested phase structure with clear dependencies and rationale:
+Based on the dependency chain in ARCHITECTURE.md and the pitfall-to-phase mapping in PITFALLS.md, four phases are recommended.
 
-### Phase 1: Multi-Anima Foundation
-**Rationale:** Core architecture must exist before other features can use it. Establishes per-Anima isolation pattern that all subsequent phases depend on.
+### Phase 1: Cross-Anima Routing Infrastructure
 
-**Delivers:** AnimaMetadata, AnimaConfigStore, AnimaRuntime, AnimaRuntimeManager, AnimaContext, Program.cs DI registration
+**Rationale:** All routing modules depend on `CrossAnimaRouter` and the correlation ID addressing scheme. Building the broker and DTOs first means modules can be tested against a real implementation, not mocks. Critical isolation and addressing pitfalls (Pitfalls 1, 2, 3, 10, 11) must be locked down here — they cannot be retrofitted without breaking changes to the addressing data model.
 
-**Addresses:** 
-- Multi-Anima architecture (FEATURES.md P1: create/list/switch/delete)
-- Independent execution per Anima (FEATURES.md P1)
-- Configuration persistence foundation (FEATURES.md P1)
+**Delivers:** `CrossAnimaRouter` singleton with full lifecycle management; `InputPortDescriptor` DTO; `InputPortRegistration` record; compound key addressing (`animaId::portName`); correlation ID map with expiry timestamps; `CancelPendingForAnima` for deletion events; hook into `AnimaRuntimeManager.DeleteAsync`; isolation integration test.
 
-**Avoids:**
-- Circuit memory leaks (PITFALLS.md #1) — Implement IAsyncDisposable from start
-- Singleton-to-scoped mismatch (PITFALLS.md #3) — Design with scoped services from day one
-- Shared static state (PITFALLS.md #6) — Establish module isolation before building instances
-- Heartbeat race conditions (PITFALLS.md #7) — Verify thread safety before enabling multiple instances
+**Addresses features from FEATURES.md:** Cross-Anima message router (global singleton), correlation ID tracking, timeout and orphan cleanup, thread-safe async delivery.
 
-**Uses:**
-- Scoped services (STACK.md) for per-circuit AnimaContext
-- State container pattern (STACK.md) for reactive updates
-- AnimaRuntimeManager factory (ARCHITECTURE.md Pattern 1)
+**Avoids pitfalls:** Global EventBus bypass (Pitfall 1), sync deadlock in tick (Pitfall 2), correlation ID collisions and orphans (Pitfall 3), service name collisions — compound key prevents (Pitfall 10), deletion with pending requests (Pitfall 11).
 
-### Phase 2: Service Migration & i18n
-**Rationale:** Refactor singleton services into AnimaRuntime while adding i18n infrastructure. These are independent changes that can be developed in parallel.
+### Phase 2: Routing Modules
 
-**Delivers:** 
-- Refactored EventBus/HeartbeatLoop/WiringEngine (per-Anima)
-- JSON localizer, language switcher UI, preference persistence
-- Updated EditorStateService to use AnimaContext
+**Rationale:** Depends on `CrossAnimaRouter` from Phase 1. `AnimaInputPortModule`, `AnimaOutputPortModule`, and `AnimaRouteModule` are standard `IModuleExecutor` implementations — once the broker is stable, these are low-risk. The correlation ID passthrough design (text prefix vs. dedicated Trigger wire) must be decided and locked in before implementation; changing it retroactively requires re-wiring all existing graphs.
 
-**Addresses:**
-- i18n (FEATURES.md P1: language switcher, Chinese/English, persistence)
-- Service lifetime migration (ARCHITECTURE.md Phase 2)
+**Delivers:** Three new `IModuleExecutor` modules registered in the plugin system; config sidebar fields (service name, description, target Anima dropdown, target port dropdown, timeout); end-to-end cross-Anima request-response demonstrable in the wiring editor without LLM involvement.
 
-**Avoids:**
-- Culture switching issues (PITFALLS.md #5) — Implement full page reload pattern
-- Missing translations (PITFALLS.md #8) — Establish fallback before adding translations
-- RTL layout breaks (PITFALLS.md #10) — Test with Arabic/Hebrew early
+**Addresses features from FEATURES.md:** AnimaInputPort, AnimaOutputPort, AnimaRoute modules (all P1).
 
-**Uses:**
-- Microsoft.Extensions.Localization 8.0.* (STACK.md)
-- Custom JSON localizer (STACK.md Pattern 2)
-- NavigateTo(forceLoad: true) for culture switching (STACK.md Pattern 4)
+**Avoids pitfalls:** AnimaRouteModule fire-and-forget anti-pattern (must await; Pitfall 2 / ARCHITECTURE.md Anti-Pattern 2); `RoutingEnvelope<T>` wrapper that breaks WiringEngine port type dispatch (Anti-Pattern 3); HttpClient-per-execution socket exhaustion (Anti-Pattern 4, though this applies to Phase 4).
 
-### Phase 3: Module Management
-**Rationale:** Extends existing ModuleRegistry (v1.0) with enable/disable capability. Requires Phase 1 for per-Anima module instances.
+### Phase 3: Prompt Auto-Injection and Format Detection
 
-**Delivers:** Install/uninstall/enable/disable UI, module metadata display, module status indicators
+**Rationale:** Depends on `CrossAnimaRouter.GetAllRegisteredPorts()` (Phase 1) and live routing modules (Phase 2) so end-to-end testing is possible. Prompt injection and format detection must ship together — injection without detection is useless (LLM produces the marker but nothing consumes it); detection without injection means the LLM was never told the marker format. Both modify `LLMModule`, so they belong in the same phase. Token budget enforcement for injection must be built here, not retrofitted after context exhaustion is observed.
 
-**Addresses:**
-- Module management (FEATURES.md P1: install/uninstall, enable/disable, metadata)
-- Module isolation (ARCHITECTURE.md AnimaModuleRegistry)
+**Delivers:** Modified `LLMModule` with `BuildSystemPrompt` helper (token-budgeted, 200–300 token cap, one-line service descriptions); `FormatDetector` stateless parser with rolling buffer; `FormatDetectorResult` and `RoutingCall` records; post-stream format dispatch; passthrough text split; compliance tests at temperature 0, 0.5, 1.0.
 
-**Avoids:**
-- AssemblyLoadContext leaks (PITFALLS.md #2) — Clear Assembly references before Unload()
+**Addresses features from FEATURES.md:** Prompt auto-injection, format detection (both P1).
 
-**Uses:**
-- Module instance cloning (ARCHITECTURE.md Pattern 3)
-- Per-Anima module registry (ARCHITECTURE.md)
+**Avoids pitfalls:** Prompt bloat exhausting context window (Pitfall 4 — 200–300 token budget mandatory from start); streaming format detection on partial chunks (Pitfall 5 — rolling buffer required, per-chunk regex explicitly rejected); LLM format non-compliance (Pitfall 6 — lenient regex, multi-temperature testing).
 
-### Phase 4: Module Configuration UI
-**Rationale:** Requires Phase 1 for per-Anima config persistence and Phase 3 for module selection. Implements detail panel pattern from Unreal/Blender.
+### Phase 4: HTTP Request Module
 
-**Delivers:** ModuleConfigPanel component, click-to-select, detail panel, config persistence, validation
+**Rationale:** Independent of all routing phases — no dependency on `CrossAnimaRouter`. Can be built in parallel with Phase 2 or Phase 3 if capacity allows, or sequentially after Phase 3. Security requirements (SSRF, credential masking) are critical and must be addressed before the module makes any live network calls; this cannot be deferred.
 
-**Addresses:**
-- Module configuration UI (FEATURES.md P1: click module → detail panel, edit settings, persist)
-- Built-in configurable modules (FEATURES.md P1: LLM with API config)
+**Delivers:** `HttpRequestModule` with URL/method/headers/body-template config; `IHttpClientFactory` typed client with `AddStandardResilienceHandler`; SSRF allowlist (empty default, HTTPS-only, private IP block post-DNS-resolution); credential config fields using `type: password` sidebar rendering; 10s timeout default with heartbeat `CancellationToken` pass-through; response body and status code output ports; error-to-output-port handling.
 
-**Avoids:**
-- Config file corruption (PITFALLS.md #4) — Atomic write-to-temp-then-rename pattern
-- Config UI state desync (PITFALLS.md #9) — Establish clear state flow before building UI
+**Addresses features from FEATURES.md:** HTTP Request module (P1); URL template, method dropdown, headers editor, body template, response/statusCode output ports.
 
-**Uses:**
-- System.Text.Json (STACK.md) for config persistence
-- Detail panel pattern (FEATURES.md from Unreal/Blender)
-- Per-tenant directory isolation (ARCHITECTURE.md Pattern 2)
+**Uses from STACK.md:** `Microsoft.Extensions.Http.Resilience 8.7.0`, `IHttpClientFactory` (built-in).
 
-### Phase 5: Built-in Modules
-**Rationale:** Demonstrates all previous phases working together. Validates multi-Anima architecture with real modules.
-
-**Delivers:** FixedTextModule, TextConcatModule, TextSplitModule, ConditionalModule, ConfigurableLLMModule, optional HeartbeatModule
-
-**Addresses:**
-- Built-in modules (FEATURES.md P1: fixed text, concat, split, conditional, LLM)
-- Heartbeat as optional module (FEATURES.md differentiator)
-
-**Avoids:**
-- Heartbeat refactor breaking changes — Keep core infrastructure, make it optional
-
-**Uses:**
-- Module SDK (already shipped v1.4)
-- Port system (already shipped v1.3)
-- Configuration UI (Phase 4)
+**Avoids pitfalls:** SSRF via LLM-injected URLs (Pitfall 7 — allowlist-first, empty default); credentials leaking through output ports (Pitfall 8 — password field type + header stripping); HTTP timeout blocking heartbeat (Pitfall 9 — 10s default, pass heartbeat `CancellationToken`).
 
 ### Phase Ordering Rationale
 
-- **Phase 1 is foundation** — All other phases depend on AnimaRuntimeManager and per-Anima isolation
-- **Phase 2 refactors services** — Must happen before Phase 3/4 can use per-Anima instances
-- **Phase 2 i18n is parallel** — Independent of Anima architecture, can develop simultaneously
-- **Phase 3 before Phase 4** — Module management provides selection mechanism for config UI
-- **Phase 4 before Phase 5** — Built-in modules need config UI to be useful
-- **Phase 5 validates everything** — Real modules prove architecture works
+- **Phase 1 before all routing work:** `CrossAnimaRouter` is the dependency root for the entire routing feature set. Building it first with full lifecycle management avoids retrofitting deletion cleanup and expiry — both are architecturally load-bearing (Pitfalls 3, 11) and require breaking changes if added later.
+- **Phase 2 before Phase 3:** Routing modules must exist and be wired before prompt injection and format detection can be tested end-to-end. Without `AnimaInputPortModule` initialized, `GetAllRegisteredPorts()` returns empty and injection is untestable in integration.
+- **Phase 4 is independent:** `HttpRequestModule` has zero dependency on `CrossAnimaRouter`. It can be scheduled in parallel with Phase 2 (conservative: wait until Phase 3; aggressive: build alongside Phase 2). Sequential placement after Phase 3 is the safe default.
+- **No LLMModule changes before Phase 3:** Keeping `LLMModule` unmodified during Phases 1 and 2 reduces regression risk for the most-used module in the system.
 
 ### Research Flags
 
-**Phases likely needing deeper research during planning:**
-- **Phase 1** — Service scope lifecycle management (when to create/dispose, memory leak prevention)
-- **Phase 4** — Dynamic UI generation for module config (each module has different schema)
-- **Phase 5** — Conditional module expression evaluation (need safe expression parser, avoid eval() security)
+Phases requiring deeper research or empirical validation during planning:
 
-**Phases with standard patterns (skip research-phase):**
-- **Phase 2 i18n** — Well-documented .NET pattern, IStringLocalizer is standard
-- **Phase 3** — Module management follows VSCode/JetBrains patterns, straightforward
+- **Phase 3 (Format Detection):** Format compliance is MEDIUM confidence. The exact marker format (`@@ROUTE:port|payload@@` vs `<route service="...">...</route>`) has inconsistency across research files and needs alignment. Compliance across model versions, temperatures, and providers must be validated empirically before the format is locked into prompts shipped to users.
+- **Phase 4 (HTTP Security — DNS rebinding):** SSRF prevention via post-resolution IP checking (blocking DNS rebinding) requires careful implementation. The allowlist UX — how users add permitted domains — needs design work that goes beyond the technical implementation.
+
+Phases with standard, well-documented patterns (skip additional research phase):
+
+- **Phase 1 (CrossAnimaRouter):** `TaskCompletionSource<string>` + `ConcurrentDictionary` is a canonical .NET pattern, documented by Microsoft and used in SignalR. Implementation confidence is HIGH.
+- **Phase 2 (Routing Modules):** Standard `IModuleExecutor` pattern — follows identical structure to all existing v1.5 modules. No novel architectural patterns.
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Official Microsoft docs confirm IStringLocalizer support, System.Text.Json is built-in and well-documented |
-| Features | HIGH | Table stakes validated by VSCode/JetBrains/Unreal patterns, multi-tenant SaaS patterns are proven |
-| Architecture | HIGH | Multi-tenant isolation patterns are well-documented, factory pattern is industry standard |
-| Pitfalls | MEDIUM | Patterns are well-known (memory leaks, race conditions), but specific to this architecture combination |
+| Stack | HIGH | Only one new NuGet package; all other capabilities are BCL. Package version (8.7.0) confirmed on NuGet. Official Microsoft docs for all patterns. |
+| Features | HIGH | Feature set derived from direct comparison with n8n, Node-RED, and AutoGen/LangGraph. Core routing features are well-precedented. Format detection compliance specifics are MEDIUM. |
+| Architecture | HIGH | Based on direct source code analysis of the v1.5 codebase. All integration points verified against existing file structure and component interfaces. |
+| Pitfalls | HIGH | 11 pitfalls identified across 6 domains. Security pitfalls (SSRF, credentials) sourced from OWASP and Microsoft documentation. Isolation pitfalls sourced from direct codebase inspection. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Service scope lifecycle:** When to create/dispose child scopes for Animas? Keep all alive or lazy-load? Memory implications need testing with 10+ Animas.
-- **Dynamic config UI generation:** Each module has different config schema. Need pattern for generating UI from schema (JSON Schema? Reflection? Custom attributes?). Research during Phase 4 planning.
-- **Conditional expression evaluation:** ConditionalModule needs safe expression parser. Options: NCalc, DynamicExpresso, or custom parser? Security implications need research during Phase 5 planning.
-- **Anima switching performance:** Switching should be instant. If all Animas run simultaneously, need to test CPU/memory impact with 10+ instances. Mitigation: Lazy instantiation, stop inactive Animas after timeout.
+- **Format marker inconsistency:** ARCHITECTURE.md uses `@@ROUTE:portName|payload@@`; FEATURES.md uses `<route service="ServiceName">payload</route>`. These must be reconciled to a single format before Phase 3 begins. Recommendation: XML-style `<route service="ServiceName">payload</route>` — closest to Claude's native tool-call format and most reliably produced by modern LLMs trained on markup.
+- **Correlation ID passthrough design:** ARCHITECTURE.md identifies two options — text prefix (`[CORR:{id}]\n{text}`) vs. dedicated Trigger wire. The text prefix approach risks corruption if intermediate modules transform the text. Recommendation: dedicated Trigger wire for cleanliness, at the cost of requiring an explicit wire in the graph. Decision must be made before Phase 2 implementation.
+- **Prompt injection token budget calibration:** The 200–300 token cap is a reasonable starting point but should be validated against real usage with 3–10 configured routes before being hardcoded. Plan a calibration step in Phase 3 planning.
+- **HTTP allowlist UX:** The allowlist design (empty default, how users add permitted domains in the config sidebar) needs UI design work in Phase 4 planning. The technical implementation is clear; the user-facing configuration flow is not yet specified.
+
+---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [ASP.NET Core Blazor globalization and localization](https://learn.microsoft.com/en-us/aspnet/core/blazor/globalization-localization) — Official Microsoft documentation
-- [ASP.NET Core Blazor state management overview](https://learn.microsoft.com/en-us/aspnet/core/blazor/state-management/) — Official guidance on scoped services
-- [How to Build Multi-Tenant Apps in .NET](https://oneuptime.com/blog/post/2026-01-26-multi-tenant-apps-dotnet/view) — Tenant context pattern
-- [AssemblyLoadContext.Unload silently fails](https://github.com/dotnet/runtime/issues/44679) — Assembly reference cleanup requirements
-- [Concurrent Hosted Service Start and Stop in .NET 8](https://www.stevejgordon.co.uk/concurrent-hosted-service-start-and-stop-in-dotnet-8) — Hosted service concurrency
-- [Details Panel in Unreal Engine](https://dev.epicgames.com/documentation/en-us/unreal-engine/details-panel-in-the-blueprints-visual-scriting-editor-for-unreal-engine) — Detail panel pattern
-- [Managing Extensions in Visual Studio Code](https://code.visualstudio.com/docs/editor/extension-marketplace) — Extension management patterns
+- OpenAnima source code — `AnimaRuntime`, `HeartbeatLoop`, `EventBus`, `LLMModule`, `WiringEngine`, `AnimaRuntimeManager` — direct codebase inspection
+- OpenAnima `.planning/PROJECT.md` — ANIMA-08 tech debt, v1.6 target features, architectural decisions
+- [Microsoft Learn — IHttpClientFactory guidelines](https://learn.microsoft.com/en-us/dotnet/core/extensions/httpclient-factory) — socket pooling, lifetime management
+- [Microsoft Learn — Build resilient HTTP apps](https://learn.microsoft.com/en-us/dotnet/core/resilience/http-resilience) — `AddStandardResilienceHandler` API
+- [NuGet — Microsoft.Extensions.Http.Resilience 8.7.0](https://www.nuget.org/packages/Microsoft.Extensions.Http.Resilience) — version confirmed
+- [Microsoft Learn — .NET Regular Expressions](https://learn.microsoft.com/en-us/dotnet/standard/base-types/regular-expressions) — `[GeneratedRegex]` attribute
+- [OWASP SSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html) — allowlist strategy, DNS rebinding prevention
+- [Microsoft Correlation IDs Engineering Playbook](https://microsoft.github.io/code-with-engineering-playbook/observability/correlation-id/) — correlation ID design and orphaned request handling
 
 ### Secondary (MEDIUM confidence)
-- [Blazor Server Memory Management](https://amarozka.dev/blazor-server-memory-management-circuit-leaks/) — Circuit leak patterns
-- [Blazor web app localization culture change exceptions](https://stackoverflow.com/questions/79516530/blazor-web-app-global-interactiveserver-net9-localization-during-culture-ch) — Culture switching issues
-- [What does scoped lifetime mean in Blazor Server](https://stackoverflow.com/questions/76195106/what-does-scoped-lifetime-for-a-service-mean-in-blazor-server) — Service lifetime semantics
-- [PhpStorm Documentation — Enabling and Disabling Plugins](https://www.jetbrains.com/phpstorm/help/enabling-and-disabling-plugins.html) — Plugin patterns
-- [Implementing Custom JSON Localization in ASP.NET Core](https://gauravm.dev/articles/implementing-custom-json-localization-in-aspnet-core-web-api/) — JSON localizer pattern
+- [Correlation Identifier — Enterprise Integration Patterns](https://www.enterpriseintegrationpatterns.com/patterns/messaging/CorrelationIdentifier.html) — correlation ID tracking pattern
+- [Node-RED HTTP Request Node — FlowFuse](https://flowfuse.com/node-red/core-nodes/http-request/) — reference UX for HTTP module config fields (canonical reference)
+- [Building your first multi-agent system with n8n](https://medium.com/mitb-for-all/building-your-first-multi-agent-system-with-n8n-0c959d7139a1) — sub-workflow-as-tool pattern (closest analog to AnimaInputPort)
+- [LLM Structured Output in 2026](https://dev.to/pockit_tools/llm-structured-output-in-2026-stop-parsing-json-with-regex-and-do-it-right-34pk) — format reliability levels: prompt engineering 80–95%, tool_call 99%+
+- [Structured Output Streaming for LLMs](https://medium.com/@prestonblckbrn/structured-output-streaming-for-llms-a836fc0d35a2) — incremental parsing, rolling buffer approach
+- [TaskCompletionSource in .NET](https://code-corner.dev/2024/01/19/NET-%E2%80%94-TaskCompletionSource-and-CancellationTokenSource/) — TCS + CancellationTokenSource async RPC pattern
+- [Gigi Labs — RabbitMQ RPC with TaskCompletionSource](https://gigi.nullneuron.net/gigilabs/abstracting-rabbitmq-rpc-with-taskcompletionsource/) — correlation dictionary pattern walkthrough
+- [C# HttpClient Security Pitfalls](https://xygeni.io/blog/c-httpclient-common-security-pitfalls-and-safe-practices/) — SSRF, SSL validation, timeout handling
+- [How to Handle Timeout Exceptions in HttpClient](https://oneuptime.com/blog/post/2025-12-23-handle-httpclient-timeout-exceptions/view) — HttpClient.Timeout default (100s), short timeout best practices
+- [Request-based Multi-Agent Reference Architecture](https://microsoft.github.io/multi-agent-reference-architecture/docs/agents-communication/Request-Based.html) — request-response patterns in multi-agent systems
 
 ### Tertiary (LOW confidence)
-- [Multi-Agent Coordination Systems Enterprise Guide 2026](https://iterathon.tech/blog/multi-agent-coordination-systems-enterprise-guide-2026) — Multi-agent architecture (enterprise-focused)
-- [Concurrent file write](https://stackoverflow.com/questions/1160233/concurrent-file-write) — File corruption patterns (general topic)
+- [Achieving Tool Calling Functionality in LLMs Using Only Prompt Engineering Without Fine-Tuning](https://arxiv.org/html/2407.04997v1) — XML-tag format reliability (needs empirical validation for this specific format/model combination)
+- [Effective Prompt Engineering: Mastering XML Tags](https://medium.com/@TechforHumans/effective-prompt-engineering-mastering-xml-tags-for-clarity-precision-and-security-in-llms-992cae203fdc) — XML-tag format guidance for LLMs
+- [Every Way To Get Structured Output From LLMs — BAML Blog](https://boundaryml.com/blog/structured-output-from-llms) — comparison of prompt-based vs constrained decoding reliability
 
 ---
-*Research completed: 2026-02-28*
+*Research completed: 2026-03-11*
 *Ready for roadmap: yes*
