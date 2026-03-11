@@ -88,43 +88,41 @@ Deferred to future releases. Tracked but not in current roadmap.
 
 ## Traceability
 
-Populated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ROUTE-01 | — | Pending |
-| ROUTE-02 | — | Pending |
-| ROUTE-03 | — | Pending |
-| ROUTE-04 | — | Pending |
-| ROUTE-05 | — | Pending |
-| ROUTE-06 | — | Pending |
-| RMOD-01 | — | Pending |
-| RMOD-02 | — | Pending |
-| RMOD-03 | — | Pending |
-| RMOD-04 | — | Pending |
-| RMOD-05 | — | Pending |
-| RMOD-06 | — | Pending |
-| RMOD-07 | — | Pending |
-| RMOD-08 | — | Pending |
-| PROMPT-01 | — | Pending |
-| PROMPT-02 | — | Pending |
-| PROMPT-03 | — | Pending |
-| PROMPT-04 | — | Pending |
-| FMTD-01 | — | Pending |
-| FMTD-02 | — | Pending |
-| FMTD-03 | — | Pending |
-| FMTD-04 | — | Pending |
-| HTTP-01 | — | Pending |
-| HTTP-02 | — | Pending |
-| HTTP-03 | — | Pending |
-| HTTP-04 | — | Pending |
-| HTTP-05 | — | Pending |
+| ROUTE-01 | Phase 28 | Pending |
+| ROUTE-02 | Phase 28 | Pending |
+| ROUTE-03 | Phase 28 | Pending |
+| ROUTE-04 | Phase 28 | Pending |
+| ROUTE-05 | Phase 28 | Pending |
+| ROUTE-06 | Phase 28 | Pending |
+| RMOD-01 | Phase 29 | Pending |
+| RMOD-02 | Phase 29 | Pending |
+| RMOD-03 | Phase 29 | Pending |
+| RMOD-04 | Phase 29 | Pending |
+| RMOD-05 | Phase 29 | Pending |
+| RMOD-06 | Phase 29 | Pending |
+| RMOD-07 | Phase 29 | Pending |
+| RMOD-08 | Phase 29 | Pending |
+| PROMPT-01 | Phase 30 | Pending |
+| PROMPT-02 | Phase 30 | Pending |
+| PROMPT-03 | Phase 30 | Pending |
+| PROMPT-04 | Phase 30 | Pending |
+| FMTD-01 | Phase 30 | Pending |
+| FMTD-02 | Phase 30 | Pending |
+| FMTD-03 | Phase 30 | Pending |
+| FMTD-04 | Phase 30 | Pending |
+| HTTP-01 | Phase 31 | Pending |
+| HTTP-02 | Phase 31 | Pending |
+| HTTP-03 | Phase 31 | Pending |
+| HTTP-04 | Phase 31 | Pending |
+| HTTP-05 | Phase 31 | Pending |
 
 **Coverage:**
 - v1.6 requirements: 27 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 27 ⚠️
+- Mapped to phases: 27 (100%)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-11 after initial definition*
+*Last updated: 2026-03-11 after roadmap creation — all 27 requirements mapped to phases 28-31*
