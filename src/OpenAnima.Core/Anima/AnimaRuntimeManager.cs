@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Core.Hubs;
+using OpenAnima.Core.Routing;
 
 namespace OpenAnima.Core.Anima;
 
@@ -22,6 +23,7 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
     private readonly ILoggerFactory _loggerFactory;
     private readonly IAnimaContext _animaContext;
     private readonly IHubContext<RuntimeHub, IRuntimeClient>? _hubContext;
+    private readonly ICrossAnimaRouter? _router;
     private readonly Dictionary<string, AnimaDescriptor> _animas = new();
     private readonly Dictionary<string, AnimaRuntime> _runtimes = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -33,13 +35,15 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
         ILogger<AnimaRuntimeManager> logger,
         ILoggerFactory loggerFactory,
         IAnimaContext animaContext,
-        IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null)
+        IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null,
+        ICrossAnimaRouter? router = null)
     {
         _animasRoot = animasRoot;
         _logger = logger;
         _loggerFactory = loggerFactory;
         _animaContext = animaContext;
         _hubContext = hubContext;
+        _router = router;
         Directory.CreateDirectory(_animasRoot);
     }
 
@@ -81,6 +85,11 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
     public async Task DeleteAsync(string id, CancellationToken ct = default)
     {
         var dir = Path.Combine(_animasRoot, id);
+
+        // Cancel pending requests and unregister ports BEFORE runtime disposal
+        // Fail-fast: pending requests get Cancelled immediately rather than timing out
+        _router?.CancelPendingForAnima(id);
+        _router?.UnregisterAllForAnima(id);
 
         // Dispose runtime before removing descriptor
         if (_runtimes.TryGetValue(id, out var runtime))

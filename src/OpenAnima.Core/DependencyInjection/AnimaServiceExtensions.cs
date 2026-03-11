@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.Hubs;
+using OpenAnima.Core.Routing;
 using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.DependencyInjection;
@@ -28,13 +29,18 @@ public static class AnimaServiceExtensions
 
         services.AddSingleton<IAnimaContext, AnimaContext>();
 
+        // Register router BEFORE AnimaRuntimeManager (no circular dependency)
+        services.AddSingleton<ICrossAnimaRouter>(sp =>
+            new CrossAnimaRouter(sp.GetRequiredService<ILogger<CrossAnimaRouter>>()));
+
         services.AddSingleton<IAnimaRuntimeManager>(sp =>
             new AnimaRuntimeManager(
                 animasRoot,
                 sp.GetRequiredService<ILogger<AnimaRuntimeManager>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetRequiredService<IAnimaContext>(),
-                sp.GetService<IHubContext<RuntimeHub, IRuntimeClient>>()));
+                sp.GetService<IHubContext<RuntimeHub, IRuntimeClient>>(),
+                sp.GetRequiredService<ICrossAnimaRouter>()));
 
         services.AddSingleton<IAnimaModuleStateService>(sp =>
             new AnimaModuleStateService(animasRoot));
