@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: Multi-Anima Architecture
-status: archived
-last_updated: "2026-03-09"
-last_activity: "2026-03-09 — Milestone v1.5 archived, ready for next milestone"
+milestone: v1.6
+milestone_name: Cross-Anima Routing
+status: active
+last_updated: "2026-03-11"
+last_activity: "2026-03-11 — Milestone v1.6 started"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State: OpenAnima
 
-**Last updated:** 2026-03-09
-**Current milestone:** v1.5 Multi-Anima Architecture (SHIPPED)
+**Last updated:** 2026-03-11
+**Current milestone:** v1.6 Cross-Anima Routing
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-09)
+See: `.planning/PROJECT.md` (updated 2026-03-11)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v1.6
 
 ## Current Position
 
-**Status:** Between milestones — v1.5 shipped, next milestone not started
-**Last activity:** 2026-03-09 — Milestone v1.5 archived
-
-**Progress:** All milestones v1.0-v1.5 shipped (27 phases, 63 plans)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-11 — Milestone v1.6 started
 
 ## Performance Metrics
 
@@ -64,5 +64,5 @@ None
 
 ---
 
-*State updated: 2026-03-09*
-*Milestone v1.5 archived*
+*State updated: 2026-03-11*
+*Milestone v1.6 started*

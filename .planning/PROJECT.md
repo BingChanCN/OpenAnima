@@ -1,16 +1,17 @@
 # OpenAnima
 
-## Current Status
+## Current Milestone: v1.6 Cross-Anima Routing
 
-**Latest milestone:** v1.5 Multi-Anima Architecture (shipped 2026-03-09)
+**Goal:** Enable Anima-to-Anima communication through request-response routing channels with prompt auto-injection, plus HTTP request tool module.
 
-**What shipped:**
-- Multi-Anima architecture: Independent agent instances with create/list/switch/delete/rename/clone
-- Per-Anima runtime isolation: Each Anima runs independent HeartbeatLoop, WiringEngine, EventBus
-- Full i18n: Chinese/English UI with LanguageService, .resx resources, persistent preferences
-- Module management: Card-layout UI with .oamod installation, per-Anima enable/disable, context menu, detail sidebar
-- Module configuration: EditorConfigSidebar with metadata display, typed config form, auto-save, validation
-- Built-in modules: FixedText, TextJoin, TextSplit, ConditionalBranch, configurable LLM with per-Anima overrides
+**Target features:**
+- AnimaInputPort module — declare named services that other Animas can call
+- AnimaOutputPort module — paired with input port by name for response return
+- AnimaRoute module — select target Anima + remote input port, send requests
+- Cross-Anima message routing system with correlation ID tracking
+- Prompt auto-injection — LLM automatically knows available downstream services
+- Format detection — monitor LLM output for routing format, split and forward
+- HTTP Request module — configurable HTTP calls as wiring tool nodes
 
 ## What This Is
 
@@ -233,4 +234,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-09 after v1.5 milestone*
+*Last updated: 2026-03-11 after v1.6 milestone start*
