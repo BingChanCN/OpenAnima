@@ -85,6 +85,9 @@
   - [x] 28-01-PLAN.md — CrossAnimaRouter core: types, interface, port registry, request correlation, timeout, cleanup, unit tests
   - [ ] 28-02-PLAN.md — Lifecycle integration: DI registration, AnimaRuntimeManager deletion hooks, EventBus isolation test
 - [ ] **Phase 29: Routing Modules** — AnimaInputPort, AnimaOutputPort, and AnimaRoute as wiring-editor modules
+  Plans:
+  - [ ] 29-01-PLAN.md — Metadata infrastructure, CrossAnimaRouter push delivery, AnimaInputPort + AnimaOutputPort modules
+  - [ ] 29-02-PLAN.md — AnimaRoute module, DI registration, EditorConfigSidebar dropdown support, E2E test
 - [ ] **Phase 30: Prompt Injection and Format Detection** — LLMModule auto-injects service list and detects routing markers in output
 - [ ] **Phase 31: HTTP Request Module** — Configurable HTTP calls with resilience pipeline and SSRF protection
 
@@ -116,7 +119,11 @@
   3. User can add an AnimaRoute module to Anima A, select Anima B from a dropdown, and then select "summarize" from a second dropdown populated from Anima B's registered ports
   4. A request sent through AnimaRoute reaches Anima B's AnimaInputPort output and the response wired back through AnimaOutputPort arrives at AnimaRoute's response output port within the same wiring tick
   5. When routing fails or times out, the error is delivered to AnimaRoute's error output port so downstream modules can handle it
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 29-01-PLAN.md — Metadata infrastructure, CrossAnimaRouter push delivery, AnimaInputPort + AnimaOutputPort modules
+- [ ] 29-02-PLAN.md — AnimaRoute module, DI registration, EditorConfigSidebar dropdown support, E2E test
 
 **Key Risks**:
 - AnimaRouteModule.ExecuteAsync MUST await the response — fire-and-forget causes downstream modules to execute with empty data in the same tick. No exceptions.
@@ -190,11 +197,11 @@
 | 26. Module Configuration UI | v1.5 | 3/3 | Complete | 2026-03-01 |
 | 27. Built-in Modules | v1.5 | 2/2 | Complete | 2026-03-02 |
 | 28. Routing Infrastructure | 2/2 | Complete    | 2026-03-11 | - |
-| 29. Routing Modules | v1.6 | 0/? | Not started | - |
+| 29. Routing Modules | v1.6 | 0/2 | Not started | - |
 | 30. Prompt Injection and Format Detection | v1.6 | 0/? | Not started | - |
 | 31. HTTP Request Module | v1.6 | 0/? | Not started | - |
 
 **Total shipped: 27 phases, 64 plans across 6 milestones (v1.6 in progress)**
 
 ---
-*Last updated: 2026-03-11 after Phase 28-01 completion*
+*Last updated: 2026-03-12 after Phase 29 planning*
