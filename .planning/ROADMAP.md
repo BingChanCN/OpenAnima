@@ -168,7 +168,7 @@ Plans:
   3. A request that takes longer than 10 seconds times out without hanging the heartbeat loop, and the timeout error is delivered to the module's error output
   4. A request targeting localhost, 127.0.0.1, or a private IP range (10.x, 172.16-31.x, 192.168.x) is blocked before any network call is made, and the block reason is delivered to the error output port
   5. The module uses IHttpClientFactory with a standard resilience handler — not a raw HttpClient instantiation — so socket exhaustion cannot occur under heartbeat-driven repeated execution
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 31-01-PLAN.md — SsrfGuard TDD + HttpRequestModule core + DI/NuGet registration
@@ -214,7 +214,7 @@ Plans:
 | 28. Routing Infrastructure | v1.6 | 2/2 | Complete | 2026-03-11 |
 | 29. Routing Modules | v1.6 | 2/2 | Complete | 2026-03-13 |
 | 30. Prompt Injection and Format Detection | v1.6 | 2/2 | Complete | 2026-03-13 |
-| 31. HTTP Request Module | v1.6 | 0/2 | Not started | - |
+| 31. HTTP Request Module | 1/2 | In Progress|  | - |
 
 **Total shipped: 27 phases, 64 plans across 6 milestones (v1.6 in progress)**
 

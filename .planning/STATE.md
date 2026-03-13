@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Cross-Anima Routing
 status: completed
-last_updated: "2026-03-13T14:02:44.647Z"
+last_updated: "2026-03-13T16:21:30.951Z"
 last_activity: "2026-03-13 — Completed 30-02: LLMModule prompt injection + FormatDetector integration (7 integration tests)"
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 8
+  completed_plans: 7
   percent: 100
 ---
 
@@ -27,12 +27,12 @@ See: `.planning/PROJECT.md` (updated 2026-03-11)
 
 ## Current Position
 
-Phase: 30 of 31 (Prompt Injection and Format Detection) — COMPLETE
-Plan: 2 of 2 complete
-Status: Phase 30 Plan 02 done — LLMModule extended with prompt injection, FormatDetector integration, self-correction loop. All 7 integration tests pass.
-Last activity: 2026-03-13 — Completed 30-02: LLMModule prompt injection + FormatDetector integration (7 integration tests)
+Phase: 31 of 31 (HTTP Request Module) — IN PROGRESS
+Plan: 1 of 1 complete
+Status: Phase 31 Plan 01 done — HttpRequestModule with SsrfGuard, IHttpClientFactory resilience pipeline, 10s timeout, and DI registration. All 15 unit tests pass.
+Last activity: 2026-03-14 — Completed 31-01: HttpRequestModule core implementation with SsrfGuard and DI registration
 
-Progress: [██████████] 100% (v1.6)
+Progress: [█████████░] 88% (v1.6)
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [██████████] 100% (v1.6)
 | 29-routing-modules | 29-02 | 15min | 2 | 8 |
 | 30-prompt-injection-and-format-detection | 30-01 | 4min | 2 | 2 |
 | 30-prompt-injection-and-format-detection | 30-02 | 15min | 2 | 4 |
+| 31-http-request-module | 31-01 | 8min | 2 | 7 |
 
 ## Accumulated Context
 
@@ -97,8 +98,14 @@ Progress: [██████████] 100% (v1.6)
 **Phase 30, Plan 02:**
 - **BuildKnownServiceNames per ExecuteAsync**: Queries IAnimaModuleConfigService on every call — prevents stale config if AnimaRoute settings change without restart
 - **Self-correction correction message**: Includes error reason AND concrete format example — both required for effective LLM self-correction
-- **No token budget cap**: All configured AnimaRoute services injected in system message (PROMPT-02 per user decision)
+- **No token budget cap**: All configured AnimateRoute services injected in system message (PROMPT-02 per user decision)
 - **Request before trigger**: AnimaRouteModule.port.request published BEFORE .port.trigger — order is critical; AnimaRouteModule buffers payload on request port
+
+**Phase 31, Plan 01:**
+- **CIDR bit-level matching**: IsInRange via byte-by-byte bit masking — avoids adding IPNetwork2 or similar library dependency for a 30-line helper
+- **localhost hostname check first**: `uri.Host.Equals("localhost", ...)` checked before `IPAddress.TryParse` — handles loopback without DNS round-trip
+- **CancellationTokenSource after SSRF check**: Created after SsrfGuard.IsBlocked — avoids burning 10s timeout budget on local validation
+- **ParseHeaders uses IndexOf(':')**: Split(':') would break `Authorization: Bearer token` or any value containing a colon
 
 ### Known Blockers
 
@@ -114,5 +121,5 @@ None
 
 ---
 
-*State updated: 2026-03-13*
-*Stopped at: Completed 30-02-PLAN.md (LLMModule prompt injection + FormatDetector integration)*
+*State updated: 2026-03-14*
+*Stopped at: Completed 31-01-PLAN.md (HttpRequestModule core implementation with SsrfGuard and DI registration)*
