@@ -1,6 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.Modules;

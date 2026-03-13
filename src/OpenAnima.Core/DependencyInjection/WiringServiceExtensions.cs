@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using OpenAnima.Core.Hosting;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Ports;
