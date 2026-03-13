@@ -27,9 +27,13 @@ public static class AnimaServiceExtensions
 
         services.AddSingleton<IAnimaContext, AnimaContext>();
 
-        // Register router BEFORE AnimaRuntimeManager (no circular dependency)
+        // Register router BEFORE AnimaRuntimeManager.
+        // The IAnimaRuntimeManager parameter uses a deferred lambda — since both are singletons,
+        // the lambda is evaluated on first use (not at registration), so circular resolution works.
         services.AddSingleton<ICrossAnimaRouter>(sp =>
-            new CrossAnimaRouter(sp.GetRequiredService<ILogger<CrossAnimaRouter>>()));
+            new CrossAnimaRouter(
+                sp.GetRequiredService<ILogger<CrossAnimaRouter>>(),
+                sp.GetRequiredService<IAnimaRuntimeManager>()));
 
         services.AddSingleton<IAnimaRuntimeManager>(sp =>
             new AnimaRuntimeManager(

@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using OpenAnima.Contracts;
+using OpenAnima.Core.Anima;
 
 [assembly: InternalsVisibleTo("OpenAnima.Tests")]
 
@@ -9,12 +11,15 @@ namespace OpenAnima.Core.Routing;
 /// Singleton router managing cross-Anima port registration and request correlation.
 /// Maintains a thread-safe port registry and a pending request map with timeout enforcement.
 /// A background cleanup loop removes expired entries every 30 seconds.
+/// When IAnimaRuntimeManager is provided, RouteRequestAsync actively delivers requests to
+/// the target Anima's EventBus via the "routing.incoming.{portName}" event.
 /// </summary>
 public class CrossAnimaRouter : ICrossAnimaRouter
 {
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
     private readonly ILogger<CrossAnimaRouter> _logger;
+    private readonly IAnimaRuntimeManager? _runtimeManager;
 
     /// <summary>Thread-safe registry mapping "animaId::portName" compound keys to PortRegistration records.</summary>
     private readonly ConcurrentDictionary<string, PortRegistration> _registry = new();
@@ -30,9 +35,15 @@ public class CrossAnimaRouter : ICrossAnimaRouter
     /// Initialises the CrossAnimaRouter and starts the background cleanup loop.
     /// </summary>
     /// <param name="logger">Logger for routing events at Information and Debug levels.</param>
-    public CrossAnimaRouter(ILogger<CrossAnimaRouter> logger)
+    /// <param name="runtimeManager">
+    /// Optional runtime manager. When provided, RouteRequestAsync actively pushes the request event
+    /// to the target Anima's EventBus. When null, the router still works but relies on external
+    /// delivery (e.g., for backward compatibility or testing without full runtime setup).
+    /// </param>
+    public CrossAnimaRouter(ILogger<CrossAnimaRouter> logger, IAnimaRuntimeManager? runtimeManager = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _runtimeManager = runtimeManager;
         StartCleanupLoop();
     }
 
@@ -125,9 +136,38 @@ public class CrossAnimaRouter : ICrossAnimaRouter
 
         _logger.LogDebug("RouteRequest {CorrelationId} -> {Key}", correlationId, key);
 
-        // NOTE (Phase 28): Delivery to the target Anima's EventBus is NOT wired here yet.
-        // Phase 29 (AnimaInputPort) will subscribe to receive the request and call CompleteRequest.
-        // For now, the request simply waits until CompleteRequest is called, or times out.
+        // Phase 29: Deliver request to the target Anima's EventBus via IAnimaRuntimeManager.
+        // The AnimaInputPortModule is subscribed to "routing.incoming.{portName}" events.
+        var runtime = _runtimeManager?.GetOrCreateRuntime(targetAnimaId);
+        if (runtime != null)
+        {
+            try
+            {
+                await runtime.EventBus.PublishAsync(new ModuleEvent<string>
+                {
+                    EventName = $"routing.incoming.{portName}",
+                    SourceModuleId = "CrossAnimaRouter",
+                    Payload = payload,
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["correlationId"] = correlationId
+                    }
+                }, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "CrossAnimaRouter: failed to deliver request {CorrelationId} to {Key} EventBus",
+                    correlationId, key);
+            }
+        }
+        else if (_runtimeManager != null)
+        {
+            _logger.LogWarning(
+                "CrossAnimaRouter: no runtime found for {TargetAnimaId}. Request {CorrelationId} will time out.",
+                targetAnimaId, correlationId);
+        }
+
         try
         {
             return await tcs.Task;
