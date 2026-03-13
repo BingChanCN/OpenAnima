@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.Http.Resilience;
 using OpenAnima.Contracts;
 using OpenAnima.Core.Events;
 using OpenAnima.Core.Hosting;
