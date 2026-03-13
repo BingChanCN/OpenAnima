@@ -29,16 +29,16 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Prompt Auto-Injection (PROMPT)
 
-- [ ] **PROMPT-01**: LLMModule system prompt auto-includes descriptions of available cross-Anima services
-- [ ] **PROMPT-02**: Prompt injection respects token budget cap (200-300 tokens) to prevent context exhaustion
-- [ ] **PROMPT-03**: Prompt injection includes format instructions for LLM to trigger routing
-- [ ] **PROMPT-04**: Prompt injection skips when no routes are configured for current Anima
+- [x] **PROMPT-01**: LLMModule system prompt auto-includes descriptions of available cross-Anima services
+- [x] **PROMPT-02**: Prompt injection respects token budget cap (200-300 tokens) to prevent context exhaustion
+- [x] **PROMPT-03**: Prompt injection includes format instructions for LLM to trigger routing
+- [x] **PROMPT-04**: Prompt injection skips when no routes are configured for current Anima
 
 ### Format Detection (FMTD)
 
 - [ ] **FMTD-01**: FormatDetector scans LLM output for routing markers after response completes
 - [ ] **FMTD-02**: FormatDetector splits passthrough text from routing payload
-- [ ] **FMTD-03**: FormatDetector dispatches extracted routing calls to CrossAnimaRouter
+- [x] **FMTD-03**: FormatDetector dispatches extracted routing calls to CrossAnimaRouter
 - [ ] **FMTD-04**: Format detection handles near-miss and malformed markers gracefully (no crash)
 
 ### HTTP Request Module (HTTP)
@@ -104,13 +104,13 @@ Deferred to future releases. Tracked but not in current roadmap.
 | RMOD-06 | Phase 29 | Complete |
 | RMOD-07 | Phase 29 | Complete |
 | RMOD-08 | Phase 29 | Complete |
-| PROMPT-01 | Phase 30 | Pending |
-| PROMPT-02 | Phase 30 | Pending |
-| PROMPT-03 | Phase 30 | Pending |
-| PROMPT-04 | Phase 30 | Pending |
+| PROMPT-01 | Phase 30 | Complete |
+| PROMPT-02 | Phase 30 | Complete |
+| PROMPT-03 | Phase 30 | Complete |
+| PROMPT-04 | Phase 30 | Complete |
 | FMTD-01 | Phase 30 | Pending |
 | FMTD-02 | Phase 30 | Pending |
-| FMTD-03 | Phase 30 | Pending |
+| FMTD-03 | Phase 30 | Complete |
 | FMTD-04 | Phase 30 | Pending |
 | HTTP-01 | Phase 31 | Pending |
 | HTTP-02 | Phase 31 | Pending |

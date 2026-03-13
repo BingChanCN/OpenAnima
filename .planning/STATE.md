@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Cross-Anima Routing
-status: in_progress
-last_updated: "2026-03-13T13:22:21Z"
-last_activity: "2026-03-13 — Completed 30-01: FormatDetector TDD — XML routing marker parser (16 tests)"
+status: completed
+last_updated: "2026-03-13T13:49:21.621Z"
+last_activity: "2026-03-13 — Completed 30-02: LLMModule prompt injection + FormatDetector integration (7 integration tests)"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
-  percent: 83
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State: OpenAnima
@@ -23,16 +23,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-11)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 30 in progress — FormatDetector complete (30-01). Next: LLMModule integration (30-02).
+**Current focus:** Phase 30 COMPLETE — FormatDetector (30-01) and LLMModule integration (30-02) both done. Milestone v1.6 complete. Next: Phase 31.
 
 ## Current Position
 
-Phase: 30 of 31 (Prompt Injection and Format Detection) — IN PROGRESS
-Plan: 1 of 2 complete
-Status: Phase 30 Plan 01 done — FormatDetector XML routing marker parser with 16 passing unit tests.
-Last activity: 2026-03-13 — Completed 30-01: FormatDetector TDD — XML routing marker parser (16 tests)
+Phase: 30 of 31 (Prompt Injection and Format Detection) — COMPLETE
+Plan: 2 of 2 complete
+Status: Phase 30 Plan 02 done — LLMModule extended with prompt injection, FormatDetector integration, self-correction loop. All 7 integration tests pass.
+Last activity: 2026-03-13 — Completed 30-02: LLMModule prompt injection + FormatDetector integration (7 integration tests)
 
-Progress: [████████░░] 83% (v1.6)
+Progress: [██████████] 100% (v1.6)
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [████████░░] 83% (v1.6)
 | 29-routing-modules | 29-01 | 30min | 2 | 6 |
 | 29-routing-modules | 29-02 | 15min | 2 | 8 |
 | 30-prompt-injection-and-format-detection | 30-01 | 4min | 2 | 2 |
+| 30-prompt-injection-and-format-detection | 30-02 | 15min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -93,6 +94,12 @@ Progress: [████████░░] 83% (v1.6)
 - **Service name normalisation**: Stored as `known.ToLowerInvariant()` (canonical form from config), not from raw LLM text
 - **FormatDetector has no ILogger**: Pure logic class; caller (LLMModule, Plan 02) handles logging of results
 
+**Phase 30, Plan 02:**
+- **BuildKnownServiceNames per ExecuteAsync**: Queries IAnimaModuleConfigService on every call — prevents stale config if AnimaRoute settings change without restart
+- **Self-correction correction message**: Includes error reason AND concrete format example — both required for effective LLM self-correction
+- **No token budget cap**: All configured AnimaRoute services injected in system message (PROMPT-02 per user decision)
+- **Request before trigger**: AnimaRouteModule.port.request published BEFORE .port.trigger — order is critical; AnimaRouteModule buffers payload on request port
+
 ### Known Blockers
 
 None
@@ -108,4 +115,4 @@ None
 ---
 
 *State updated: 2026-03-13*
-*Stopped at: Completed 30-01-PLAN.md (FormatDetector XML routing marker parser)*
+*Stopped at: Completed 30-02-PLAN.md (LLMModule prompt injection + FormatDetector integration)*

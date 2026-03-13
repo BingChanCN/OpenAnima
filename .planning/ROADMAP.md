@@ -88,7 +88,7 @@
   Plans:
   - [ ] 29-01-PLAN.md — Metadata infrastructure, CrossAnimaRouter push delivery, AnimaInputPort + AnimaOutputPort modules
   - [ ] 29-02-PLAN.md — AnimaRoute module, DI registration, EditorConfigSidebar dropdown support, E2E test
-- [ ] **Phase 30: Prompt Injection and Format Detection** — LLMModule auto-injects service list and detects routing markers in output
+- [x] **Phase 30: Prompt Injection and Format Detection** — LLMModule auto-injects service list and detects routing markers in output (completed 2026-03-13)
   Plans:
   - [x] 30-01-PLAN.md — FormatDetector: TDD-built XML routing marker parser with lenient regex
   - [ ] 30-02-PLAN.md — LLMModule extension: system message injection, FormatDetector integration, self-correction loop, route dispatch
@@ -142,7 +142,7 @@ Plans:
   3. The injected service description block stays within a 200-300 token budget regardless of how many routes are configured
   4. After the LLM produces output containing a routing marker, the passthrough text (normal reply) and routing payload are correctly split and the routing call is dispatched to CrossAnimaRouter
   5. A malformed or near-miss routing marker in LLM output does not crash the system — it is silently dropped and the passthrough text is delivered normally
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 30-01-PLAN.md — FormatDetector: TDD-built XML routing marker parser with lenient regex
@@ -205,7 +205,7 @@ Plans:
 | 27. Built-in Modules | v1.5 | 2/2 | Complete | 2026-03-02 |
 | 28. Routing Infrastructure | 2/2 | Complete    | 2026-03-11 | - |
 | 29. Routing Modules | 2/2 | Complete    | 2026-03-13 | - |
-| 30. Prompt Injection and Format Detection | v1.6 | 1/2 | In Progress | - |
+| 30. Prompt Injection and Format Detection | 2/2 | Complete   | 2026-03-13 | - |
 | 31. HTTP Request Module | v1.6 | 0/? | Not started | - |
 
 **Total shipped: 27 phases, 64 plans across 6 milestones (v1.6 in progress)**
