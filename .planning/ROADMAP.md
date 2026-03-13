@@ -90,7 +90,7 @@
   - [ ] 29-02-PLAN.md — AnimaRoute module, DI registration, EditorConfigSidebar dropdown support, E2E test
 - [ ] **Phase 30: Prompt Injection and Format Detection** — LLMModule auto-injects service list and detects routing markers in output
   Plans:
-  - [ ] 30-01-PLAN.md — FormatDetector: TDD-built XML routing marker parser with lenient regex
+  - [x] 30-01-PLAN.md — FormatDetector: TDD-built XML routing marker parser with lenient regex
   - [ ] 30-02-PLAN.md — LLMModule extension: system message injection, FormatDetector integration, self-correction loop, route dispatch
 - [ ] **Phase 31: HTTP Request Module** — Configurable HTTP calls with resilience pipeline and SSRF protection
 
@@ -145,7 +145,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 30-01-PLAN.md — FormatDetector: TDD-built XML routing marker parser with lenient regex
+- [x] 30-01-PLAN.md — FormatDetector: TDD-built XML routing marker parser with lenient regex
 - [ ] 30-02-PLAN.md — LLMModule extension: system message injection, FormatDetector integration, self-correction loop, route dispatch
 
 **Key Risks**:
@@ -205,7 +205,7 @@ Plans:
 | 27. Built-in Modules | v1.5 | 2/2 | Complete | 2026-03-02 |
 | 28. Routing Infrastructure | 2/2 | Complete    | 2026-03-11 | - |
 | 29. Routing Modules | 2/2 | Complete    | 2026-03-13 | - |
-| 30. Prompt Injection and Format Detection | v1.6 | 0/2 | Not started | - |
+| 30. Prompt Injection and Format Detection | v1.6 | 1/2 | In Progress | - |
 | 31. HTTP Request Module | v1.6 | 0/? | Not started | - |
 
 **Total shipped: 27 phases, 64 plans across 6 milestones (v1.6 in progress)**

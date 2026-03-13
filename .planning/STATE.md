@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Cross-Anima Routing
-status: completed
-last_updated: "2026-03-13T07:50:22.108Z"
-last_activity: "2026-03-13 — Completed 29-02: AnimaRouteModule, DI registration, EditorConfigSidebar dropdowns, E2E integration test"
+status: in_progress
+last_updated: "2026-03-13T13:22:21Z"
+last_activity: "2026-03-13 — Completed 30-01: FormatDetector TDD — XML routing marker parser (16 tests)"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_plans: 6
+  completed_plans: 5
+  percent: 83
 ---
 
 # Project State: OpenAnima
@@ -23,21 +23,21 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-11)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 29 complete — all routing modules implemented. Milestone v1.6 complete.
+**Current focus:** Phase 30 in progress — FormatDetector complete (30-01). Next: LLMModule integration (30-02).
 
 ## Current Position
 
-Phase: 29 of 31 (Routing Modules) — COMPLETE
-Plan: 2 of 2 complete
-Status: Phase 29 Plan 02 done — AnimaRouteModule + DI + EditorConfigSidebar dropdowns. Phase 29 complete.
-Last activity: 2026-03-13 — Completed 29-02: AnimaRouteModule, DI registration, EditorConfigSidebar dropdowns, E2E integration test
+Phase: 30 of 31 (Prompt Injection and Format Detection) — IN PROGRESS
+Plan: 1 of 2 complete
+Status: Phase 30 Plan 01 done — FormatDetector XML routing marker parser with 16 passing unit tests.
+Last activity: 2026-03-13 — Completed 30-01: FormatDetector TDD — XML routing marker parser (16 tests)
 
-Progress: [██████████] 100% (v1.6)
+Progress: [████████░░] 83% (v1.6)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 67 (across v1.0-v1.6)
+- Total plans completed: 68 (across v1.0-v1.6)
 
 **By Milestone:**
 
@@ -49,7 +49,7 @@ Progress: [██████████] 100% (v1.6)
 | v1.3 Visual Wiring | 10 | 21 | 2026-02-28 |
 | v1.4 Module SDK | 3 | 8 | 2026-02-28 |
 | v1.5 Multi-Anima | 5 | 13 | 2026-03-09 |
-| v1.6 Cross-Anima Routing | 4 | 4/4 | 2026-03-13 |
+| v1.6 Cross-Anima Routing | 4 | 5/6 | in progress |
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -57,6 +57,7 @@ Progress: [██████████] 100% (v1.6)
 | 28-routing-infrastructure | 28-02 | 6min | 2 | 3 |
 | 29-routing-modules | 29-01 | 30min | 2 | 6 |
 | 29-routing-modules | 29-02 | 15min | 2 | 8 |
+| 30-prompt-injection-and-format-detection | 30-01 | 4min | 2 | 2 |
 
 ## Accumulated Context
 
@@ -86,6 +87,12 @@ Progress: [██████████] 100% (v1.6)
 - **EditorConfigSidebar variable rename**: `targetPorts` and `ownPorts` to avoid CS0136 collision with existing `ports` variable in port info section
 - **Default config initialisation**: All 3 routing modules call `SetConfigAsync` with empty key defaults on `InitializeAsync` so sidebar renders correct fields
 
+**Phase 30, Plan 01:**
+- **UnclosedMarkerRegex pattern**: Uses alternation to catch both complete-open-tag-no-close AND partial `<route` strings (no `>`): `<route(?:\b[^>]*>(?![\s\S]*</route>)|(?![^>]*>))`
+- **Unrecognised service names in passthrough**: MalformedMarkerError set but marker left in passthrough text — user sees the LLM's attempted output
+- **Service name normalisation**: Stored as `known.ToLowerInvariant()` (canonical form from config), not from raw LLM text
+- **FormatDetector has no ILogger**: Pure logic class; caller (LLMModule, Plan 02) handles logging of results
+
 ### Known Blockers
 
 None
@@ -101,4 +108,4 @@ None
 ---
 
 *State updated: 2026-03-13*
-*Stopped at: Completed 29-02-PLAN.md (AnimaRouteModule + DI registration + EditorConfigSidebar dropdowns)*
+*Stopped at: Completed 30-01-PLAN.md (FormatDetector XML routing marker parser)*
