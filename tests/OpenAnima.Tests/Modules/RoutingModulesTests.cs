@@ -3,7 +3,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Contracts;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.Events;
+using OpenAnima.Core.Modules;
 using OpenAnima.Core.Routing;
+using OpenAnima.Core.Services;
 using OpenAnima.Core.Wiring;
 using OpenAnima.Tests.TestHelpers;
 
@@ -176,6 +178,262 @@ public class RoutingModulesTests
         router.Dispose();
     }
 
+    // ── Task 2: AnimaInputPortModule ────────────────────────────────────────
+
+    [Fact]
+    public async Task AnimaInputPort_InitializeAsync_RegistersPort()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
+        {
+            ["serviceName"] = "summarize",
+            ["serviceDescription"] = "Summarization service"
+        });
+        var animaContext = new AnimaContext();
+        animaContext.SetActive("anima-test");
+
+        var module = new AnimaInputPortModule(
+            eventBus, router, config, animaContext,
+            NullLogger<AnimaInputPortModule>.Instance);
+
+        // Act
+        await module.InitializeAsync();
+
+        // Assert — router should have the port registered
+        var ports = router.GetPortsForAnima("anima-test");
+        Assert.Single(ports);
+        Assert.Equal("summarize", ports[0].PortName);
+
+        await module.ShutdownAsync();
+        router.Dispose();
+    }
+
+    [Fact]
+    public async Task AnimaInputPort_RegisterPort_IncludesDescription()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
+        {
+            ["serviceName"] = "translate",
+            ["serviceDescription"] = "Translation service for multi-language support"
+        });
+        var animaContext = new AnimaContext();
+        animaContext.SetActive("anima-desc-test");
+
+        var module = new AnimaInputPortModule(
+            eventBus, router, config, animaContext,
+            NullLogger<AnimaInputPortModule>.Instance);
+
+        // Act
+        await module.InitializeAsync();
+
+        // Assert — description should be passed through
+        var ports = router.GetPortsForAnima("anima-desc-test");
+        Assert.Single(ports);
+        Assert.Equal("Translation service for multi-language support", ports[0].Description);
+
+        await module.ShutdownAsync();
+        router.Dispose();
+    }
+
+    [Fact]
+    public async Task AnimaInputPort_ShutdownAsync_UnregistersPort()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
+        {
+            ["serviceName"] = "cleanup-test",
+            ["serviceDescription"] = "Test service"
+        });
+        var animaContext = new AnimaContext();
+        animaContext.SetActive("anima-cleanup");
+
+        var module = new AnimaInputPortModule(
+            eventBus, router, config, animaContext,
+            NullLogger<AnimaInputPortModule>.Instance);
+
+        await module.InitializeAsync();
+        Assert.Single(router.GetPortsForAnima("anima-cleanup"));
+
+        // Act
+        await module.ShutdownAsync();
+
+        // Assert — port should be unregistered after shutdown
+        Assert.Empty(router.GetPortsForAnima("anima-cleanup"));
+
+        router.Dispose();
+    }
+
+    [Fact]
+    public async Task AnimaInputPort_IncomingRequest_OutputsPayloadWithMetadata()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
+        {
+            ["serviceName"] = "myService",
+            ["serviceDescription"] = "Test service"
+        });
+        var animaContext = new AnimaContext();
+        animaContext.SetActive("anima-incoming");
+
+        var module = new AnimaInputPortModule(
+            eventBus, router, config, animaContext,
+            NullLogger<AnimaInputPortModule>.Instance);
+
+        await module.InitializeAsync();
+
+        // Set up a subscriber to catch the output event
+        ModuleEvent<string>? outputEvent = null;
+        var tcs = new TaskCompletionSource<bool>();
+        eventBus.Subscribe<string>(
+            (evt, ct) =>
+            {
+                if (evt.EventName.EndsWith(".port.request"))
+                {
+                    outputEvent = evt;
+                    tcs.TrySetResult(true);
+                }
+                return Task.CompletedTask;
+            });
+
+        // Act — simulate CrossAnimaRouter delivering an incoming request
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "routing.incoming.myService",
+            SourceModuleId = "CrossAnimaRouter",
+            Payload = "test request payload",
+            Metadata = new Dictionary<string, string>
+            {
+                ["correlationId"] = "abc123def4567890abc123def4567890"
+            }
+        });
+
+        // Wait for handler
+        await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(5));
+
+        // Assert
+        Assert.NotNull(outputEvent);
+        Assert.Equal("test request payload", outputEvent!.Payload);
+        Assert.NotNull(outputEvent.Metadata);
+        Assert.Equal("abc123def4567890abc123def4567890", outputEvent.Metadata!["correlationId"]);
+
+        await module.ShutdownAsync();
+        router.Dispose();
+    }
+
+    // ── Task 2: AnimaOutputPortModule ───────────────────────────────────────
+
+    [Fact]
+    public async Task AnimaOutputPort_CompleteRequest_UsesMetadata()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
+        {
+            ["matchedService"] = "summarize"
+        });
+        var animaContext = new AnimaContext();
+        animaContext.SetActive("anima-output");
+
+        var module = new AnimaOutputPortModule(
+            eventBus, router, config, animaContext,
+            NullLogger<AnimaOutputPortModule>.Instance);
+
+        await module.InitializeAsync();
+
+        // Register a pending request in the router
+        router.RegisterPort("anima-output", "summarize", "Test service");
+        var routeTask = router.RouteRequestAsync(
+            "anima-output",
+            "summarize",
+            "request",
+            timeout: TimeSpan.FromSeconds(5));
+
+        // Get the correlationId from the pending request
+        await Task.Delay(20);
+        var correlationIds = router.GetPendingCorrelationIds();
+        Assert.Single(correlationIds);
+        var correlationId = correlationIds.First();
+
+        // Act — publish response event with correlationId in Metadata
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = $"{module.Metadata.Name}.port.response",
+            SourceModuleId = "test",
+            Payload = "response text",
+            Metadata = new Dictionary<string, string>
+            {
+                ["correlationId"] = correlationId
+            }
+        });
+
+        // Assert — route request should complete with the response
+        var result = await WaitWithTimeout(routeTask, TimeSpan.FromSeconds(5));
+        Assert.True(result.IsSuccess);
+        Assert.Equal("response text", result.Payload);
+        Assert.Equal(correlationId, result.CorrelationId);
+
+        await module.ShutdownAsync();
+        router.Dispose();
+    }
+
+    [Fact]
+    public async Task AnimaOutputPort_NullMetadata_NoException()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
+        {
+            ["matchedService"] = "summarize"
+        });
+        var animaContext = new AnimaContext();
+        animaContext.SetActive("anima-null-meta");
+
+        var module = new AnimaOutputPortModule(
+            eventBus, router, config, animaContext,
+            NullLogger<AnimaOutputPortModule>.Instance);
+
+        await module.InitializeAsync();
+
+        // Act — publish response event WITHOUT Metadata (null)
+        Exception? caughtException = null;
+        try
+        {
+            await eventBus.PublishAsync(new ModuleEvent<string>
+            {
+                EventName = $"{module.Metadata.Name}.port.response",
+                SourceModuleId = "test",
+                Payload = "response text",
+                Metadata = null
+            });
+
+            // Wait briefly for event processing
+            await Task.Delay(50);
+        }
+        catch (Exception ex)
+        {
+            caughtException = ex;
+        }
+
+        // Assert — no exception AND CompleteRequest NOT called (no pending requests)
+        Assert.Null(caughtException);
+        var pendingIds = router.GetPendingCorrelationIds();
+        Assert.Empty(pendingIds); // Nothing completed (nothing was pending either)
+
+        await module.ShutdownAsync();
+        router.Dispose();
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────
 
     private static async Task<T> WaitWithTimeout<T>(Task<T> task, TimeSpan timeout)
@@ -188,6 +446,29 @@ public class RoutingModulesTests
             return await task;
         }
         throw new TimeoutException($"Task did not complete within {timeout.TotalSeconds}s");
+    }
+
+    /// <summary>
+    /// Stub config service that returns a fixed dictionary for all requests.
+    /// Used to configure AnimaInputPortModule and AnimaOutputPortModule in tests.
+    /// </summary>
+    private class StubAnimaModuleConfigService : IAnimaModuleConfigService
+    {
+        private readonly Dictionary<string, string> _config;
+
+        public StubAnimaModuleConfigService(Dictionary<string, string> config)
+        {
+            _config = config;
+        }
+
+        public Dictionary<string, string> GetConfig(string animaId, string moduleId)
+            => new(_config);
+
+        public Task SetConfigAsync(string animaId, string moduleId, Dictionary<string, string> config)
+            => Task.CompletedTask;
+
+        public Task InitializeAsync()
+            => Task.CompletedTask;
     }
 
     /// <summary>
