@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using OpenAI;
 using OpenAI.Chat;
 using System.ClientModel;
