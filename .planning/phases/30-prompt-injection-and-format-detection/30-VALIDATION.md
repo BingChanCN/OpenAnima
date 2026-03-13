@@ -38,23 +38,23 @@ created: 2026-03-13
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 30-01-01 | 01 | 1 | FMTD-01 | unit | `dotnet test --filter "FormatDetector" --no-build` | ❌ W0 | ⬜ pending |
-| 30-01-02 | 01 | 1 | FMTD-02 | unit | `dotnet test --filter "FormatDetector" --no-build` | ❌ W0 | ⬜ pending |
-| 30-01-03 | 01 | 1 | FMTD-04 | unit | `dotnet test --filter "FormatDetector" --no-build` | ❌ W0 | ⬜ pending |
-| 30-02-01 | 02 | 1 | PROMPT-01 | unit | `dotnet test --filter "PromptInjection" --no-build` | ❌ W0 | ⬜ pending |
-| 30-02-02 | 02 | 1 | PROMPT-03 | unit | `dotnet test --filter "PromptInjection" --no-build` | ❌ W0 | ⬜ pending |
-| 30-02-03 | 02 | 1 | PROMPT-04 | unit | `dotnet test --filter "PromptInjection" --no-build` | ❌ W0 | ⬜ pending |
-| 30-03-01 | 03 | 2 | FMTD-03 | integration | `dotnet test --filter "Category=Routing" --no-build` | ❌ W0 | ⬜ pending |
-| 30-03-02 | 03 | 2 | PROMPT-02 | unit | `dotnet test --filter "PromptInjection" --no-build` | ❌ W0 | ⬜ pending |
+| 30-01-01 | 01 | 1 | FMTD-01 | unit | `dotnet test --filter "FormatDetector" --no-build` | :x: W0 | :white_large_square: pending |
+| 30-01-02 | 01 | 1 | FMTD-02 | unit | `dotnet test --filter "FormatDetector" --no-build` | :x: W0 | :white_large_square: pending |
+| 30-01-03 | 01 | 1 | FMTD-04 | unit | `dotnet test --filter "FormatDetector" --no-build` | :x: W0 | :white_large_square: pending |
+| 30-02-01 | 02 | 2 | PROMPT-01 | unit | `dotnet test --filter "PromptInjection" --no-build` | :x: W0 | :white_large_square: pending |
+| 30-02-02 | 02 | 2 | PROMPT-03 | unit | `dotnet test --filter "PromptInjection" --no-build` | :x: W0 | :white_large_square: pending |
+| 30-02-03 | 02 | 2 | PROMPT-04 | unit | `dotnet test --filter "PromptInjection" --no-build` | :x: W0 | :white_large_square: pending |
+| 30-02-04 | 02 | 2 | FMTD-03 | integration | `dotnet test --filter "PromptInjection" --no-build` | :x: W0 | :white_large_square: pending |
+| 30-02-05 | 02 | 2 | PROMPT-02 | unit | `dotnet test --filter "PromptInjection" --no-build` | :x: W0 | :white_large_square: pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: :white_large_square: pending / :white_check_mark: green / :x: red / :warning: flaky*
 
 ---
 
 ## Wave 0 Requirements
 
 - [ ] `tests/OpenAnima.Tests/Modules/FormatDetectorTests.cs` — stubs for FMTD-01, FMTD-02, FMTD-04
-- [ ] `tests/OpenAnima.Tests/Integration/PromptInjectionIntegrationTests.cs` — stubs for PROMPT-01, PROMPT-03, PROMPT-04, FMTD-03
+- [ ] `tests/OpenAnima.Tests/Integration/PromptInjectionIntegrationTests.cs` — stubs for PROMPT-01, PROMPT-02, PROMPT-03, PROMPT-04, FMTD-03
 
 *Existing infrastructure covers test framework — no new package installs needed.*
 
