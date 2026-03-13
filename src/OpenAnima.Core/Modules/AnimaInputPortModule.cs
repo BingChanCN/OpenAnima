@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
 using OpenAnima.Core.Anima;
