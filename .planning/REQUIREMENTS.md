@@ -18,10 +18,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Routing Modules (RMOD)
 
-- [ ] **RMOD-01**: User can add AnimaInputPort module to declare a named service on an Anima
-- [ ] **RMOD-02**: AnimaInputPort registers with CrossAnimaRouter on initialization with service name and description
-- [ ] **RMOD-03**: User can add AnimaOutputPort module paired by name with AnimaInputPort for response return
-- [ ] **RMOD-04**: AnimaOutputPort completes cross-Anima request via correlation ID through CrossAnimaRouter
+- [x] **RMOD-01**: User can add AnimaInputPort module to declare a named service on an Anima
+- [x] **RMOD-02**: AnimaInputPort registers with CrossAnimaRouter on initialization with service name and description
+- [x] **RMOD-03**: User can add AnimaOutputPort module paired by name with AnimaInputPort for response return
+- [x] **RMOD-04**: AnimaOutputPort completes cross-Anima request via correlation ID through CrossAnimaRouter
 - [ ] **RMOD-05**: User can add AnimaRoute module and select target Anima via dropdown
 - [ ] **RMOD-06**: User can select target remote input port via second dropdown (populated from selected Anima's registered ports)
 - [ ] **RMOD-07**: AnimaRoute sends request and awaits response synchronously within wiring tick
@@ -96,10 +96,10 @@ Deferred to future releases. Tracked but not in current roadmap.
 | ROUTE-04 | Phase 28 | Complete |
 | ROUTE-05 | Phase 28 | Complete |
 | ROUTE-06 | Phase 28 | Complete |
-| RMOD-01 | Phase 29 | Pending |
-| RMOD-02 | Phase 29 | Pending |
-| RMOD-03 | Phase 29 | Pending |
-| RMOD-04 | Phase 29 | Pending |
+| RMOD-01 | Phase 29 | Complete |
+| RMOD-02 | Phase 29 | Complete |
+| RMOD-03 | Phase 29 | Complete |
+| RMOD-04 | Phase 29 | Complete |
 | RMOD-05 | Phase 29 | Pending |
 | RMOD-06 | Phase 29 | Pending |
 | RMOD-07 | Phase 29 | Pending |

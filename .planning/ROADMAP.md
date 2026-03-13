@@ -119,7 +119,7 @@
   3. User can add an AnimaRoute module to Anima A, select Anima B from a dropdown, and then select "summarize" from a second dropdown populated from Anima B's registered ports
   4. A request sent through AnimaRoute reaches Anima B's AnimaInputPort output and the response wired back through AnimaOutputPort arrives at AnimaRoute's response output port within the same wiring tick
   5. When routing fails or times out, the error is delivered to AnimaRoute's error output port so downstream modules can handle it
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 29-01-PLAN.md — Metadata infrastructure, CrossAnimaRouter push delivery, AnimaInputPort + AnimaOutputPort modules
@@ -197,7 +197,7 @@ Plans:
 | 26. Module Configuration UI | v1.5 | 3/3 | Complete | 2026-03-01 |
 | 27. Built-in Modules | v1.5 | 2/2 | Complete | 2026-03-02 |
 | 28. Routing Infrastructure | 2/2 | Complete    | 2026-03-11 | - |
-| 29. Routing Modules | v1.6 | 0/2 | Not started | - |
+| 29. Routing Modules | 1/2 | In Progress|  | - |
 | 30. Prompt Injection and Format Detection | v1.6 | 0/? | Not started | - |
 | 31. HTTP Request Module | v1.6 | 0/? | Not started | - |
 

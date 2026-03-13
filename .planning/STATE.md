@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Cross-Anima Routing
-status: completed
-last_updated: "2026-03-11T14:10:11.023Z"
-last_activity: "2026-03-11 — Completed 28-02: CrossAnimaRouter DI registration, AnimaRuntimeManager lifecycle hooks, ANIMA-08 isolation test"
+status: in_progress
+last_updated: "2026-03-13T15:14:00Z"
+last_activity: "2026-03-13 — Completed 29-01: ModuleEvent.Metadata, CrossAnimaRouter push delivery, AnimaInputPortModule, AnimaOutputPortModule"
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 10
+  total_plans: 4
+  completed_plans: 3
+  percent: 75
 ---
 
 # Project State: OpenAnima
 
-**Last updated:** 2026-03-11
+**Last updated:** 2026-03-13
 **Current milestone:** v1.6 Cross-Anima Routing
 
 ## Project Reference
@@ -23,21 +23,21 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-11)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 28 — Routing Infrastructure complete (both plans done), ready for Phase 29
+**Current focus:** Phase 29 — Plan 01 complete (routing modules). Ready for Phase 29 Plan 02 or next phase.
 
 ## Current Position
 
-Phase: 28 of 31 (Routing Infrastructure)
-Plan: 2 of 2 complete
-Status: Phase 28 done — both plans complete. Ready for Phase 29 (AnimaInputPort)
-Last activity: 2026-03-11 — Completed 28-02: CrossAnimaRouter DI registration, AnimaRuntimeManager lifecycle hooks, ANIMA-08 isolation test
+Phase: 29 of 31 (Routing Modules)
+Plan: 1 of ? complete
+Status: Phase 29 Plan 01 done — AnimaInputPortModule + AnimaOutputPortModule implemented. Ready for next plan.
+Last activity: 2026-03-13 — Completed 29-01: ModuleEvent.Metadata, CrossAnimaRouter push delivery, AnimaInputPortModule, AnimaOutputPortModule
 
-Progress: [██░░░░░░░░] 10% (v1.6)
+Progress: [████████░░] 75% (v1.6)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 65 (across v1.0-v1.6)
+- Total plans completed: 66 (across v1.0-v1.6)
 
 **By Milestone:**
 
@@ -49,12 +49,13 @@ Progress: [██░░░░░░░░] 10% (v1.6)
 | v1.3 Visual Wiring | 10 | 21 | 2026-02-28 |
 | v1.4 Module SDK | 3 | 8 | 2026-02-28 |
 | v1.5 Multi-Anima | 5 | 13 | 2026-03-09 |
-| v1.6 Cross-Anima Routing | 4 | 2/? | in progress |
+| v1.6 Cross-Anima Routing | 4 | 3/? | in progress |
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 28-routing-infrastructure | 28-01 | 15min | 2 | 8 |
 | 28-routing-infrastructure | 28-02 | 6min | 2 | 3 |
+| 29-routing-modules | 29-01 | 30min | 2 | 6 |
 
 ## Accumulated Context
 
@@ -70,9 +71,12 @@ Progress: [██░░░░░░░░] 10% (v1.6)
 - **DI ordering**: ICrossAnimaRouter registered BEFORE IAnimaRuntimeManager in AnimaServiceExtensions — no circular dependency (CrossAnimaRouter only takes ILogger)
 - **Deletion semantics**: CancelPendingForAnima + UnregisterAllForAnima called BEFORE DisposeAsync — fail-fast (Cancelled, not Timeout)
 
-Pending decisions to lock before Phase 29 execution:
-- **Routing marker format**: XML-style `<route service="ServiceName">payload</route>` recommended (aligns with LLM training patterns); must reconcile with ARCHITECTURE.md which uses `@@ROUTE:port|payload@@`
-- **Correlation ID passthrough**: dedicated Trigger wire vs. text prefix — text prefix risks corruption through intermediate modules; decide before Phase 29
+**Phase 29, Plan 01:**
+- **Event name convention**: `routing.incoming.{portName}` — CrossAnimaRouter publishes, AnimaInputPortModule subscribes. Enables direct EventBus addressing without adapter layer.
+- **Metadata copy at forwarding**: `new Dictionary<string, string>(evt.Metadata)` prevents aliasing bugs during WiringEngine fan-out deep copy.
+- **DI circular dependency resolution**: Both ICrossAnimaRouter and IAnimaRuntimeManager are singletons with deferred lambdas — resolved at first use, not registration.
+- **IAnimaRuntimeManager optional on CrossAnimaRouter**: Null-safe, backward compatible with tests that create CrossAnimaRouter directly.
+- **AnimaOutputPortModule listens on `{Metadata.Name}.port.response`**: Follows existing `{ModuleName}.port.{portName}` wiring convention.
 
 ### Known Blockers
 
@@ -88,5 +92,5 @@ None
 
 ---
 
-*State updated: 2026-03-11*
-*Stopped at: Completed 28-02-PLAN.md (CrossAnimaRouter integration hooks)*
+*State updated: 2026-03-13*
+*Stopped at: Completed 29-01-PLAN.md (ModuleEvent.Metadata + AnimaInputPortModule + AnimaOutputPortModule)*
