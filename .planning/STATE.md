@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Cross-Anima Routing
 status: completed
-last_updated: "2026-03-13T16:21:30.951Z"
-last_activity: "2026-03-13 — Completed 30-02: LLMModule prompt injection + FormatDetector integration (7 integration tests)"
+last_updated: "2026-03-14T16:39:54Z"
+last_activity: "2026-03-14 — Completed 31-02: HttpRequestModule EditorConfigSidebar rendering + 8 integration tests"
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 100
 ---
 
@@ -23,16 +23,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-11)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 30 COMPLETE — FormatDetector (30-01) and LLMModule integration (30-02) both done. Milestone v1.6 complete. Next: Phase 31.
+**Current focus:** Phase 31 COMPLETE — HttpRequestModule with SsrfGuard (31-01) and EditorConfigSidebar UI + integration tests (31-02). Milestone v1.6 complete.
 
 ## Current Position
 
-Phase: 31 of 31 (HTTP Request Module) — IN PROGRESS
-Plan: 1 of 1 complete
-Status: Phase 31 Plan 01 done — HttpRequestModule with SsrfGuard, IHttpClientFactory resilience pipeline, 10s timeout, and DI registration. All 15 unit tests pass.
-Last activity: 2026-03-14 — Completed 31-01: HttpRequestModule core implementation with SsrfGuard and DI registration
+Phase: 31 of 31 (HTTP Request Module) — COMPLETE
+Plan: 2 of 2 complete
+Status: Phase 31 done — HttpRequestModule fully functional with SSRF guard, IHttpClientFactory pipeline, config sidebar rendering (dropdown/textarea), and 8 integration tests (23 total in Category=HttpRequest).
+Last activity: 2026-03-14 — Completed 31-02: HttpRequestModule EditorConfigSidebar rendering + 8 integration tests
 
-Progress: [█████████░] 88% (v1.6)
+Progress: [██████████] 100% (v1.6)
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [█████████░] 88% (v1.6)
 | 30-prompt-injection-and-format-detection | 30-01 | 4min | 2 | 2 |
 | 30-prompt-injection-and-format-detection | 30-02 | 15min | 2 | 4 |
 | 31-http-request-module | 31-01 | 8min | 2 | 7 |
+| 31-http-request-module | 31-02 | 8min | 2 | 2 |
 
 ## Accumulated Context
 
@@ -107,6 +108,10 @@ Progress: [█████████░] 88% (v1.6)
 - **CancellationTokenSource after SSRF check**: Created after SsrfGuard.IsBlocked — avoids burning 10s timeout budget on local validation
 - **ParseHeaders uses IndexOf(':')**: Split(':') would break `Authorization: Bearer token` or any value containing a colon
 
+**Phase 31, Plan 02:**
+- **EditorConfigSidebar body/headers empty value exemption**: `key != "body" && key != "headers"` added to validation guard — GET requests (empty body) and requests with no custom headers save without validation errors
+- **Integration test pattern**: FakeHttpMessageHandler inner class + TestConfigService + ServiceCollection/AddHttpClient + TCS/WhenAny for mutually-exclusive EventBus port assertions — zero external mock frameworks needed
+
 ### Known Blockers
 
 None
@@ -122,4 +127,4 @@ None
 ---
 
 *State updated: 2026-03-14*
-*Stopped at: Completed 31-01-PLAN.md (HttpRequestModule core implementation with SsrfGuard and DI registration)*
+*Stopped at: Completed 31-02-PLAN.md (HttpRequestModule EditorConfigSidebar rendering + 8 integration tests)*

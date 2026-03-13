@@ -92,7 +92,7 @@
   Plans:
   - [x] 30-01-PLAN.md — FormatDetector: TDD-built XML routing marker parser with lenient regex
   - [ ] 30-02-PLAN.md — LLMModule extension: system message injection, FormatDetector integration, self-correction loop, route dispatch
-- [ ] **Phase 31: HTTP Request Module** — Configurable HTTP calls with resilience pipeline and SSRF protection
+- [x] **Phase 31: HTTP Request Module** — Configurable HTTP calls with resilience pipeline and SSRF protection (completed 2026-03-13)
   **Plans:** 2 plans
   Plans:
   - [ ] 31-01-PLAN.md — SsrfGuard TDD + HttpRequestModule core + DI/NuGet registration
@@ -168,7 +168,7 @@ Plans:
   3. A request that takes longer than 10 seconds times out without hanging the heartbeat loop, and the timeout error is delivered to the module's error output
   4. A request targeting localhost, 127.0.0.1, or a private IP range (10.x, 172.16-31.x, 192.168.x) is blocked before any network call is made, and the block reason is delivered to the error output port
   5. The module uses IHttpClientFactory with a standard resilience handler — not a raw HttpClient instantiation — so socket exhaustion cannot occur under heartbeat-driven repeated execution
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 31-01-PLAN.md — SsrfGuard TDD + HttpRequestModule core + DI/NuGet registration
@@ -214,7 +214,7 @@ Plans:
 | 28. Routing Infrastructure | v1.6 | 2/2 | Complete | 2026-03-11 |
 | 29. Routing Modules | v1.6 | 2/2 | Complete | 2026-03-13 |
 | 30. Prompt Injection and Format Detection | v1.6 | 2/2 | Complete | 2026-03-13 |
-| 31. HTTP Request Module | 1/2 | In Progress|  | - |
+| 31. HTTP Request Module | 2/2 | Complete   | 2026-03-13 | - |
 
 **Total shipped: 27 phases, 64 plans across 6 milestones (v1.6 in progress)**
 
