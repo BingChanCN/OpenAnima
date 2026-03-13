@@ -197,7 +197,7 @@ Plans:
 | 26. Module Configuration UI | v1.5 | 3/3 | Complete | 2026-03-01 |
 | 27. Built-in Modules | v1.5 | 2/2 | Complete | 2026-03-02 |
 | 28. Routing Infrastructure | 2/2 | Complete    | 2026-03-11 | - |
-| 29. Routing Modules | 2/2 | Complete   | 2026-03-13 | - |
+| 29. Routing Modules | 2/2 | Complete    | 2026-03-13 | - |
 | 30. Prompt Injection and Format Detection | v1.6 | 0/? | Not started | - |
 | 31. HTTP Request Module | v1.6 | 0/? | Not started | - |
 
