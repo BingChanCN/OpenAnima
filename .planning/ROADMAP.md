@@ -214,7 +214,7 @@ Plans:
 | 28. Routing Infrastructure | v1.6 | 2/2 | Complete | 2026-03-11 |
 | 29. Routing Modules | v1.6 | 2/2 | Complete | 2026-03-13 |
 | 30. Prompt Injection and Format Detection | v1.6 | 2/2 | Complete | 2026-03-13 |
-| 31. HTTP Request Module | 2/2 | Complete   | 2026-03-13 | - |
+| 31. HTTP Request Module | 2/2 | Complete    | 2026-03-13 | - |
 
 **Total shipped: 27 phases, 64 plans across 6 milestones (v1.6 in progress)**
 

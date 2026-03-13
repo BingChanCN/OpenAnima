@@ -45,7 +45,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **HTTP-01**: User can add HttpRequest module with configurable URL, HTTP method, headers, and body template
 - [x] **HTTP-02**: HttpRequest module uses IHttpClientFactory with resilience pipeline
-- [ ] **HTTP-03**: HttpRequest module outputs response body and status code via separate output ports
+- [x] **HTTP-03**: HttpRequest module outputs response body and status code via separate output ports
 - [x] **HTTP-04**: HttpRequest module enforces 10s default timeout with heartbeat CancellationToken passthrough
 - [x] **HTTP-05**: HttpRequest module blocks requests to localhost and private IP ranges
 
@@ -114,7 +114,7 @@ Deferred to future releases. Tracked but not in current roadmap.
 | FMTD-04 | Phase 30 | Pending |
 | HTTP-01 | Phase 31 | Complete |
 | HTTP-02 | Phase 31 | Complete |
-| HTTP-03 | Phase 31 | Pending |
+| HTTP-03 | Phase 31 | Complete |
 | HTTP-04 | Phase 31 | Complete |
 | HTTP-05 | Phase 31 | Complete |
 
