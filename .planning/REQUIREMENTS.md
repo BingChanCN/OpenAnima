@@ -22,10 +22,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **RMOD-02**: AnimaInputPort registers with CrossAnimaRouter on initialization with service name and description
 - [x] **RMOD-03**: User can add AnimaOutputPort module paired by name with AnimaInputPort for response return
 - [x] **RMOD-04**: AnimaOutputPort completes cross-Anima request via correlation ID through CrossAnimaRouter
-- [ ] **RMOD-05**: User can add AnimaRoute module and select target Anima via dropdown
-- [ ] **RMOD-06**: User can select target remote input port via second dropdown (populated from selected Anima's registered ports)
-- [ ] **RMOD-07**: AnimaRoute sends request and awaits response synchronously within wiring tick
-- [ ] **RMOD-08**: AnimaRoute exposes error/timeout output port for routing failure handling in wiring
+- [x] **RMOD-05**: User can add AnimaRoute module and select target Anima via dropdown
+- [x] **RMOD-06**: User can select target remote input port via second dropdown (populated from selected Anima's registered ports)
+- [x] **RMOD-07**: AnimaRoute sends request and awaits response synchronously within wiring tick
+- [x] **RMOD-08**: AnimaRoute exposes error/timeout output port for routing failure handling in wiring
 
 ### Prompt Auto-Injection (PROMPT)
 
@@ -100,10 +100,10 @@ Deferred to future releases. Tracked but not in current roadmap.
 | RMOD-02 | Phase 29 | Complete |
 | RMOD-03 | Phase 29 | Complete |
 | RMOD-04 | Phase 29 | Complete |
-| RMOD-05 | Phase 29 | Pending |
-| RMOD-06 | Phase 29 | Pending |
-| RMOD-07 | Phase 29 | Pending |
-| RMOD-08 | Phase 29 | Pending |
+| RMOD-05 | Phase 29 | Complete |
+| RMOD-06 | Phase 29 | Complete |
+| RMOD-07 | Phase 29 | Complete |
+| RMOD-08 | Phase 29 | Complete |
 | PROMPT-01 | Phase 30 | Pending |
 | PROMPT-02 | Phase 30 | Pending |
 | PROMPT-03 | Phase 30 | Pending |

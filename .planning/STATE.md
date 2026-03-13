@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Cross-Anima Routing
 status: in_progress
-last_updated: "2026-03-13T15:14:00Z"
-last_activity: "2026-03-13 — Completed 29-01: ModuleEvent.Metadata, CrossAnimaRouter push delivery, AnimaInputPortModule, AnimaOutputPortModule"
+last_updated: "2026-03-13T07:38:00Z"
+last_activity: "2026-03-13 — Completed 29-02: AnimaRouteModule, DI registration, EditorConfigSidebar dropdowns, E2E integration test"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
-  percent: 75
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State: OpenAnima
@@ -23,21 +23,21 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-11)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 29 — Plan 01 complete (routing modules). Ready for Phase 29 Plan 02 or next phase.
+**Current focus:** Phase 29 complete — all routing modules implemented. Milestone v1.6 complete.
 
 ## Current Position
 
-Phase: 29 of 31 (Routing Modules)
-Plan: 1 of ? complete
-Status: Phase 29 Plan 01 done — AnimaInputPortModule + AnimaOutputPortModule implemented. Ready for next plan.
-Last activity: 2026-03-13 — Completed 29-01: ModuleEvent.Metadata, CrossAnimaRouter push delivery, AnimaInputPortModule, AnimaOutputPortModule
+Phase: 29 of 31 (Routing Modules) — COMPLETE
+Plan: 2 of 2 complete
+Status: Phase 29 Plan 02 done — AnimaRouteModule + DI + EditorConfigSidebar dropdowns. Phase 29 complete.
+Last activity: 2026-03-13 — Completed 29-02: AnimaRouteModule, DI registration, EditorConfigSidebar dropdowns, E2E integration test
 
-Progress: [████████░░] 75% (v1.6)
+Progress: [██████████] 100% (v1.6)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 66 (across v1.0-v1.6)
+- Total plans completed: 67 (across v1.0-v1.6)
 
 **By Milestone:**
 
@@ -49,13 +49,14 @@ Progress: [████████░░] 75% (v1.6)
 | v1.3 Visual Wiring | 10 | 21 | 2026-02-28 |
 | v1.4 Module SDK | 3 | 8 | 2026-02-28 |
 | v1.5 Multi-Anima | 5 | 13 | 2026-03-09 |
-| v1.6 Cross-Anima Routing | 4 | 3/? | in progress |
+| v1.6 Cross-Anima Routing | 4 | 4/4 | 2026-03-13 |
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 28-routing-infrastructure | 28-01 | 15min | 2 | 8 |
 | 28-routing-infrastructure | 28-02 | 6min | 2 | 3 |
 | 29-routing-modules | 29-01 | 30min | 2 | 6 |
+| 29-routing-modules | 29-02 | 15min | 2 | 8 |
 
 ## Accumulated Context
 
@@ -78,6 +79,13 @@ Progress: [████████░░] 75% (v1.6)
 - **IAnimaRuntimeManager optional on CrossAnimaRouter**: Null-safe, backward compatible with tests that create CrossAnimaRouter directly.
 - **AnimaOutputPortModule listens on `{Metadata.Name}.port.response`**: Follows existing `{ModuleName}.port.{portName}` wiring convention.
 
+**Phase 29, Plan 02:**
+- **AnimaRouteModule MUST await RouteRequestAsync**: Verified with grep — `var result = await _router.RouteRequestAsync(...)` — no fire-and-forget
+- **Mutually exclusive output ports**: Response XOR error per trigger — only one publishes per invocation
+- **Structured JSON error**: `{error: ErrorKind.ToString(), target: animaId::portName, timeout: 30}` — consistent for all failure modes
+- **EditorConfigSidebar variable rename**: `targetPorts` and `ownPorts` to avoid CS0136 collision with existing `ports` variable in port info section
+- **Default config initialisation**: All 3 routing modules call `SetConfigAsync` with empty key defaults on `InitializeAsync` so sidebar renders correct fields
+
 ### Known Blockers
 
 None
@@ -93,4 +101,4 @@ None
 ---
 
 *State updated: 2026-03-13*
-*Stopped at: Completed 29-01-PLAN.md (ModuleEvent.Metadata + AnimaInputPortModule + AnimaOutputPortModule)*
+*Stopped at: Completed 29-02-PLAN.md (AnimaRouteModule + DI registration + EditorConfigSidebar dropdowns)*
