@@ -93,6 +93,10 @@
   - [x] 30-01-PLAN.md — FormatDetector: TDD-built XML routing marker parser with lenient regex
   - [ ] 30-02-PLAN.md — LLMModule extension: system message injection, FormatDetector integration, self-correction loop, route dispatch
 - [ ] **Phase 31: HTTP Request Module** — Configurable HTTP calls with resilience pipeline and SSRF protection
+  **Plans:** 2 plans
+  Plans:
+  - [ ] 31-01-PLAN.md — SsrfGuard TDD + HttpRequestModule core + DI/NuGet registration
+  - [ ] 31-02-PLAN.md — EditorConfigSidebar config rendering + validation fix + integration tests
 
 ## Phase Details
 
@@ -164,7 +168,11 @@ Plans:
   3. A request that takes longer than 10 seconds times out without hanging the heartbeat loop, and the timeout error is delivered to the module's error output
   4. A request targeting localhost, 127.0.0.1, or a private IP range (10.x, 172.16-31.x, 192.168.x) is blocked before any network call is made, and the block reason is delivered to the error output port
   5. The module uses IHttpClientFactory with a standard resilience handler — not a raw HttpClient instantiation — so socket exhaustion cannot occur under heartbeat-driven repeated execution
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 31-01-PLAN.md — SsrfGuard TDD + HttpRequestModule core + DI/NuGet registration
+- [ ] 31-02-PLAN.md — EditorConfigSidebar config rendering + validation fix + integration tests
 
 **Key Risks**:
 - SSRF via LLM-injected URLs: the URL input is a direct execution path for LLM output. Private IP blocking and HTTPS-only enforcement must be built in from day one, not retrofitted.
@@ -203,12 +211,12 @@ Plans:
 | 25. Module Management | v1.5 | 3/3 | Complete | 2026-02-28 |
 | 26. Module Configuration UI | v1.5 | 3/3 | Complete | 2026-03-01 |
 | 27. Built-in Modules | v1.5 | 2/2 | Complete | 2026-03-02 |
-| 28. Routing Infrastructure | 2/2 | Complete    | 2026-03-11 | - |
-| 29. Routing Modules | 2/2 | Complete    | 2026-03-13 | - |
-| 30. Prompt Injection and Format Detection | 2/2 | Complete    | 2026-03-13 | - |
-| 31. HTTP Request Module | v1.6 | 0/? | Not started | - |
+| 28. Routing Infrastructure | v1.6 | 2/2 | Complete | 2026-03-11 |
+| 29. Routing Modules | v1.6 | 2/2 | Complete | 2026-03-13 |
+| 30. Prompt Injection and Format Detection | v1.6 | 2/2 | Complete | 2026-03-13 |
+| 31. HTTP Request Module | v1.6 | 0/2 | Not started | - |
 
 **Total shipped: 27 phases, 64 plans across 6 milestones (v1.6 in progress)**
 
 ---
-*Last updated: 2026-03-13 after Phase 30 planning*
+*Last updated: 2026-03-14 after Phase 31 planning*
