@@ -58,6 +58,19 @@ public class AnimaInputPortModule : IModuleExecutor
 
         var config = _configService.GetConfig(_animaId, Metadata.Name);
 
+        // Initialise default config if not set (so sidebar shows the fields)
+        if (config.Count == 0)
+        {
+            _ = _configService.SetConfigAsync(_animaId, Metadata.Name,
+                new Dictionary<string, string>
+                {
+                    ["serviceName"] = "",
+                    ["serviceDescription"] = "",
+                    ["inputFormatHint"] = ""
+                });
+            // Re-read after setting defaults (returns empty until persisted, which is fine)
+        }
+
         if (!config.TryGetValue("serviceName", out _serviceName) || string.IsNullOrWhiteSpace(_serviceName))
         {
             _logger.LogWarning("AnimaInputPortModule: missing required config key 'serviceName'");

@@ -34,7 +34,10 @@ public class WiringInitializationService : IHostedService
         typeof(FixedTextModule),
         typeof(TextJoinModule),
         typeof(TextSplitModule),
-        typeof(ConditionalBranchModule)
+        typeof(ConditionalBranchModule),
+        typeof(AnimaInputPortModule),
+        typeof(AnimaOutputPortModule),
+        typeof(AnimaRouteModule)
     };
 
     /// <summary>
@@ -49,7 +52,10 @@ public class WiringInitializationService : IHostedService
         typeof(FixedTextModule),
         typeof(TextJoinModule),
         typeof(TextSplitModule),
-        typeof(ConditionalBranchModule)
+        typeof(ConditionalBranchModule),
+        typeof(AnimaInputPortModule),
+        typeof(AnimaOutputPortModule),
+        typeof(AnimaRouteModule)
     };
 
     public WiringInitializationService(

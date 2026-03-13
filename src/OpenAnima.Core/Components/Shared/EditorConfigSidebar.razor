@@ -2,12 +2,15 @@
 @using OpenAnima.Core.Anima
 @using OpenAnima.Core.Ports
 @using OpenAnima.Core.Wiring
+@using OpenAnima.Core.Routing
 @using OpenAnima.Contracts.Ports
 @implements IDisposable
 @inject EditorStateService _editorState
 @inject IAnimaModuleConfigService _configService
 @inject IAnimaContext _animaContext
 @inject IPortRegistry _portRegistry
+@inject ICrossAnimaRouter _router
+@inject IAnimaRuntimeManager _runtimeManager
 @inject LanguageService LangSvc
 @inject IStringLocalizer<SharedResources> L
 
@@ -118,7 +121,41 @@
                         {
                             <div class="config-field">
                                 <label>@kvp.Key</label>
-                                @if (kvp.Key == "template")
+                                @if (kvp.Key == "targetAnimaId")
+                                {
+                                    <select value="@kvp.Value" @onchange="@(e => HandleConfigChanged(kvp.Key, e.Value?.ToString() ?? string.Empty))">
+                                        <option value="">-- Select Anima --</option>
+                                        @foreach (var anima in _runtimeManager.GetAll())
+                                        {
+                                            <option value="@anima.Id" selected="@(anima.Id == kvp.Value)">@anima.Name</option>
+                                        }
+                                    </select>
+                                }
+                                else if (kvp.Key == "targetPortName")
+                                {
+                                    var selectedAnimaId = _currentConfig.TryGetValue("targetAnimaId", out var aid) ? aid : "";
+                                    var targetPorts = !string.IsNullOrEmpty(selectedAnimaId) ? _router.GetPortsForAnima(selectedAnimaId) : Array.Empty<PortRegistration>();
+                                    <select value="@kvp.Value" @onchange="@(e => HandleConfigChanged(kvp.Key, e.Value?.ToString() ?? string.Empty))">
+                                        <option value="">-- Select Port --</option>
+                                        @foreach (var port in targetPorts)
+                                        {
+                                            <option value="@port.PortName" selected="@(port.PortName == kvp.Value)">@port.PortName — @port.Description</option>
+                                        }
+                                    </select>
+                                }
+                                else if (kvp.Key == "matchedService")
+                                {
+                                    var currentAnimaId = _animaContext.ActiveAnimaId ?? "";
+                                    var ownPorts = !string.IsNullOrEmpty(currentAnimaId) ? _router.GetPortsForAnima(currentAnimaId) : Array.Empty<PortRegistration>();
+                                    <select value="@kvp.Value" @onchange="@(e => HandleConfigChanged(kvp.Key, e.Value?.ToString() ?? string.Empty))">
+                                        <option value="">-- Select Service --</option>
+                                        @foreach (var port in ownPorts)
+                                        {
+                                            <option value="@port.PortName" selected="@(port.PortName == kvp.Value)">@port.PortName — @port.Description</option>
+                                        }
+                                    </select>
+                                }
+                                else if (kvp.Key == "template")
                                 {
                                     <textarea rows="6"
                                               @oninput="@(e => HandleConfigChanged(kvp.Key, e.Value?.ToString() ?? string.Empty))">@kvp.Value</textarea>

@@ -57,6 +57,9 @@ public static class WiringServiceExtensions
         services.AddSingleton<TextJoinModule>();
         services.AddSingleton<TextSplitModule>();
         services.AddSingleton<ConditionalBranchModule>();
+        services.AddSingleton<AnimaInputPortModule>();
+        services.AddSingleton<AnimaOutputPortModule>();
+        services.AddSingleton<AnimaRouteModule>();
 
         return services;
     }

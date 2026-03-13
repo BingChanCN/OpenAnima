@@ -45,6 +45,22 @@ public class AnimaOutputPortModule : IModuleExecutor
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
     {
+        var animaId = _animaContext.ActiveAnimaId;
+
+        // Initialise default config if not set (so sidebar shows the fields)
+        if (animaId != null)
+        {
+            var existing = _configService.GetConfig(animaId, Metadata.Name);
+            if (existing.Count == 0)
+            {
+                _ = _configService.SetConfigAsync(animaId, Metadata.Name,
+                    new Dictionary<string, string>
+                    {
+                        ["matchedService"] = ""
+                    });
+            }
+        }
+
         // Subscribe to the response input port event
         var responseEventName = $"{Metadata.Name}.port.response";
         var sub = _eventBus.Subscribe<string>(
