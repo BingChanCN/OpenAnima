@@ -68,6 +68,10 @@ builder.Services.AddAnimaServices();
 // --- Register wiring services ---
 builder.Services.AddWiringServices();
 
+// --- Register named HTTP client with resilience pipeline ---
+builder.Services.AddHttpClient("HttpRequest")
+    .AddStandardResilienceHandler();
+
 // --- Register hosted service for runtime lifecycle ---
 builder.Services.AddHostedService<AnimaInitializationService>();
 builder.Services.AddHostedService<OpenAnimaHostedService>();

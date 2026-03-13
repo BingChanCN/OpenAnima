@@ -34,7 +34,8 @@ public class WiringInitializationService : IHostedService
         typeof(ConditionalBranchModule),
         typeof(AnimaInputPortModule),
         typeof(AnimaOutputPortModule),
-        typeof(AnimaRouteModule)
+        typeof(AnimaRouteModule),
+        typeof(HttpRequestModule)
     };
 
     /// <summary>
@@ -52,7 +53,8 @@ public class WiringInitializationService : IHostedService
         typeof(ConditionalBranchModule),
         typeof(AnimaInputPortModule),
         typeof(AnimaOutputPortModule),
-        typeof(AnimaRouteModule)
+        typeof(AnimaRouteModule),
+        typeof(HttpRequestModule)
     };
 
     public WiringInitializationService(
