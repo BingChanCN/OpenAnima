@@ -434,7 +434,381 @@ public class RoutingModulesTests
         router.Dispose();
     }
 
-    // ── Helpers ────────────────────────────────────────────────────────────
+    // ── Task 3: AnimaRouteModule ────────────────────────────────────────────
+
+    [Fact]
+    public async Task AnimaRoute_TriggerWithRequest_CallsRouteRequestAsync()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var testRouter = new TestCrossAnimaRouter();
+        testRouter.SetupResult(RouteResult.Ok("response", "corr1"));
+
+        var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
+        {
+            ["targetAnimaId"] = "animaB",
+            ["targetPortName"] = "summarize"
+        });
+        var animaContext = new AnimaContext();
+        animaContext.SetActive("animaA");
+
+        var module = new AnimaRouteModule(
+            eventBus, testRouter, config, animaContext,
+            NullLogger<AnimaRouteModule>.Instance);
+
+        await module.InitializeAsync();
+
+        // Publish request data first
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "AnimaRouteModule.port.request",
+            SourceModuleId = "test",
+            Payload = "test request payload"
+        });
+
+        // Act — fire trigger
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "AnimaRouteModule.port.trigger",
+            SourceModuleId = "test",
+            Payload = "trigger"
+        });
+
+        // Brief wait for async handler
+        await Task.Delay(50);
+
+        // Assert — RouteRequestAsync was called with the right args
+        Assert.Equal("animaB", testRouter.LastTargetAnimaId);
+        Assert.Equal("summarize", testRouter.LastPortName);
+        Assert.Equal("test request payload", testRouter.LastPayload);
+
+        await module.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task AnimaRoute_AwaitResponse_PublishesToResponsePort()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var testRouter = new TestCrossAnimaRouter();
+        testRouter.SetupResult(RouteResult.Ok("hello from animaB", "corr1"));
+
+        var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
+        {
+            ["targetAnimaId"] = "animaB",
+            ["targetPortName"] = "summarize"
+        });
+        var animaContext = new AnimaContext();
+        animaContext.SetActive("animaA");
+
+        var module = new AnimaRouteModule(
+            eventBus, testRouter, config, animaContext,
+            NullLogger<AnimaRouteModule>.Instance);
+
+        await module.InitializeAsync();
+
+        // Subscribe to response port
+        ModuleEvent<string>? responseEvent = null;
+        var tcs = new TaskCompletionSource<bool>();
+        eventBus.Subscribe<string>(
+            "AnimaRouteModule.port.response",
+            (evt, ct) =>
+            {
+                responseEvent = evt;
+                tcs.TrySetResult(true);
+                return Task.CompletedTask;
+            });
+
+        // Set request payload then fire trigger
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "AnimaRouteModule.port.request",
+            SourceModuleId = "test",
+            Payload = "the request"
+        });
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "AnimaRouteModule.port.trigger",
+            SourceModuleId = "test",
+            Payload = "trigger"
+        });
+
+        await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(5));
+
+        Assert.NotNull(responseEvent);
+        Assert.Equal("hello from animaB", responseEvent!.Payload);
+
+        await module.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task AnimaRoute_OnTimeout_OutputsErrorJson()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var testRouter = new TestCrossAnimaRouter();
+        testRouter.SetupResult(RouteResult.Failed(RouteErrorKind.Timeout, "corr1"));
+
+        var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
+        {
+            ["targetAnimaId"] = "animaB",
+            ["targetPortName"] = "summarize"
+        });
+        var animaContext = new AnimaContext();
+        animaContext.SetActive("animaA");
+
+        var module = new AnimaRouteModule(
+            eventBus, testRouter, config, animaContext,
+            NullLogger<AnimaRouteModule>.Instance);
+
+        await module.InitializeAsync();
+
+        ModuleEvent<string>? errorEvent = null;
+        var tcs = new TaskCompletionSource<bool>();
+        eventBus.Subscribe<string>(
+            "AnimaRouteModule.port.error",
+            (evt, ct) =>
+            {
+                errorEvent = evt;
+                tcs.TrySetResult(true);
+                return Task.CompletedTask;
+            });
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "AnimaRouteModule.port.request",
+            SourceModuleId = "test",
+            Payload = "payload"
+        });
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "AnimaRouteModule.port.trigger",
+            SourceModuleId = "test",
+            Payload = "trigger"
+        });
+
+        await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(5));
+
+        Assert.NotNull(errorEvent);
+        var errorJson = errorEvent!.Payload;
+        Assert.Contains("Timeout", errorJson);
+        Assert.Contains("animaB::summarize", errorJson);
+        Assert.Contains("30", errorJson);
+
+        await module.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task AnimaRoute_OnNotFound_OutputsErrorJson()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var testRouter = new TestCrossAnimaRouter();
+        testRouter.SetupResult(RouteResult.Failed(RouteErrorKind.NotFound, "corr1"));
+
+        var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
+        {
+            ["targetAnimaId"] = "animaB",
+            ["targetPortName"] = "noPort"
+        });
+        var animaContext = new AnimaContext();
+        animaContext.SetActive("animaA");
+
+        var module = new AnimaRouteModule(
+            eventBus, testRouter, config, animaContext,
+            NullLogger<AnimaRouteModule>.Instance);
+
+        await module.InitializeAsync();
+
+        ModuleEvent<string>? errorEvent = null;
+        var tcs = new TaskCompletionSource<bool>();
+        eventBus.Subscribe<string>(
+            "AnimaRouteModule.port.error",
+            (evt, ct) =>
+            {
+                errorEvent = evt;
+                tcs.TrySetResult(true);
+                return Task.CompletedTask;
+            });
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "AnimaRouteModule.port.request",
+            SourceModuleId = "test",
+            Payload = "payload"
+        });
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "AnimaRouteModule.port.trigger",
+            SourceModuleId = "test",
+            Payload = "trigger"
+        });
+
+        await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(5));
+
+        Assert.NotNull(errorEvent);
+        var errorJson = errorEvent!.Payload;
+        Assert.Contains("NotFound", errorJson);
+        Assert.Contains("animaB::noPort", errorJson);
+
+        await module.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task AnimaRoute_ResponseAndError_MutuallyExclusive_OnSuccess()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var testRouter = new TestCrossAnimaRouter();
+        testRouter.SetupResult(RouteResult.Ok("success response", "corr1"));
+
+        var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
+        {
+            ["targetAnimaId"] = "animaB",
+            ["targetPortName"] = "summarize"
+        });
+        var animaContext = new AnimaContext();
+        animaContext.SetActive("animaA");
+
+        var module = new AnimaRouteModule(
+            eventBus, testRouter, config, animaContext,
+            NullLogger<AnimaRouteModule>.Instance);
+
+        await module.InitializeAsync();
+
+        var responseReceived = false;
+        var errorReceived = false;
+        var tcs = new TaskCompletionSource<bool>();
+        eventBus.Subscribe<string>("AnimaRouteModule.port.response", (evt, ct) =>
+        {
+            responseReceived = true;
+            tcs.TrySetResult(true);
+            return Task.CompletedTask;
+        });
+        eventBus.Subscribe<string>("AnimaRouteModule.port.error", (evt, ct) =>
+        {
+            errorReceived = true;
+            return Task.CompletedTask;
+        });
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "AnimaRouteModule.port.request",
+            SourceModuleId = "test",
+            Payload = "payload"
+        });
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "AnimaRouteModule.port.trigger",
+            SourceModuleId = "test",
+            Payload = "trigger"
+        });
+
+        await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(5));
+        await Task.Delay(50); // small wait to confirm error port NOT triggered
+
+        Assert.True(responseReceived, "Response port should be triggered on success");
+        Assert.False(errorReceived, "Error port should NOT be triggered on success");
+
+        await module.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task AnimaRoute_ResponseAndError_MutuallyExclusive_OnFailure()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var testRouter = new TestCrossAnimaRouter();
+        testRouter.SetupResult(RouteResult.Failed(RouteErrorKind.Failed, "corr1"));
+
+        var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
+        {
+            ["targetAnimaId"] = "animaB",
+            ["targetPortName"] = "summarize"
+        });
+        var animaContext = new AnimaContext();
+        animaContext.SetActive("animaA");
+
+        var module = new AnimaRouteModule(
+            eventBus, testRouter, config, animaContext,
+            NullLogger<AnimaRouteModule>.Instance);
+
+        await module.InitializeAsync();
+
+        var responseReceived = false;
+        var errorReceived = false;
+        var tcs = new TaskCompletionSource<bool>();
+        eventBus.Subscribe<string>("AnimaRouteModule.port.response", (evt, ct) =>
+        {
+            responseReceived = true;
+            return Task.CompletedTask;
+        });
+        eventBus.Subscribe<string>("AnimaRouteModule.port.error", (evt, ct) =>
+        {
+            errorReceived = true;
+            tcs.TrySetResult(true);
+            return Task.CompletedTask;
+        });
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "AnimaRouteModule.port.request",
+            SourceModuleId = "test",
+            Payload = "payload"
+        });
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "AnimaRouteModule.port.trigger",
+            SourceModuleId = "test",
+            Payload = "trigger"
+        });
+
+        await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(5));
+        await Task.Delay(50);
+
+        Assert.True(errorReceived, "Error port should be triggered on failure");
+        Assert.False(responseReceived, "Response port should NOT be triggered on failure");
+
+        await module.ShutdownAsync();
+    }
+
+    /// <summary>
+    /// Test implementation of ICrossAnimaRouter that records calls and returns a preset result.
+    /// </summary>
+    private class TestCrossAnimaRouter : ICrossAnimaRouter
+    {
+        private RouteResult _result = RouteResult.Ok("default", "corr0");
+
+        public string? LastTargetAnimaId { get; private set; }
+        public string? LastPortName { get; private set; }
+        public string? LastPayload { get; private set; }
+
+        public void SetupResult(RouteResult result) => _result = result;
+
+        public Task<RouteResult> RouteRequestAsync(
+            string targetAnimaId, string portName, string payload,
+            TimeSpan? timeout = null, CancellationToken ct = default)
+        {
+            LastTargetAnimaId = targetAnimaId;
+            LastPortName = portName;
+            LastPayload = payload;
+            return Task.FromResult(_result);
+        }
+
+        public RouteRegistrationResult RegisterPort(string animaId, string portName, string description)
+            => RouteRegistrationResult.Success();
+        public void UnregisterPort(string animaId, string portName) { }
+        public IReadOnlyList<PortRegistration> GetPortsForAnima(string animaId) => [];
+        public bool CompleteRequest(string correlationId, string responsePayload) => true;
+        public void CancelPendingForAnima(string animaId) { }
+        public void UnregisterAllForAnima(string animaId) { }
+        public void Dispose() { }
+    }
 
     private static async Task<T> WaitWithTimeout<T>(Task<T> task, TimeSpan timeout)
     {
@@ -446,6 +820,15 @@ public class RoutingModulesTests
             return await task;
         }
         throw new TimeoutException($"Task did not complete within {timeout.TotalSeconds}s");
+    }
+
+    private static async Task WaitWithTimeout(Task task, TimeSpan timeout)
+    {
+        using var cts = new CancellationTokenSource(timeout);
+        var completedTask = await Task.WhenAny(task, Task.Delay(timeout, cts.Token));
+        if (completedTask != task)
+            throw new TimeoutException($"Task did not complete within {timeout.TotalSeconds}s");
+        await task;
     }
 
     /// <summary>
