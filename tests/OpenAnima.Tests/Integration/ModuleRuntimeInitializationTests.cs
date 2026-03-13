@@ -82,9 +82,10 @@ public class ModuleRuntimeInitializationTests : IDisposable
         var registry = _provider.GetRequiredService<IPortRegistry>();
 
         var llmPorts = registry.GetPorts("LLMModule");
-        Assert.Equal(2, llmPorts.Count);
+        Assert.Equal(3, llmPorts.Count);
         Assert.Contains(llmPorts, p => p.Name == "prompt" && p.Direction == PortDirection.Input);
         Assert.Contains(llmPorts, p => p.Name == "response" && p.Direction == PortDirection.Output);
+        Assert.Contains(llmPorts, p => p.Name == "error" && p.Direction == PortDirection.Output);
 
         var chatInputPorts = registry.GetPorts("ChatInputModule");
         Assert.Single(chatInputPorts);

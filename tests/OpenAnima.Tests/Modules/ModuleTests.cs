@@ -1,9 +1,11 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Contracts;
+using OpenAnima.Core.Anima;
 using OpenAnima.Core.Events;
 using OpenAnima.Core.LLM;
 using OpenAnima.Core.Modules;
+using OpenAnima.Tests.TestHelpers;
 
 namespace OpenAnima.Tests.Modules;
 
@@ -24,7 +26,8 @@ public class ModuleTests
         // Arrange
         var eventBus = CreateEventBus();
         var mockLlm = new FakeLLMService("Hello back!");
-        var module = new LLMModule(mockLlm, eventBus, NullLogger<LLMModule>.Instance);
+        var module = new LLMModule(mockLlm, eventBus, NullLogger<LLMModule>.Instance,
+            NullAnimaModuleConfigService.Instance, new AnimaContext(), router: null);
         await module.InitializeAsync();
 
         Assert.Equal(ModuleExecutionState.Idle, module.GetState());
@@ -57,7 +60,8 @@ public class ModuleTests
         // Arrange
         var eventBus = CreateEventBus();
         var mockLlm = new FakeLLMService(throwError: true);
-        var module = new LLMModule(mockLlm, eventBus, NullLogger<LLMModule>.Instance);
+        var module = new LLMModule(mockLlm, eventBus, NullLogger<LLMModule>.Instance,
+            NullAnimaModuleConfigService.Instance, new AnimaContext(), router: null);
         await module.InitializeAsync();
 
         // Act — publish prompt; handler will throw
