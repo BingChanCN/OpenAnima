@@ -9,6 +9,7 @@
 - ✅ **v1.4 Module SDK** — Phases 20-22 (shipped 2026-02-28)
 - ✅ **v1.5 Multi-Anima Architecture** — Phases 23-27 (shipped 2026-03-09)
 - ✅ **v1.6 Cross-Anima Routing** — Phases 28-31 (shipped 2026-03-14)
+- 🚧 **v1.7 Runtime Foundation** — Phases 32-36 (in progress)
 
 ## Phases
 
@@ -86,6 +87,74 @@
 
 </details>
 
+### 🚧 v1.7 Runtime Foundation (In Progress)
+
+**Milestone Goal:** Harden the runtime foundation — fix concurrency bugs, introduce Activity Channel execution model, thicken the Contracts API, and decouple built-in modules from Core.
+
+- [ ] **Phase 32: Test Baseline** - Resolve 3 pre-existing test failures to establish a clean regression baseline
+- [ ] **Phase 33: Concurrency Fixes** - Eliminate race conditions on shared mutable fields across WiringEngine and modules
+- [ ] **Phase 34: Activity Channel Model** - Introduce per-Anima Channel<T> mailbox serializing all state-mutating work
+- [ ] **Phase 35: Contracts API Expansion** - Promote essential interfaces to OpenAnima.Contracts for external module parity
+- [ ] **Phase 36: Built-in Module Decoupling** - Migrate all 14 built-in modules to depend only on Contracts
+
+## Phase Details
+
+### Phase 32: Test Baseline
+**Goal**: The test suite is green with zero failures, giving a known-good baseline before any concurrency work begins
+**Depends on**: Nothing (first phase of v1.7)
+**Requirements**: CONC-10
+**Success Criteria** (what must be TRUE):
+  1. All test cases in the full suite pass with zero failures (previously 3 were failing)
+  2. The root cause of each previously-failing test is documented (ANIMA-08 global singleton isolation)
+  3. Any formerly-flaky tests are annotated with [Trait] or skipped with a tracked reason
+**Plans**: TBD
+
+### Phase 33: Concurrency Fixes
+**Goal**: Module execution is race-free — concurrent invocations cannot corrupt shared mutable state
+**Depends on**: Phase 32
+**Requirements**: CONC-01, CONC-02, CONC-03, CONC-04
+**Success Criteria** (what must be TRUE):
+  1. WiringEngine._failedModules uses ConcurrentDictionary — parallel task writes cannot corrupt its state
+  2. LLMModule._pendingPrompt race is eliminated — rapid back-to-back sends never interleave prompts
+  3. Each module has a SemaphoreSlim(1,1) execution guard — a second invocation skips rather than races the first
+  4. All tests that passed after Phase 32 still pass after these changes (zero new failures)
+**Plans**: TBD
+
+### Phase 34: Activity Channel Model
+**Goal**: Each Anima processes heartbeat ticks, user messages, and incoming routes through a single serialized channel — intra-Anima races are structurally impossible
+**Depends on**: Phase 33
+**Requirements**: CONC-05, CONC-06, CONC-07, CONC-08, CONC-09
+**Success Criteria** (what must be TRUE):
+  1. A stateful Anima with active heartbeat and concurrent user messages produces no interleaved or lost events
+  2. Multiple stateless Animas handle concurrent requests simultaneously without channel serialization blocking them
+  3. HeartbeatLoop uses TryWrite (never WriteAsync) — the tick path cannot deadlock when the channel is full
+  4. Modules can declare [StatelessModule] — the runtime routes them through the concurrent path, not the channel
+  5. A 10-second soak test with simultaneous heartbeat + chat activity completes with no deadlock or missed ticks
+**Plans**: TBD
+
+### Phase 35: Contracts API Expansion
+**Goal**: External module authors can access config, context, and routing services via OpenAnima.Contracts alone — no Core assembly reference required
+**Depends on**: Phase 34
+**Requirements**: API-01, API-02, API-03, API-04, API-05, API-06, API-07
+**Success Criteria** (what must be TRUE):
+  1. IModuleConfig, IAnimaContext (or IModuleContext), and ICrossAnimaRouter are all resolvable from Contracts with no Core import
+  2. A canary .oamod built against old Core namespaces still loads correctly due to type-forward shims
+  3. An external module built using only OpenAnima.Contracts can read its config, identify its Anima, and invoke cross-Anima routing
+  4. IModuleConfigSchema exists in Contracts — a module implementing it causes the sidebar to auto-render its declared fields
+  5. OpenAnima.Contracts builds in isolation (dotnet build on the project alone) with no ProjectReference to Core
+**Plans**: TBD
+
+### Phase 36: Built-in Module Decoupling
+**Goal**: All 14 built-in modules reference only OpenAnima.Contracts — Core internals are invisible to module code
+**Depends on**: Phase 35
+**Requirements**: DECPL-01, DECPL-02, DECPL-03, DECPL-04, DECPL-05
+**Success Criteria** (what must be TRUE):
+  1. Zero `using OpenAnima.Core.*` directives remain in any of the 14 built-in module files
+  2. All 14 module types resolve correctly via DI at startup — no InvalidOperationException on application start
+  3. All tests that passed after Phase 35 still pass after migration (zero regressions)
+  4. `oani new` generates a module project with Contracts-only dependency — no Core reference in the template
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -122,8 +191,14 @@
 | 29. Routing Modules | v1.6 | 2/2 | Complete | 2026-03-13 |
 | 30. Prompt Injection & Format Detection | v1.6 | 2/2 | Complete | 2026-03-13 |
 | 31. HTTP Request Module | v1.6 | 2/2 | Complete | 2026-03-14 |
+| 32. Test Baseline | v1.7 | 0/TBD | Not started | - |
+| 33. Concurrency Fixes | v1.7 | 0/TBD | Not started | - |
+| 34. Activity Channel Model | v1.7 | 0/TBD | Not started | - |
+| 35. Contracts API Expansion | v1.7 | 0/TBD | Not started | - |
+| 36. Built-in Module Decoupling | v1.7 | 0/TBD | Not started | - |
 
 **Total shipped: 31 phases, 72 plans across 7 milestones**
+**v1.7 in progress: 5 phases, 0/TBD plans**
 
 ---
-*Last updated: 2026-03-14 after v1.6 milestone completion*
+*Last updated: 2026-03-14 after v1.7 roadmap creation*

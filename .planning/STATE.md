@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Runtime Foundation
-status: defining_requirements
+status: ready_to_plan
 last_updated: "2026-03-14"
-last_activity: "2026-03-14 — Milestone v1.7 started"
+last_activity: "2026-03-14 — Roadmap created, Phase 32 ready to plan"
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -23,21 +23,21 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-14)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** v1.7 — hardening runtime foundation (concurrency, module API, decoupling)
+**Current focus:** Phase 32 — Test Baseline
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-14 — Milestone v1.7 started
+Phase: 32 of 36 (Test Baseline)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-03-14 — v1.7 roadmap created (5 phases, 22 requirements mapped)
 
 Progress: [░░░░░░░░░░] 0% (v1.7)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 68 (across v1.0-v1.6)
+- Total plans completed: 72 (across v1.0–v1.6)
 
 **By Milestone:**
 
@@ -55,23 +55,23 @@ Progress: [░░░░░░░░░░] 0% (v1.7)
 
 ### Decisions (v1.7)
 
-(None yet)
+- ActivityChannel: use Channel.CreateUnbounded<T>() with SingleReader=true; always TryWrite from tick path — WriteAsync risks deadlock
+- Interface moves to Contracts: type-forward aliases in old Core namespaces must ship in same commit — binary compat for .oamod packages
+- Module migration order: simplest first (ChatInput/Output/Heartbeat → text utils → routing → LLM/HTTP); DI smoke test after each
 
 ### Known Blockers
 
-None
+- [Phase 32]: 3 pre-existing failures (ANIMA-08 singleton root cause) must be resolved before concurrency work — scope of fix TBD
+- [Phase 35]: ILLMService move also requires ChatMessageInput move — v1.7 vs v1.8 scope decision needed during Phase 35 planning
 
-### Technical Debt
+### Technical Debt (carried forward)
 
-- MODMGMT-01/02/03/06: Full install/uninstall/search UI deferred
+- MODMGMT-01/02/03/06: Full install/uninstall/search UI deferred to v1.8
 - Schema mismatch between CLI and Runtime (extended manifest fields)
-- Pre-existing test isolation issues (3 pre-existing failures in full test suite)
 - TextJoin fixed 3 input ports — static port system limitation
-- LLMModule `_pendingPrompt` race condition under concurrent calls
-- WiringEngine `_failedModules` HashSet not thread-safe
-- All 14 built-in modules tightly coupled to OpenAnima.Core internals
+- ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred to v2+
 
 ---
 
 *State updated: 2026-03-14*
-*Stopped at: Defining v1.7 requirements*
+*Stopped at: v1.7 roadmap written — ready to plan Phase 32*
