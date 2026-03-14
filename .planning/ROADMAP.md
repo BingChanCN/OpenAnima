@@ -110,7 +110,7 @@
 **Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 32-01-PLAN.md — Fix 3 test failures (ModuleTestHarness DLL compilation + FanOut type-mismatch)
+- [x] 32-01-PLAN.md — Fix 3 test failures (ModuleTestHarness DLL compilation + FanOut type-mismatch)
 
 ### Phase 33: Concurrency Fixes
 **Goal**: Module execution is race-free — concurrent invocations cannot corrupt shared mutable state
@@ -121,7 +121,10 @@ Plans:
   2. LLMModule._pendingPrompt race is eliminated — rapid back-to-back sends never interleave prompts
   3. Each module has a SemaphoreSlim(1,1) execution guard — a second invocation skips rather than races the first
   4. All tests that passed after Phase 32 still pass after these changes (zero new failures)
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 33-01-PLAN.md — ConcurrentDictionary + local capture + SemaphoreSlim guards across WiringEngine and 5 modules
 
 ### Phase 34: Activity Channel Model
 **Goal**: Each Anima processes heartbeat ticks, user messages, and incoming routes through a single serialized channel — intra-Anima races are structurally impossible
@@ -194,14 +197,14 @@ Plans:
 | 29. Routing Modules | v1.6 | 2/2 | Complete | 2026-03-13 |
 | 30. Prompt Injection & Format Detection | v1.6 | 2/2 | Complete | 2026-03-13 |
 | 31. HTTP Request Module | v1.6 | 2/2 | Complete | 2026-03-14 |
-| 32. Test Baseline | 1/1 | Complete    | 2026-03-14 | - |
-| 33. Concurrency Fixes | v1.7 | 0/TBD | Not started | - |
+| 32. Test Baseline | v1.7 | 1/1 | Complete | 2026-03-14 |
+| 33. Concurrency Fixes | v1.7 | 0/1 | Not started | - |
 | 34. Activity Channel Model | v1.7 | 0/TBD | Not started | - |
 | 35. Contracts API Expansion | v1.7 | 0/TBD | Not started | - |
 | 36. Built-in Module Decoupling | v1.7 | 0/TBD | Not started | - |
 
 **Total shipped: 31 phases, 72 plans across 7 milestones**
-**v1.7 in progress: 5 phases, 0/1 plans**
+**v1.7 in progress: 5 phases, 1/2 plans**
 
 ---
-*Last updated: 2026-03-15 after Phase 32 planning*
+*Last updated: 2026-03-15 after Phase 33 planning*
