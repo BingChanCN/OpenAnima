@@ -258,17 +258,17 @@ public class WiringEngineIntegrationTests
         // Track received data
         var receivedByB = new TaskCompletionSource<bool>();
         var receivedByC = new TaskCompletionSource<bool>();
-        object? payloadB = null;
-        object? payloadC = null;
+        string? payloadB = null;
+        string? payloadC = null;
 
-        eventBus.Subscribe<object>("ModuleB.port.text_in", async (evt, ct) =>
+        eventBus.Subscribe<string>("ModuleB.port.text_in", async (evt, ct) =>
         {
             payloadB = evt.Payload;
             receivedByB.TrySetResult(true);
             await Task.CompletedTask;
         });
 
-        eventBus.Subscribe<object>("ModuleC.port.text_in", async (evt, ct) =>
+        eventBus.Subscribe<string>("ModuleC.port.text_in", async (evt, ct) =>
         {
             payloadC = evt.Payload;
             receivedByC.TrySetResult(true);
@@ -296,7 +296,7 @@ public class WiringEngineIntegrationTests
 
         // Act - Publish data on A's output port
         var originalData = "test message";
-        await eventBus.PublishAsync(new ModuleEvent<object>
+        await eventBus.PublishAsync(new ModuleEvent<string>
         {
             EventName = "ModuleA.port.text_out",
             SourceModuleId = "ModuleA",
@@ -316,8 +316,8 @@ public class WiringEngineIntegrationTests
         Assert.NotNull(payloadC);
 
         // Verify data was routed correctly (deep copy preserves string values)
-        Assert.Equal("test message", payloadB.ToString());
-        Assert.Equal("test message", payloadC.ToString());
+        Assert.Equal("test message", payloadB);
+        Assert.Equal("test message", payloadC);
     }
 
     [Fact]
