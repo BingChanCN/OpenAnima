@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
@@ -23,7 +24,7 @@ public class WiringEngine : IWiringEngine
     private ConnectionGraph? _graph;
     private WiringConfiguration? _currentConfig;
     private readonly List<IDisposable> _subscriptions = new();
-    private readonly HashSet<string> _failedModules = new();
+    private readonly ConcurrentDictionary<string, byte> _failedModules = new();
 
     public WiringEngine(
         IEventBus eventBus,
@@ -196,7 +197,7 @@ public class WiringEngine : IWiringEngine
         catch (Exception ex)
         {
             _logger.LogError(ex, "Module execution failed: {ModuleId}", moduleId);
-            _failedModules.Add(moduleId);
+            _failedModules.TryAdd(moduleId, 0);
 
             // Push error details and Error status via SignalR
             if (_hubContext != null)
@@ -218,7 +219,7 @@ public class WiringEngine : IWiringEngine
             .Select(c => c.SourceModuleId)
             .Distinct();
 
-        return upstreamModules.Any(upstream => _failedModules.Contains(upstream));
+        return upstreamModules.Any(upstream => _failedModules.ContainsKey(upstream));
     }
 
     private string ResolveRuntimeModuleName(string moduleId)
