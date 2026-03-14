@@ -1,17 +1,9 @@
 # OpenAnima
 
-## Current Milestone: v1.6 Cross-Anima Routing
+## Current State
 
-**Goal:** Enable Anima-to-Anima communication through request-response routing channels with prompt auto-injection, plus HTTP request tool module.
-
-**Target features:**
-- AnimaInputPort module — declare named services that other Animas can call
-- AnimaOutputPort module — paired with input port by name for response return
-- AnimaRoute module — select target Anima + remote input port, send requests
-- Cross-Anima message routing system with correlation ID tracking
-- Prompt auto-injection — LLM automatically knows available downstream services
-- Format detection — monitor LLM output for routing format, split and forward
-- HTTP Request module — configurable HTTP calls as wiring tool nodes
+**Latest milestone:** v1.6 Cross-Anima Routing (shipped 2026-03-14)
+**Next milestone:** Planning (use `/gsd:new-milestone`)
 
 ## What This Is
 
@@ -113,6 +105,11 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ LLM module allows configuration of API key in detail panel (BUILTIN-08) — v1.5
 - ✓ LLM module allows configuration of model name in detail panel (BUILTIN-09) — v1.5
 - ✓ Heartbeat module is optional (BUILTIN-10) — v1.5
+- ✓ CrossAnimaRouter with port registry, correlation IDs, timeout, lifecycle hooks (ROUTE-01~06) — v1.6
+- ✓ AnimaInputPort, AnimaOutputPort, AnimaRoute modules with E2E routing (RMOD-01~08) — v1.6
+- ✓ LLM prompt auto-injection with service descriptions and routing format (PROMPT-01~04) — v1.6
+- ✓ FormatDetector XML marker parsing with self-correction loop (FMTD-01~04) — v1.6
+- ✓ HttpRequestModule with IHttpClientFactory resilience, SSRF guard, timeout (HTTP-01~05) — v1.6
 - ✓ AnimaRuntimeManager manages all Anima instances (ARCH-01) — v1.5
 - ✓ AnimaContext identifies current Anima for scoped services (ARCH-02) — v1.5
 - ✓ Each Anima has isolated EventBus instance (ARCH-03) — v1.5
@@ -152,29 +149,28 @@ Agents that proactively think and act on their own, while module connections rem
 - Local model hosting (llama.cpp etc.) — v1 uses cloud LLM only, architecture allows future addition
 - Module marketplace backend/infrastructure — v1 supports loading local module packages only
 - Nested Anima instances — unclear value proposition, high complexity
-- Cross-Anima communication — violates isolation principle, wait for user demand
 - Auto-update modules — breaking changes risk, user loses control
 - Real-time collaboration — multi-user complexity, single-user focus
 - Cloud sync — privacy concerns, local-first principle
 
 ## Context
 
-Shipped v1.5 with ~21,155 LOC across all source files (C#, Razor, CSS, JS).
-Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4.
+Shipped v1.6 with ~13,610 LOC across all source files (C#, Razor, CSS, JS).
+Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4, Microsoft.Extensions.Http.Resilience 8.7.0.
 
-v1.5 delivered multi-Anima architecture:
-- AnimaRuntimeManager + AnimaContext for independent instance lifecycle
-- Per-Anima runtime containers (HeartbeatLoop, WiringEngine, EventBus)
-- Full i18n with LanguageService, .resx embedded resources, 11+ components localized
-- Module management UI with card layout, .oamod install, per-Anima enable/disable
-- EditorConfigSidebar with metadata, typed config form (text/textarea/password), auto-save
-- 5 built-in modules: FixedText, TextJoin, TextSplit, ConditionalBranch, LLM (per-Anima config)
+v1.6 delivered cross-Anima routing:
+- CrossAnimaRouter singleton with compound-key port registry, Guid correlation IDs, timeout enforcement, periodic cleanup
+- AnimaInputPort, AnimaOutputPort, AnimaRoute modules with cascading dropdown config UI
+- LLM prompt auto-injection with FormatDetector XML marker parsing and self-correction retry loop
+- HttpRequestModule with SsrfGuard IP blocking, IHttpClientFactory resilience pipeline, configurable sidebar UI
+- ModuleEvent.Metadata for correlationId passthrough across module boundaries
 
 Known tech debt:
 - ANIMA-08: Global IEventBus singleton kept for module constructor DI — full module instance isolation deferred
 - MODMGMT-01/02/03/06: Full install/uninstall/search UI deferred — basic card UI with .oamod install works
 - Schema mismatch between CLI and Runtime (extended manifest fields)
-- Pre-existing test isolation issues
+- Pre-existing test isolation issues (3 failures)
+- LLMModule dispatch uses hardcoded event name strings
 
 ## Key Decisions
 
@@ -225,6 +221,12 @@ Known tech debt:
 | Pragmatic expression evaluator | ~150 LOC recursive descent for ConditionalBranchModule — avoids external dependency | ✓ Good — v1.5 |
 | Fixed 3 input ports for TextJoin | Static port system cannot support dynamic port counts without major change | ⚠️ Revisit — limits flexibility |
 
+| Metadata passthrough via Dictionary copy | Prevents aliasing bugs during WiringEngine fan-out deep copy | ✓ Good — v1.6 |
+| XML routing markers for LLM format detection | Closest to LLM training-data markup; lenient regex handles 80-95% compliance | ✓ Good — v1.6 |
+| SsrfGuard with CIDR bit-level matching | Blocks private/loopback/link-local without third-party IP library | ✓ Good — v1.6 |
+| IHttpClientFactory with named client + resilience | Prevents socket exhaustion under heartbeat-driven repeated execution | ✓ Good — v1.6 |
+| Self-correction retry loop (MaxRetries=2) | LLM malformed markers get error feedback + format example for re-call | ✓ Good — v1.6 |
+
 ## Constraints
 
 - **Platform**: Windows-first — must work on Windows 10/11 without WSL or Docker
@@ -234,4 +236,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-11 after v1.6 milestone start*
+*Last updated: 2026-03-14 after v1.6 milestone*

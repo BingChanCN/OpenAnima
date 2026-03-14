@@ -1,5 +1,26 @@
 # Milestones
 
+## v1.6 Cross-Anima Routing (Shipped: 2026-03-14)
+
+**Phases:** 28-31 | **Plans:** 8 | **Tasks:** 16 | **LOC:** ~4,910 C# added (+4,910 insertions)
+**Git range:** feat(28-01)..docs(phase-31) | **Timeline:** 2026-03-11 → 2026-03-14 (3 days)
+
+**Delivered:** Cross-Anima request-response routing with LLM-driven service discovery, automatic prompt injection, XML format detection with self-correction, and an HTTP request tool module with SSRF protection — enabling multi-agent collaboration through deterministic wiring.
+
+**Key accomplishments:**
+- CrossAnimaRouter singleton with compound-key port registry, Guid correlation IDs, configurable timeout, periodic cleanup, and Anima deletion lifecycle hooks
+- Three routing modules (AnimaInputPort, AnimaOutputPort, AnimaRoute) with end-to-end request-response across separate Anima EventBuses, cascading dropdown config UI
+- LLMModule auto-injects service descriptions and routing format instructions; FormatDetector parses XML markers with self-correction retry loop (up to 2 retries)
+- HttpRequestModule with IHttpClientFactory resilience pipeline, SsrfGuard IP blocking (all private/loopback/link-local ranges), 10s timeout, and configurable method/headers/body sidebar UI
+- ModuleEvent.Metadata transport layer for correlationId passthrough across module boundaries
+- 53+ routing tests, 25 format detection tests, 23 HTTP tests — zero regressions to full suite
+
+**Tech debt (accepted):** REQUIREMENTS.md tracking table stale for FMTD-01/02/04, PROMPT-02 requirement text stale (user pivoted to no cap), hardcoded event name strings in LLMModule dispatch, 3 pre-existing test failures
+
+**Archive:** [milestones/v1.6-ROADMAP.md](milestones/v1.6-ROADMAP.md) | [milestones/v1.6-REQUIREMENTS.md](milestones/v1.6-REQUIREMENTS.md) | [milestones/v1.6-MILESTONE-AUDIT.md](milestones/v1.6-MILESTONE-AUDIT.md)
+
+---
+
 ## v1.5 Multi-Anima Architecture (Shipped: 2026-03-09)
 
 **Phases:** 23-27 | **Plans:** 13 | **LOC:** ~6,600 C#/Razor/CSS added (+11,753 insertions)

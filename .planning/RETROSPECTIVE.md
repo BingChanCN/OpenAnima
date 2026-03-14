@@ -2,6 +2,52 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v1.6 — Cross-Anima Routing
+
+**Shipped:** 2026-03-14
+**Phases:** 4 | **Plans:** 8 | **Commits:** 25
+
+### What Was Built
+- CrossAnimaRouter singleton with ConcurrentDictionary port registry, TCS-based request correlation, 32-char Guid IDs, PeriodicTimer cleanup, and Anima deletion lifecycle hooks
+- AnimaInputPort, AnimaOutputPort, AnimaRoute modules with end-to-end cross-Anima request-response via EventBus push delivery
+- ModuleEvent.Metadata nullable dictionary for correlationId passthrough across module boundaries
+- FormatDetector XML routing marker parser with case-insensitive matching, unclosed tag detection, multiline payloads
+- LLMModule extended with system message injection, FormatDetector integration, self-correction retry loop (MaxRetries=2), error output port
+- HttpRequestModule with SsrfGuard IP blocking, IHttpClientFactory resilience pipeline, 10s timeout, configurable method/headers/body sidebar UI
+- EditorConfigSidebar extended with cascading Anima/port dropdowns, HTTP method select, textarea fields
+
+### What Worked
+- TDD red-green consistently produced clean implementations — FormatDetector (4 min), SsrfGuard (8 min), all tests passing on first GREEN
+- Phase dependency chain (28→29→30) cleanly separated concerns: infrastructure → modules → intelligence layer
+- Phase 31 (HTTP) was independent of 28-30, allowing parallel planning
+- Deferred singleton lambda pattern for DI circular dependency (ICrossAnimaRouter ↔ IAnimaRuntimeManager) — resolved at first use
+- Integration checker caught potential DI gap (LLMModule optional parameter) during milestone audit
+
+### What Was Inefficient
+- REQUIREMENTS.md tracking table not updated after Phase 30 Plan 01 — FMTD-01/02/04 marked "Pending" despite being implemented
+- PROMPT-02 requirement text never updated after user pivoted to no token cap — stale requirement text persisted through verification
+- Hardcoded event name strings ("AnimaRouteModule.port.request") in LLMModule dispatch — fragile coupling
+
+### Patterns Established
+- Routing event chain: CrossAnimaRouter.RouteRequestAsync → EventBus routing.incoming.{port} → AnimaInputPortModule → LLM chain → AnimaOutputPortModule → CompleteRequest
+- Metadata passthrough: copy dictionary at each hop, never share reference
+- SSRF guard pattern: static SsrfGuard.IsBlocked(url, out reason) before any HTTP operation
+- FakeHttpMessageHandler + TCS/WhenAny pattern for testing mutually-exclusive EventBus output ports
+- Self-correction loop: append assistant+user correction turns to message list, re-call LLM up to MaxRetries
+
+### Key Lessons
+1. Update REQUIREMENTS.md tracking table immediately after each plan completes — stale checkboxes create noise in milestone audit
+2. TDD with short timeouts (100-150ms) is effective for testing async timeout behavior without 30s waits
+3. Optional DI parameters with defaults should be verified at integration time — test suites that bypass DI won't catch resolution gaps
+4. XML routing markers are a pragmatic format for LLM-driven routing — close enough to training data for 80-95% compliance
+
+### Cost Observations
+- Model mix: ~75% sonnet (executor/verifier), ~20% haiku (research), ~5% opus (planning)
+- Sessions: ~4 sessions across 3 days
+- Notable: Entire milestone (4 phases, 8 plans, 16 tasks) completed in ~100 min execution time — fastest per-phase velocity yet
+
+---
+
 ## Milestone: v1.5 — Multi-Anima Architecture
 
 **Shipped:** 2026-03-09
@@ -49,11 +95,7 @@
 
 ## Cross-Milestone Trends
 
-### Process Evolution
-
-| Milestone | Commits | Phases | Key Change |
-|-----------|---------|--------|------------|
-| v1.0 | ~15 | 2 | Initial TDD-first approach |
+| v1.6 | 25 | 4 | Cross-Anima routing, format detection, HTTP module |
 | v1.1 | ~25 | 5 | Blazor Server architecture established |
 | v1.2 | ~20 | 3 | OpenAI SDK integration pattern |
 | v1.3 | ~40 | 10 | SVG editor, port system, verification backfill |
@@ -69,7 +111,7 @@
 | v1.2 | ~6,400 | Streaming, token counting | 0 |
 | v1.3 | ~11,000 | SVG editor, topological sort | 0 |
 | v1.4 | ~14,500 | CLI framework, .oamod format | 3 |
-| v1.5 | ~21,155 | AnimaRuntime, i18n, config UI | 5 |
+| v1.6 | ~13,610 | Routing event chain, SSRF guard, self-correction loop | 5 |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -77,3 +119,5 @@
 2. Name-based type comparison is essential for cross-AssemblyLoadContext scenarios — verified in v1.0 (PluginLoader), v1.4 (CLI validate), v1.5 (module registration)
 3. Per-instance isolation requires upfront architectural planning — retrofitting is expensive (v1.3 DI fix, v1.5 runtime container)
 4. Wave-based plan execution significantly speeds up milestone delivery when plans are independent
+5. TDD with short timeouts and TCS-based completion produces deterministic async tests — verified in v1.6 routing and HTTP modules
+6. Update tracking tables immediately after plan completion — stale docs create audit noise (v1.6 lesson)
