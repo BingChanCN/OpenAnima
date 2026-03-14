@@ -92,7 +92,7 @@
 **Milestone Goal:** Harden the runtime foundation — fix concurrency bugs, introduce Activity Channel execution model, thicken the Contracts API, and decouple built-in modules from Core.
 
 - [x] **Phase 32: Test Baseline** - Resolve 3 pre-existing test failures to establish a clean regression baseline (completed 2026-03-14)
-- [ ] **Phase 33: Concurrency Fixes** - Eliminate race conditions on shared mutable fields across WiringEngine and modules
+- [x] **Phase 33: Concurrency Fixes** - Eliminate race conditions on shared mutable fields across WiringEngine and modules (completed 2026-03-14)
 - [ ] **Phase 34: Activity Channel Model** - Introduce per-Anima Channel<T> mailbox serializing all state-mutating work
 - [ ] **Phase 35: Contracts API Expansion** - Promote essential interfaces to OpenAnima.Contracts for external module parity
 - [ ] **Phase 36: Built-in Module Decoupling** - Migrate all 14 built-in modules to depend only on Contracts
@@ -121,7 +121,7 @@ Plans:
   2. LLMModule._pendingPrompt race is eliminated — rapid back-to-back sends never interleave prompts
   3. Each module has a SemaphoreSlim(1,1) execution guard — a second invocation skips rather than races the first
   4. All tests that passed after Phase 32 still pass after these changes (zero new failures)
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 33-01-PLAN.md — ConcurrentDictionary + local capture + SemaphoreSlim guards across WiringEngine and 5 modules
@@ -198,7 +198,7 @@ Plans:
 | 30. Prompt Injection & Format Detection | v1.6 | 2/2 | Complete | 2026-03-13 |
 | 31. HTTP Request Module | v1.6 | 2/2 | Complete | 2026-03-14 |
 | 32. Test Baseline | v1.7 | 1/1 | Complete | 2026-03-14 |
-| 33. Concurrency Fixes | v1.7 | 0/1 | Not started | - |
+| 33. Concurrency Fixes | 1/1 | Complete   | 2026-03-14 | - |
 | 34. Activity Channel Model | v1.7 | 0/TBD | Not started | - |
 | 35. Contracts API Expansion | v1.7 | 0/TBD | Not started | - |
 | 36. Built-in Module Decoupling | v1.7 | 0/TBD | Not started | - |

@@ -9,10 +9,10 @@ Requirements for v1.7 Runtime Foundation. Each maps to roadmap phases.
 
 ### Concurrency
 
-- [ ] **CONC-01**: Module execution is race-free — no concurrent writes to shared mutable fields (`_pendingPrompt`, `_failedModules`, `_state`, etc.)
-- [ ] **CONC-02**: WiringEngine._failedModules uses thread-safe collection (ConcurrentDictionary) instead of HashSet
-- [ ] **CONC-03**: LLMModule._pendingPrompt race condition is eliminated via local capture or Channel<T>
-- [ ] **CONC-04**: Each module has SemaphoreSlim(1,1) execution guard with skip-when-busy semantics
+- [x] **CONC-01**: Module execution is race-free — no concurrent writes to shared mutable fields (`_pendingPrompt`, `_failedModules`, `_state`, etc.)
+- [x] **CONC-02**: WiringEngine._failedModules uses thread-safe collection (ConcurrentDictionary) instead of HashSet
+- [x] **CONC-03**: LLMModule._pendingPrompt race condition is eliminated via local capture or Channel<T>
+- [x] **CONC-04**: Each module has SemaphoreSlim(1,1) execution guard with skip-when-busy semantics
 - [ ] **CONC-05**: ActivityChannel component serializes all state-mutating work per Anima (HeartbeatTick, UserMessage, IncomingRoute)
 - [ ] **CONC-06**: Stateful Anima has named activity channels (heartbeat, chat) — parallel between channels, serial within each
 - [ ] **CONC-07**: Stateless/mechanical Anima supports concurrent request-level execution without channel serialization
@@ -69,10 +69,10 @@ Requirements for v1.7 Runtime Foundation. Each maps to roadmap phases.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CONC-10 | Phase 32 | Complete |
-| CONC-01 | Phase 33 | Pending |
-| CONC-02 | Phase 33 | Pending |
-| CONC-03 | Phase 33 | Pending |
-| CONC-04 | Phase 33 | Pending |
+| CONC-01 | Phase 33 | Complete |
+| CONC-02 | Phase 33 | Complete |
+| CONC-03 | Phase 33 | Complete |
+| CONC-04 | Phase 33 | Complete |
 | CONC-05 | Phase 34 | Pending |
 | CONC-06 | Phase 34 | Pending |
 | CONC-07 | Phase 34 | Pending |
