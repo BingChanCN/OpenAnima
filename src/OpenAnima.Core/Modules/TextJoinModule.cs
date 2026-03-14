@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
@@ -24,7 +25,8 @@ public class TextJoinModule : IModuleExecutor
 
     private ModuleExecutionState _state = ModuleExecutionState.Idle;
     private Exception? _lastError;
-    private readonly Dictionary<string, string> _receivedInputs = new();
+    private readonly ConcurrentDictionary<string, string> _receivedInputs = new();
+    private readonly SemaphoreSlim _executionGuard = new SemaphoreSlim(1, 1);
 
     public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
         "TextJoinModule", "1.0.0", "Joins multiple text inputs into one output");
@@ -51,22 +53,26 @@ public class TextJoinModule : IModuleExecutor
                 async (evt, ct) =>
                 {
                     _receivedInputs[capturedPort] = evt.Payload;
-                    await ExecuteAsync(ct);
+                    await ExecuteInternalAsync(ct);
                 });
             _subscriptions.Add(sub);
         }
         return Task.CompletedTask;
     }
 
-    public async Task ExecuteAsync(CancellationToken ct = default)
-    {
-        if (_receivedInputs.Count == 0) return;
+    public Task ExecuteAsync(CancellationToken ct = default) => Task.CompletedTask;
 
-        _state = ModuleExecutionState.Running;
-        _lastError = null;
+    private async Task ExecuteInternalAsync(CancellationToken ct)
+    {
+        if (!_executionGuard.Wait(0)) return;
 
         try
         {
+            if (_receivedInputs.IsEmpty) return;
+
+            _state = ModuleExecutionState.Running;
+            _lastError = null;
+
             var animaId = _animaContext.ActiveAnimaId;
             var separator = string.Empty;
 
@@ -98,6 +104,10 @@ public class TextJoinModule : IModuleExecutor
             _lastError = ex;
             _logger.LogError(ex, "TextJoinModule execution failed");
             throw;
+        }
+        finally
+        {
+            _executionGuard.Release();
         }
     }
 

@@ -34,6 +34,7 @@ public class HttpRequestModule : IModuleExecutor
     private ModuleExecutionState _state = ModuleExecutionState.Idle;
     private Exception? _lastError;
     private string? _lastBodyPayload;
+    private readonly SemaphoreSlim _executionGuard = new SemaphoreSlim(1, 1);
 
     public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
         "HttpRequestModule",
@@ -90,7 +91,18 @@ public class HttpRequestModule : IModuleExecutor
         // Subscribe to trigger input port — fire the HTTP request
         var triggerSub = _eventBus.Subscribe<string>(
             $"{Metadata.Name}.port.trigger",
-            async (evt, ct) => await HandleTriggerAsync(ct));
+            async (evt, ct) =>
+            {
+                if (!_executionGuard.Wait(0)) return;
+                try
+                {
+                    await HandleTriggerAsync(ct);
+                }
+                finally
+                {
+                    _executionGuard.Release();
+                }
+            });
         _subscriptions.Add(triggerSub);
 
         _logger.LogDebug("HttpRequestModule: initialized");

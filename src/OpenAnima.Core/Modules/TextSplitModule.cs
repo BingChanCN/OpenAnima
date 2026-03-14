@@ -23,7 +23,7 @@ public class TextSplitModule : IModuleExecutor
 
     private ModuleExecutionState _state = ModuleExecutionState.Idle;
     private Exception? _lastError;
-    private string? _pendingInput;
+    private readonly SemaphoreSlim _executionGuard = new SemaphoreSlim(1, 1);
 
     public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
         "TextSplitModule", "1.0.0", "Splits text by delimiter into JSON array");
@@ -46,22 +46,26 @@ public class TextSplitModule : IModuleExecutor
             $"{Metadata.Name}.port.input",
             async (evt, ct) =>
             {
-                _pendingInput = evt.Payload;
-                await ExecuteAsync(ct);
+                var input = evt.Payload;
+                await ExecuteInternalAsync(input, ct);
             });
         _subscriptions.Add(sub);
         return Task.CompletedTask;
     }
 
-    public async Task ExecuteAsync(CancellationToken ct = default)
-    {
-        if (_pendingInput == null) return;
+    public Task ExecuteAsync(CancellationToken ct = default) => Task.CompletedTask;
 
-        _state = ModuleExecutionState.Running;
-        _lastError = null;
+    private async Task ExecuteInternalAsync(string input, CancellationToken ct)
+    {
+        if (!_executionGuard.Wait(0)) return;
 
         try
         {
+            if (input == null) return;
+
+            _state = ModuleExecutionState.Running;
+            _lastError = null;
+
             var animaId = _animaContext.ActiveAnimaId;
             var delimiter = ",";
 
@@ -71,7 +75,7 @@ public class TextSplitModule : IModuleExecutor
                 delimiter = config.TryGetValue("delimiter", out var delim) ? delim : ",";
             }
 
-            var parts = _pendingInput.Split(new[] { delimiter }, StringSplitOptions.None);
+            var parts = input.Split(new[] { delimiter }, StringSplitOptions.None);
             var jsonArray = JsonSerializer.Serialize(parts);
 
             await _eventBus.PublishAsync(new ModuleEvent<string>
@@ -90,6 +94,10 @@ public class TextSplitModule : IModuleExecutor
             _lastError = ex;
             _logger.LogError(ex, "TextSplitModule execution failed");
             throw;
+        }
+        finally
+        {
+            _executionGuard.Release();
         }
     }
 

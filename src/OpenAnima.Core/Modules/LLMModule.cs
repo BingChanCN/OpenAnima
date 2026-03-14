@@ -39,7 +39,7 @@ public class LLMModule : IModuleExecutor
 
     private ModuleExecutionState _state = ModuleExecutionState.Idle;
     private Exception? _lastError;
-    private string? _pendingPrompt;
+    private readonly SemaphoreSlim _executionGuard = new SemaphoreSlim(1, 1);
 
     public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
         "LLMModule", "1.0.0", "Sends prompt to LLM and outputs response");
@@ -62,22 +62,26 @@ public class LLMModule : IModuleExecutor
             $"{Metadata.Name}.port.prompt",
             async (evt, ct) =>
             {
-                _pendingPrompt = evt.Payload;
-                await ExecuteAsync(ct);
+                var prompt = evt.Payload;
+                await ExecuteInternalAsync(prompt, ct);
             });
         _subscriptions.Add(sub);
         return Task.CompletedTask;
     }
 
-    public async Task ExecuteAsync(CancellationToken ct = default)
-    {
-        if (_pendingPrompt == null) return;
+    public Task ExecuteAsync(CancellationToken ct = default) => Task.CompletedTask;
 
-        _state = ModuleExecutionState.Running;
-        _lastError = null;
+    private async Task ExecuteInternalAsync(string prompt, CancellationToken ct)
+    {
+        if (!_executionGuard.Wait(0)) return;
 
         try
         {
+            if (prompt == null) return;
+
+            _state = ModuleExecutionState.Running;
+            _lastError = null;
+
             var animaId = _animaContext.ActiveAnimaId ?? "";
 
             // Build the known service names set for this Anima's AnimaRoute module.
@@ -101,7 +105,7 @@ public class LLMModule : IModuleExecutor
                 }
             }
 
-            messages.Add(new ChatMessageInput("user", _pendingPrompt));
+            messages.Add(new ChatMessageInput("user", prompt));
 
             // Determine whether to apply FormatDetector (router present + routes configured).
             var useFormatDetection = _router != null && knownServiceNames.Count > 0;
@@ -187,6 +191,10 @@ public class LLMModule : IModuleExecutor
             _lastError = ex;
             _logger.LogError(ex, "LLMModule execution failed");
             throw;
+        }
+        finally
+        {
+            _executionGuard.Release();
         }
     }
 

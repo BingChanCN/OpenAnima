@@ -33,7 +33,7 @@ public class ConditionalBranchModule : IModuleExecutor
 
     private ModuleExecutionState _state = ModuleExecutionState.Idle;
     private Exception? _lastError;
-    private string? _pendingInput;
+    private readonly SemaphoreSlim _executionGuard = new SemaphoreSlim(1, 1);
 
     public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
         "ConditionalBranchModule", "1.0.0", "Routes input to true/false branch based on expression");
@@ -56,22 +56,26 @@ public class ConditionalBranchModule : IModuleExecutor
             $"{Metadata.Name}.port.input",
             async (evt, ct) =>
             {
-                _pendingInput = evt.Payload;
-                await ExecuteAsync(ct);
+                var input = evt.Payload;
+                await ExecuteInternalAsync(input, ct);
             });
         _subscriptions.Add(sub);
         return Task.CompletedTask;
     }
 
-    public async Task ExecuteAsync(CancellationToken ct = default)
-    {
-        if (_pendingInput == null) return;
+    public Task ExecuteAsync(CancellationToken ct = default) => Task.CompletedTask;
 
-        _state = ModuleExecutionState.Running;
-        _lastError = null;
+    private async Task ExecuteInternalAsync(string input, CancellationToken ct)
+    {
+        if (!_executionGuard.Wait(0)) return;
 
         try
         {
+            if (input == null) return;
+
+            _state = ModuleExecutionState.Running;
+            _lastError = null;
+
             var animaId = _animaContext.ActiveAnimaId;
             var expression = string.Empty;
 
@@ -91,7 +95,7 @@ public class ConditionalBranchModule : IModuleExecutor
             {
                 try
                 {
-                    result = EvaluateExpression(expression.Trim(), _pendingInput);
+                    result = EvaluateExpression(expression.Trim(), input);
                 }
                 catch (ArgumentException ex)
                 {
@@ -107,7 +111,7 @@ public class ConditionalBranchModule : IModuleExecutor
             {
                 EventName = $"{Metadata.Name}.port.{outputPort}",
                 SourceModuleId = Metadata.Name,
-                Payload = _pendingInput
+                Payload = input
             }, ct);
 
             if (_state != ModuleExecutionState.Error)
@@ -121,6 +125,10 @@ public class ConditionalBranchModule : IModuleExecutor
             _lastError = ex;
             _logger.LogError(ex, "ConditionalBranchModule execution failed");
             throw;
+        }
+        finally
+        {
+            _executionGuard.Release();
         }
     }
 
