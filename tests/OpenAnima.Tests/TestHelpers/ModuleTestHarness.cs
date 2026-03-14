@@ -225,6 +225,7 @@ namespace {moduleName}
     <OutputType>Library</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include=""{moduleName}.cs"" />
     <Reference Include=""OpenAnima.Contracts"">
       <HintPath>{contractsPath}</HintPath>
     </Reference>
@@ -238,11 +239,21 @@ namespace {moduleName}
         if (process != null)
         {
             process.WaitForExit();
-            // Clean up temp files
+            // Clean up temp files and contracts copy
+            // Removing OpenAnima.Contracts.dll from the output dir is critical:
+            // PluginLoadContext uses AssemblyDependencyResolver which resolves Contracts
+            // from the local deps.json entry, loading a second copy in the plugin context.
+            // That creates type identity mismatch — (IModule)instance throws InvalidCastException.
+            // Deleting the local copy forces fallback to Default context's shared Contracts assembly.
             try
             {
                 File.Delete(sourceFile);
                 File.Delete(csprojPath);
+                // Remove contracts copy so PluginLoadContext uses Default context (shared type identity)
+                foreach (string contractsFile in Directory.GetFiles(tempDir, "OpenAnima.Contracts*"))
+                {
+                    File.Delete(contractsFile);
+                }
             }
             catch
             {
