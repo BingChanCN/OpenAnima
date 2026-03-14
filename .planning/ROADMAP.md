@@ -105,9 +105,12 @@
 **Requirements**: CONC-10
 **Success Criteria** (what must be TRUE):
   1. All test cases in the full suite pass with zero failures (previously 3 were failing)
-  2. The root cause of each previously-failing test is documented (ANIMA-08 global singleton isolation)
+  2. The root cause of each previously-failing test is documented (ModuleTestHarness missing Compile Include; FanOut type-mismatch)
   3. Any formerly-flaky tests are annotated with [Trait] or skipped with a tracked reason
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 32-01-PLAN.md — Fix 3 test failures (ModuleTestHarness DLL compilation + FanOut type-mismatch)
 
 ### Phase 33: Concurrency Fixes
 **Goal**: Module execution is race-free — concurrent invocations cannot corrupt shared mutable state
@@ -191,14 +194,14 @@
 | 29. Routing Modules | v1.6 | 2/2 | Complete | 2026-03-13 |
 | 30. Prompt Injection & Format Detection | v1.6 | 2/2 | Complete | 2026-03-13 |
 | 31. HTTP Request Module | v1.6 | 2/2 | Complete | 2026-03-14 |
-| 32. Test Baseline | v1.7 | 0/TBD | Not started | - |
+| 32. Test Baseline | v1.7 | 0/1 | In Progress | - |
 | 33. Concurrency Fixes | v1.7 | 0/TBD | Not started | - |
 | 34. Activity Channel Model | v1.7 | 0/TBD | Not started | - |
 | 35. Contracts API Expansion | v1.7 | 0/TBD | Not started | - |
 | 36. Built-in Module Decoupling | v1.7 | 0/TBD | Not started | - |
 
 **Total shipped: 31 phases, 72 plans across 7 milestones**
-**v1.7 in progress: 5 phases, 0/TBD plans**
+**v1.7 in progress: 5 phases, 0/1 plans**
 
 ---
-*Last updated: 2026-03-14 after v1.7 roadmap creation*
+*Last updated: 2026-03-15 after Phase 32 planning*
