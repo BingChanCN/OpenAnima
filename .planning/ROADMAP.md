@@ -91,7 +91,7 @@
 
 **Milestone Goal:** Harden the runtime foundation — fix concurrency bugs, introduce Activity Channel execution model, thicken the Contracts API, and decouple built-in modules from Core.
 
-- [ ] **Phase 32: Test Baseline** - Resolve 3 pre-existing test failures to establish a clean regression baseline
+- [x] **Phase 32: Test Baseline** - Resolve 3 pre-existing test failures to establish a clean regression baseline (completed 2026-03-14)
 - [ ] **Phase 33: Concurrency Fixes** - Eliminate race conditions on shared mutable fields across WiringEngine and modules
 - [ ] **Phase 34: Activity Channel Model** - Introduce per-Anima Channel<T> mailbox serializing all state-mutating work
 - [ ] **Phase 35: Contracts API Expansion** - Promote essential interfaces to OpenAnima.Contracts for external module parity
@@ -107,7 +107,7 @@
   1. All test cases in the full suite pass with zero failures (previously 3 were failing)
   2. The root cause of each previously-failing test is documented (ModuleTestHarness missing Compile Include; FanOut type-mismatch)
   3. Any formerly-flaky tests are annotated with [Trait] or skipped with a tracked reason
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 32-01-PLAN.md — Fix 3 test failures (ModuleTestHarness DLL compilation + FanOut type-mismatch)
@@ -194,7 +194,7 @@ Plans:
 | 29. Routing Modules | v1.6 | 2/2 | Complete | 2026-03-13 |
 | 30. Prompt Injection & Format Detection | v1.6 | 2/2 | Complete | 2026-03-13 |
 | 31. HTTP Request Module | v1.6 | 2/2 | Complete | 2026-03-14 |
-| 32. Test Baseline | v1.7 | 0/1 | In Progress | - |
+| 32. Test Baseline | 1/1 | Complete   | 2026-03-14 | - |
 | 33. Concurrency Fixes | v1.7 | 0/TBD | Not started | - |
 | 34. Activity Channel Model | v1.7 | 0/TBD | Not started | - |
 | 35. Contracts API Expansion | v1.7 | 0/TBD | Not started | - |

@@ -18,7 +18,7 @@ Requirements for v1.7 Runtime Foundation. Each maps to roadmap phases.
 - [ ] **CONC-07**: Stateless/mechanical Anima supports concurrent request-level execution without channel serialization
 - [ ] **CONC-08**: Modules can declare concurrency mode via [StatelessModule] attribute — runtime enforces correct execution strategy
 - [ ] **CONC-09**: HeartbeatLoop enqueues via TryWrite (never WriteAsync) to prevent deadlock in tick path
-- [ ] **CONC-10**: Pre-existing 3 test failures are resolved before concurrency work begins (clean baseline)
+- [x] **CONC-10**: Pre-existing 3 test failures are resolved before concurrency work begins (clean baseline)
 
 ### Module API
 
@@ -68,7 +68,7 @@ Requirements for v1.7 Runtime Foundation. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CONC-10 | Phase 32 | Pending |
+| CONC-10 | Phase 32 | Complete |
 | CONC-01 | Phase 33 | Pending |
 | CONC-02 | Phase 33 | Pending |
 | CONC-03 | Phase 33 | Pending |
