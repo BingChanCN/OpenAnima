@@ -1,9 +1,13 @@
 # OpenAnima
 
-## Current State
+## Current Milestone: v1.7 Runtime Foundation
 
-**Latest milestone:** v1.6 Cross-Anima Routing (shipped 2026-03-14)
-**Next milestone:** Planning (use `/gsd:new-milestone`)
+**Goal:** Harden the runtime foundation — fix concurrency bugs, introduce Activity Channel execution model, thicken the Contracts API, and decouple built-in modules from Core.
+
+**Target features:**
+- Concurrency model: fix race conditions, Activity Channel for stateful Animas, request-level isolation for stateless Animas
+- Module API: move essential interfaces (config, context, routing) from Core to Contracts
+- Built-in module decoupling: migrate all 14 internal modules to depend only on Contracts
 
 ## What This Is
 
@@ -119,6 +123,12 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Active
 
+- [ ] Module execution is concurrency-safe — no race conditions under parallel invocation (CONC-01)
+- [ ] Stateless/mechanical Animas support concurrent request-level isolation (CONC-02)
+- [ ] Stateful/main Animas use Activity Channel model — channels parallel, channel-internal serial (CONC-03)
+- [ ] Essential module APIs (config, context, routing) available in Contracts layer (API-01)
+- [ ] External modules achieve feature parity with built-in modules via Contracts (API-02)
+- [ ] All 14 built-in modules depend only on OpenAnima.Contracts, not Core internals (DECPL-01)
 - [ ] Each Anima has independent module instances (ANIMA-08 — global singleton kept for DI compatibility)
 - [ ] User can view list of all installed modules (MODMGMT-01)
 - [ ] User can install module from .oamod package (MODMGMT-02)
@@ -236,4 +246,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-14 after v1.6 milestone*
+*Last updated: 2026-03-14 after v1.7 milestone started*
