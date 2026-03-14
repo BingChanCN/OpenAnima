@@ -1,18 +1,20 @@
 # Technology Stack
 
-**Project:** OpenAnima v1.6 Cross-Anima Routing + HTTP Request Module
-**Researched:** 2026-03-11
+**Project:** OpenAnima v1.7 Runtime Foundation
+**Researched:** 2026-03-14
 **Confidence:** HIGH
 
 ## Executive Summary
 
-For v1.6's cross-Anima routing and HTTP request module, **only one new NuGet package is needed** (`Microsoft.Extensions.Http.Resilience 8.7.0`). All other capabilities — correlation tracking, in-process messaging, async request-response patterns, JSON serialization — are fully covered by .NET 8's built-in BCL. The cross-Anima routing system requires no external message broker, no new protocol layer, and no serialization library; it is a pure in-process architecture built on `ConcurrentDictionary<Guid, TaskCompletionSource<string>>` + the existing `IEventBus`. The HTTP request module requires `IHttpClientFactory` (built-in via `Microsoft.Extensions.DependencyInjection`) with a resilience pipeline.
+For v1.7's three target areas — Activity Channel concurrency model, Contracts API thickening, and built-in module decoupling — **no new NuGet packages are required**. Every needed primitive (`Channel<T>`, `SemaphoreSlim`, `IServiceProvider`, `CancellationToken`) ships with the .NET 8 BCL. The work is entirely architectural: introducing the right concurrency primitives at the right layer, moving interfaces from `Core` to `Contracts`, and severing the `using OpenAnima.Core.*` dependency chain in the 14 built-in modules.
 
-**Zero-dependency principle holds:** Cross-Anima routing = pure .NET constructs. HTTP = IHttpClientFactory + one resilience package.
+**Zero-new-dependency principle holds for v1.7.** No NuGet additions. No new framework. No actor model library.
 
-## Context
+---
 
-OpenAnima v1.5 shipped with ~21,155 LOC using:
+## Baseline: Validated v1.6 Stack
+
+Already shipped and unchanged:
 
 | Package | Version | Status |
 |---------|---------|--------|
@@ -20,236 +22,243 @@ OpenAnima v1.5 shipped with ~21,155 LOC using:
 | Blazor Server + SignalR | 8.0.x | unchanged |
 | OpenAI SDK | 2.8.0 | unchanged |
 | SharpToken | 2.0.4 | unchanged |
-| Markdig | 0.41.3 | unchanged |
-| Markdown.ColorCode | 3.0.1 | unchanged |
+| Markdig + Markdown.ColorCode | 0.41.3 / 3.0.1 | unchanged |
 | System.CommandLine | 2.0.0-beta4 | unchanged |
+| Microsoft.Extensions.Http.Resilience | 8.7.0 | unchanged |
 
-The existing `EventBus` is a lock-free, `ConcurrentDictionary`-based publish-subscribe system. `AnimaRuntime` gives each Anima its own isolated `EventBus`, `WiringEngine`, and `HeartbeatLoop`. The `AnimaRuntimeManager` singleton holds all `AnimaRuntime` instances, making it the natural coordination point for cross-Anima message delivery.
+Existing architecture that v1.7 builds on:
+- Per-Anima `AnimaRuntime` container (isolated `EventBus` + `WiringEngine` + `HeartbeatLoop`)
+- Lock-free `EventBus` (`ConcurrentDictionary` + `ConcurrentBag`)
+- `HeartbeatLoop` with `PeriodicTimer` + `SemaphoreSlim(1,1)` skip-tick guard
+- `WiringEngine` with Kahn's algorithm topological sort + level-parallel `Task.WhenAll`
+- `ICrossAnimaRouter` singleton with `ConcurrentDictionary<Guid, TaskCompletionSource<string>>`
 
-## Recommended Stack Additions
+---
 
-### New NuGet Package (Only Addition)
+## New Stack Elements for v1.7
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Microsoft.Extensions.Http.Resilience | 8.7.0 | HTTP retry/timeout pipeline for HTTP Request module | Official Microsoft package built on Polly v8; replaces deprecated Microsoft.Extensions.Http.Polly; pins to 8.x to stay on .NET 8 SDK train; provides `AddStandardResilienceHandler` which gives retry + circuit-breaker + timeout in one call |
+### Concurrency Primitives (BCL — No NuGet)
 
-### Built-In Capabilities (No New Packages)
+| Primitive | Namespace | Purpose | Why This One |
+|-----------|-----------|---------|--------------|
+| `Channel<T>` | `System.Threading.Channels` | Activity Channel per-channel serial queue — one `Channel<ChannelItem>` per named activity channel on a stateful Anima | Built into .NET 8 BCL (no package needed). `Channel.CreateUnbounded<T>()` with a single consumer task gives guaranteed FIFO serial execution within a channel while multiple channels run concurrently across `Task.WhenAll`. This is the idiomatic .NET pattern for serialized async processing without blocking threads. |
+| `SemaphoreSlim` | `System.Threading` | Per-request execution gate for stateless Animas — allow N concurrent executions, block excess | Already used in `HeartbeatLoop` for the skip-tick guard. `SemaphoreSlim(maxConcurrency, maxConcurrency)` + `WaitAsync()` in `finally` is the BCL idiom for async throttling. No thread blocking — waiters return to thread pool. |
+| `CancellationTokenSource` | `System.Threading` | Lifecycle token for each channel consumer task | Already used throughout the codebase. Each `Channel<T>` consumer loop needs a `CancellationToken` tied to the `AnimaRuntime` disposal path. `CreateLinkedTokenSource` from the existing HeartbeatLoop token is the correct composition. |
+| `TaskCreationOptions.RunContinuationsAsynchronously` | `System.Threading.Tasks` | Required flag on `TaskCompletionSource` when bridging channel completions back to callers | Already used in `CrossAnimaRouter` for the same reason: prevents deadlocks when TCS completions run in-line on the thread that called `TrySetResult`. |
+| `Interlocked` | `System.Threading` | Lock-free counters for channel queue depth metrics (monitoring) | Already used in `HeartbeatLoop` for `_tickCount`. Use `Interlocked.Increment`/`Read` for per-channel metrics without locking. |
 
-| Capability | .NET 8 Built-In | Why Sufficient |
-|-----------|-----------------|----------------|
-| Correlation ID tracking | `Guid.NewGuid()` + `ConcurrentDictionary<Guid, TaskCompletionSource<string>>` | BCL, zero allocation overhead, thread-safe, exactly how .NET async RPC is done idiomatically |
-| Cross-Anima request-response | `TaskCompletionSource<string>` with `CancellationToken` timeout | Standard .NET pattern for bridging async callbacks to awaitable Tasks; used in SignalR internals, RabbitMQ RPC, etc. |
-| In-process message passing | Existing `IEventBus.PublishAsync<T>` + `IEventBus.SendAsync<TResponse>` | EventBus already has `SendAsync` targeting a module by ID; cross-Anima routing extends the same pattern at the `AnimaRuntimeManager` level |
-| JSON serialization for routing payloads | `System.Text.Json` (built-in) | Already used throughout the project for config persistence; routing messages are plain `string` payloads so serialization is optional |
-| HTTP client lifecycle | `IHttpClientFactory` (built-in via `Microsoft.Extensions.DependencyInjection`) | .NET 8 includes `IHttpClientFactory`; avoids socket exhaustion; handles DNS rotation; already registered via `builder.Services.AddHttpClient()` |
-| Regex format detection | `System.Text.RegularExpressions.Regex` (built-in, source-generated) | LLM output routing markers are simple fixed patterns; compiled `Regex` with `[GeneratedRegex]` attribute is zero-allocation at call site |
-| Prompt injection | `string.Format` / interpolation + `StringBuilder` | System prompt auto-injection is plain string concatenation; no template engine needed |
-| Timeout / cancellation | `CancellationTokenSource` with `CancelAfter(TimeSpan)` | Standard .NET timeout pattern; pairs with `TaskCompletionSource` for clean cancellation of pending cross-Anima calls |
+### Contracts API Additions (No NuGet — Interface Design)
 
-## Cross-Anima Routing Architecture Pattern
+Interfaces to move from `OpenAnima.Core` to `OpenAnima.Contracts`. These are additions to the `Contracts` project only — no new packages:
 
-The routing system lives **above** the per-Anima `WiringEngine` layer, at the `AnimaRuntimeManager` level. This avoids coupling individual Anima runtimes to each other.
+| Interface | Move From | Move To | What Modules Need It For |
+|-----------|-----------|---------|--------------------------|
+| `IModuleConfigProvider` | new (extracted from `IAnimaModuleConfigService`) | `OpenAnima.Contracts` | Modules reading their own config dict by `(animaId, moduleId)` — `LLMModule`, `AnimaRouteModule`, `ConditionalBranchModule`, `FixedTextModule` all do this today via `IAnimaModuleConfigService` which lives in `Core.Services` |
+| `IAnimaContext` | `OpenAnima.Core.Anima` | `OpenAnima.Contracts` | Modules needing `ActiveAnimaId` (current scope) — `LLMModule`, `AnimaRouteModule`, `AnimaInputPortModule`, `AnimaOutputPortModule` all inject this today |
+| `ICrossAnimaRouter` (read-only subset) | `OpenAnima.Core.Routing` | `OpenAnima.Contracts` | `AnimaRouteModule` and `AnimaInputPortModule` need `RouteRequestAsync` and `GetPortsForAnima` — currently they reference `OpenAnima.Core.Routing.ICrossAnimaRouter` which is a Core type |
 
-### Correlation ID Request-Response Pattern
+**Design rule:** The `Contracts` versions are thin interfaces containing only the surface external modules actually call. Implementation details (persistence path, registry internals) stay in `Core`.
 
-```csharp
-// CrossAnimaRouter singleton registered alongside AnimaRuntimeManager
-public class CrossAnimaRouter
-{
-    private readonly IAnimaRuntimeManager _manager;
-    private readonly ConcurrentDictionary<Guid, TaskCompletionSource<string>> _pending = new();
+---
 
-    // Called by AnimaRoute module to send a request to another Anima's named service
-    public async Task<string> SendRequestAsync(
-        string targetAnimaId,
-        string servicePortName,
-        string payload,
-        CancellationToken ct = default)
-    {
-        var correlationId = Guid.NewGuid();
-        var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pending[correlationId] = tcs;
+## Architecture of the Activity Channel Model
 
-        // Register cancellation: remove pending entry, cancel the TCS
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        cts.CancelAfter(TimeSpan.FromSeconds(30)); // configurable timeout
-        cts.Token.Register(() =>
-        {
-            if (_pending.TryRemove(correlationId, out var pendingTcs))
-                pendingTcs.TrySetCanceled();
-        });
+This is an in-process concurrency architecture, not a new technology. The stack primitives map to these roles:
 
-        var targetRuntime = _manager.GetRuntime(targetAnimaId);
-        await targetRuntime.EventBus.PublishAsync(new ModuleEvent<CrossAnimaRequest>
-        {
-            EventName = $"AnimaInputPort.{servicePortName}.request",
-            SourceModuleId = "CrossAnimaRouter",
-            Payload = new CrossAnimaRequest(correlationId, payload)
-        }, ct);
+### Stateful Anima: Activity Channel Model
 
-        return await tcs.Task;
-    }
+```
+HeartbeatLoop tick
+  └─ for each Activity Channel (name → Channel<ChannelItem>)
+       └─ Channel<ChannelItem>.Writer.TryWrite(item)   ← non-blocking, fire-and-forget into queue
 
-    // Called by AnimaOutputPort module when a response is ready
-    public void CompleteRequest(Guid correlationId, string response)
-    {
-        if (_pending.TryRemove(correlationId, out var tcs))
-            tcs.TrySetResult(response);
-    }
-}
-
-public record CrossAnimaRequest(Guid CorrelationId, string Payload);
+Per-channel consumer Task (started at AnimaRuntime.StartAsync)
+  └─ await foreach (var item in channel.Reader.ReadAllAsync(ct))
+       └─ await WiringEngine.ExecuteAsync(item, ct)    ← serial within channel, bounded by reader
 ```
 
-**Why `TaskCompletionSource` with `ConcurrentDictionary`:** This is the idiomatic .NET in-process async RPC pattern. It is used by SignalR's server-to-client call mechanism, RabbitMQ .NET client, and documented by Microsoft for async request-reply. It requires no external dependency, no serialization of correlation state, and integrates cleanly with `CancellationToken`. Confidence: HIGH (multiple authoritative sources confirm this pattern).
+**Multiple channels run concurrently** (one Task per channel). **Within each channel, execution is serial** (single consumer reader). This gives "parallel channels, serial within channel" semantics with zero locks.
 
-### LLM Output Format Detection Pattern
+### Stateless Anima: Request-Level Isolation
 
-```csharp
-// Source-generated regex — zero allocation, compiled at build time
-public partial class RoutingPatternDetector
-{
-    // Matches: [ROUTE:service-name] ... payload ... [/ROUTE]
-    [GeneratedRegex(@"\[ROUTE:(?<service>[^\]]+)\](?<payload>[\s\S]*?)\[/ROUTE\]",
-        RegexOptions.Singleline)]
-    private static partial Regex RouteTagRegex();
-
-    public static IEnumerable<(string Service, string Payload)> FindRoutes(string llmOutput)
-    {
-        foreach (Match m in RouteTagRegex().Matches(llmOutput))
-            yield return (m.Groups["service"].Value, m.Groups["payload"].Value.Trim());
-    }
-}
+```
+Incoming request (chat, heartbeat, external trigger)
+  └─ await semaphore.WaitAsync(ct)                     ← gate: max N concurrent executions
+       └─ var snapshot = CreateExecutionSnapshot()     ← copy of current state
+       └─ await WiringEngine.ExecuteAsync(snapshot, ct)
+  finally: semaphore.Release()
 ```
 
-**Why `[GeneratedRegex]`:** .NET 8 source-generated regex avoids runtime regex compilation overhead and is zero-allocation on match success. The routing format tag is developer-defined and simple enough for regex; no external parser needed. Confidence: HIGH (official .NET docs).
+**Each request gets an independent execution snapshot.** `SemaphoreSlim(N, N)` caps concurrency without blocking threads.
 
-### HTTP Request Module Pattern
+### Key Design Constraint: Channel<T> Not Used for EventBus
 
-```csharp
-// Register typed client in Program.cs / DI setup
-services.AddHttpClient<HttpRequestModuleClient>()
-    .AddStandardResilienceHandler(); // retry + circuit breaker + timeout
+The existing `EventBus` is lock-free broadcast (`ConcurrentDictionary` + `ConcurrentBag`). It is **not** being replaced by `Channel<T>`. The Channel model sits **above** the EventBus at the request-scheduling layer, not inside event dispatch. This avoids rewiring the entire pub-sub system.
 
-// HttpRequestModule uses the typed client
-public class HttpRequestModule : IModuleExecutor
-{
-    private readonly HttpRequestModuleClient _client;
-    // ... port declarations, config fields (url, method, headers, body template)
+---
 
-    public async Task ExecuteAsync(CancellationToken ct = default)
-    {
-        var request = new HttpRequestMessage(_method, _resolvedUrl);
-        if (_body != null)
-            request.Content = new StringContent(_body, Encoding.UTF8, "application/json");
+## Contracts API Design Principles
 
-        var response = await _client.SendAsync(request, ct);
-        var responseBody = await response.Content.ReadAsStringAsync(ct);
+These principles govern what goes into `IModuleConfigProvider`, `IAnimaContext` in Contracts:
 
-        await _eventBus.PublishAsync(new ModuleEvent<string>
-        {
-            EventName = $"{Metadata.Name}.port.response",
-            Payload = responseBody
-        }, ct);
-    }
-}
-```
+**Principle 1: Contracts expose read-only or append-only operations only.**
+- `IModuleConfigProvider.GetConfig(animaId, moduleId)` — read only, returns `IReadOnlyDictionary<string, string>`
+- `IAnimaContext.ActiveAnimaId` — read only getter + event
+- `ICrossAnimaRouter.RouteRequestAsync(...)` + `GetPortsForAnima(...)` — calling, not mutating registry
 
-**Why `AddStandardResilienceHandler`:** Provides exponential-backoff retry (3 attempts), circuit breaker (opens after consecutive failures), and per-request timeout (10s default) in one call. Targets HTTP 5xx, 429, and 408. Replaces deprecated `Microsoft.Extensions.Http.Polly`. Confidence: HIGH (official Microsoft docs + NuGet).
+**Principle 2: No Core types in Contracts method signatures.**
+- `IModuleConfigProvider` must not reference `AnimaModuleConfigService`, `PluginRegistry`, or any `Core` type
+- Parameter types: primitives, BCL types (`string`, `IReadOnlyDictionary`, `CancellationToken`), or other Contracts types
+
+**Principle 3: Thin — don't dump everything there.**
+- `IModuleService`, `IHeartbeatService`, `IAnimaModuleStateService` stay in `Core` — these are host-side management APIs, not module-facing APIs
+- Only what the 14 built-in modules actually call goes to Contracts
+
+**Principle 4: Additive — no breaking changes to existing Contracts.**
+- `IModule`, `IModuleExecutor`, `IEventBus`, `ITickable`, `IModuleMetadata`, `IModuleInput/Output` are already in Contracts and must not change
+- New interfaces are additions only
+
+---
+
+## Module Decoupling: What Changes Per Module
+
+Analysis of which `Core` namespaces each built-in module currently imports:
+
+| Module | Core Deps to Remove | Contracts Replacement |
+|--------|--------------------|-----------------------|
+| `LLMModule` | `OpenAnima.Core.Anima.IAnimaContext`, `OpenAnima.Core.Services.IAnimaModuleConfigService`, `OpenAnima.Core.Routing.ICrossAnimaRouter`, `OpenAnima.Core.LLM.*` | `IAnimaContext` (Contracts), `IModuleConfigProvider` (Contracts), `ICrossAnimaRouter` subset (Contracts); `ILLMService` moved to Contracts or kept in Core via constructor injection |
+| `AnimaRouteModule` | `OpenAnima.Core.Anima.IAnimaContext`, `OpenAnima.Core.Services.IAnimaModuleConfigService`, `OpenAnima.Core.Routing.ICrossAnimaRouter` | All three move to Contracts |
+| `AnimaInputPortModule` | `OpenAnima.Core.Anima.IAnimaContext`, `OpenAnima.Core.Routing.ICrossAnimaRouter` | Both move to Contracts |
+| `AnimaOutputPortModule` | `OpenAnima.Core.Anima.IAnimaContext`, `OpenAnima.Core.Routing.ICrossAnimaRouter` | Both move to Contracts |
+| `ChatInputModule` | None (only `IEventBus` from Contracts) | Already clean |
+| `ChatOutputModule` | Minimal Core refs | Check for `IAnimaContext` usage |
+| `FixedTextModule` | `IAnimaModuleConfigService` | `IModuleConfigProvider` (Contracts) |
+| `TextJoinModule` | None | Already clean |
+| `TextSplitModule` | None | Already clean |
+| `ConditionalBranchModule` | `IAnimaModuleConfigService` | `IModuleConfigProvider` (Contracts) |
+| `HeartbeatModule` | None | Already clean |
+| `HttpRequestModule` | `IAnimaModuleConfigService` | `IModuleConfigProvider` (Contracts) |
+| `FormatDetector` | None (pure logic) | Already clean |
+
+**Decoupling completion test:** After v1.7, `dotnet build` on a project that references only `OpenAnima.Contracts` (not `OpenAnima.Core`) must succeed for all 14 built-in modules if they were extracted. This is the DECPL-01 validation criterion.
+
+---
 
 ## Installation
 
 ```bash
-# Only new dependency for v1.6
-cd src/OpenAnima.Core
-dotnet add package Microsoft.Extensions.Http.Resilience --version 8.7.0
+# No new packages for v1.7 — everything is BCL
 
-# Nothing else — all other capabilities are BCL built-ins
+# Verify System.Threading.Channels is available (it is, in .NET 8 BCL)
+# No dotnet add package needed
+
+# Verify build after interface moves compile correctly
+cd /path/to/OpenAnima
+dotnet build src/OpenAnima.Contracts/OpenAnima.Contracts.csproj
+dotnet build src/OpenAnima.Core/OpenAnima.Core.csproj
 ```
 
-## New Types to Create (No External Dependencies)
-
-| Type | Location | Purpose |
-|------|----------|---------|
-| `CrossAnimaRouter` | `Core/Anima/CrossAnimaRouter.cs` | Singleton coordinator for cross-Anima request-response with correlation tracking |
-| `CrossAnimaRequest` | `Core/Anima/CrossAnimaRouter.cs` | Record carrying `(Guid CorrelationId, string Payload)` |
-| `AnimaServiceRegistry` | `Core/Anima/AnimaServiceRegistry.cs` | Per-Anima dictionary of named input port services (service name → module ID), queried by `CrossAnimaRouter` for prompt injection |
-| `AnimaInputPortModule` | `Core/Modules/AnimaInputPortModule.cs` | Declares a named service; subscribes to `AnimaInputPort.{name}.request`; routes payload into wiring |
-| `AnimaOutputPortModule` | `Core/Modules/AnimaOutputPortModule.cs` | Collects wiring output; calls `CrossAnimaRouter.CompleteRequest()` with correlation ID |
-| `AnimaRouteModule` | `Core/Modules/AnimaRouteModule.cs` | Selects target Anima + service, calls `CrossAnimaRouter.SendRequestAsync()`, forwards response to output port |
-| `RoutingPatternDetector` | `Core/Services/RoutingPatternDetector.cs` | `[GeneratedRegex]` based detection of route tags in LLM output |
-| `PromptInjectionService` | `Core/Services/PromptInjectionService.cs` | Queries `AnimaServiceRegistry` to build available-services suffix for system prompt |
-| `HttpRequestModule` | `Core/Modules/HttpRequestModule.cs` | Configurable HTTP call module with typed `IHttpClientFactory` client |
-| `HttpRequestModuleClient` | `Core/Modules/HttpRequestModule.cs` | Typed client wrapper for `IHttpClientFactory` DI registration |
+---
 
 ## Alternatives Considered
 
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Cross-Anima messaging | `ConcurrentDictionary<Guid, TaskCompletionSource<string>>` | `System.Threading.Channels` | Channels are for one-way producer-consumer flows; TCS is the right primitive for request-response correlation. Channels would add unnecessary complexity — you'd still need TCS to bridge the response back to the caller |
-| Cross-Anima messaging | In-process `CrossAnimaRouter` | RabbitMQ / Redis pub-sub / gRPC | External message brokers are out-of-scope per downstream spec ("keep in-process"). Platform is local-first; external brokers add ops complexity and latency for zero benefit |
-| HTTP resilience | `Microsoft.Extensions.Http.Resilience 8.7.0` | `Polly` directly | Resilience package is the official Polly wrapper with `IHttpClientFactory` integration and sane defaults. Using Polly directly requires more boilerplate and separate `Polly.Core` version pinning |
-| HTTP resilience | `Microsoft.Extensions.Http.Resilience` | `Microsoft.Extensions.Http.Polly` | Polly extension is deprecated as of .NET 8. Use the resilience package |
-| Format detection | `[GeneratedRegex]` | Pydantic / structured output libraries | Structured output libs are Python ecosystem. OpenAI SDK structured outputs constrain model-side generation and don't work for output inspection post-generation. The routing tag format is developer-defined; simple regex is correct tool |
-| Correlation IDs | `Guid.NewGuid()` (32-char hex) | Short IDs / sequential IDs | Guid guarantees global uniqueness with zero coordination; used by existing Anima ID pattern (`Guid.NewGuid().ToString("N")[..8]`). Full Guid for correlation avoids collision risk under concurrent requests |
-| Prompt injection | `string` interpolation in `PromptInjectionService` | Handlebars / Scriban | Template engines are over-engineering for injecting a list of 3-10 service names into a system prompt footer |
+### Concurrency Model
+
+| Recommended | Alternative | Why Not |
+|-------------|-------------|---------|
+| `Channel<T>` for Activity Channels | `BlockingCollection<T>` | `BlockingCollection` blocks the calling thread on `Take()`; unusable in async code. `Channel<T>` is the modern async replacement. |
+| `Channel<T>` for Activity Channels | `ActionBlock<T>` (TPL Dataflow) | `ActionBlock` requires `System.Threading.Tasks.Dataflow` NuGet package (not BCL in all targets). More complex API. `Channel<T>` covers the serial-queue use case with simpler code. |
+| `Channel<T>` for Activity Channels | `ConcurrentQueue<T>` + polling | Polling wastes CPU. `Channel<T>` uses `ValueTask`-based notification (zero allocation on hot path). |
+| `SemaphoreSlim` for stateless gate | `lock {}` keyword | `lock` blocks the thread; cannot be used with `await`. `SemaphoreSlim.WaitAsync()` yields the thread to the pool while waiting. |
+| `SemaphoreSlim` for stateless gate | Orleans / Akka.NET actor model | Full actor frameworks (Orleans, Akka.NET) are correct for distributed or high-scale scenarios but are 100-500 KB of dependencies and significant conceptual overhead for a single-process local-first agent runtime. `SemaphoreSlim` + `Channel<T>` deliver the same per-entity serial execution semantics with zero external dependencies. |
+| In-process `Channel<T>` | Per-request `IServiceScope` from DI | Scoped DI is for request isolation at the dependency level, not execution concurrency. `Channel<T>` controls when work runs; DI scope controls what services are resolved. These are orthogonal and can coexist. |
+
+### Contracts API Design
+
+| Recommended | Alternative | Why Not |
+|-------------|-------------|---------|
+| Thin `IModuleConfigProvider` (read-only dict) | Pass full `IAnimaModuleConfigService` to Contracts | `IAnimaModuleConfigService` has `SetConfigAsync`, `InitializeAsync`, and references `Core.Services` internals — exposing it to Contracts creates a circular dep risk and exposes write operations modules should not call |
+| Move `IAnimaContext` to Contracts | Keep in Core, reference Core from Contracts | Core cannot reference Contracts AND Contracts reference Core — circular. Current flow must be Contracts ← Core, so types modules need must be in Contracts |
+| Subset `ICrossAnimaRouter` interface in Contracts | Move the whole `CrossAnimaRouter` implementation | Implementation has `ConcurrentDictionary`, `AnimaRuntimeManager` refs, and cleanup timers — all Core concerns. Only the `Task RouteRequestAsync(...)` and `IReadOnlyList<PortRegistration> GetPortsForAnima(...)` signatures move to Contracts |
+
+### Module Decoupling
+
+| Recommended | Alternative | Why Not |
+|-------------|-------------|---------|
+| Move built-in modules to `OpenAnima.Contracts`-only deps | Keep modules in Core with Core deps | Modules in Core with Core deps = external developers can never achieve feature parity with built-ins (API-02 requirement). The whole point of decoupling is that a third-party module compiled only against Contracts can do everything a built-in does |
+| Keep `ILLMService` interface in Core for now | Move `ILLMService` to Contracts immediately | `ILLMService` depends on `ChatMessageInput` which is currently a Core type. Moving it to Contracts requires moving `ChatMessageInput` too. This is correct but is a larger refactor; flag for v1.7 scope assessment |
+
+---
 
 ## What NOT to Add
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| RabbitMQ / Redis / Azure Service Bus | External broker, requires daemon process, violates local-first constraint | `CrossAnimaRouter` in-process with TCS correlation |
-| MediatR | Already replaced by the custom `IEventBus`; adding MediatR creates two competing event systems | Extend existing `IEventBus` / `CrossAnimaRouter` |
-| `Microsoft.Extensions.Http.Polly` | Deprecated since .NET 8 | `Microsoft.Extensions.Http.Resilience` |
-| Newtonsoft.Json for routing messages | Legacy library, slower; routing payloads are plain strings anyway | `System.Text.Json` (already in use) or plain string passing |
-| `System.Threading.Channels` for cross-Anima routing | Channels are producer-consumer, not request-response; would require wrapping with TCS anyway | `TaskCompletionSource<string>` with `ConcurrentDictionary` |
-| External template engine (Handlebars, Scriban) | Over-engineering for prompt injection that adds 2-4 lines of service names | `string` interpolation / `StringBuilder` |
-| OpenAI Structured Outputs API | Constrains server-side token generation; does not work for inspecting already-generated text in routing triggers | `[GeneratedRegex]` pattern detection on output |
+| Orleans / Akka.NET / Service Fabric Reliable Actors | Full distributed actor frameworks — massive dependency for a local-first single-process runtime. Per-entity serial execution is achievable with `Channel<T>` + single consumer task at 1/100th the complexity | `Channel<T>` + `SemaphoreSlim` |
+| `System.Threading.Tasks.Dataflow.ActionBlock<T>` | Requires separate NuGet package, more complex API surface, same semantics as `Channel<T>` + consumer task | `Channel.CreateUnbounded<T>()` + `ReadAllAsync` consumer |
+| `BlockingCollection<T>` | Thread-blocking API incompatible with the async-first codebase | `Channel<T>` |
+| `lock {}` in async methods | Blocks thread pool threads; causes deadlocks when awaiting inside locked sections | `SemaphoreSlim.WaitAsync()` |
+| MEF (Managed Extensibility Framework) | Heavy plugin framework; the project already has its own `AssemblyLoadContext` isolation with `PluginLoadContext`. Adding MEF would conflict with the existing duck-typing + interface-name resolution approach | Existing `PluginLoadContext` + Contracts interfaces |
+| Moving ALL of `IAnimaModuleConfigService` to Contracts | Interface has write operations (`SetConfigAsync`) that modules should not call; moving it full creates over-broad module permissions | Thin `IModuleConfigProvider` (read-only subset) in Contracts |
+| Reactive Extensions (Rx.NET) / `IObservable<T>` | Introduces push-based observable streams as a third concurrency model alongside EventBus and Channel. Increases mental model complexity with no benefit for the current use cases | `Channel<T>` for queuing, `IEventBus` for events |
+
+---
 
 ## Integration Points with Existing Architecture
 
-| Existing Component | Integration for v1.6 |
-|--------------------|----------------------|
-| `AnimaRuntimeManager` | Register `CrossAnimaRouter` alongside it (singleton); `CrossAnimaRouter` calls `_manager.GetRuntime(targetId).EventBus` |
-| `IEventBus` (per-Anima) | `AnimaInputPortModule` subscribes to `AnimaInputPort.{name}.request` on its Anima's EventBus; `AnimaOutputPortModule` publishes via its EventBus |
-| `IAnimaModuleConfigService` | `AnimaInputPortModule` reads `serviceName` config field; `AnimaRouteModule` reads `targetAnimaId` + `servicePortName` config fields |
-| `LLMModule` | `PromptInjectionService` injects available-services list into system prompt before `ChatClient.CompleteChatAsync`; `RoutingPatternDetector` monitors output |
-| `WiringEngine` | No change; routing modules plug in as standard modules with Text input/output ports; wiring engine executes them in topological order |
-| `EditorConfigSidebar` | Config fields for routing modules use existing `text` field type; no sidebar changes needed |
-| `ModuleMetadataRecord` | New modules use the existing `ModuleMetadataRecord` pattern |
+| Existing Component | v1.7 Integration |
+|--------------------|-----------------|
+| `AnimaRuntime` | Gains `ActivityChannelManager` — owns a `Dictionary<string, Channel<ChannelItem>>` + one `Task` consumer per channel, started/stopped alongside `HeartbeatLoop` |
+| `HeartbeatLoop` | Instead of directly calling `WiringEngine.ExecuteAsync`, heartbeat tick writes to the appropriate `Channel<T>` for each stateful Anima. The channel consumer calls `WiringEngine.ExecuteAsync`. Stateless Animas keep direct execution with `SemaphoreSlim` gate |
+| `WiringEngine` | No API change needed — `ExecuteAsync(CancellationToken)` signature stays. Concurrency protection is at the scheduling layer (Channel consumer), not inside WiringEngine itself |
+| `EventBus` | Not changed. Channel model is above EventBus, not inside it. EventBus continues to handle pub-sub within a single execution |
+| `IAnimaModuleConfigService` | Implements new `IModuleConfigProvider` (Contracts) interface — one interface addition to existing class, no behavior change |
+| `AnimaContext` | Implements new `IAnimaContext` in Contracts namespace — `IAnimaContext` is extracted from `Core.Anima` to `Contracts`; `AnimaContext` class still lives in Core and still implements it |
+| `CrossAnimaRouter` | Implements new `ICrossAnimaRouter` subset in Contracts — two methods extracted to Contracts interface; full implementation stays in Core |
+| Built-in modules (14) | `using OpenAnima.Core.Anima`, `using OpenAnima.Core.Services`, `using OpenAnima.Core.Routing` replaced with `using OpenAnima.Contracts` equivalents. Constructor signatures change from Core types to Contracts types |
+| DI registration (`Program.cs`) | No change at registration site — concrete types registered remain the same. Only the injected interfaces in module constructors change from Core to Contracts |
+
+---
 
 ## Version Compatibility
 
-| Package | Version | Compatible With | Notes |
-|---------|---------|-----------------|-------|
-| Microsoft.Extensions.Http.Resilience | 8.7.0 | .NET 8.0 | 8.x series tracks .NET 8 SDK; 10.x requires .NET 10 |
-| System.Text.RegularExpressions (BCL) | built-in | .NET 8.0 | `[GeneratedRegex]` attribute available since .NET 7 |
-| System.Threading (BCL) | built-in | .NET 8.0 | `TaskCompletionSource`, `ConcurrentDictionary`, `CancellationTokenSource` all .NET 8 |
-| IHttpClientFactory | built-in | .NET 8.0 | Available via `Microsoft.Extensions.DependencyInjection` (already a transitive dependency) |
+| Component | Version | Notes |
+|-----------|---------|-------|
+| `System.Threading.Channels` | Built-in .NET 8 BCL | No NuGet needed. `Channel.CreateUnbounded<T>()`, `ChannelWriter<T>.TryWrite`, `ChannelReader<T>.ReadAllAsync` all available. |
+| `System.Threading.SemaphoreSlim` | Built-in .NET 8 BCL | `WaitAsync(CancellationToken)` overload available since .NET 4.5; `SemaphoreSlim(initialCount, maxCount)` constructor available. |
+| `System.Threading.Tasks.TaskCompletionSource<T>` | Built-in .NET 8 BCL | `TaskCreationOptions.RunContinuationsAsynchronously` flag available since .NET 4.6. |
+| `System.Threading.Interlocked` | Built-in .NET 8 BCL | `Interlocked.Read(ref long)` for lock-free 64-bit reads on 32-bit platforms. |
+| `OpenAnima.Contracts` project | v1.7 additions | Interface additions are additive — no breaking changes to `IModule`, `IModuleExecutor`, `IEventBus`, `ITickable` |
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Rationale |
 |------|------------|-----------|
-| Cross-Anima routing (TCS + ConcurrentDictionary) | HIGH | Standard .NET in-process RPC pattern documented in official sources; used by SignalR internals |
-| IHttpClientFactory + resilience package | HIGH | Official Microsoft documentation; package version confirmed on NuGet |
-| `[GeneratedRegex]` for format detection | HIGH | Official .NET 8 docs; available since .NET 7 |
-| Prompt injection via string interpolation | HIGH | No API surface uncertainty; pure string operations |
-| Correlation ID via `Guid` | HIGH | Idiomatic .NET; matches existing Anima ID convention |
-| Zero need for external message broker | HIGH | In-process constraint is explicit in spec; `AnimaRuntimeManager` already holds all runtimes |
+| `Channel<T>` for Activity Channels | HIGH | BCL type since .NET Core 3.0; documented in official .NET docs; `ReadAllAsync` + single consumer is the canonical serial-queue pattern confirmed in multiple official sources |
+| `SemaphoreSlim` for stateless gate | HIGH | Already used in `HeartbeatLoop`; `WaitAsync()` + `finally Release()` is BCL idiom with no API uncertainty |
+| Contracts API design (thin interfaces) | HIGH | Plugin/module contracts design pattern well-established in .NET ecosystem; the specific interface splits are based on direct code inspection of the 14 modules |
+| Module decoupling path (which imports to remove) | HIGH | Based on direct code inspection of `LLMModule.cs`, `AnimaRouteModule.cs`, etc. The `using` statements are read directly — no inference needed |
+| No new NuGet packages needed | HIGH | All named primitives (`Channel<T>`, `SemaphoreSlim`, `CancellationToken`, `Interlocked`) are BCL; verified BCL status of `System.Threading.Channels` in .NET 8 via NuGet search results |
+| `ILLMService` move to Contracts (deferred) | MEDIUM | Correct direction but depends on also moving `ChatMessageInput`; scope risk for v1.7; flagged as deferred |
+
+---
 
 ## Sources
 
-- [Microsoft Learn — IHttpClientFactory guidelines](https://learn.microsoft.com/en-us/dotnet/core/extensions/httpclient-factory) — IHttpClientFactory lifetime management, HIGH confidence
-- [Microsoft Learn — Build resilient HTTP apps](https://learn.microsoft.com/en-us/dotnet/core/resilience/http-resilience) — `AddStandardResilienceHandler` API, HIGH confidence
-- [NuGet — Microsoft.Extensions.Http.Resilience](https://www.nuget.org/packages/Microsoft.Extensions.Http.Resilience) — Version 8.7.0 confirmed, HIGH confidence
-- [Microsoft Learn — Channels (.NET)](https://learn.microsoft.com/en-us/dotnet/core/extensions/channels) — System.Threading.Channels pattern analysis (considered but not selected), HIGH confidence
-- [Microsoft Learn — .NET Regular Expressions](https://learn.microsoft.com/en-us/dotnet/standard/base-types/regular-expressions) — GeneratedRegex attribute, HIGH confidence
-- [TaskCompletionSource in .NET](https://code-corner.dev/2024/01/19/NET-%E2%80%94-TaskCompletionSource-and-CancellationTokenSource/) — TCS + CancellationTokenSource async RPC pattern, MEDIUM confidence (confirmed by SignalR source and existing IEventBus.SendAsync pattern in this codebase)
-- [Gigi Labs — RabbitMQ RPC with TaskCompletionSource](https://gigi.nullneuron.net/gigilabs/abstracting-rabbitmq-rpc-with-taskcompletionsource/) — Correlation dictionary pattern walkthrough, MEDIUM confidence
+- [Microsoft Learn — Channels in .NET](https://learn.microsoft.com/en-us/dotnet/core/extensions/channels) — `Channel<T>` API, BCL inclusion, bounded vs unbounded, `ReadAllAsync` consumer pattern. HIGH confidence.
+- [.NET Blog — Introduction to System.Threading.Channels](https://devblogs.microsoft.com/dotnet/an-introduction-to-system-threading-channels/) — Producer-consumer patterns, back-pressure, completion semantics. HIGH confidence.
+- [NuGet — System.Threading.Channels 8.0.0](https://www.nuget.org/packages/System.Threading.Channels/8.0.0) — Confirms BCL inclusion for .NET 8 targets (no explicit package reference needed). HIGH confidence.
+- [Microsoft Learn — SemaphoreSlim](https://learn.microsoft.com/en-us/dotnet/api/system.threading.semaphoreslim) — `WaitAsync(CancellationToken)` API, async throttling pattern. HIGH confidence.
+- [Microsoft Learn — Create .NET app with plugin support](https://learn.microsoft.com/en-us/dotnet/core/tutorials/creating-app-with-plugin-support) — AssemblyLoadContext plugin contracts pattern, interface-only Contracts assembly. HIGH confidence.
+- [Microsoft Learn — About AssemblyLoadContext](https://learn.microsoft.com/en-us/dotnet/core/dependency-loading/understanding-assemblyloadcontext) — Plugin isolation, type identity across contexts. HIGH confidence.
+- [blog.semirhamid.com — .NET Concurrency: lock, SemaphoreSlim & Channels](https://blog.semirhamid.com/net-concurrency-lock-semaphore-slim-and-channels) — Comparison of `SemaphoreSlim` vs `Channel<T>` for serial queue vs throttling. MEDIUM confidence (blog, consistent with official docs).
+- [ConcurrentDictionary pitfalls — dotnet/runtime issue #33221](https://github.com/dotnet/runtime/issues/33221) — `GetOrAdd` delegate execution outside lock; factory may run multiple times. HIGH confidence (official GitHub issue).
+- Direct codebase inspection: `HeartbeatLoop.cs`, `WiringEngine.cs`, `EventBus.cs`, `LLMModule.cs`, `AnimaRouteModule.cs`, `AnimaRuntime.cs`, `IAnimaContext.cs`, `IAnimaModuleConfigService.cs` — Determines exact import removal targets and existing pattern compatibility. HIGH confidence (first-party source).
 
 ---
-*Stack research for: v1.6 Cross-Anima Routing and HTTP Request Module*
-*Researched: 2026-03-11*
+
+*Stack research for: v1.7 Runtime Foundation (concurrency model, Contracts API thickening, module decoupling)*
+*Researched: 2026-03-14*
 *Confidence: HIGH*

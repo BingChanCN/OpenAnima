@@ -1,165 +1,201 @@
 # Feature Research
 
-**Domain:** Cross-Anima Routing and HTTP Request Module — v1.6
-**Researched:** 2026-03-11
-**Confidence:** HIGH (core patterns well-established; format detection specifics MEDIUM)
+**Domain:** Runtime Foundation — Concurrency Model, Plugin API, Module Decoupling — v1.7
+**Researched:** 2026-03-14
+**Confidence:** HIGH (concurrency patterns well-established; exact API surface design is project-specific judgment)
 
 ---
 
 ## Feature Landscape
 
-### Table Stakes (Users Expect These)
+### Area 1: Activity Channel Execution Model (CONC-01 / CONC-02 / CONC-03)
 
-Features users assume exist in a multi-agent wiring platform. Missing these makes the routing concept feel broken.
+The goal: make module execution concurrency-safe and introduce an Activity Channel model for stateful Animas.
 
-#### AnimaInputPort Module
+**Problem statement from codebase:** Every module in the current system is a singleton registered in DI. `ExecuteAsync` on a given module can be called concurrently if two heartbeat ticks fire before the prior tick's execution chain finishes, or if cross-Anima routing delivers a request while a heartbeat-triggered execution is in flight. The current `_state` field, `_pendingPrompt` field, and similar per-module state variables are written and read without synchronization — a classic shared-mutable-state race condition.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Declare a named service on an Anima | Any "service provider" concept requires a registration point | LOW | Config: service name (string), service description (string for LLM injection) |
-| Service name uniqueness per Anima | Two ports with the same name would create ambiguous routing | LOW | Validate on save; show error in config sidebar |
-| Service description field | LLM must understand what the service does to route to it | LOW | Free-text; injected verbatim into system prompt |
-| Output port for incoming request payload | The received message must flow into the wiring graph | LOW | Single Text output port: `request` |
-| Correlation ID passthrough | Response must be routed back to the correct caller | MEDIUM | Store correlation ID in module state while request is in-flight; emit alongside response |
+#### Table Stakes
 
-#### AnimaOutputPort Module
+Features users/developers expect from any concurrency-safe agent runtime. Missing these means data corruption or dropped messages under realistic load.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Paired to AnimaInputPort by name | Response must return to the same channel that received the request | LOW | Config: port name (must match an AnimaInputPort name on the same Anima) |
-| Input port for response text | Accepts the wired response and sends it back to the caller | LOW | Single Text input port: `response` |
-| Correlation ID automatically matched | Output port must route reply to the original requester, not broadcast | MEDIUM | Reads correlation ID from sibling AnimaInputPort state; router matches on it |
+| Race-free module state mutation | Module `_state`, `_pendingPrompt`, `_pendingRequest` etc. are shared fields — concurrent writes corrupt them | MEDIUM | SemaphoreSlim(1,1) guard on `ExecuteAsync` is the idiomatic .NET async lock; already used in HeartbeatLoop's `_tickLock` |
+| Skip-tick behavior when module is busy | If a module is already running, a new tick should be dropped, not queued — prevents cascading backlog | LOW | Early-return pattern: `if (!await _lock.WaitAsync(0)) return;` (zero-timeout tryacquire) |
+| Stateless Anima parallel execution | Mechanical/utility Animas (fixed-text, text-split, etc.) have no shared state — parallel requests should be allowed | MEDIUM | Stateless request isolation = separate `ExecuteAsync` invocation per-request with no shared mutable fields; requires module-level flag or interface marker |
+| Stateful Anima channel-internal serialization | Chat-capable Animas have conversation state — concurrent LLM calls would interleave messages nonsensically | MEDIUM | `Channel<ExecutionRequest>` with single consumer loop; parallel channels (heartbeat, chat) serialized within each channel |
+| Heartbeat tick does not block on I/O modules | LLMModule and HttpRequestModule await external calls (seconds); HeartbeatLoop tick should not block waiting for them | MEDIUM | Fire-and-forget dispatch for I/O modules with their own per-module SemaphoreSlim guard; already partially present in HeartbeatLoop's `_tickLock` skip pattern |
 
-#### AnimaRoute Module
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Select target Anima | User must be able to designate which Anima handles this request | LOW | Config: dropdown of all known Animas (populated from AnimaRuntimeManager) |
-| Select target input port | Multiple services may be registered on target Anima | LOW | Config: dropdown of AnimaInputPort names registered on the selected Anima |
-| Input port for request text | Accepts the text payload to forward | LOW | Single Text input port: `request` |
-| Output port for received response | The caller needs the response back in its wiring graph | LOW | Single Text output port: `response` |
-| Correlation ID generated per call | Each request needs a unique ID to match against async response | MEDIUM | Generate `Guid.NewGuid().ToString("N")[..8]` on each execution |
-| Configurable timeout | Prevent indefinite blocking when target Anima fails to respond | MEDIUM | Config: timeout in seconds (default 30); return error text on expiry |
-
-#### Cross-Anima Message Router (Infrastructure)
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Global routing registry accessible to all Animas | AnimaRoute must reach AnimaInputPort across runtime isolation boundaries | MEDIUM | Singleton `AnimaRouterService` registered in the DI container; holds a `ConcurrentDictionary<correlationId, TaskCompletionSource>` |
-| Correlation ID tracking | Request-response matching is impossible without it | MEDIUM | Standard enterprise integration pattern; key in router's pending-request map |
-| Timeout and orphan response cleanup | Late responses after timeout must be silently discarded | MEDIUM | `CancellationTokenSource` per pending request; remove entry from map on expiry or completion |
-| Thread-safe async delivery | Multiple Animas may send/receive simultaneously | MEDIUM | `TaskCompletionSource<string>` per request; `await` on caller side; `SetResult` on responder side |
-
-#### Prompt Auto-Injection
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| LLM automatically knows available services | Without injection, LLM has no basis for routing decisions | MEDIUM | LLMModule reads all AnimaRoute modules in current Anima's wiring; assembles service list from target Anima's AnimaInputPort descriptions |
-| Service list format in system prompt | LLM needs a clear, parseable format to produce routing markers | LOW | Block appended to system prompt: `# Available Services\n- ServiceName: Description\n...` |
-| Injection only when routes exist | Injecting an empty block when no routes are wired is noise | LOW | Skip injection if no AnimaRoute modules are configured |
-| Update injection when wiring changes | Stale service list leads to routing errors | MEDIUM | Re-read wiring on each LLM execution; injection is stateless (computed per call) |
-
-#### Format Detection (Output Monitoring)
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Detect routing marker in LLM output | LLM must signal when it wants to route | MEDIUM | Scan full output text for marker pattern after streaming completes |
-| Split: routing payload vs. display text | User sees the conversational reply; routing payload goes to the wire | MEDIUM | Marker block is removed from displayed text; extracted payload is forwarded |
-| Defined marker format | Ambiguous detection leads to false positives | LOW | XML-style tags are the established pattern: `<route service="ServiceName">payload</route>` — widely used in LLM structured output |
-| No marker = normal response | Non-routing responses must pass through unchanged | LOW | If marker absent, emit full text to chat output port as before |
-
-### Differentiators (Competitive Advantage)
-
-Features that set OpenAnima apart from simple HTTP-connected agents or static pipelines.
+#### Differentiators
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Service descriptions in prompt auto-injection | LLM understands *what* each service does, not just that it exists; enables semantic routing without hardcoded rules | LOW | Free-text description field on AnimaInputPort config is the lever |
-| Wiring-native routing (not code) | Users configure routing in the visual editor, not code; consistent with existing module philosophy | MEDIUM | AnimaInputPort/OutputPort/Route are first-class modules, not a special API |
-| Correlation ID via wiring state (not HTTP session) | Stateless modules pass correlation context through the routing system without exposing it to users | MEDIUM | Routing infrastructure is invisible to the wiring graph; users see clean input/output ports |
-| Format detection preserves streaming display | User sees the LLM's conversational response even when a routing action is embedded in it | HIGH | Requires buffering stream, detecting marker after completion, then splitting before forwarding |
-| Timeout as a config field | Users control failure behavior without writing code | LOW | Simple timeout dropdown in AnimaRoute config sidebar |
+| Named Activity Channels (heartbeat vs. chat) | Two parallel activity channels per stateful Anima — heartbeat channel processes proactive agent ticks; chat channel processes user messages — both serialized internally, run concurrently with each other | HIGH | This is the Orleans Grain reentrancy pattern applied at the Anima level: two logical "tracks" of execution that don't block each other. Key insight: a user message should not wait for a heartbeat tick to finish, and vice versa. Requires `Channel<T>` per named channel with dedicated consumer task. |
+| Correlation-ID-scoped execution context | Each request flowing through the wiring graph carries an execution context (correlationId, channel name, timestamp) — allows concurrent in-flight requests to be distinguishable in logs and monitoring | MEDIUM | `ModuleExecutionContext` record threaded through `ExecuteAsync(context, ct)` instead of implicit module state fields. Prerequisite for stateless module parallelism. |
+| Per-module concurrency mode declaration | Module declares whether it is `Serialized` or `Stateless` via attribute or interface — runtime enforces the right execution strategy without module authors needing to write synchronization code | MEDIUM | Analogous to Orleans' `[Reentrant]` attribute. `[StatelessModule]` marker attribute; runtime checks and spawns per-invocation vs. serialized dispatch. |
 
-### Anti-Features (Commonly Requested, Often Problematic)
+#### Anti-Features
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Bidirectional/broadcast routing | "Let Anima A talk to multiple Animas simultaneously" | Correlation ID tracking breaks with fan-out; response ordering becomes non-deterministic | Keep point-to-point for v1.6; fan-out can be composed with multiple AnimaRoute nodes |
-| LLM-initiated multi-hop routing chains | "Let the LLM chain service calls automatically" | Recursive correlation IDs, nested timeouts, hard to debug, easy to create infinite loops | Single-hop only for v1.6; manual wiring chains are explicit and deterministic |
-| Streaming HTTP request body | "Stream large payloads to HTTP endpoints" | Significantly complicates the module lifecycle; blocks execution level until stream ends | Use buffered body; streaming can be added later if demand exists |
-| Dynamic route discovery at runtime | "Auto-discover what services Animas expose" | AnimaRuntimeManager already has this data; the complication is caching + invalidation when Animas are deleted | Read live from AnimaRuntimeManager on each execution |
-| HTTP response streaming to downstream modules | "Get tokens as they arrive from external API" | Downstream modules in the wiring graph are synchronous execution nodes; they cannot consume a stream | Buffer full response, emit as single Text payload |
-| Global system prompt for all Animas | "Configure routing instructions once" | Violates per-Anima isolation; one Anima's service list polluting another's context | Per-Anima injection computed from that Anima's wiring only |
+| Global lock on WiringEngine execution | "Simplest way to prevent races — lock the whole execution" | Serializes all Animas, destroys parallel Anima benefit, kills heartbeat cadence | Per-module SemaphoreSlim locks; channel-per-activity model |
+| Unbounded execution queue per module | "Don't drop messages — queue them all" | Queue grows unbounded under backpressure; memory leak in pathological loops | Bounded channel with skip-on-full (drop policy); explicit backpressure via BoundedChannelOptions.DropOldest |
+| Thread-per-module approach | "Give each module its own dedicated thread for isolation" | ~14 modules × N Animas = unsustainable thread count; .NET thread pool is better | Async/await with SemaphoreSlim; no dedicated threads needed |
+
+---
+
+### Area 2: Plugin API Surface — Contracts Layer (API-01 / API-02)
+
+The goal: move `IAnimaModuleConfigService`, `IAnimaContext`, `ICrossAnimaRouter` (and any other interfaces external modules need) from `OpenAnima.Core` into `OpenAnima.Contracts`, so external plugin authors have feature parity with built-in modules.
+
+**Current state from codebase:**
+- `OpenAnima.Contracts` contains: `IModule`, `IModuleExecutor`, `IModuleInput`, `IModuleOutput`, `IModuleMetadata`, `ITickable`, `IEventBus`, `ModuleEvent`, `ModuleExecutionState`, and all Port types.
+- `OpenAnima.Core` contains (not accessible to external plugins): `IAnimaModuleConfigService`, `IAnimaContext`, `ICrossAnimaRouter`, `ILLMService`, and `IAnimaRuntimeManager`.
+- Every built-in module constructor takes `IAnimaModuleConfigService` and `IAnimaContext` injected from DI — these are Core types. External plugins cannot access them.
+
+#### Table Stakes
+
+Features external plugin authors assume they have. Missing these = external plugins cannot do anything meaningful beyond trivial text transformation.
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| `IModuleConfig` (config read/write) in Contracts | Every non-trivial module needs per-Anima config (API URL, delay, label, etc.); without this, external modules are un-configurable | LOW | Move `IAnimaModuleConfigService` (renamed to `IModuleConfig` or `IAnimaModuleConfig`) to Contracts. Exposes only `GetConfig(animaId, moduleId)` and `SetConfigAsync(...)` — no `InitializeAsync` (that's an implementation detail). |
+| `IAnimaContext` in Contracts | Modules need to know which Anima they are running under to scope their config lookups | LOW | `IAnimaContext` is already a lean interface (2 members). Move to Contracts as-is or add to a `OpenAnima.Contracts.Runtime` namespace. |
+| `ILogger<T>` injection in plugin constructors | External module developers expect standard .NET logging; without it they have no observability | LOW | Already works via DI — not a Contracts change; document that `ILogger<T>` is automatically available via host DI. Template generator should include it. |
+| Module config schema declaration | The config sidebar in the editor needs to know what fields a module has to render the UI | MEDIUM | `IModuleConfigSchema` or `IModuleMetadata` extension: method `GetConfigFields()` returning `IReadOnlyList<ConfigField>` — each field has id, label, type (text/dropdown/number), default value. Built-in modules currently hard-code their UI in Razor. External modules cannot do that. This is the bridge. |
+| Deterministic module identity scoping | Module config is keyed by `(animaId, moduleId)` where `moduleId = Metadata.Name` — external modules must follow the same convention | LOW | Document the convention. `IModuleMetadata.Name` is already the key. No API change needed, just spec clarity. |
+
+#### Differentiators
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| `ICrossAnimaRouter` in Contracts | External modules can participate in cross-Anima routing (send requests, register services) — not just built-in modules | MEDIUM | `ICrossAnimaRouter` interface is already clean (no implementation details leak through it). Move to Contracts. External routing modules become possible (e.g., a third-party module that calls a specialized Anima). |
+| `IModuleConfigSchema` for sidebar auto-generation | Render config UI for any module (built-in or external) from a schema declaration — no Razor component needed per-module | HIGH | This is a significant DX improvement. External module devs declare fields in C#; the platform renders the sidebar automatically. Built-in modules that currently use custom Razor components would need migration. |
+| `IModuleLifecycle` context injection | Rich lifecycle context object passed at `InitializeAsync` time — provides logger, config, animaContext, and (optionally) router in a single object | LOW | Reduces constructor injection boilerplate from 4+ params to 1. Pattern from Apache Ignite's `IPluginContext<T>` and .NET Generic Host's `IHostApplicationLifetime`. Does not replace DI — adds a convenience wrapper for the most common services. |
+
+#### Anti-Features
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Expose `ILLMService` in Contracts | "Let external modules call the LLM directly" | Leaks the LLM service contract (OpenAI SDK types) into Contracts; breaks the abstraction; external modules should route to LLMModule via EventBus, not call LLM directly | Keep `ILLMService` in Core; if external modules need LLM access, document the EventBus pattern |
+| Expose `IAnimaRuntimeManager` in Contracts | "Let external modules create or manage Animas" | Anima lifecycle management is a host concern, not a module concern; exposing it to modules violates the responsibility boundary | If a module needs to discover other Animas' ports, use `ICrossAnimaRouter.GetPortsForAnima()` which is already scoped appropriately |
+| Auto-discover config fields via reflection | "Scan module class for property attributes to build the schema" | Fragile across `AssemblyLoadContext` boundaries (type identity issues); also mixes config schema with module implementation | Explicit `GetConfigFields()` method on an interface — opt-in, deterministic, ALC-safe |
+
+---
+
+### Area 3: Built-in Module Decoupling (DECPL-01)
+
+The goal: migrate all 14 built-in modules to depend only on `OpenAnima.Contracts`, not `OpenAnima.Core` internals.
+
+**Current dependency audit (from codebase grep):**
+
+| Module | Core Imports Used | Why |
+|--------|-------------------|-----|
+| FixedTextModule | `IAnimaModuleConfigService`, `IAnimaContext` | Reads config for text content |
+| TextJoinModule | `IAnimaModuleConfigService`, `IAnimaContext` | Reads config for join separator |
+| TextSplitModule | `IAnimaModuleConfigService`, `IAnimaContext` | Reads config for split delimiter |
+| ConditionalBranchModule | `IAnimaModuleConfigService`, `IAnimaContext` | Reads condition expression from config |
+| HttpRequestModule | `IAnimaModuleConfigService`, `IAnimaContext`, `SsrfGuard` | Reads URL/method/headers config; SSRF protection |
+| LLMModule | `IAnimaModuleConfigService`, `IAnimaContext`, `ILLMService`, `ICrossAnimaRouter`, `FormatDetector` | Full feature set |
+| AnimaInputPortModule | `IAnimaModuleConfigService`, `IAnimaContext`, `ICrossAnimaRouter` | Registers routing port |
+| AnimaOutputPortModule | `IAnimaModuleConfigService`, `IAnimaContext`, `ICrossAnimaRouter` | Completes routing requests |
+| AnimaRouteModule | `IAnimaModuleConfigService`, `IAnimaContext`, `ICrossAnimaRouter` | Dispatches cross-Anima requests |
+| ChatInputModule | None (Core) | Already clean — only uses Contracts |
+| ChatOutputModule | None audited | Likely uses Core.Services |
+| HeartbeatModule | None audited | Likely clean |
+
+#### Table Stakes
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| All modules compile against Contracts only | Plugin authors expect that built-in modules are held to the same standard as plugins — if built-ins use Core, the standard is a lie | LOW-MEDIUM | Purely mechanical: move `IAnimaModuleConfigService` → Contracts, move `IAnimaContext` → Contracts, update `using` in all 14 modules. No logic changes. |
+| Tests compile and pass after decoupling | Regression safety: decoupling must not break existing behavior | LOW | Existing integration tests provide the safety net. Only using-statement changes expected. |
+| Module project template (oani new) updated | Template should generate a module that uses the new Contracts-only API, not stale Core references | LOW | One file change: `NewCommand.cs` template strings. |
+
+#### Differentiators
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| `SsrfGuard` abstracted behind `IUrlValidator` in Contracts | HttpRequestModule can be decoupled AND external modules that make HTTP requests get SSRF protection without reimplementing it | MEDIUM | `IUrlValidator` interface in Contracts: `bool IsAllowed(string url)`. Core provides default `SsrfGuard` impl. Modules receive it via DI injection — they don't need to know about SSRF. |
+| `IModuleConfigSchema` generation on built-in modules | Once built-in modules implement `GetConfigFields()`, the custom Razor sidebar components can be replaced with a single generic `<AutoConfigSidebar>` component | HIGH | Large DX improvement for future module authors — proves the pattern works on battle-tested modules before external authors see it. This is a Phase 2 enhancement, not Phase 1. |
+| Per-Anima module instances (ANIMA-08 resolution) | With Contracts-only modules, modules no longer have hard ties to Core singletons — the path to per-Anima module instantiation opens up | HIGH | ANIMA-08 (global IEventBus singleton for DI compatibility) is a blocker for full per-Anima isolation. Decoupling is a prerequisite, not the final step. Scope to v1.7 only if ANIMA-08 is resolved. |
+
+#### Anti-Features
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Move all of `OpenAnima.Core` into `OpenAnima.Contracts` | "Just merge the projects — simpler" | Contracts must be a lightweight reference assembly; pulling in ASP.NET Core, SignalR, and LLM SDK types defeats the purpose | Move only the interfaces needed by module authors; keep implementations in Core |
+| Migrate `FormatDetector` and `LLMService` to Contracts | "LLMModule needs them and LLMModule should only depend on Contracts" | `FormatDetector` is a Core utility; `LLMService` wraps the OpenAI SDK — both are implementation concerns, not contracts | `LLMModule` can remain in `Core/Modules/` and reference both Contracts and Core; only the public interface (`IModuleExecutor`) needs to be in Contracts |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[AnimaRoute Module]
-    ├──requires──> [AnimaInputPort on target Anima] (target must declare service)
-    ├──requires──> [AnimaRouterService (global singleton)] (cross-runtime delivery)
-    └──requires──> [Correlation ID infrastructure] (request-response matching)
+[Activity Channel Model]
+    ├──requires──> [SemaphoreSlim per-module guard] (baseline concurrency safety)
+    ├──requires──> [ModuleExecutionContext record] (request identity for stateless execution)
+    └──enhances──> [HeartbeatLoop skip-tick behavior] (already exists; explicit with new model)
 
-[AnimaOutputPort Module]
-    ├──requires──> [AnimaInputPort (same Anima, matching name)] (paired by config)
-    └──requires──> [AnimaRouterService] (to resolve and deliver response)
+[Module Config API in Contracts (IModuleConfig)]
+    ├──requires──> [IAnimaContext in Contracts] (config is keyed by animaId)
+    └──enables──> [Built-in Module Decoupling] (modules can drop Core.Services import)
 
-[Prompt Auto-Injection]
-    ├──requires──> [AnimaRoute modules exist in wiring] (source of service list)
-    ├──requires──> [AnimaInputPort on target Anima] (source of service description)
-    └──enhances──> [LLMModule] (appends to system prompt at call time)
+[IAnimaContext in Contracts]
+    └──enables──> [Built-in Module Decoupling] (modules can drop Core.Anima import)
 
-[Format Detection]
-    ├──requires──> [Prompt Auto-Injection] (LLM must know the marker format to produce it)
-    ├──requires──> [AnimaRoute Module] (target to forward extracted payload to)
-    └──requires──> [LLMModule streaming output] (must buffer stream before splitting)
+[ICrossAnimaRouter in Contracts]
+    ├──requires──> [IModuleConfig in Contracts] (routing modules need config)
+    ├──requires──> [IAnimaContext in Contracts] (routing modules need animaId)
+    └──enables──> [External routing modules] (AnimaRoute-equivalent plugins possible)
 
-[HTTP Request Module]
-    └──requires──> [Module config sidebar] (already exists v1.5) (URL, method, headers, body template fields)
+[Built-in Module Decoupling]
+    ├──requires──> [IModuleConfig in Contracts] (replaces Core.Services.IAnimaModuleConfigService)
+    ├──requires──> [IAnimaContext in Contracts] (replaces Core.Anima.IAnimaContext)
+    └──unlocks──> [ANIMA-08 resolution] (path to per-Anima module instances)
 
-[AnimaRouterService]
-    └──requires──> [AnimaRuntimeManager] (to resolve target Anima runtime)
+[IModuleConfigSchema]
+    ├──requires──> [Built-in Module Decoupling] (proves the pattern on real modules first)
+    └──enables──> [Auto-rendered config sidebar] (replaces per-module Razor components)
 ```
 
 ### Dependency Notes
 
-- **AnimaRoute requires AnimaInputPort on the target:** The route's dropdown can only show services that have been declared. If a user selects a target Anima with no declared services, the dropdown is empty — handle gracefully with a "No services available" placeholder.
-- **AnimaOutputPort requires a paired AnimaInputPort by name:** Enforce this at config-save time. If no matching AnimaInputPort exists on the same Anima, show a validation error. This prevents silent routing failures.
-- **Prompt Auto-Injection requires Format Detection:** Injection without detection is useless — the LLM will produce the marker but nothing will consume it. These two features must ship together in the same phase.
-- **Format Detection requires buffered streaming:** The current LLMModule streams tokens. Detection must run on the complete output. Two approaches: (1) Buffer the full text, detect, then emit — delays display but is simple. (2) Stream to chat display while buffering a copy for detection — preserves streaming UX but is higher complexity. Start with (1); upgrade to (2) as a differentiator.
-- **HTTP Request Module is independent:** No dependency on cross-Anima routing. Can be implemented in a parallel phase.
+- **IAnimaContext before IModuleConfig:** `IModuleConfig.GetConfig(animaId, moduleId)` requires `animaId` — modules get the `animaId` from `IAnimaContext.ActiveAnimaId`. Both must move to Contracts together (one `using` change replaces two Core imports per module).
+- **Config move before decoupling:** The mechanical decoupling of 14 modules is blocked until the interfaces they depend on (`IAnimaModuleConfigService`, `IAnimaContext`) live in Contracts. This is the critical path dependency.
+- **Activity Channel model is independent:** Concurrency fixes do not depend on the Contracts changes. These two work streams can be phased in parallel (separate roadmap phases) or sequenced.
+- **ICrossAnimaRouter is optional for Phase 1:** Only AnimaInputPortModule, AnimaOutputPortModule, and AnimaRouteModule need it. The other 11 modules can be fully decoupled without touching the router interface. Moving the router to Contracts can be a Phase 2 item.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v1.6)
+### Launch With (v1.7)
 
-Minimum set that makes cross-Anima routing usable end-to-end.
+Minimum set that hardens the runtime and enables external module parity.
 
-- [ ] **AnimaInputPort module** — Service declaration with name + description config; output port `request`
-- [ ] **AnimaOutputPort module** — Paired-by-name response return; input port `response`
-- [ ] **AnimaRoute module** — Target Anima + port dropdowns; correlation ID generation; configurable timeout; input port `request`, output port `response`
-- [ ] **AnimaRouterService (global singleton)** — Thread-safe correlation ID map; pending request tracking; timeout cleanup; orphan response discard
-- [ ] **Prompt Auto-Injection in LLMModule** — Compute service list from current Anima's AnimaRoute nodes; append to system prompt block
-- [ ] **Format Detection in LLMModule** — Post-stream scan for `<route service="...">...</route>` marker; split output; forward payload to AnimaRoute input port
-- [ ] **HTTP Request module** — URL (static or template), Method (GET/POST/PUT/DELETE/PATCH), Headers (key-value pairs), Body template, response body output port, status code output port
+- [ ] **SemaphoreSlim per-module concurrency guard** — prevents race conditions on `_state` and `_pending*` fields in all 14 modules (CONC-01)
+- [ ] **Stateless/stateful Anima execution policy** — mechanical Animas (no chat state) allow concurrent request-level execution; chat Animas serialize execution per activity channel (CONC-02, CONC-03)
+- [ ] **`IModuleConfig` interface in Contracts** — renamed/moved from `Core.Services.IAnimaModuleConfigService`; exposes only `GetConfig` and `SetConfigAsync` (API-01)
+- [ ] **`IAnimaContext` moved to Contracts** — same interface, new namespace; DI registration unchanged (API-01)
+- [ ] **All 14 built-in modules updated** to use `Contracts.IModuleConfig` and `Contracts.IAnimaContext` instead of Core types (DECPL-01)
+- [ ] **Module project template updated** to reflect Contracts-only dependency (SDK consistency)
+- [ ] **Module management UI** — install, uninstall, list, search modules (MODMGMT-01/02/03/06)
 
 ### Add After Validation (v1.x)
 
-- [ ] **Streaming display with parallel detection** — Buffer a copy for detection while streaming to chat; eliminates display latency during routing calls
-- [ ] **Route error port** — Second output port on AnimaRoute for timeout/failure paths; lets wiring handle errors gracefully
-- [ ] **AnimaRoute dynamic target** — Allow target Anima to be supplied via input port at runtime, not only config; enables dynamic dispatch
-- [ ] **HTTP response headers output port** — Second output on HTTP Request module for header inspection
-- [ ] **HTTP Request authentication fields** — Bearer token, Basic auth as first-class config fields (not manual header entry)
+- [ ] **`ICrossAnimaRouter` moved to Contracts** — enables external routing modules; blocked until built-in module decoupling is stable
+- [ ] **`IModuleConfigSchema` interface** — external modules declare config fields programmatically; platform auto-renders sidebar
+- [ ] **`IModuleLifecycle` context object** — convenience wrapper injecting logger + config + animaContext in one parameter at InitializeAsync time
+- [ ] **Activity Channel named-channel model** — explicit `heartbeat` and `chat` channels per stateful Anima with dedicated `Channel<T>` consumer loops
+- [ ] **`[StatelessModule]` marker attribute** — runtime spawns per-invocation execution for stateless modules instead of serializing
 
 ### Future Consideration (v2+)
 
-- [ ] **Multi-hop routing chains** — Routing through more than one Anima; requires nested correlation ID tracking and timeout propagation
-- [ ] **Fan-out routing** — Single request broadcast to multiple target Animas; requires scatter-gather correlation pattern
-- [ ] **HTTP Request streaming response** — Progressive token delivery from HTTP endpoint to downstream modules
-- [ ] **Service versioning on AnimaInputPort** — Declare version alongside service name; AnimaRoute selects by version constraint
+- [ ] **Per-Anima module instances (ANIMA-08 resolution)** — full isolation requires replacing the global `IEventBus` singleton with per-Anima injection at module construction time; significant DI restructure
+- [ ] **`IUrlValidator` in Contracts** — SSRF protection abstracted behind an interface; HttpRequestModule and external HTTP modules share the guard
+- [ ] **Auto-rendered config sidebar** — replace per-module Razor components with a single generic component driven by `IModuleConfigSchema`
+- [ ] **`ILLMService` access pattern for external modules** — document EventBus-based LLM delegation pattern for plugin authors who want LLM access without directly invoking Core
 
 ---
 
@@ -167,144 +203,134 @@ Minimum set that makes cross-Anima routing usable end-to-end.
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| AnimaInputPort module | HIGH | LOW | P1 |
-| AnimaOutputPort module | HIGH | LOW | P1 |
-| AnimaRoute module | HIGH | MEDIUM | P1 |
-| AnimaRouterService (global) | HIGH | MEDIUM | P1 |
-| Prompt Auto-Injection | HIGH | MEDIUM | P1 |
-| Format Detection (post-stream) | HIGH | MEDIUM | P1 |
-| HTTP Request module | HIGH | MEDIUM | P1 |
-| Route error/timeout output port | MEDIUM | LOW | P2 |
-| Streaming display + parallel detection | MEDIUM | HIGH | P2 |
-| HTTP auth fields (Bearer/Basic) | MEDIUM | LOW | P2 |
-| HTTP response headers port | LOW | LOW | P2 |
-| AnimaRoute dynamic target (runtime) | MEDIUM | MEDIUM | P2 |
-| Multi-hop routing chains | LOW | HIGH | P3 |
-| Fan-out routing | LOW | HIGH | P3 |
+| Per-module SemaphoreSlim concurrency guard | HIGH | LOW | P1 |
+| IModuleConfig in Contracts | HIGH | LOW | P1 |
+| IAnimaContext moved to Contracts | HIGH | LOW | P1 |
+| All 14 modules decoupled (using change) | HIGH | LOW | P1 |
+| Module management UI (install/uninstall/search) | HIGH | MEDIUM | P1 |
+| Stateless/stateful execution policy | MEDIUM | MEDIUM | P1 |
+| SDK template updated | MEDIUM | LOW | P1 |
+| ICrossAnimaRouter in Contracts | MEDIUM | LOW | P2 |
+| IModuleConfigSchema interface | HIGH | HIGH | P2 |
+| IModuleLifecycle context object | MEDIUM | LOW | P2 |
+| Named Activity Channels (heartbeat/chat) | MEDIUM | HIGH | P2 |
+| StatelessModule attribute | LOW | MEDIUM | P2 |
+| IUrlValidator in Contracts | LOW | MEDIUM | P3 |
+| Per-Anima module instances (ANIMA-08) | HIGH | HIGH | P3 |
+| Auto-rendered config sidebar | HIGH | HIGH | P3 |
 
 **Priority key:**
-- P1: Must have for v1.6 launch
-- P2: Should have, add in v1.7+
-- P3: Future consideration
+- P1: Must have for v1.7 launch
+- P2: Should have, add when v1.7 core is stable
+- P3: Future milestone
 
 ---
 
 ## Implementation Detail Notes
 
-### Cross-Anima Router Lifecycle
+### Concurrency: Per-Module SemaphoreSlim Pattern
 
-The `AnimaRouterService` must be a global singleton (registered in the root DI container, not per-Anima). Each `AnimaRuntime` has its own `EventBus` — cross-Anima messages cannot use the EventBus. The router holds:
+The idiomatic .NET async lock for module execution is already used in `HeartbeatLoop._tickLock`. Apply the same pattern per-module:
 
 ```csharp
-// Conceptual structure
-ConcurrentDictionary<string, TaskCompletionSource<string>> _pendingRequests;
+private readonly SemaphoreSlim _executionLock = new(1, 1);
 
-Task<string> SendRequestAsync(string targetAnimaId, string inputPortName, string payload, TimeSpan timeout, CancellationToken ct)
-// AnimaRoute calls this; awaits the TCS result
-
-void DeliverResponse(string correlationId, string responseText)
-// AnimaOutputPort calls this; sets TCS result
+public async Task ExecuteAsync(CancellationToken ct = default)
+{
+    // Skip if already executing (drop, not queue)
+    if (!await _executionLock.WaitAsync(0, ct)) return;
+    try
+    {
+        // ... execution logic
+    }
+    finally
+    {
+        _executionLock.Release();
+    }
+}
 ```
 
-Orphan responses (after timeout) call `SetResult` on a TCS that has already been removed from the map — they are silently no-ops. This is safe because `ConcurrentDictionary.TryGetValue` returns false.
+Zero-timeout `WaitAsync(0)` ensures no queuing — the tick is dropped if the prior execution hasn't finished. This matches the existing HeartbeatLoop `_skippedCount` tracking pattern. `SkippedCount` can be surfaced per-module in the editor monitor for observability.
 
-Correlation IDs are short hex strings (same pattern as Anima IDs: `Guid.NewGuid().ToString("N")[..8]`). They are only live for the duration of a single request-response cycle.
+The `_pendingPrompt`, `_pendingRequest`, and similar intermediate state fields are safe once the lock is held — no further synchronization needed inside the lock body.
 
-### Prompt Auto-Injection Format
+### Contracts: Minimal Interface Surface for Modules
 
-The injected system prompt block (appended, not prepended — preserve user-written system prompt):
+The moved interfaces should expose only what module authors genuinely need — not the full implementation API:
 
-```
-# Available Services
-You can route requests to the following services by including a route marker in your response.
-Format: <route service="ServiceName">payload to send</route>
-
-Services:
-- ServiceName: Description of what this service does and when to use it
-- AnotherService: Description...
-
-When using a route marker, include your conversational response before the marker.
-```
-
-This format follows the XML-tag convention that Claude, GPT-4o, and most models handle reliably for structured output detection (HIGH confidence — documented in LLM structured output literature).
-
-### Format Detection Marker
-
-Use XML-style tags because:
-- Models are trained on XML/HTML and produce it reliably
-- Tags are visually distinct and unlikely to appear in normal prose
-- Easy to detect with a single `string.Contains` + `Regex.Match` in C#
-- Consistent with how Claude's own tool-use format works
-
-Pattern for detection (C# Regex):
 ```csharp
-@"<route\s+service=""([^""]+)"">([^<]*)</route>"
+// OpenAnima.Contracts.IModuleConfig
+public interface IModuleConfig
+{
+    Dictionary<string, string> GetConfig(string animaId, string moduleId);
+    Task SetConfigAsync(string animaId, string moduleId, Dictionary<string, string> config);
+}
+
+// OpenAnima.Contracts.IAnimaContext (move as-is — already lean)
+public interface IAnimaContext
+{
+    string? ActiveAnimaId { get; }
+    void SetActive(string animaId);
+    event Action? ActiveAnimaChanged;
+}
 ```
 
-Split strategy for v1.6 (simple, post-stream):
-1. Buffer full LLM output after streaming completes
-2. Match regex against buffer
-3. If match found: emit `buffer[..match.Index]` as chat display text; emit `match.Groups[2].Value` as route payload; identify `match.Groups[1].Value` as target service name
-4. If no match: emit full buffer as chat display text unchanged
+`IAnimaModuleConfigService.InitializeAsync()` is an implementation detail (startup bootstrapping) — omit from the Contracts interface. The Core implementation class still has it; modules never call `InitializeAsync()` directly.
 
-### HTTP Request Module Configuration Fields
+### Decoupling: What Changes per Module
 
-Based on Node-RED's HTTP Request node (the canonical reference for this pattern), the module should expose:
+Each of the 14 modules needs two `using` changes:
+- `using OpenAnima.Core.Services;` → `using OpenAnima.Contracts;` (for `IModuleConfig`)
+- `using OpenAnima.Core.Anima;` → `using OpenAnima.Contracts;` (for `IAnimaContext`)
 
-| Config Field | Type | Description | Notes |
-|--------------|------|-------------|-------|
-| URL | text | Full URL (static) or template with `{{portName}}` placeholders | Template resolution at execute time from upstream port values |
-| Method | dropdown | GET, POST, PUT, DELETE, PATCH | Default: GET |
-| Headers | key-value list | Static header pairs (Content-Type, Authorization, etc.) | UI: row-based key/value editor |
-| Body Template | textarea | Request body with `{{portName}}` placeholders for Text input ports | Only shown/relevant for POST/PUT/PATCH |
-| Response Format | dropdown | Text (raw), JSON (parsed) | JSON mode emits the response body as a JSON string |
-| Timeout (seconds) | number | Request timeout | Default: 30 |
+Constructor parameter types change: `IAnimaModuleConfigService` → `IModuleConfig`. DI registrations in `AnimaServiceExtensions.cs` and `WiringServiceExtensions.cs` must add the new Contracts interface binding (the Core implementation implements both the old and new interfaces during the transition, or the old interface is removed after migration).
 
-Port declarations:
-- Input: `trigger` (Trigger type) to initiate a GET request with no body, OR `body` (Text type) for POST/PUT body
-- Output: `response` (Text type) — response body
-- Output: `statusCode` (Text type) — HTTP status code as string
+Modules that also reference `ICrossAnimaRouter` (AnimaInputPort, AnimaOutputPort, AnimaRoute) are Phase 2 — the router interface move is deferred until the simpler config/context move is stable.
 
-Key decision: keep headers as static key-value config (not template-expanded), same as Node-RED. Dynamic headers can be handled by upstream TextJoin modules for simple cases.
+### Activity Channel: Naming Convention
+
+Based on the Orleans grain model and `System.Threading.Channels` patterns:
+
+- `heartbeat` channel: driven by `HeartbeatLoop` ticks — proactive agent behavior
+- `chat` channel: driven by user messages from `ChatInputModule` — reactive conversation
+
+Each channel is `Channel<ExecutionRequest>.CreateBounded(capacity: 1, options: DropOldest)` for the heartbeat channel (dropping stale ticks is acceptable) and `Channel<ExecutionRequest>.CreateUnbounded()` for the chat channel (user messages should not be silently dropped).
+
+A stateful Anima has both channels. A stateless/mechanical Anima has neither — each `ExecuteAsync` call spawns directly on the thread pool with no channel buffering.
 
 ---
 
-## Competitor Feature Analysis
+## Competitor / Reference Analysis
 
-| Feature | n8n | Node-RED | AutoGen/LangGraph | Our Approach |
-|---------|-----|----------|-------------------|--------------|
-| Agent-to-agent routing | Sub-workflow as tool; Switch node for dispatch | No native agent routing; HTTP in/out nodes | Native multi-agent orchestration (code-level) | Wiring modules (AnimaInputPort/Route); visual, no code |
-| Service declaration | Sub-workflow exposed as tool | HTTP endpoint declared as server | Agent registered in orchestrator code | AnimaInputPort with service description field |
-| Prompt auto-injection | Manual: user writes system prompt listing tools | N/A | Framework injects tool schema automatically | Automatic: LLMModule reads wiring and injects |
-| Format detection | n8n parses LLM tool-call JSON response natively | Not applicable | Framework-level structured output parsing | Custom XML-tag marker + post-stream regex scan |
-| HTTP request module | HTTP Request node with full config | HTTP Request node (canonical reference) | HTTP tool via LangChain/custom code | Module with URL/method/headers/body template config |
-| Correlation ID | Workflow execution ID, transparent to user | Not applicable | Task ID within agent runtime | Short hex ID in AnimaRouterService, transparent to user |
-| Timeout handling | Configurable per node | Configurable per HTTP request node | Framework-level retry config | Configurable per AnimaRoute and HTTP Request module |
+| Feature | Orleans (Grains) | Semantic Kernel Agents | Our Approach |
+|---------|------------------|------------------------|--------------|
+| Concurrency per unit | Single-threaded grain turns; `[Reentrant]` for opt-in interleaving | Actor-based runtime per orchestration invocation | Per-module SemaphoreSlim; named channels for heartbeat/chat |
+| Plugin API surface | Grain interfaces + `IGrainFactory` (host services) | Kernel `IKernelPlugin` with function/filter registration | `IModuleConfig` + `IAnimaContext` + `ICrossAnimaRouter` in Contracts |
+| Internal/external parity | Grains are grains — built-in and external use identical interfaces | Built-in and custom plugins are identical `KernelFunction` | Built-in modules depend on Core (current gap); target: Contracts-only |
+| Config injection | Constructor DI on grains; `[Inject]` attributes | `KernelArguments` passed at invocation time | `IModuleConfig.GetConfig(animaId, moduleId)` — per-Anima keyed config |
+| Logging | `ILogger<T>` via DI (standard) | `ILogger<T>` via DI (standard) | `ILogger<T>` via DI — already works; document in SDK |
 
-**Key Insights:**
-- **n8n's Sub-workflow-as-tool pattern** is the closest analog to AnimaInputPort — validated, widely used
-- **Node-RED HTTP Request node** is the definitive reference for HTTP module UX: URL template + method dropdown + headers + body
-- **LangGraph/AutoGen** inject tool schemas automatically — our prompt auto-injection should match this behavior for non-developer users
-- **XML-tag format detection** is the approach Claude uses natively for tool calls — high reliability with OpenAI-compatible models
+**Key insight from Orleans:** The grain single-threaded turn model eliminates almost all races inside a grain. OpenAnima modules are not grains (they share a process-level DI container), but the SemaphoreSlim pattern achieves the same serialization guarantee within each module. Named channels (heartbeat/chat) achieve the Orleans reentrancy pattern — two logical tracks that interleave without blocking each other.
+
+**Key insight from .NET Channels:** `System.Threading.Channels` with `SingleReader = true` provides lock-free, backpressure-aware serialized processing. The bounded channel with `DropOldest` for heartbeat ticks is the canonical pattern for "skip if busy" without a manual `isOperating` flag.
 
 ---
 
 ## Sources
 
-- [Developer's guide to multi-agent patterns in ADK - Google Developers Blog](https://developers.googleblog.com/developers-guide-to-multi-agent-patterns-in-adk/)
-- [Request-based - Multi-agent Reference Architecture](https://microsoft.github.io/multi-agent-reference-architecture/docs/agents-communication/Request-Based.html)
-- [Correlation Identifier - Enterprise Integration Patterns](https://www.enterpriseintegrationpatterns.com/patterns/messaging/CorrelationIdentifier.html)
-- [Node-RED HTTP Request Node - FlowFuse](https://flowfuse.com/node-red/core-nodes/http-request/)
-- [Set the URL of a request using a template - Node-RED Cookbook](https://cookbook.nodered.org/http/set-request-url-template)
-- [Set a request header - Node-RED Cookbook](https://cookbook.nodered.org/http/set-request-header)
-- [Achieving Tool Calling Functionality in LLMs Using Only Prompt Engineering Without Fine-Tuning](https://arxiv.org/html/2407.04997v1)
-- [Effective Prompt Engineering: Mastering XML Tags for Clarity, Precision, and Security in LLMs](https://medium.com/@TechforHumans/effective-prompt-engineering-mastering-xml-tags-for-clarity-precision-and-security-in-llms-992cae203fdc)
-- [Building your first multi-agent system with n8n](https://medium.com/mitb-for-all/building-your-first-multi-agent-system-with-n8n-0c959d7139a1)
-- [Building Production-Ready Multi-Agent Systems: Architecture Patterns and Best Practices](https://www.getmaxim.ai/articles/best-practices-for-building-production-ready-multi-agent-systems/)
-- [Taming LLM Outputs: Your Guide to Structured Text Generation](https://www.dataiku.com/stories/blog/your-guide-to-structured-text-generation)
-- [How to Implement Request-Reply Pattern in RabbitMQ](https://oneuptime.com/blog/post/2026-01-27-rabbitmq-request-reply/view)
+- [Channels - .NET | Microsoft Learn](https://learn.microsoft.com/en-us/dotnet/core/extensions/channels)
+- [An Introduction to System.Threading.Channels - .NET Blog](https://devblogs.microsoft.com/dotnet/an-introduction-to-system-threading-channels/)
+- [Request scheduling (Orleans grains) - .NET | Microsoft Learn](https://learn.microsoft.com/en-us/dotnet/orleans/grains/request-scheduling)
+- [Orleans Virtual Actors in Practice - DevelopersVoice](https://developersvoice.com/blog/dotnet/orleans-virtual-actors-in-practice/)
+- [Building a Plugin-Ready Modular Monolith in .NET - DevelopersVoice](https://developersvoice.com/blog/dotnet/building_plugin_ready_modular_monolith/)
+- [Plugin Architecture Pattern in C# - Code Maze](https://code-maze.com/csharp-plugin-architecture-pattern/)
+- [GitHub - natemcmaster/DotNetCorePlugins](https://github.com/natemcmaster/DotNetCorePlugins)
+- [IPluginContext<T> - Apache Ignite.NET](https://ignite.apache.org/releases/latest/dotnetdoc/api/Apache.Ignite.Core.Plugin.IPluginContext-1.html)
+- [Semantic Kernel Agent Orchestration | Microsoft Learn](https://learn.microsoft.com/en-us/semantic-kernel/frameworks/agent/agent-orchestration/)
+- [Deep Dive Into Race Condition Problem in .NET - Medium](https://resulhsn.medium.com/deep-dive-into-race-condition-problem-in-net-5e881f64e554)
+- [Building High-Performance .NET Apps With C# Channels - AntonDevTips](https://antondevtips.com/blog/building-high-performance-dotnet-apps-with-csharp-channels)
 
 ---
 
-*Feature research for: OpenAnima v1.6 Cross-Anima Routing + HTTP Request Module*
-*Researched: 2026-03-11*
+*Feature research for: OpenAnima v1.7 Runtime Foundation — Concurrency, Plugin API, Module Decoupling*
+*Researched: 2026-03-14*

@@ -1,657 +1,752 @@
 # Architecture Research
 
-**Domain:** Cross-Anima request-response routing and HTTP request module for OpenAnima v1.6
-**Researched:** 2026-03-11
-**Confidence:** HIGH — based on direct source code analysis of the v1.5 codebase
+**Domain:** Modular AI Agent Runtime — v1.7 Runtime Foundation
+**Researched:** 2026-03-14
+**Confidence:** HIGH (all conclusions drawn from live codebase inspection + official .NET docs)
 
 ---
 
-## Standard Architecture
+## Current Architecture (as-built, v1.6)
 
-### System Overview — v1.6 Additions in Context
+### System Overview
 
 ```
-┌───────────────────────────────────────────────────────────────────────────┐
-│                       Blazor Server UI (SignalR)                           │
-│  ┌────────────────────────────────────────────────────────────────────┐   │
-│  │    Wiring Editor (SVG canvas, drag-drop, node inspector)            │   │
-│  │    Shows: AnimaInputPortModule, AnimaOutputPortModule,              │   │
-│  │           AnimaRouteModule, HttpRequestModule as standard nodes     │   │
-│  └────────────────────────────────────────────────────────────────────┘   │
-└──────────────────────────────┬────────────────────────────────────────────┘
-                               │ SignalR / Blazor circuit
-┌──────────────────────────────▼────────────────────────────────────────────┐
-│                 APPLICATION LAYER (Singleton Services)                     │
-│                                                                            │
-│  ┌──────────────────────────────────────────────────────────────────────┐ │
-│  │              AnimaRuntimeManager (Singleton — unchanged)              │ │
-│  │  GetAll() | GetById() | CreateAsync() | GetOrCreateRuntime()          │ │
-│  └───────────────────────────┬──────────────────────────────────────────┘ │
-│                              │ owns Dictionary<string, AnimaRuntime>       │
-│  ┌───────────────────────────▼──────────────────────────────────────────┐ │
-│  │           CrossAnimaRouter (NEW — Singleton)                          │ │
-│  │  RegisterInputPort() | RouteRequestAsync() | CompleteRequest()        │ │
-│  │  GetAllRegisteredPorts()                                              │ │
-│  │  _ports: ConcurrentDictionary<"{animaId}::{portName}", Registration> │ │
-│  │  _pending: ConcurrentDictionary<correlationId, TaskCompletionSource>  │ │
-│  └──────────────────────────────────────────────────────────────────────┘ │
-└──────────────────────────────┬────────────────────────────────────────────┘
-                               │
-┌──────────────────────────────▼────────────────────────────────────────────┐
-│                  ANIMA RUNTIME LAYER (Per-Anima, unchanged)                │
-│                                                                            │
-│  Anima A (calling)                     Anima B (target)                   │
-│  ┌──────────────────────────────┐      ┌──────────────────────────────┐   │
-│  │  AnimaRuntime                │      │  AnimaRuntime                │   │
-│  │  ├ EventBus (isolated)       │      │  ├ EventBus (isolated)       │   │
-│  │  ├ WiringEngine              │      │  ├ WiringEngine              │   │
-│  │  └ PluginRegistry            │      │  └ PluginRegistry            │   │
-│  │                              │      │                              │   │
-│  │  Module nodes in graph:      │      │  Module nodes in graph:      │   │
-│  │  ┌──────────────────────┐    │      │  ┌──────────────────────┐    │   │
-│  │  │ LLMModule (modified) │    │      │  │ AnimaInputPortModule  │    │   │
-│  │  │ - prompt injection   │    │      │  │ (NEW — declares svc)  │    │   │
-│  │  │ - FormatDetector     │◄───┼──────┼──│ registers w/ router   │    │   │
-│  │  └──────────────────────┘    │      │  └────────────┬─────────┘    │   │
-│  │  ┌──────────────────────┐    │      │               │ EventBus     │   │
-│  │  │ AnimaRouteModule     │    │      │  ┌────────────▼─────────┐    │   │
-│  │  │ (NEW — sends req)    │────┼──────┼──► [sub-graph: LLM etc] │    │   │
-│  │  └──────────────────────┘    │      │  └────────────┬─────────┘    │   │
-│  │  ┌──────────────────────┐    │      │  ┌────────────▼─────────┐    │   │
-│  │  │ HttpRequestModule    │    │      │  │ AnimaOutputPortModule │    │   │
-│  │  │ (NEW — HTTP tool)    │    │      │  │ (NEW — returns resp)  │────┼───┤
-│  │  └──────────────────────┘    │      │  └──────────────────────┘    │   │
-│  └──────────────────────────────┘      └──────────────────────────────┘   │
-└───────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                       Blazor Server / SignalR                        │
+│  (Components/Pages, Hubs/RuntimeHub, IRuntimeClient)                 │
+├─────────────────────────────────────────────────────────────────────┤
+│                     AnimaRuntimeManager (singleton)                  │
+│  Dictionary<animaId, AnimaRuntime>  ←→  ICrossAnimaRouter (singleton)│
+├─────────────────────────────────────────────────────────────────────┤
+│                     Per-Anima: AnimaRuntime                          │
+│  ┌───────────────┐  ┌───────────────┐  ┌────────────────────────┐  │
+│  │ HeartbeatLoop │  │ WiringEngine  │  │  PluginRegistry        │  │
+│  │ (PeriodicTimer│  │ (EventBus subs│  │  (IModule[] + metadata)│  │
+│  │  SemaphoreSlim│  │  HashSet<fail>│  │                        │  │
+│  │  duck-typing) │  │  NOT thread-  │  │                        │  │
+│  └──────┬────────┘  │  safe!)       │  └────────────────────────┘  │
+│         │ calls     └───────┬───────┘                               │
+│         └──────────────────►│ EventBus (per-Anima, lock-free)       │
+│                             │ ConcurrentDictionary + ConcurrentBag  │
+│                             └───────────────────────────────────────┘
+├─────────────────────────────────────────────────────────────────────┤
+│              14 Built-in Modules (Core/Modules/)                     │
+│  All directly import OpenAnima.Core.* namespaces:                    │
+│    Core.Anima   (IAnimaContext)                                       │
+│    Core.Services (IAnimaModuleConfigService)                         │
+│    Core.Routing  (ICrossAnimaRouter, PortRegistration)               │
+│    Core.LLM      (ILLMService, ChatMessageInput)                     │
+│    Core.Http     (SsrfGuard — static class)                         │
+├─────────────────────────────────────────────────────────────────────┤
+│              OpenAnima.Contracts (shared, loaded once)               │
+│  IModule, IModuleExecutor, IEventBus, ModuleEvent,                   │
+│  ITickable, PortAttributes, ModuleExecutionState                     │
+├─────────────────────────────────────────────────────────────────────┤
+│              Plugin System (AssemblyLoadContext)                      │
+│  External modules: Contracts only as shared dep                      │
+│  Built-in modules: DI singletons, NOT loaded via ALC                │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities
+### Component Responsibilities (v1.6)
 
-**Existing components — unchanged unless noted:**
-
-| Component | File | Responsibility | v1.6 Change |
-|-----------|------|----------------|-------------|
-| `AnimaRuntimeManager` | `Core/Anima/AnimaRuntimeManager.cs` | Singleton factory for all AnimaRuntime instances | None |
-| `AnimaRuntime` | `Core/Anima/AnimaRuntime.cs` | Per-Anima container: EventBus, PluginRegistry, HeartbeatLoop, WiringEngine | None |
-| `EventBus` | `Core/Events/EventBus.cs` | Per-Anima pub/sub; typed `ModuleEvent<T>` routing | None |
-| `WiringEngine` | `Core/Wiring/WiringEngine.cs` | Topological execution; EventBus subscriptions for port routing | None |
-| `AnimaContext` | `Core/Anima/AnimaContext.cs` | Singleton identifying the active Anima for the UI | None |
-| `IAnimaModuleConfigService` | `Core/Services/AnimaModuleConfigService.cs` | Per-Anima module config (key-value, JSON persistence) | None |
-| `LLMModule` | `Core/Modules/LLMModule.cs` | LLM API call, publishes response to EventBus | **Modified** — prompt injection + FormatDetector call |
-
-**New components (v1.6):**
-
-| Component | File | Responsibility |
-|-----------|------|----------------|
-| `CrossAnimaRouter` | `Core/Routing/CrossAnimaRouter.cs` | Singleton broker above all runtimes; maps port keys to registrations; holds correlation ID map |
-| `InputPortDescriptor` | `Core/Routing/InputPortDescriptor.cs` | DTO: animaId, animaName, portName, description — used for prompt injection |
-| `FormatDetector` | `Core/Routing/FormatDetector.cs` | Stateless parser; extracts routing calls from LLM output text |
-| `AnimaInputPortModule` | `Core/Modules/AnimaInputPortModule.cs` | Standard IModule; registers named service with CrossAnimaRouter on init |
-| `AnimaOutputPortModule` | `Core/Modules/AnimaOutputPortModule.cs` | Standard IModule; completes pending CrossAnimaRouter request on execution |
-| `AnimaRouteModule` | `Core/Modules/AnimaRouteModule.cs` | Standard IModule; configured with target Anima ID + port name; sends request, awaits response |
-| `HttpRequestModule` | `Core/Modules/HttpRequestModule.cs` | Standard IModule; configurable HTTP call; uses IHttpClientFactory |
+| Component | Responsibility | Location |
+|-----------|---------------|----------|
+| AnimaRuntime | Container: owns EventBus, HeartbeatLoop, WiringEngine, PluginRegistry per Anima | Core/Anima |
+| AnimaRuntimeManager | CRUD for Animas, runtime lifecycle, AnimaRuntime factory | Core/Anima |
+| AnimaContext | Active Anima ID singleton with change event — used by all modules to identify "which Anima am I in" | Core/Anima |
+| HeartbeatLoop | PeriodicTimer at 100ms, ticks ITickable modules via duck-typing, SemaphoreSlim skip guard | Core/Runtime |
+| WiringEngine | Topological sort, level-parallel execution, EventBus subscriptions for port routing | Core/Wiring |
+| EventBus | ConcurrentDictionary+ConcurrentBag pub/sub, lock-free with lazy cleanup | Core/Events |
+| CrossAnimaRouter | ConcurrentDictionary port registry, TCS-based request-response with timeout | Core/Routing |
+| AnimaModuleConfigService | Per-Anima per-module JSON config, SemaphoreSlim write lock | Core/Services |
+| 14 built-in modules | Business logic — each imports Core.Anima, Core.Services, Core.Routing or Core.LLM directly | Core/Modules |
+| PluginLoader | AssemblyLoadContext isolation for external modules, name-based type identity | Core/Plugins |
 
 ---
 
-## Integration Points — New vs Modified
+## Known Concurrency Defects (v1.6)
 
-### New: CrossAnimaRouter
+### Defect 1: _pendingPrompt / _pendingInput Race Condition (CONC-01)
 
-```csharp
-// Core/Routing/CrossAnimaRouter.cs
-// Registered as singleton in AnimaServiceExtensions.AddAnimaServices()
+**What:** `LLMModule._pendingPrompt` is a plain `string?` field. EventBus.PublishAsync calls all
+handlers with `Task.WhenAll`, meaning concurrent events can race. Two overlapping calls to
+the prompt subscription handler can interleave: Thread A sets `_pendingPrompt`, Thread B
+overwrites it, Thread A executes with B's value. Last-write-wins is not the intended semantic.
 
-public class CrossAnimaRouter
-{
-    // Key: "{animaId}::{portName}" → registered handler + metadata
-    private readonly ConcurrentDictionary<string, InputPortRegistration> _ports = new();
+**Same field pattern in:** `ConditionalBranchModule._pendingInput`.
 
-    // Key: correlationId → TaskCompletionSource<string>
-    private readonly ConcurrentDictionary<string, TaskCompletionSource<string>> _pending = new();
+**Trigger-buffer pattern in:** `HttpRequestModule._lastBodyPayload`, `AnimaRouteModule._lastRequestPayload`.
+These intentionally buffer the last value, but the buffer write is also unprotected.
 
-    private readonly IAnimaRuntimeManager _runtimeManager;
+**Root cause:** Modules assume serial event delivery. EventBus.PublishAsync runs all
+matching handlers concurrently via Task.WhenAll — there is no serial guarantee.
 
-    // Called by AnimaInputPortModule.InitializeAsync
-    public void RegisterInputPort(string animaId, string portName, string description,
-        Func<string, string, CancellationToken, Task> handler);
+### Defect 2: WiringEngine._failedModules Non-Thread-Safe HashSet (CONC-01)
 
-    // Called by AnimaInputPortModule.ShutdownAsync
-    public void UnregisterInputPort(string animaId, string portName);
+**What:** `_failedModules` is `HashSet<string>`. In `ExecuteAsync`, level modules run in
+parallel via `Task.WhenAll`. The failure handler calls `_failedModules.Add(moduleId)` from
+concurrent tasks. `HashSet<T>` is not safe for concurrent writers.
 
-    // Called by AnimaRouteModule.ExecuteAsync — suspends until CompleteRequest called
-    public Task<string> RouteRequestAsync(string targetAnimaId, string portName,
-        string payload, int timeoutMs, CancellationToken ct);
+**Fix:** Replace with `ConcurrentDictionary<string, byte>` used as a set.
 
-    // Called by AnimaOutputPortModule when its input port fires
-    public void CompleteRequest(string correlationId, string responsePayload);
+### Defect 3: AnimaContext.ActiveAnimaId — Wrong Identity for Per-Anima Modules
 
-    // Called by LLMModule.BuildSystemPrompt — returns all registered services for injection
-    public IReadOnlyList<InputPortDescriptor> GetAllRegisteredPorts();
+**What:** `IAnimaContext` is a singleton that holds the *UI-selected* Anima. Modules use
+`_animaContext.ActiveAnimaId` to identify which Anima they are executing for. If the user
+switches Anima while a module is executing, or if two Anima heartbeats tick simultaneously,
+modules may read the wrong Anima ID.
 
-    // Called by AnimaRuntimeManager on Anima deletion — cancels any pending requests
-    public void CancelPendingForAnima(string animaId);
-}
-```
-
-**Injection:** `CrossAnimaRouter` is registered as singleton in `AnimaServiceExtensions.AddAnimaServices()`. It receives `IAnimaRuntimeManager` to resolve Anima names for prompt descriptions (avoids circular dependency since both are singletons).
-
-### New: AnimaInputPortModule
-
-Standard `IModuleExecutor`. Config keys (via `IAnimaModuleConfigService`):
-- `portName` — the service name other Animas reference
-- `description` — displayed in LLM system prompt
-
-On `InitializeAsync`:
-1. Reads `portName` and `description` from config
-2. Calls `CrossAnimaRouter.RegisterInputPort(animaId, portName, description, handler)`
-3. The handler receives `(correlationId, payload)` and publishes to local EventBus with embedded prefix
-
-Ports:
-- Output: `request` (Text) — fires when a cross-Anima request arrives; payload has correlation prefix stripped for downstream modules
-
-On `ShutdownAsync`: calls `CrossAnimaRouter.UnregisterInputPort`.
-
-### New: AnimaOutputPortModule
-
-Standard `IModuleExecutor`. Config keys:
-- `inputPortModuleId` — the node ID of the paired `AnimaInputPortModule` in this Anima's graph (needed to recover the correlation ID)
-
-Simpler approach: embed correlation ID in the text prefix `[CORR:{id}]\n{payload}` so `AnimaOutputPortModule` extracts it from whatever text arrives on its input port without needing an explicit module reference.
-
-Ports:
-- Input: `response` (Text) — receives processed response from the sub-graph; text contains correlation ID prefix
-
-On receiving input via EventBus subscription:
-1. Extracts correlation ID prefix from text
-2. Strips prefix to get clean response text
-3. Calls `CrossAnimaRouter.CompleteRequest(correlationId, cleanText)`
-
-### New: AnimaRouteModule
-
-Standard `IModuleExecutor`. Config keys:
-- `targetAnimaId` — ID of the Anima to call
-- `targetPortName` — name of the `AnimaInputPortModule` port
-- `timeoutMs` — default 30000
-
-Ports:
-- Input: `request` (Text) — payload to send to target Anima
-- Output: `response` (Text) — response received from target Anima
-
-`ExecuteAsync` calls `CrossAnimaRouter.RouteRequestAsync(targetAnimaId, targetPortName, payload, timeoutMs, ct)` and `await`s the result. This naturally suspends the WiringEngine's level execution until the response arrives.
-
-### New: FormatDetector
-
-Stateless utility class — not an IModule, not injected directly. Called from `LLMModule.ExecuteAsync`.
-
-```csharp
-// Core/Routing/FormatDetector.cs
-
-public static class FormatDetector
-{
-    // Parses LLM output for routing markers, returns split result
-    public static FormatDetectorResult Parse(string llmOutput);
-}
-
-public record FormatDetectorResult(
-    string PassthroughText,           // Text with routing markers removed
-    IReadOnlyList<RoutingCall> Calls  // Extracted routing calls
-);
-
-public record RoutingCall(
-    string PortName,   // Target port name
-    string Payload     // Text to send to that port
-);
-```
-
-**Format convention** — simple, unambiguous, LLM-friendly:
-```
-Regular response text here.
-@@ROUTE:portName|message to send to the service@@
-More response text continues here.
-```
-
-Multiple `@@ROUTE:..@@` markers in one response are all extracted. The `PassthroughText` has markers removed and whitespace normalized.
-
-### Modified: LLMModule
-
-Two additions to `ExecuteAsync`:
-
-**1. Prompt injection (before LLM call):**
-```csharp
-private string BuildSystemPrompt(string basePrompt)
-{
-    var ports = _crossAnimaRouter?.GetAllRegisteredPorts() ?? Array.Empty<InputPortDescriptor>();
-    if (ports.Count == 0)
-        return basePrompt;
-
-    var serviceLines = string.Join("\n", ports.Select(p =>
-        $"  - {p.PortName} (from Anima '{p.AnimaName}'): {p.Description}"));
-
-    return basePrompt + "\n\n" +
-        "You have access to these services. To call a service, include in your response:\n" +
-        "@@ROUTE:portName|your message to the service@@\n" +
-        "Available services:\n" + serviceLines;
-}
-```
-
-`_crossAnimaRouter` is nullable — if not injected (e.g., in tests), injection is skipped silently. LLMModule constructor gains an optional `CrossAnimaRouter? crossAnimaRouter = null` parameter.
-
-**2. FormatDetector call (after LLM response, before publish):**
-```csharp
-// After receiving result.Content:
-var detected = FormatDetector.Parse(result.Content);
-
-// Dispatch routing calls (fire-and-forget with error logging)
-foreach (var call in detected.Calls)
-{
-    _ = DispatchRoutingCallAsync(call, ct);
-}
-
-// Publish clean passthrough text to response port
-await _eventBus.PublishAsync(new ModuleEvent<string>
-{
-    EventName = $"{Metadata.Name}.port.response",
-    SourceModuleId = Metadata.Name,
-    Payload = detected.PassthroughText
-}, ct);
-```
-
-### New: HttpRequestModule
-
-Standard `IModuleExecutor`. Receives `IHttpClientFactory` via constructor (registered in DI via `builder.Services.AddHttpClient()`).
-
-Config keys:
-- `method` — GET, POST, PUT, DELETE (default: GET)
-- `url` — static URL (overridden by input port if wired)
-- `headers` — JSON string of key-value pairs
-- `bodyTemplate` — text with optional `{body}` placeholder
-
-Ports:
-- Input: `url` (Text, optional — overrides config URL if wired)
-- Input: `body` (Text, optional — substituted into bodyTemplate or sent as-is)
-- Output: `response` (Text — response body)
-- Output: `statusCode` (Text — e.g., "200", "404", "500")
-
-On error (network failure, timeout): publish error message to `response` port, set state to Error, continue execution (don't throw — consistent with LLMModule's inline error pattern).
+**Affected:** All 9 config-dependent modules (FixedTextModule, ConditionalBranchModule,
+LLMModule, HttpRequestModule, AnimaRouteModule, AnimaInputPortModule, AnimaOutputPortModule,
+TextJoinModule, TextSplitModule).
 
 ---
 
-## Recommended Project Structure — New Files
+## v1.7 Target Architecture
+
+### Three Core Changes
+
+1. **ActivityChannel** — per-Anima `Channel<ActivityRequest>` with single consumer loop.
+   Animas execute in parallel; within a single Anima, activities are serialized.
+   Wraps WiringEngine; does not replace it.
+
+2. **Contracts API Expansion** — move `IAnimaModuleConfigService`, a new `IModuleContext`,
+   `ICrossAnimaRouter`, `ILLMService`, and `ISsrfGuard` interfaces into Contracts so
+   built-in modules can be decoupled from Core namespaces.
+
+3. **Built-in Module Decoupling** — migrate all 14 modules to depend only on Contracts.
+   Core implementations remain in Core and implement the Contracts interfaces; DI resolution
+   is unchanged.
+
+---
+
+## New Component: ActivityChannel
+
+### What It Is
+
+An `ActivityChannel` is a per-Anima `Channel<ActivityRequest>` with `SingleReader = true`
+and a single background consumer `Task`. All state-mutating work for an Anima flows through
+this channel. This is the standard .NET implementation of the actor-model mailbox pattern.
+
+### Why It Solves the Concurrency Problems
+
+- The single consumer loop processes one `ActivityRequest` at a time per Anima. No two
+  activities overlap within an Anima. Module field access becomes effectively single-threaded:
+  the `_pendingPrompt` race, the HashSet concurrent write, and the IAnimaContext identity
+  confusion are all eliminated without adding locks to module code.
+- Cross-Anima parallelism is preserved: each Anima has its own channel and its own consumer
+  Task. `AnimaRuntime` A and `AnimaRuntime` B process their channels concurrently.
+- WiringEngine.ExecuteAsync is still called for level-parallel module execution within an
+  activity, exactly as before. The channel serializes *activities*, not *modules within
+  an activity*.
+
+### ActivityRequest Type Hierarchy
+
+These types live in `OpenAnima.Contracts` (so external modules can post activities):
+
+```csharp
+// OpenAnima.Contracts/ActivityRequest.cs (new)
+namespace OpenAnima.Contracts;
+
+public abstract record ActivityRequest;
+
+/// <summary>Posted by HeartbeatLoop each tick.</summary>
+public sealed record HeartbeatTickActivity : ActivityRequest;
+
+/// <summary>Posted by chat UI when user sends a message.</summary>
+public sealed record UserMessageActivity(string Message, CancellationToken Ct = default)
+    : ActivityRequest;
+
+/// <summary>Posted by CrossAnimaRouter when a cross-Anima request arrives.</summary>
+public sealed record IncomingRouteActivity(
+    string PortName,
+    string Payload,
+    string CorrelationId) : ActivityRequest;
+```
+
+### ActivityChannel Implementation
+
+Located at `Core/Runtime/ActivityChannel.cs`:
+
+```csharp
+public sealed class ActivityChannel : IAsyncDisposable
+{
+    private readonly Channel<ActivityRequest> _channel;
+    private readonly WiringEngine _wiringEngine;
+    private readonly IEventBus _eventBus;
+    private readonly string _animaId;
+    private Task? _consumerTask;
+    private CancellationTokenSource? _cts;
+
+    public ActivityChannel(WiringEngine wiringEngine, IEventBus eventBus, string animaId)
+    {
+        _channel = Channel.CreateUnbounded<ActivityRequest>(
+            new UnboundedChannelOptions { SingleReader = true });
+        // UnboundedChannelOptions chosen because HeartbeatLoop already has a skip guard;
+        // if consumer is slow, ticks are skipped at the HeartbeatLoop level, not queued.
+        _wiringEngine = wiringEngine;
+        _eventBus = eventBus;
+        _animaId = animaId;
+    }
+
+    public void Start(CancellationToken ct = default)
+    {
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        _consumerTask = Task.Run(() => RunConsumerAsync(_cts.Token));
+    }
+
+    public bool TryPost(ActivityRequest request) =>
+        _channel.Writer.TryWrite(request);
+
+    private async Task RunConsumerAsync(CancellationToken ct)
+    {
+        await foreach (var request in _channel.Reader.ReadAllAsync(ct))
+        {
+            switch (request)
+            {
+                case HeartbeatTickActivity:
+                    await _wiringEngine.ExecuteAsync(ct);
+                    break;
+
+                case UserMessageActivity msg:
+                    await _eventBus.PublishAsync(new ModuleEvent<string>
+                    {
+                        EventName = "ChatInputModule.port.userMessage",
+                        SourceModuleId = "ActivityChannel",
+                        Payload = msg.Message
+                    }, ct);
+                    break;
+
+                case IncomingRouteActivity route:
+                    await _eventBus.PublishAsync(new ModuleEvent<string>
+                    {
+                        EventName = $"routing.incoming.{route.PortName}",
+                        SourceModuleId = "CrossAnimaRouter",
+                        Payload = route.Payload,
+                        Metadata = new Dictionary<string, string>
+                            { ["correlationId"] = route.CorrelationId }
+                    }, ct);
+                    break;
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _channel.Writer.TryComplete();
+        _cts?.Cancel();
+        if (_consumerTask != null)
+            await _consumerTask.ConfigureAwait(false);
+        _cts?.Dispose();
+    }
+}
+```
+
+### Integration with AnimaRuntime
+
+`AnimaRuntime` gains an `ActivityChannel` property. The HeartbeatLoop's `ExecuteTickAsync`
+enqueues a `HeartbeatTickActivity` instead of calling WiringEngine directly. This is the
+only behavioral change to HeartbeatLoop — its public interface is unchanged.
 
 ```
-src/OpenAnima.Core/
-├── Routing/                        # NEW directory
-│   ├── CrossAnimaRouter.cs         # Singleton cross-Anima broker
-│   ├── FormatDetector.cs           # Stateless LLM output parser
-│   ├── FormatDetectorResult.cs     # Result record
-│   ├── InputPortDescriptor.cs      # DTO for prompt injection
-│   └── InputPortRegistration.cs    # Internal registration record
-│
-├── Modules/                        # Add new files; modify LLMModule
-│   ├── AnimaInputPortModule.cs     # NEW — declares named service
-│   ├── AnimaOutputPortModule.cs    # NEW — returns response via router
-│   ├── AnimaRouteModule.cs         # NEW — sends cross-Anima request
-│   ├── HttpRequestModule.cs        # NEW — HTTP tool node
-│   ├── LLMModule.cs                # MODIFIED — prompt injection + FormatDetector
-│   └── [existing modules, unchanged]
-│
-└── DependencyInjection/
-    └── AnimaServiceExtensions.cs   # MODIFIED — register CrossAnimaRouter singleton
+AnimaRuntime (modified)
+├── EventBus              (unchanged)
+├── PluginRegistry        (unchanged)
+├── HeartbeatLoop         (interface unchanged; ExecuteTickAsync enqueues instead of calling directly)
+├── WiringEngine          (unchanged; called by ActivityChannel consumer)
+└── ActivityChannel       (NEW — owns consumer Task, dispatches to WiringEngine and EventBus)
+```
+
+### Integration with CrossAnimaRouter
+
+`CrossAnimaRouter.RouteRequestAsync` currently publishes directly to the target Anima's
+EventBus. After v1.7, it enqueues an `IncomingRouteActivity` into the target Anima's
+`ActivityChannel` instead. This eliminates the race where routing delivery fires while
+the target Anima is mid-tick.
+
+```
+CrossAnimaRouter.RouteRequestAsync(targetAnimaId, portName, payload, ...)
+    ↓ was: runtime.EventBus.PublishAsync(routing.incoming.X)
+    ↓ v1.7: runtime.ActivityChannel.TryPost(new IncomingRouteActivity(portName, payload, correlationId))
+    ↓ ActivityChannel consumer (serialized with WiringEngine.ExecuteAsync)
+    ↓ EventBus.PublishAsync(routing.incoming.X)   ← same delivery, just serialized
+    ↓ AnimaInputPortModule subscription handler
+```
+
+### ChatInputModule Integration
+
+`ChatInputModule.SendMessageAsync` currently publishes directly to EventBus. In v1.7, it
+enqueues a `UserMessageActivity`. This ensures user message delivery is serialized with
+the Anima's tick and does not race with an in-progress WiringEngine execution.
+
+**Note:** If it is decided that user message delivery is guaranteed to come from outside
+an Anima's execution context (i.e., always from a UI circuit, never from another module),
+the direct EventBus publish can be preserved. The ActivityChannel path adds one async
+hop but guarantees ordering. The channel approach is recommended for correctness.
+
+---
+
+## Contracts API Expansion
+
+### Interfaces to Move from Core to Contracts
+
+#### IAnimaModuleConfigService → Contracts
+
+9 of 14 built-in modules import `Core.Services` solely for this interface. Moving it to
+Contracts removes that dependency for all of them.
+
+The `InitializeAsync` method (startup-only, modules never call it) stays on the Core
+implementation but is removed from the Contracts interface (modules do not need it).
+
+```csharp
+// OpenAnima.Contracts/IAnimaModuleConfigService.cs (new file in Contracts)
+namespace OpenAnima.Contracts;
+
+public interface IAnimaModuleConfigService
+{
+    Dictionary<string, string> GetConfig(string animaId, string moduleId);
+    Task SetConfigAsync(string animaId, string moduleId, Dictionary<string, string> config);
+}
+// AnimaModuleConfigService in Core.Services implements this interface.
+// InitializeAsync is a Core-internal startup concern, not part of the module-facing API.
+```
+
+#### IModuleContext → new Contracts interface (replaces IAnimaContext in modules)
+
+`IAnimaContext.ActiveAnimaId` is UI state. Modules need execution-scoped identity.
+Introduce `IModuleContext` in Contracts:
+
+```csharp
+// OpenAnima.Contracts/IModuleContext.cs (new)
+namespace OpenAnima.Contracts;
+
+/// <summary>
+/// Provides execution-scoped identity for a module instance.
+/// Set once at module initialization; never changes.
+/// </summary>
+public interface IModuleContext
+{
+    /// <summary>The Anima ID this module instance belongs to.</summary>
+    string AnimaId { get; }
+}
+```
+
+`IAnimaContext` remains in Core for Blazor layout components that need the change event.
+All modules replace `IAnimaContext` with `IModuleContext` (read the AnimaId field directly).
+
+**Injection approach:** Use property injection matching the existing EventBus property
+injection pattern. After module instantiation, the runtime sets `module.Context = new
+ModuleContext(animaId)`. This avoids changing the `IModule.InitializeAsync` signature
+(which would be a breaking change requiring all external module authors to update).
+
+```csharp
+// Core/Anima/ModuleContext.cs (new — lightweight implementation)
+namespace OpenAnima.Core.Anima;
+public sealed record ModuleContext(string AnimaId) : IModuleContext;
+```
+
+DI registration: `IModuleContext` is NOT registered in the DI container directly. It is
+set by the runtime on module instances after they are resolved. This is consistent with
+how `IEventBus` is currently injected via property setter after module loading.
+
+#### ICrossAnimaRouter → Contracts
+
+`AnimaInputPortModule`, `AnimaOutputPortModule`, and `AnimaRouteModule` import
+`Core.Routing` solely for `ICrossAnimaRouter` and its supporting types. Move the
+interface and its return/parameter types to Contracts.
+
+Types to move: `ICrossAnimaRouter`, `PortRegistration`, `RouteResult`,
+`RouteRegistrationResult`, `RouteErrorKind`, `PendingRequest` (if used in interface).
+The `CrossAnimaRouter` implementation and `IAnimaRuntimeManager` stay in Core.
+
+#### ILLMService → Contracts
+
+`LLMModule` imports `Core.LLM` solely for `ILLMService`, `ChatMessageInput`, and
+`LLMResult`. Move these three types to Contracts.
+
+Types staying in Core: `LLMService`, `LLMOptions`, `TokenCounter`, `StreamingResult`
+(streaming is an advanced use case not needed in the module-facing interface).
+
+#### ISsrfGuard → new Contracts interface
+
+`HttpRequestModule` uses `SsrfGuard.IsBlocked` (a static method). To decouple
+HttpRequestModule from Core.Http, introduce:
+
+```csharp
+// OpenAnima.Contracts/ISsrfGuard.cs (new)
+namespace OpenAnima.Contracts;
+
+public interface ISsrfGuard
+{
+    bool IsBlocked(string url, out string reason);
+}
+```
+
+`SsrfGuard` in Core.Http implements `ISsrfGuard`. The static call in HttpRequestModule
+becomes an injected interface call. The DI registration is a singleton.
+
+### Dependency Map After Contracts Expansion
+
+| Type | v1.6 location | v1.7 location |
+|------|--------------|--------------|
+| IAnimaModuleConfigService | Core.Services | Contracts |
+| IAnimaContext | Core.Anima | Core.Anima (unchanged — UI only) |
+| IModuleContext | does not exist | Contracts (new) |
+| ICrossAnimaRouter | Core.Routing | Contracts |
+| PortRegistration, RouteResult, RouteRegistrationResult, RouteErrorKind | Core.Routing | Contracts |
+| ILLMService | Core.LLM | Contracts |
+| ChatMessageInput, LLMResult | Core.LLM | Contracts |
+| ISsrfGuard | does not exist | Contracts (new) |
+| ActivityRequest hierarchy | does not exist | Contracts (new) |
+
+---
+
+## Built-in Module Decoupling
+
+### Target Dependency per Module
+
+| Module | Core deps today | Core deps after v1.7 |
+|--------|----------------|---------------------|
+| ChatInputModule | EventBus (already in Contracts) | zero |
+| ChatOutputModule | Core.Anima (verify) | zero |
+| HeartbeatModule | none beyond Contracts | zero |
+| FixedTextModule | Core.Anima, Core.Services | zero |
+| TextJoinModule | Core.Anima, Core.Services | zero |
+| TextSplitModule | Core.Anima, Core.Services | zero |
+| ConditionalBranchModule | Core.Anima, Core.Services | zero |
+| LLMModule | Core.Anima, Core.Services, Core.LLM, Core.Routing | zero |
+| HttpRequestModule | Core.Anima, Core.Services, Core.Http | zero |
+| AnimaInputPortModule | Core.Anima, Core.Services, Core.Routing | zero |
+| AnimaOutputPortModule | Core.Anima, Core.Services, Core.Routing | zero |
+| AnimaRouteModule | Core.Anima, Core.Services, Core.Routing | zero |
+| FormatDetector | none (pure logic) | zero (already clean) |
+| ModuleMetadataRecord | none (helper record in Core/Modules/) | move to Contracts or keep in Core |
+
+### Migration Pattern (same for all modules)
+
+1. Replace `using OpenAnima.Core.X` with `using OpenAnima.Contracts`
+2. Replace `IAnimaContext` constructor parameter with `IModuleContext`
+3. Replace `_animaContext.ActiveAnimaId` with `_moduleContext.AnimaId`
+4. Replace Core-namespace interface types with Contracts-namespace equivalents
+5. Verify the project compiles with no Core references in the module file
+
+The Core implementations continue to implement the Contracts interfaces. DI registration
+remains `services.AddSingleton<IContractsInterface, CoreImplementation>()`.
+
+### No Change to Plugin System
+
+Built-in modules are DI singletons, not loaded via `PluginLoader`/`AssemblyLoadContext`.
+Changing their `using` directives does not affect `PluginLoader` or external module loading.
+The ALC isolation boundary remains Contracts-only for external modules; internal modules live
+in Core alongside their implementations.
+
+---
+
+## Data Flow Changes
+
+### Before v1.7: HeartbeatLoop directly calls WiringEngine
+
+```
+PeriodicTimer tick (100ms)
+    → HeartbeatLoop.ExecuteTickAsync
+        → tick all ITickable modules (duck-typing, Task.WhenAll) [concurrent]
+        → WiringEngine.ExecuteAsync              ← direct call, no serialization
+            → level 0: modules in parallel (Task.WhenAll)
+            → level 1: modules in parallel
+            ...
+            (HashSet<string> _failedModules written from concurrent Tasks ← bug)
+```
+
+### After v1.7: HeartbeatLoop enqueues; ActivityChannel consumer calls WiringEngine
+
+```
+PeriodicTimer tick (100ms)
+    → HeartbeatLoop.ExecuteTickAsync
+        → tick all ITickable modules (unchanged)
+        → ActivityChannel.TryPost(new HeartbeatTickActivity())  ← enqueue only
+
+ActivityChannel consumer (single Task per Anima):
+    await foreach (var req in _channel.Reader.ReadAllAsync(ct)):
+        HeartbeatTickActivity  → WiringEngine.ExecuteAsync(ct)
+                                     → level-parallel execution (unchanged)
+        UserMessageActivity    → EventBus.PublishAsync(ChatInput event)
+        IncomingRouteActivity  → EventBus.PublishAsync(routing.incoming.X)
+
+CrossAnimaRouter.RouteRequestAsync:
+    before: runtime.EventBus.PublishAsync(...)    ← concurrent with HeartbeatTick
+    after:  runtime.ActivityChannel.TryPost(IncomingRouteActivity)  ← serialized
+```
+
+### WiringEngine._failedModules Fix (Phase A, independent)
+
+```csharp
+// Before:
+private readonly HashSet<string> _failedModules = new();
+// Concurrent writes from Task.WhenAll in ExecuteAsync — NOT SAFE
+
+// After:
+private readonly ConcurrentDictionary<string, byte> _failedModules = new();
+// TryAdd(moduleId, 0) to mark failed; ContainsKey(moduleId) to check
+// _failedModules.Clear() → _failedModules.Clear() (ConcurrentDictionary has Clear())
 ```
 
 ---
 
 ## Architectural Patterns
 
-### Pattern 1: Cross-Anima Request-Response via Singleton Broker
+### Pattern 1: Mailbox / Channel-per-Anima (new in v1.7)
 
-**What:** `CrossAnimaRouter` acts as a message broker above all Anima runtimes. The calling Anima suspends via `TaskCompletionSource<string>` until the target Anima's `AnimaOutputPortModule` calls `CompleteRequest`. Per-Anima EventBus instances remain fully isolated — the router bridges them without merging them.
+**What:** Each `AnimaRuntime` gets a `Channel<ActivityRequest>` with `SingleReader = true`
+and one background consumer Task. All state-mutating work for that Anima flows through this
+channel as sequential activities.
 
-**When to use:** Whenever one Anima needs to call another and await a typed response.
-
-**Why not bridge via EventBus directly:** Each Anima has its own `EventBus` instance (created inside `AnimaRuntime`). This is an intentional isolation invariant established in v1.5. Injecting a shared EventBus would collapse isolation. The `CrossAnimaRouter` singleton sits above the runtimes and can reach any Anima's EventBus — modules cannot.
-
-**Trade-offs:**
-- Pro: Anima runtimes remain completely isolated — existing guarantees intact
-- Pro: Correlation tracking is explicit and observable for debugging
-- Pro: `AnimaRuntimeManager` is already singleton — `CrossAnimaRouter` is a natural peer
-- Con: `TaskCompletionSource` requires timeout to prevent deadlock if target Anima never responds
-- Con: If target Anima is deleted while a request is in flight, router must cancel pending completions — handle in `CancelPendingForAnima`
-
-**Example:**
-
-```csharp
-// In CrossAnimaRouter.RouteRequestAsync
-public async Task<string> RouteRequestAsync(
-    string targetAnimaId, string portName, string payload,
-    int timeoutMs, CancellationToken ct)
-{
-    var correlationId = Guid.NewGuid().ToString("N")[..16];
-    var tcs = new TaskCompletionSource<string>(
-        TaskCreationOptions.RunContinuationsAsynchronously);
-
-    _pending[correlationId] = tcs;
-    ct.Register(() => tcs.TrySetCanceled());
-
-    var key = $"{targetAnimaId}::{portName}";
-    if (!_ports.TryGetValue(key, out var registration))
-    {
-        _pending.TryRemove(correlationId, out _);
-        throw new InvalidOperationException($"No input port registered: {key}");
-    }
-
-    // Deliver to target Anima's EventBus via handler stored at registration time
-    await registration.Handler(correlationId, payload, ct);
-
-    try
-    {
-        return await tcs.Task.WaitAsync(TimeSpan.FromMilliseconds(timeoutMs), ct);
-    }
-    finally
-    {
-        _pending.TryRemove(correlationId, out _);
-    }
-}
-```
-
-### Pattern 2: Correlation ID as Text Prefix
-
-**What:** When `CrossAnimaRouter` delivers a request to the target Anima, the payload includes an embedded prefix: `[CORR:{correlationId}]\n{actualPayload}`. `AnimaInputPortModule` strips this prefix before publishing to its `request` output port. `AnimaOutputPortModule` extracts it from whatever text arrives on its input port before calling `CompleteRequest`.
-
-**When to use:** Wherever correlation state needs to travel through the Anima's sub-graph without the intermediate modules being aware of it.
-
-**Why not pass correlation ID through a shared dictionary:** That would require module-to-module coupling (`AnimaOutputPortModule` knowing the ID of its paired `AnimaInputPortModule`). The prefix approach is stateless — no shared register needed.
+**When to use:** Any work unit that mutates Anima module state or publishes to the Anima's
+EventBus in a way that could race with the heartbeat tick. This includes: routing delivery,
+user message injection, and any future "command" sent to an Anima.
 
 **Trade-offs:**
-- Pro: Intermediate modules (LLM, TextSplit, etc.) receive and pass clean text unmodified
-- Pro: `AnimaInputPortModule` and `AnimaOutputPortModule` are stateless — no shared mutable state
-- Con: If the sub-graph transforms the text (e.g., TextJoin merges it with other text), the prefix is lost — correlation fails. Mitigation: document that the response path must preserve the prefix token, or pass it on a separate Trigger port
+- Pro: eliminates all intra-Anima races without adding locks to module code
+- Pro: FIFO activity ordering is deterministic and debuggable
+- Pro: no external dependency — `System.Threading.Channels` is built into .NET 8
+- Con: one async hop for user messages (latency is negligible for interactive use)
+- Con: if WiringEngine.ExecuteAsync is slow (LLM call), user messages queue behind it;
+  this is correct behavior (backpressure) but must be visible in UI as "processing"
 
-**Recommendation:** Use a dedicated `correlationId` Trigger output port on `AnimaInputPortModule` and a `correlationId` Trigger input port on `AnimaOutputPortModule`. Wire them separately in the editor. This avoids prefix-in-text fragility at the cost of requiring an explicit wire in the graph.
+**Unbounded vs bounded:** Use `Channel.CreateUnbounded<T>` with `SingleReader = true`.
+Unbounded is safe here because `HeartbeatLoop._tickLock` already prevents tick snowball:
+if the consumer is busy, the next tick's `HeartbeatTickActivity` is skipped at the
+HeartbeatLoop level before being enqueued. The channel queue cannot grow unboundedly.
 
-### Pattern 3: Prompt Auto-Injection via System Prompt Construction
+### Pattern 2: Interface Promotion (expanded in v1.7)
 
-**What:** `LLMModule.ExecuteAsync` queries `CrossAnimaRouter.GetAllRegisteredPorts()` before building the message list. If any ports are registered, the service list is appended to the system prompt so the LLM knows available downstream services and the `@@ROUTE:..@@` format.
+**What:** Move an interface from Core to Contracts without moving its implementation.
+The implementation stays in Core, implements the Contracts interface, and the DI
+registration `services.AddSingleton<IContractsInterface, CoreImplementation>()` is
+unchanged.
 
-**When to use:** `CrossAnimaRouter` has at least one registered port (any Anima has an `AnimaInputPortModule` wired and initialized).
-
-**Why in LLMModule, not in a separate component:** LLMModule already owns system prompt construction (it reads `systemPrompt` from `IAnimaModuleConfigService`). Adding service injection here is a minimal, contained change. No new event or subscription is needed.
-
-**Trade-offs:**
-- Pro: Automatic — services appear in context as soon as `AnimaInputPortModule` initializes
-- Pro: No schema changes to LLMModule's config interface
-- Con: Increases token cost slightly per registered route (minor — descriptors are short)
-- Con: If `CrossAnimaRouter` is null (not injected), silently skips — correct behavior for environments without routing
-
-### Pattern 4: Format Detection as Post-LLM Interceptor
-
-**What:** After `LLMModule` receives the full LLM response, before publishing to the `response` EventBus port, it calls `FormatDetector.Parse(content)`. Routing calls are dispatched; passthrough text is published to the response port.
-
-**When to use:** Always — `FormatDetector.Parse` returns original text unchanged when no markers are found.
-
-**Why in LLMModule, not WiringEngine:** WiringEngine does not know routing semantics. LLMModule owns its output — modifying the publish step is the minimum change. No new subscriptions needed.
+**Key test:** "Can this interface be implemented by an external plugin author without
+depending on Core?" If yes, the interface belongs in Contracts.
 
 **Trade-offs:**
-- Pro: Transparent to existing wiring — downstream modules receive clean text
-- Pro: Works in non-streaming mode without architecture changes
-- Con: Streaming UX: format detection requires the full response to be buffered before markers can be found. The current `LLMModule` does not stream to EventBus — it calls `CompleteAsync` and publishes the full result. No streaming change required for v1.6.
-- Con: LLM hallucination risk — malformed markers (`@@ROUTE:` without closing `@@`) are silently ignored. Document that malformed markers are dropped with a warning log.
+- Pro: zero breaking change to existing code paths
+- Pro: external modules can now access the interface at compile time
+- Con: Contracts must remain stable; adding interfaces is a forward commitment
 
----
+### Pattern 3: Execution-Scoped Identity via Property Injection
 
-## Data Flow
+**What:** Replace `IAnimaContext` (UI state singleton) with `IModuleContext` (immutable
+execution-scoped record). `IModuleContext.AnimaId` is set once after module instantiation,
+never changes during module lifetime.
 
-### Cross-Anima Request-Response Cycle
+**Injection method:** Property injection after DI resolution, mirroring the existing
+`EventBus` property injection pattern. No change to `IModule.InitializeAsync` signature.
 
-```
-[Calling Anima — WiringEngine tick]
-         │
-         ▼
-  AnimaRouteModule.ExecuteAsync()
-         │  config: targetAnimaId="b2c3d4e5", targetPortName="translate"
-         │  _pendingRequest = text on input port
-         ▼
-  CrossAnimaRouter.RouteRequestAsync("b2c3d4e5", "translate", payload, 30000, ct)
-         │  1. Generate correlationId = "a1b2c3d4e5f6g7h8"
-         │  2. Store correlationId → TaskCompletionSource in _pending
-         │  3. Look up registration for "b2c3d4e5::translate"
-         │  4. Call registration.Handler(correlationId, payload, ct)
-         ↓ (awaits TaskCompletionSource)
+**When to use:** In all modules that currently call `_animaContext.ActiveAnimaId`.
 
-  [Target Anima "b2c3d4e5" — EventBus receives delivery]
-         │
-         ▼
-  AnimaInputPortModule (registered handler fires)
-         │  strips correlation prefix from delivery (or receives via separate mechanism)
-         │  publishes to own EventBus:
-         │    EventName = "AnimaInputPortModule.port.request"
-         │    Payload = payload text
-         ▼
-  [Target Anima WiringEngine sees event, executes sub-graph]
-  LLMModule → produces response → AnimaOutputPortModule
-         │
-         ▼
-  AnimaOutputPortModule.ExecuteAsync()
-         │  extracts correlationId (from Trigger wire or text prefix)
-         │  calls CrossAnimaRouter.CompleteRequest("a1b2c3d4e5f6g7h8", cleanResponse)
-         ↓ (resolves TaskCompletionSource)
+### Pattern 4: Direct Cross-Anima Delivery via ActivityChannel
 
-  [CrossAnimaRouter.RouteRequestAsync — awaited by calling Anima]
-         │  tcs.Task.Result = cleanResponse
-         ▼
-  AnimaRouteModule receives response text
-         │  publishes to "AnimaRouteModule.port.response" on calling Anima's EventBus
-         ▼
-  [Downstream modules in calling Anima receive response]
-```
+**What:** `CrossAnimaRouter` enqueues `IncomingRouteActivity` into the target Anima's
+`ActivityChannel` instead of publishing directly to the target Anima's EventBus. The
+channel consumer handles the EventBus publish within the Anima's serial context.
 
-### LLM Format Detection Flow
-
-```
-[LLMModule.ExecuteAsync — after LLM API call returns]
-         │
-         ▼
-  FormatDetector.Parse(result.Content)
-         │  Returns: PassthroughText + List<RoutingCall>
-         │
-         ├── If RoutingCalls.Count > 0:
-         │     foreach RoutingCall in calls:
-         │       CrossAnimaRouter.RouteRequestAsync(call.PortName, call.Payload)
-         │       (fire-and-forget dispatched — not awaited by LLMModule)
-         │
-         └── Publish PassthroughText to "LLMModule.port.response"
-                    │
-                    ▼
-             [Downstream modules receive clean text]
-```
-
-Note: Format-detected routing calls are fire-and-forget from LLMModule's perspective. The LLM response is delivered to the chat UI without waiting for routing completion. This keeps the chat interaction snappy. If blocking behavior is needed (wait for service response before continuing), use explicit `AnimaRouteModule` nodes in the wiring graph instead.
-
-### HTTP Request Module Flow
-
-```
-[WiringEngine tick — HttpRequestModule node executes]
-         │
-         ▼
-  HttpRequestModule.ExecuteAsync()
-         │  1. Read config: method, staticUrl, headers, bodyTemplate
-         │  2. Check input port "url" — override config URL if present
-         │  3. Check input port "body" — substitute into bodyTemplate if present
-         ▼
-  IHttpClientFactory.CreateClient()
-         │  Build HttpRequestMessage (method, url, headers, body)
-         │  SendAsync(request, ct)
-         │
-         ├── Success (2xx-5xx):
-         │     Publish response body → "HttpRequestModule.port.response"
-         │     Publish status code string → "HttpRequestModule.port.statusCode"
-         │
-         └── Exception (network error, timeout):
-               _state = Error
-               Publish error message → "HttpRequestModule.port.response"
-               Publish "0" → "HttpRequestModule.port.statusCode"
-               Log error (do not throw — consistent with LLMModule error pattern)
-```
-
-### Prompt Injection Flow
-
-```
-[Application startup / AnimaInputPortModule.InitializeAsync]
-         │
-         ▼
-  CrossAnimaRouter.RegisterInputPort(
-      animaId, portName, description, handler)
-         │  stored in _ports ConcurrentDictionary
-
-  [Later — LLMModule.ExecuteAsync in any Anima]
-         │
-         ▼
-  CrossAnimaRouter.GetAllRegisteredPorts()
-         │  returns List<InputPortDescriptor>
-         │  [{animaId, animaName, portName, description}, ...]
-         ▼
-  BuildSystemPrompt(basePrompt, ports)
-         │  appends: "Available services:" block + @@ROUTE format instructions
-         ▼
-  LLM API call includes service list in system message
-         │  LLM can now output @@ROUTE:portName|payload@@ markers
-         ▼
-  FormatDetector.Parse(response) extracts and dispatches routing calls
-```
+**Why not keep the direct EventBus publish:** The direct publish can race with a concurrent
+HeartbeatTickActivity in the same channel consumer — serializing routing through the channel
+eliminates this race entirely. The router already accesses the target runtime via
+`IAnimaRuntimeManager`; accessing the `ActivityChannel` property is a one-line change.
 
 ---
 
 ## Component Boundaries
 
-### What Belongs Where
+### What Belongs Where After v1.7
 
-| Concern | Component | Rationale |
-|---------|-----------|-----------|
-| Cross-Anima message brokering | `CrossAnimaRouter` (singleton) | Must access all Anima runtimes — lives above them alongside AnimaRuntimeManager |
-| Service registration | `AnimaInputPortModule.InitializeAsync` | Registration tied to module lifecycle; module owns its registration |
-| Request dispatch | `AnimaRouteModule.ExecuteAsync` | Wiring-graph-native call — module is the natural encapsulation unit |
-| Response completion | `AnimaOutputPortModule.ExecuteAsync` | Symmetric to input; module owns the completion call |
-| Correlation ID map | `CrossAnimaRouter._pending` | Broker owns pending state — not tied to any single Anima |
-| Format parsing | `FormatDetector` (static) | Stateless utility; no runtime state required |
-| Format interception | `LLMModule.ExecuteAsync` | Post-response processing in the module that produces the text |
-| Prompt injection | `LLMModule.BuildSystemPrompt` | System prompt is LLMModule's domain; reads from router |
-| HTTP calls | `HttpRequestModule` | Standard IModule pattern; IHttpClientFactory handles socket pooling |
-| Timeout enforcement | `CrossAnimaRouter.RouteRequestAsync` | Broker controls the wait — natural home for timeout and cleanup |
+| Concern | Component | Notes |
+|---------|-----------|-------|
+| Activity serialization per Anima | ActivityChannel (Core/Runtime) | One instance per AnimaRuntime |
+| WiringEngine execution | WiringEngine (Core/Wiring) | Called by ActivityChannel consumer, unchanged |
+| EventBus pub/sub within activity | EventBus (Core/Events) | Unchanged; still handles intra-module routing |
+| Cross-Anima message delivery | CrossAnimaRouter → ActivityChannel | Router enqueues; channel consumer delivers |
+| Module identity (Anima ID) | IModuleContext (Contracts) | Set by runtime at module init; immutable |
+| Module configuration | IAnimaModuleConfigService (Contracts) | Core implementation reads from disk |
+| LLM capability | ILLMService (Contracts) | Core implementation wraps OpenAI SDK |
+| HTTP safety validation | ISsrfGuard (Contracts) | Core implementation in Core.Http |
 
 ### What Must NOT Be Coupled
 
-- `WiringEngine` must not know about `CrossAnimaRouter` — routing is a module-level concern. WiringEngine executes nodes; what they do is opaque.
-- Per-Anima `EventBus` instances must remain isolated — `CrossAnimaRouter` bridges them by calling registration handlers directly, never by merging bus instances.
-- `AnimaInputPortModule` must not reference calling Anima's runtime — it knows only its own Anima's EventBus.
-- `FormatDetector` must not call `CrossAnimaRouter` directly — `LLMModule` orchestrates the pipeline.
-- `HttpRequestModule` must not reference routing infrastructure — it is an independent tool node.
+- `WiringEngine` must not reference `ActivityChannel` — the channel calls WiringEngine,
+  not the reverse. WiringEngine remains oblivious to serialization concerns.
+- `ActivityChannel` must not reference `HeartbeatLoop` — the loop enqueues into the channel,
+  not the reverse.
+- Built-in modules must not reference any `OpenAnima.Core.*` namespace after Phase D.
+  The only acceptable non-system references in a module file are `OpenAnima.Contracts`.
+- `IAnimaContext` must not be injected into any module after Phase D. It is a UI concern.
 
 ---
 
-## Build Order — Dependency Chain
+## Suggested Build Order
 
-```
-Stage 1: Foundation (no module work)
-  ├── InputPortDescriptor.cs        (DTO, no dependencies)
-  ├── FormatDetectorResult.cs       (DTO, no dependencies)
-  ├── FormatDetector.cs             (static, no dependencies)
-  └── CrossAnimaRouter.cs           (depends on IAnimaRuntimeManager — already exists)
+### Phase A: Concurrency Fixes (no new interfaces, minimal risk, do first)
 
-Stage 2: New Modules (depend on CrossAnimaRouter)
-  ├── AnimaInputPortModule.cs       (depends on CrossAnimaRouter, IAnimaModuleConfigService, IAnimaContext)
-  ├── AnimaOutputPortModule.cs      (depends on CrossAnimaRouter, IAnimaModuleConfigService)
-  ├── AnimaRouteModule.cs           (depends on CrossAnimaRouter, IAnimaModuleConfigService)
-  └── HttpRequestModule.cs          (depends on IHttpClientFactory — DI built-in)
+1. Fix `WiringEngine._failedModules` → `ConcurrentDictionary<string, byte>`
+2. Fix `LLMModule._pendingPrompt` race: capture `evt.Payload` as a local variable at the
+   top of the subscription lambda, pass as parameter to `ExecuteAsync(string prompt, ct)`
+   instead of reading from a field
+3. Fix `ConditionalBranchModule._pendingInput` with same local-capture pattern
+4. For trigger-buffer modules (`HttpRequestModule._lastBodyPayload`,
+   `AnimaRouteModule._lastRequestPayload`): mark fields `volatile` or use
+   `Interlocked.Exchange` — these intentionally hold last-write value but the assignment
+   must be atomic
 
-Stage 3: LLMModule Modifications (depend on Stage 1)
-  ├── Add CrossAnimaRouter? parameter to constructor (nullable — optional injection)
-  ├── Add BuildSystemPrompt() helper that calls GetAllRegisteredPorts()
-  └── Add FormatDetector.Parse() call after LLM response received
+**Outcome:** CONC-01 resolved without any architectural change. Existing tests pass.
 
-Stage 4: DI and Integration
-  ├── AnimaServiceExtensions.cs — add CrossAnimaRouter singleton registration
-  ├── Program.cs — add builder.Services.AddHttpClient()
-  ├── AnimaRuntimeManager.DeleteAsync — call CrossAnimaRouter.CancelPendingForAnima on delete
-  └── End-to-end integration verification
-```
+### Phase B: ActivityChannel (new runtime component, Contracts unchanged)
 
-**Why this order:**
-- `CrossAnimaRouter` has no new dependencies — build it first so modules can reference it
-- `FormatDetector` is stateless — build alongside `CrossAnimaRouter` as pure logic
-- Port modules depend on `CrossAnimaRouter` being available for injection — build after Stage 1
-- `LLMModule` modifications build last; they depend on both `CrossAnimaRouter` (prompt injection) and `FormatDetector` (output parsing) being stable
-- DI registration is always last — validates the full injection chain compiles and resolves correctly
+1. Add `ActivityRequest` hierarchy to `Contracts/` (or `Core/Runtime/` temporarily)
+2. Implement `ActivityChannel` in `Core/Runtime/ActivityChannel.cs`
+3. Add `ActivityChannel` property to `AnimaRuntime`; start consumer in constructor;
+   await disposal in `DisposeAsync`
+4. Modify `HeartbeatLoop.ExecuteTickAsync` to `ActivityChannel.TryPost(new HeartbeatTickActivity())`
+   instead of calling `WiringEngine.ExecuteAsync` directly
+5. Modify `CrossAnimaRouter.RouteRequestAsync` to enqueue `IncomingRouteActivity` instead
+   of direct EventBus publish
+6. Modify `ChatInputModule.SendMessageAsync` to enqueue `UserMessageActivity`
 
----
+**Outcome:** CONC-03 resolved (stateful Animas serialized). CONC-02 (stateless request-level
+isolation) can be Phase B extension: if `AnimaDescriptor` gains a `bool IsStateless` flag,
+the ActivityChannel can spawn a Task per activity instead of serializing (bounded by a
+semaphore for backpressure).
 
-## Anti-Patterns
+### Phase C: Contracts API Expansion
 
-### Anti-Pattern 1: Bridging Anima EventBus Instances Directly
+1. Add `IModuleContext` to Contracts
+2. Add `ActivityRequest` hierarchy to Contracts (if added to Core in Phase B, move it now)
+3. Move `IAnimaModuleConfigService` interface to Contracts; update namespace usings in Core
+4. Move `ICrossAnimaRouter`, `PortRegistration`, `RouteResult`, `RouteRegistrationResult`,
+   `RouteErrorKind` to Contracts; update namespace usings in Core
+5. Move `ILLMService`, `ChatMessageInput`, `LLMResult` to Contracts
+6. Add `ISsrfGuard` to Contracts; make `SsrfGuard` implement it; register in DI
+7. Update all Core implementations to add `: IContractsInterface` to class declarations
+8. Update DI registrations to register by Contracts interface
 
-**What people do:** Inject both Anima A's EventBus and Anima B's EventBus into a bridging class, subscribe on one and publish to the other.
+**Outcome:** API-01 and API-02 resolved. External modules now have feature parity via
+Contracts without referencing Core.
 
-**Why it's wrong:** Each `EventBus` is created inside `AnimaRuntime` with no DI registration — they are not resolvable from the DI container. Retrieving them requires going through `AnimaRuntimeManager.GetRuntime(id).EventBus`. This creates tight coupling and makes it easy to introduce cross-Anima event leakage. The v1.5 architecture deliberately prevents this.
+### Phase D: Built-in Module Decoupling (mechanical, low risk)
 
-**Do this instead:** Use `CrossAnimaRouter`. The registration handler captures the target EventBus via closure when `AnimaInputPortModule` registers — only the module that owns the EventBus touches it.
+Migrate in dependency order (simple first):
 
-### Anti-Pattern 2: Making AnimaRouteModule Fire-and-Forget
+1. ChatInputModule, ChatOutputModule, HeartbeatModule (no Core deps or trivial)
+2. FixedTextModule, TextJoinModule, TextSplitModule (Core.Anima + Core.Services only)
+3. ConditionalBranchModule (same as above)
+4. AnimaInputPortModule, AnimaOutputPortModule, AnimaRouteModule (add Core.Routing)
+5. LLMModule (all four Core deps → Contracts)
+6. HttpRequestModule (Core.Anima + Core.Services + Core.Http → Contracts + ISsrfGuard)
+7. FormatDetector is already pure logic — no change needed
 
-**What people do:** `AnimaRouteModule.ExecuteAsync` publishes a request event and completes immediately, expecting the response to "arrive later."
+For each module:
+- Replace `using OpenAnima.Core.X` with `using OpenAnima.Contracts`
+- Replace `IAnimaContext animaContext` constructor param with `IModuleContext moduleContext`
+- Replace `_animaContext.ActiveAnimaId` with `_moduleContext.AnimaId`
+- Verify no remaining `OpenAnima.Core` usings in the file
 
-**Why it's wrong:** The WiringEngine executes in topological order. If `AnimaRouteModule` completes immediately without waiting for the response, downstream modules (which consume the response) execute in the same tick with empty data. The response arrives after the tick completes — the data is never delivered.
-
-**Do this instead:** `AnimaRouteModule.ExecuteAsync` awaits `CrossAnimaRouter.RouteRequestAsync(...)`. The WiringEngine suspends the current level until the task completes. The tick-lock (`SemaphoreSlim _tickLock` in `HeartbeatLoop`) skips subsequent ticks if this one runs long — acceptable behavior for a cross-Anima call.
-
-### Anti-Pattern 3: Embedding Correlation IDs in EventBus Payload Type
-
-**What people do:** Define a `RoutingEnvelope<T>` wrapper with `CorrelationId` + `Payload` fields and route it through the Anima's internal EventBus. WiringEngine subscriptions see `RoutingEnvelope<string>` instead of `string`.
-
-**Why it's wrong:** `WiringEngine.CreateRoutingSubscription` switches on `PortType.Text` to create `Subscribe<string>`. A new payload type breaks this dispatch. All downstream modules (LLM, TextSplit, TextJoin, etc.) expect `string` — they would break silently. Port type validation would reject connections. This change cascades through the entire port system.
-
-**Do this instead:** Use the correlation ID as a text prefix (`[CORR:{id}]\n{text}`) that only the boundary modules know about, or use a dedicated Trigger wire to carry the correlation ID alongside the text. All intermediate modules remain unchanged.
-
-### Anti-Pattern 4: Creating HttpClient Instances Per Execution
-
-**What people do:** `new HttpClient(...)` inside `HttpRequestModule.ExecuteAsync` for each call.
-
-**Why it's wrong:** `HttpClient` socket exhaustion is a well-documented .NET problem. Creating instances per execution leads to `TIME_WAIT` socket exhaustion under even moderate load. With a 100ms heartbeat firing HTTP requests, exhaustion is reachable within minutes.
-
-**Do this instead:** Inject `IHttpClientFactory` via constructor (registered with `builder.Services.AddHttpClient()`). Call `_factory.CreateClient()` per execution. The factory manages underlying `HttpMessageHandler` pooling transparently.
-
-### Anti-Pattern 5: Long Timeouts That Block the Heartbeat Tick
-
-**What people do:** Set `AnimaRouteModule` timeout to 5+ minutes to handle slow LLM operations.
-
-**Why it's wrong:** `AnimaRouteModule.ExecuteAsync` is awaited inside the WiringEngine, which is awaited by `HeartbeatLoop.ExecuteTickAsync`. The tick-lock guard (`_tickLock.Wait(0)`) skips subsequent ticks while one is running. A multi-minute cross-Anima call suspends the calling Anima's heartbeat entirely — no proactive behavior, no UI updates from that Anima.
-
-**Do this instead:** Keep timeouts short (5–30 seconds). Document that cross-Anima calls block the calling Anima's tick. For long operations, design the target Anima to respond with an acknowledgment immediately, then push results back asynchronously using a separate `AnimaRouteModule` call in the reverse direction.
+**Outcome:** DECPL-01 resolved. Built-in modules can be extracted to a separate assembly
+in a future milestone if desired.
 
 ---
 
-## Scaling Considerations
+## Integration Points with Existing Components
+
+| Component | v1.7 change | Backward compatibility |
+|-----------|------------|----------------------|
+| EventBus | Unchanged | Full |
+| WiringEngine | `_failedModules` field type change; called by ActivityChannel instead of HeartbeatLoop | IWiringEngine interface unchanged |
+| HeartbeatLoop | `ExecuteTickAsync` enqueues instead of calling WiringEngine | Public API unchanged |
+| AnimaRuntime | Gains `ActivityChannel` property; constructor starts channel | Existing properties unchanged |
+| AnimaRuntimeManager | `GetOrCreateRuntime` and `DeleteAsync` unchanged | Full |
+| CrossAnimaRouter | `RouteRequestAsync` enqueues to ActivityChannel | ICrossAnimaRouter interface unchanged |
+| PluginLoader | Unchanged — ALC isolation boundary remains Contracts | Full |
+| DI registrations | Add `ISsrfGuard`, `IModuleContext`; update existing to Contracts interfaces | Additive |
+| IModule interface | Unchanged (property injection avoids signature change) | Full |
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Using ActivityChannel as EventBus Replacement
+
+**What people might do:** Route all module-to-module communication through ActivityChannel.
+
+**Why it's wrong:** ActivityChannel serializes activities, not events. EventBus handles
+intra-activity pub/sub (which is already safe within a single activity). Routing
+module-to-module communication through the channel would serialize all event delivery and
+destroy level-parallel execution within an activity.
+
+**Do this instead:** ActivityChannel is an entry point. Once an activity is dequeued, all
+internal module communication continues through EventBus exactly as today.
+
+### Anti-Pattern 2: Injecting IAnimaContext into Modules After v1.7
+
+**What people might do:** Keep using `IAnimaContext` because it's already wired in DI.
+
+**Why it's wrong:** `IAnimaContext.ActiveAnimaId` is UI state. A module reading it may
+get the wrong Anima ID. `IModuleContext.AnimaId` is set at module init and never changes.
+
+**Do this instead:** Use `IModuleContext`. If a module genuinely needs to react to Anima
+switching (unlikely for pure execution modules), subscribe to `IAnimaContext.ActiveAnimaChanged`
+via property injection of `IAnimaContext` separately — do not use it as the AnimaId source.
+
+### Anti-Pattern 3: Moving Core Implementations to Contracts
+
+**What people might do:** Move `AnimaModuleConfigService` (class) to Contracts along with
+its interface to keep them together.
+
+**Why it's wrong:** Contracts must be dependency-free — no file I/O, no JSON serializer,
+no DI framework attributes. Only interfaces, abstract base types, and pure data records
+belong in Contracts. Moving implementations would break the ALC isolation guarantee.
+
+**Do this instead:** Move only the interface. Implementations stay in Core.
+
+### Anti-Pattern 4: Making ActivityChannel Bounded
+
+**What people might do:** Use `Channel.CreateBounded<ActivityRequest>(capacity: 10)` to
+limit queue depth.
+
+**Why it's wrong:** HeartbeatLoop's `_tickLock` skip guard already prevents tick flood —
+the channel queue never grows unboundedly from heartbeats. Adding a bounded channel with
+a `DropWrite` or `DropNewest` mode could silently drop user messages or routing deliveries.
+
+**Do this instead:** Use `Channel.CreateUnbounded` with `SingleReader = true`. The
+HeartbeatLoop skip guard is the backpressure mechanism. If in the future tick-skipping
+is not sufficient, implement bounded logic at the HeartbeatLoop level, not the channel level.
+
+---
+
+## Scalability Considerations
 
 This is a single-user local application. Concerns are runtime performance within one process.
 
-| Concern | At 5 Animas | At 20+ Animas |
-|---------|-------------|---------------|
-| Concurrent routing requests | No issue — `ConcurrentDictionary` handles parallel `TaskCompletionSource` entries | Add max-in-flight limit if `_pending` count grows unbounded |
-| Prompt injection token cost | Minimal — registered ports are short descriptors | Add per-LLMModule opt-out config (`"disablePromptInjection": "true"`) |
-| Cross-Anima latency | Target Anima's LLM call dominates; router overhead is negligible | Same — LLM latency is the only meaningful bottleneck |
-| Heartbeat suspension | Calling Anima's tick suspends while awaiting; tick-lock prevents snowball | Accept behavior; document; consider async-over-sync only if it becomes a UX problem |
-| Memory from pending requests | Negligible — `TaskCompletionSource<string>` is ~100 bytes | Automatic cleanup in `RouteRequestAsync` finally block and `CancelPendingForAnima` |
-| Port registration growth | Global port list for prompt injection grows with more `AnimaInputPortModule` instances | No issue at local-user scale; add pagination if list exceeds ~50 entries |
+| Scale | ActivityChannel overhead |
+|-------|--------------------------|
+| 5 Animas | 5 background Tasks — negligible |
+| 20 Animas | 20 background Tasks — still negligible on modern hardware |
+| Future: multi-Anima background execution | ActivityChannel naturally supports it — each Anima runs independently |
+
+The channel write (`TryPost`) is a lock-free operation. The consumer loop (`ReadAllAsync`)
+does one `ValueTask` allocation per activity. At 100ms tick rate with 5 Animas, this is
+50 allocations/second — well within .NET's allocation tolerance.
 
 ---
 
 ## Sources
 
-- Direct source code analysis: `/home/user/OpenAnima/src/OpenAnima.Core/` — HIGH confidence
-- Existing architecture decisions in `.planning/PROJECT.md` — HIGH confidence
-- `TaskCompletionSource<T>` for async request-response correlation: established .NET pattern — HIGH confidence
-- `IHttpClientFactory` socket pooling: official Microsoft documentation — HIGH confidence
-- Correlation ID pattern for request matching: industry standard — HIGH confidence
+- Live codebase inspection: `/home/user/OpenAnima/src/` (HIGH confidence — primary source)
+- [System.Threading.Channels — .NET Documentation](https://learn.microsoft.com/en-us/dotnet/core/extensions/channels) (HIGH confidence)
+- [An Introduction to System.Threading.Channels — .NET Blog](https://devblogs.microsoft.com/dotnet/an-introduction-to-system-threading-channels/) (HIGH confidence)
+- [Building High-Performance .NET Apps with C# Channels](https://antondevtips.com/blog/building-high-performance-dotnet-apps-with-csharp-channels) (MEDIUM confidence)
+- Actor model / mailbox serial processing: corroborated by multiple sources (MEDIUM confidence)
 
 ---
 
-*Architecture research for: OpenAnima v1.6 Cross-Anima Routing and HTTP Request Module*
-*Researched: 2026-03-11*
+*Architecture research for: OpenAnima v1.7 Runtime Foundation*
+*Researched: 2026-03-14*

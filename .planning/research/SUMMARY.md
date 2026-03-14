@@ -1,17 +1,17 @@
 # Project Research Summary
 
-**Project:** OpenAnima v1.6 — Cross-Anima Routing + HTTP Request Module
-**Domain:** In-process multi-agent routing and HTTP tooling for a Blazor Server LLM wiring platform
-**Researched:** 2026-03-11
+**Project:** OpenAnima v1.7 Runtime Foundation
+**Domain:** .NET 8 Modular AI Agent Runtime — Concurrency, Plugin API, Module Decoupling
+**Researched:** 2026-03-14
 **Confidence:** HIGH
 
 ## Executive Summary
 
-OpenAnima v1.6 extends the existing per-Anima isolation model to enable controlled cross-agent communication. The v1.5 architecture is deliberately isolated — each Anima has its own `EventBus`, `WiringEngine`, and `HeartbeatLoop`. V1.6 adds a `CrossAnimaRouter` singleton that sits above all `AnimaRuntime` instances (alongside `AnimaRuntimeManager`) and acts as the only sanctioned bridge between them. Cross-Anima request-response is implemented via the standard .NET `TaskCompletionSource<string>` + `ConcurrentDictionary<string, TCS>` correlation pattern — a zero-dependency approach used by SignalR internals and RabbitMQ .NET clients. The HTTP Request module requires one new NuGet package (`Microsoft.Extensions.Http.Resilience 8.7.0`); all other capabilities are BCL built-ins.
+OpenAnima v1.7 is a runtime hardening and plugin API expansion milestone for an in-process, single-user Blazor Server AI agent runtime. The three work streams are tightly coupled: two known race conditions (LLMModule `_pendingPrompt` field, WiringEngine `_failedModules` HashSet) must be fixed before introducing an Activity Channel concurrency model, which itself is a prerequisite for the Contracts API expansion that enables full built-in module decoupling. Research confirms that all required primitives ship in the .NET 8 BCL — `Channel<T>`, `SemaphoreSlim`, `CancellationToken` — with zero new NuGet dependencies required.
 
-The key design tension is that `AnimaRouteModule.ExecuteAsync` must `await` the cross-Anima response while suspended inside the calling Anima's `HeartbeatLoop` tick. This is architecturally correct — the WiringEngine needs the response before executing downstream modules — but means the calling Anima's heartbeat is blocked during cross-Anima LLM calls (typically 2–10 seconds). This is an accepted trade-off for v1.6. All four new modules (`AnimaInputPort`, `AnimaOutputPort`, `AnimaRoute`, `HttpRequest`) are standard `IModuleExecutor` implementations, so they plug into the wiring editor, config sidebar, and port system without any framework changes.
+The recommended approach treats the three work streams as four sequential phases after a mandatory pre-flight: (0) clean the test baseline, (1) fix the two pre-existing race conditions, (2) introduce the `ActivityChannel` component that serializes per-Anima execution, and (3+4) expand the Contracts API surface and mechanically decouple the 14 built-in modules. The Activity Channel pattern — a single `Channel<ActivityRequest>` consumer per `AnimaRuntime` — is the idiomatic .NET 8 actor-mailbox pattern. It eliminates all intra-Anima races without adding synchronization inside module code. Cross-Anima parallelism is preserved because each Anima gets its own channel and consumer Task.
 
-The highest-risk areas are: (1) isolation boundary integrity — the global `IEventBus` singleton (tech debt ANIMA-08) must never be used as the cross-Anima transport; (2) LLM format detection reliability — XML-tag or `@@ROUTE:..@@` markers achieve only 80–95% compliance via prompt engineering versus 99%+ with tool-call APIs; (3) HTTP module security — URL allowlists and SSRF prevention must be built in from day one, not retrofitted. With those risks addressed upfront, the implementation is straightforward: 9 new files in `Core/Routing/` and `Core/Modules/`, one modified file (`LLMModule.cs`), and two DI registration changes.
+The dominant risk is the Contracts API expansion: moving interfaces between assemblies is a binary breaking change that silently breaks externally-compiled `.oamod` packages. The mitigation is mandatory compatibility forwarding in the old Core namespaces before any interface move ships, combined with a canary `.oamod` round-trip test on every interface-move commit. A secondary risk is the three pre-existing test failures caused by the global `IEventBus` singleton (ANIMA-08 tech debt) — if left unresolved, concurrency changes will amplify them into indistinguishable regressions. Fix the baseline first.
 
 ---
 
@@ -19,132 +19,129 @@ The highest-risk areas are: (1) isolation boundary integrity — the global `IEv
 
 ### Recommended Stack
 
-V1.6 requires minimal stack additions. One new NuGet package adds HTTP resilience: `Microsoft.Extensions.Http.Resilience 8.7.0`, which wraps Polly v8 with `AddStandardResilienceHandler()` (retry + circuit breaker + 10s timeout in one call). It replaces the deprecated `Microsoft.Extensions.Http.Polly`. Everything else — correlation tracking, async request-response, in-process messaging, format detection via regex, prompt string assembly — uses .NET 8 BCL with no additional dependencies. The zero-dependency principle holds for the routing layer entirely.
+No new NuGet packages are needed for v1.7. Every required primitive is already in the .NET 8 BCL. The work is purely architectural: introducing `Channel<T>` at the scheduling layer, moving interfaces from `Core` to `Contracts`, and replacing `using OpenAnima.Core.*` with `using OpenAnima.Contracts` in 14 module files. The existing v1.6 stack (Blazor Server, OpenAI SDK 2.8.0, SharpToken, Markdig, System.CommandLine, Microsoft.Extensions.Http.Resilience) is unchanged.
 
 **Core technologies:**
-- `.NET 8 BCL` (`TaskCompletionSource<string>` + `ConcurrentDictionary`): cross-Anima request-response correlation — idiomatic .NET in-process async RPC, used by SignalR internals
-- `IHttpClientFactory` (built-in via `Microsoft.Extensions.DependencyInjection`): HTTP socket pooling — avoids socket exhaustion in heartbeat-driven execution
-- `Microsoft.Extensions.Http.Resilience 8.7.0`: HTTP retry/timeout pipeline — official Polly wrapper, `.NET 8` train, `AddStandardResilienceHandler` one-liner
-- `[GeneratedRegex]` (built-in, `.NET 8`): zero-allocation format detection — source-generated, no runtime compilation overhead
-- Existing `IEventBus` / `AnimaRuntimeManager`: per-Anima and cross-Anima event delivery — already established, no changes needed to these components
+- `System.Threading.Channels.Channel<T>` (BCL): per-Anima activity serialization — the canonical .NET async mailbox pattern with `SingleReader = true` consumer loop and lock-free `TryWrite` from producers
+- `System.Threading.SemaphoreSlim` (BCL): already used in `HeartbeatLoop`; extend the same `WaitAsync(0)` skip-tick pattern to stateless Anima request gating
+- `OpenAnima.Contracts` interface additions: `IModuleContext`, `IAnimaModuleConfigService` (moved), `ICrossAnimaRouter` (moved), `ILLMService` (moved), `ISsrfGuard` (new) — no implementation changes, only interface location changes
+- `ConcurrentDictionary<string, byte>` (BCL): replace `HashSet<string>` in `WiringEngine._failedModules` — single-line fix for the parallel task write race
 
 ### Expected Features
 
-All seven v1.6 features are P1 (must-have). Six are required for cross-Anima routing to function end-to-end; the HTTP Request module is independent and parallelizable.
+**Must have (v1.7 launch):**
+- Race-free module execution — per-module `SemaphoreSlim(1,1)` skip guard preventing `_state`/`_pendingPrompt` corruption
+- `WiringEngine._failedModules` thread safety — `ConcurrentDictionary` replacing `HashSet`
+- `ActivityChannel` component — single consumer per `AnimaRuntime` serializing HeartbeatTick, UserMessage, and IncomingRoute activities
+- `IModuleContext` in Contracts — immutable `AnimaId` set at module init, replacing the UI-state `IAnimaContext` in modules
+- `IAnimaModuleConfigService` moved to Contracts — enables all 9 config-dependent modules to drop Core.Services dependency
+- All 14 built-in modules decoupled from `OpenAnima.Core.*` — only `OpenAnima.Contracts` references in module files
+- Module project template (`oani new`) updated to reflect Contracts-only dependency
+- Module management UI — install, uninstall, list, search (MODMGMT-01/02/03/06)
+- Clean test baseline — 3 pre-existing failures resolved before concurrency work begins
 
-**Must have (table stakes):**
-- `AnimaInputPortModule` — declares a named service on an Anima; registers with `CrossAnimaRouter` on init; single output port `request`
-- `AnimaOutputPortModule` — returns cross-Anima response; calls `CrossAnimaRouter.CompleteRequest`; single input port `response`
-- `AnimaRouteModule` — selects target Anima + port; generates correlation ID; awaits response via TCS; configurable timeout; input `request` / output `response`
-- `CrossAnimaRouter` singleton — global correlation map; compound key addressing; timeout cleanup; `CancelPendingForAnima` on Anima deletion; `GetAllRegisteredPorts` for injection
-- Prompt auto-injection in `LLMModule` — reads registered ports, appends token-budgeted service list to system prompt; skips if no routes registered
-- Format detection in `LLMModule` — post-stream scan for route markers using rolling buffer; splits passthrough text from payload; dispatches routing calls fire-and-forget
-- `HttpRequestModule` — URL/method/headers/body-template config; `IHttpClientFactory`; response + status code output ports; 10s default timeout; SSRF allowlist
-
-**Should have (competitive, v1.7+):**
-- Route error/timeout output port — lets wiring handle routing failures gracefully
-- Streaming display with parallel detection — buffer copy for detection while streaming to chat
-- HTTP auth fields (Bearer/Basic) — first-class config, not manual header entry
-- `AnimaRoute` dynamic target — target Anima supplied via input port at runtime
+**Should have (v1.x after stabilization):**
+- `ICrossAnimaRouter` moved to Contracts — enables external routing modules; defer until decoupling of simpler modules is stable
+- `ILLMService` and `ChatMessageInput` moved to Contracts — enables external LLM-capable modules; depends on also moving `ChatMessageInput`
+- `IModuleConfigSchema` interface — external modules declare config fields; platform auto-renders sidebar
+- `IModuleLifecycle` context object — convenience DI wrapper reducing 4+ constructor params to 1
+- Named Activity Channels (heartbeat vs. chat) — two parallel tracks per stateful Anima
 
 **Defer (v2+):**
-- Multi-hop routing chains — nested correlation IDs, timeout propagation
-- Fan-out routing — scatter-gather correlation pattern
-- HTTP response streaming to downstream modules
+- Per-Anima module instances (ANIMA-08 resolution) — requires full DI restructure to replace the global `IEventBus` singleton
+- `IUrlValidator` / `ISsrfGuard` in Contracts — SSRF protection abstracted for external HTTP modules
+- Auto-rendered config sidebar — replace per-module Razor components with generic `<AutoConfigSidebar>`
 
 ### Architecture Approach
 
-The architecture adds one new directory (`Core/Routing/`) containing the singleton broker and stateless utilities, and four new module files in `Core/Modules/`. The `CrossAnimaRouter` is a peer to `AnimaRuntimeManager` — both are application-layer singletons. `CrossAnimaRouter` holds the `_ports` registry (compound key `"{animaId}::{portName}"`) and the `_pending` correlation map. `LLMModule` gains two lightweight additions: a `BuildSystemPrompt` helper that queries `CrossAnimaRouter.GetAllRegisteredPorts()`, and a `FormatDetector.Parse()` call post-response. `WiringEngine` and per-Anima `EventBus` instances are completely unchanged. Per-Anima isolation invariants are preserved by design.
+The v1.7 architecture inserts one new component (`ActivityChannel`) between the HeartbeatLoop and WiringEngine, moves a set of interfaces from `Core` to `Contracts`, and updates module `using` directives. No existing component interfaces change. The `ActivityChannel` is a per-`AnimaRuntime` `Channel<ActivityRequest>` with a single consumer Task: heartbeat ticks, user messages, and cross-Anima route deliveries all enter through `TryPost(ActivityRequest)` and are processed serially. WiringEngine, EventBus, and PluginLoader are untouched.
 
-**Major components:**
-1. `CrossAnimaRouter` (`Core/Routing/CrossAnimaRouter.cs`) — singleton broker; port registry with compound key; correlation ID map with expiry; timeout enforcement; deletion cleanup via `CancelPendingForAnima`
-2. `FormatDetector` (`Core/Routing/FormatDetector.cs`) — stateless parser; extracts routing calls from buffered LLM output; returns `FormatDetectorResult(PassthroughText, List<RoutingCall>)`
-3. `AnimaInputPortModule` / `AnimaOutputPortModule` / `AnimaRouteModule` — standard `IModuleExecutor` modules; register/complete/send cross-Anima requests via `CrossAnimaRouter`; invisible to `WiringEngine`
-4. `HttpRequestModule` (`Core/Modules/HttpRequestModule.cs`) — standard `IModuleExecutor`; typed `IHttpClientFactory` client with resilience handler; 10s timeout; error-to-output-port pattern
-5. Modified `LLMModule` (`Core/Modules/LLMModule.cs`) — prompt injection before API call; `FormatDetector.Parse` after response; `CrossAnimaRouter` injected as nullable (optional, backward-compatible)
+**Major components after v1.7:**
+1. `ActivityChannel` (new, `Core/Runtime/`) — owns `Channel<ActivityRequest>` + consumer Task; started/stopped alongside `HeartbeatLoop`; receives `HeartbeatTickActivity`, `UserMessageActivity`, `IncomingRouteActivity`; calls `WiringEngine.ExecuteAsync` and `EventBus.PublishAsync` from the serial consumer loop
+2. `AnimaRuntime` (modified) — gains `ActivityChannel` property; `HeartbeatLoop.ExecuteTickAsync` enqueues instead of calling WiringEngine directly; `CrossAnimaRouter.RouteRequestAsync` enqueues instead of publishing directly to EventBus
+3. `OpenAnima.Contracts` (expanded) — gains `ActivityRequest` hierarchy, `IModuleContext`, `IAnimaModuleConfigService`, `ICrossAnimaRouter` + supporting DTOs, `ILLMService` + `ChatMessageInput`, `ISsrfGuard`; all existing interfaces (`IModule`, `IEventBus`, `ITickable`, etc.) are unchanged
 
-**Build order:** DTOs + `FormatDetector` + `CrossAnimaRouter` (Stage 1) → routing modules + `HttpRequestModule` (Stage 2) → `LLMModule` modifications (Stage 3) → DI registration + `AnimaRuntimeManager.DeleteAsync` hook (Stage 4).
+**Key patterns:**
+- Mailbox/Channel-per-Anima: all state-mutating work for an Anima flows through one channel; eliminates intra-Anima races without module-level locks
+- Interface Promotion: move interface to Contracts without moving implementation; DI registration stays `AddSingleton<IContractsInterface, CoreImpl>()`
+- Execution-Scoped Identity: `IModuleContext.AnimaId` replaces `IAnimaContext.ActiveAnimaId` in modules; set once at init via property injection; never changes
 
 ### Critical Pitfalls
 
-1. **Using the global `IEventBus` singleton for cross-Anima routing** — silently breaks per-Anima isolation (ANIMA-08 tech debt); all cross-Anima delivery MUST go through `AnimaRuntimeManager.GetRuntime(targetId)` → `CrossAnimaRouter`. Add an isolation integration test verifying Anima A events do NOT arrive at Anima B.
-
-2. **`AnimaRouteModule` fire-and-forget instead of awaiting response** — WiringEngine downstream modules execute in the same tick with empty data; route response arrives after tick completes and is never delivered. Fix: `AnimaRouteModule.ExecuteAsync` MUST `await CrossAnimaRouter.RouteRequestAsync(...)`.
-
-3. **LLM format non-compliance at runtime** — prompt-engineering-based format markers achieve only 80–95% compliance; temperature > 0, model version changes, and long context all reduce this. Use XML-style tags or `@@ROUTE:port|payload@@` (mapped to training-data patterns); implement lenient regex (case-insensitive, optional whitespace); document as best-effort.
-
-4. **HTTP module SSRF via LLM-injected URLs** — the HTTP module's URL input is a direct execution path for LLM output. Default to an empty allowlist; block non-HTTPS schemes at parse time; reject private/loopback IP ranges after DNS resolution. Security cannot be added after the fact.
-
-5. **`AnimaRuntime` deletion leaving in-flight TCS entries hanging** — `AnimaRuntimeManager.DeleteAsync` must broadcast an `AnimaDeleted` signal before disposing, so `CrossAnimaRouter` can call `CancelPendingForAnima(animaId)` and fail pending requests with a clean error, not a silent timeout.
-
-6. **Short correlation IDs colliding under concurrent load** — use full `Guid.NewGuid().ToString("N")` (32-char), not truncated 8-char hex. Include expiry timestamps in pending entries; run periodic cleanup to prevent unbounded dictionary growth.
+1. **Activity Channel deadlock from bounded channel + WriteAsync in tick path** — use `Channel.CreateUnbounded<T>()` exclusively; always `TryWrite` (never `WriteAsync`) from HeartbeatLoop tick path; HeartbeatLoop's existing `_tickLock` skip guard is the backpressure mechanism
+2. **Interface move is a binary breaking change** — moving `IAnimaContext` or `IAnimaModuleConfigService` to a different assembly silently breaks `.oamod` packages compiled against old Core; keep type-forward alias in old namespace; run canary `.oamod` round-trip test on every interface-move commit
+3. **Pre-existing 3 test failures amplified by concurrency changes** — document all 3 failing test names before starting v1.7; fix them (ANIMA-08 global singleton root cause) before any Activity Channel work; any 4th failure after concurrency changes is a new regression
+4. **DI registration fails silently after module decoupling** — module constructor type mismatch shows as runtime `InvalidOperationException`, not compile error; migrate one module at a time, run integration tests after each, add startup smoke test that resolves all 14 module types
+5. **Blazor Server SynchronizationContext corruption** — EventBus and ActivityChannel callbacks fire on ThreadPool threads; all Blazor component subscriptions must use `await InvokeAsync(StateHasChanged)` not bare `StateHasChanged()`; audit all components when ActivityChannel events are wired to UI state
 
 ---
 
 ## Implications for Roadmap
 
-Based on the dependency chain in ARCHITECTURE.md and the pitfall-to-phase mapping in PITFALLS.md, four phases are recommended.
+Based on research, suggested phase structure:
 
-### Phase 1: Cross-Anima Routing Infrastructure
+### Phase 0: Pre-flight — Test Baseline
+**Rationale:** Three pre-existing test failures are caused by ANIMA-08 (global `IEventBus` singleton). Concurrency changes will make order-sensitive tests indistinguishable from regressions unless the baseline is clean. This is a blocking prerequisite for all other v1.7 work.
+**Delivers:** Full test suite at 0 failures; documented ANIMA-08 root cause; known-flaky test trait annotations removed
+**Addresses:** Pitfall 10 (pre-existing failures amplified by concurrency changes)
+**Avoids:** Inability to distinguish regression from pre-existing debt during Activity Channel work
 
-**Rationale:** All routing modules depend on `CrossAnimaRouter` and the correlation ID addressing scheme. Building the broker and DTOs first means modules can be tested against a real implementation, not mocks. Critical isolation and addressing pitfalls (Pitfalls 1, 2, 3, 10, 11) must be locked down here — they cannot be retrofitted without breaking changes to the addressing data model.
+### Phase 1: Concurrency Fixes
+**Rationale:** Fix the two known races before introducing the Activity Channel model. The channel model would hide the `_pendingPrompt` symptom while leaving the root cause. Both fixes are mechanical (1-3 line changes) with immediate test coverage.
+**Delivers:** Race-free `WiringEngine._failedModules` (ConcurrentDictionary); race-free `LLMModule._pendingPrompt` and `ConditionalBranchModule._pendingInput` (local capture or Channel<string>); `volatile` / `Interlocked.Exchange` on trigger-buffer fields
+**Addresses:** CONC-01 (race conditions on shared mutable fields)
+**Avoids:** Pitfall 1 (pendingPrompt race), Pitfall 2 (WiringEngine HashSet race)
+**Research flag:** Standard patterns — skip `/gsd:research-phase`
 
-**Delivers:** `CrossAnimaRouter` singleton with full lifecycle management; `InputPortDescriptor` DTO; `InputPortRegistration` record; compound key addressing (`animaId::portName`); correlation ID map with expiry timestamps; `CancelPendingForAnima` for deletion events; hook into `AnimaRuntimeManager.DeleteAsync`; isolation integration test.
+### Phase 2: Activity Channel Model
+**Rationale:** With a clean concurrency baseline, introduce the `ActivityChannel` component. This is the highest-architectural-impact change in v1.7 and should be isolated in its own phase so any integration failures are attributable.
+**Delivers:** `ActivityRequest` hierarchy in Contracts; `ActivityChannel` class in `Core/Runtime/`; `AnimaRuntime` gains `ActivityChannel` property; `HeartbeatLoop.ExecuteTickAsync` enqueues instead of calling WiringEngine directly; `CrossAnimaRouter.RouteRequestAsync` enqueues `IncomingRouteActivity`; `ChatInputModule.SendMessageAsync` enqueues `UserMessageActivity`; 10-second soak test confirming no deadlock
+**Addresses:** CONC-02/CONC-03 (stateless and stateful Anima execution safety)
+**Uses:** `Channel.CreateUnbounded<T>()` with `SingleReader = true`; `Task.Run(() => RunConsumerAsync(ct))`; `CancellationTokenSource.CreateLinkedTokenSource`
+**Avoids:** Pitfall 3 (Activity Channel deadlock), Pitfall 4 (Blazor SynchronizationContext — audit components in this phase)
+**Research flag:** Architecture is fully specified in ARCHITECTURE.md — skip `/gsd:research-phase`; however, verify Blazor component audit scope before committing
 
-**Addresses features from FEATURES.md:** Cross-Anima message router (global singleton), correlation ID tracking, timeout and orphan cleanup, thread-safe async delivery.
+### Phase 3: Contracts API Expansion
+**Rationale:** Once the ActivityChannel is stable, expand the Contracts surface. This enables external plugins to access config, identity, routing, and LLM services without referencing Core — the prerequisite for Phase 4's module decoupling. Interface moves are binary breaking; compatibility shims must ship in the same commit as the move.
+**Delivers:** `IModuleContext` in Contracts; `IAnimaModuleConfigService` moved to Contracts with type-forward in `Core.Services`; `ICrossAnimaRouter` + supporting DTOs moved to Contracts; `ILLMService` + `ChatMessageInput` moved to Contracts; `ISsrfGuard` new in Contracts; all Core implementations updated to implement new Contracts interfaces; DI registrations updated; canary `.oamod` round-trip test passing
+**Addresses:** API-01 (Contracts API surface), API-02 (external module parity)
+**Avoids:** Pitfall 5 (binary breaking interface move), Pitfall 6 (adding members to IEventBus/IModule), Pitfall 7 (circular dependency in Contracts)
+**Research flag:** Binary compatibility rules are well-documented — skip `/gsd:research-phase`; CI enforcement of zero ProjectReferences in Contracts is the key guard
 
-**Avoids pitfalls:** Global EventBus bypass (Pitfall 1), sync deadlock in tick (Pitfall 2), correlation ID collisions and orphans (Pitfall 3), service name collisions — compound key prevents (Pitfall 10), deletion with pending requests (Pitfall 11).
+### Phase 4: Built-in Module Decoupling
+**Rationale:** With Contracts containing all required interfaces, the mechanical decoupling of 14 modules is unblocked. Migrate in dependency order (simplest first) and validate DI resolution after each module — never batch-commit.
+**Delivers:** All 14 modules using only `OpenAnima.Contracts` — zero `using OpenAnima.Core.*`; `IAnimaContext` constructor params replaced with `IModuleContext`; DI registrations updated; startup smoke test resolves all 14 module types; `oani new` template updated; `dotnet build OpenAnima.Contracts` in isolation succeeds; `WeakReference<IModule>` unload test passing
+**Migration order:** ChatInputModule, ChatOutputModule, HeartbeatModule → FixedTextModule, TextJoinModule, TextSplitModule, ConditionalBranchModule → AnimaInputPortModule, AnimaOutputPortModule, AnimaRouteModule → LLMModule, HttpRequestModule; FormatDetector already clean
+**Addresses:** DECPL-01 (module decoupling)
+**Avoids:** Pitfall 8 (DI registration break), Pitfall 9 (AssemblyLoadContext unload failure), Pitfall 11 (EventBus subscription lifecycle leak)
+**Research flag:** Standard refactor pattern — skip `/gsd:research-phase`
 
-### Phase 2: Routing Modules
-
-**Rationale:** Depends on `CrossAnimaRouter` from Phase 1. `AnimaInputPortModule`, `AnimaOutputPortModule`, and `AnimaRouteModule` are standard `IModuleExecutor` implementations — once the broker is stable, these are low-risk. The correlation ID passthrough design (text prefix vs. dedicated Trigger wire) must be decided and locked in before implementation; changing it retroactively requires re-wiring all existing graphs.
-
-**Delivers:** Three new `IModuleExecutor` modules registered in the plugin system; config sidebar fields (service name, description, target Anima dropdown, target port dropdown, timeout); end-to-end cross-Anima request-response demonstrable in the wiring editor without LLM involvement.
-
-**Addresses features from FEATURES.md:** AnimaInputPort, AnimaOutputPort, AnimaRoute modules (all P1).
-
-**Avoids pitfalls:** AnimaRouteModule fire-and-forget anti-pattern (must await; Pitfall 2 / ARCHITECTURE.md Anti-Pattern 2); `RoutingEnvelope<T>` wrapper that breaks WiringEngine port type dispatch (Anti-Pattern 3); HttpClient-per-execution socket exhaustion (Anti-Pattern 4, though this applies to Phase 4).
-
-### Phase 3: Prompt Auto-Injection and Format Detection
-
-**Rationale:** Depends on `CrossAnimaRouter.GetAllRegisteredPorts()` (Phase 1) and live routing modules (Phase 2) so end-to-end testing is possible. Prompt injection and format detection must ship together — injection without detection is useless (LLM produces the marker but nothing consumes it); detection without injection means the LLM was never told the marker format. Both modify `LLMModule`, so they belong in the same phase. Token budget enforcement for injection must be built here, not retrofitted after context exhaustion is observed.
-
-**Delivers:** Modified `LLMModule` with `BuildSystemPrompt` helper (token-budgeted, 200–300 token cap, one-line service descriptions); `FormatDetector` stateless parser with rolling buffer; `FormatDetectorResult` and `RoutingCall` records; post-stream format dispatch; passthrough text split; compliance tests at temperature 0, 0.5, 1.0.
-
-**Addresses features from FEATURES.md:** Prompt auto-injection, format detection (both P1).
-
-**Avoids pitfalls:** Prompt bloat exhausting context window (Pitfall 4 — 200–300 token budget mandatory from start); streaming format detection on partial chunks (Pitfall 5 — rolling buffer required, per-chunk regex explicitly rejected); LLM format non-compliance (Pitfall 6 — lenient regex, multi-temperature testing).
-
-### Phase 4: HTTP Request Module
-
-**Rationale:** Independent of all routing phases — no dependency on `CrossAnimaRouter`. Can be built in parallel with Phase 2 or Phase 3 if capacity allows, or sequentially after Phase 3. Security requirements (SSRF, credential masking) are critical and must be addressed before the module makes any live network calls; this cannot be deferred.
-
-**Delivers:** `HttpRequestModule` with URL/method/headers/body-template config; `IHttpClientFactory` typed client with `AddStandardResilienceHandler`; SSRF allowlist (empty default, HTTPS-only, private IP block post-DNS-resolution); credential config fields using `type: password` sidebar rendering; 10s timeout default with heartbeat `CancellationToken` pass-through; response body and status code output ports; error-to-output-port handling.
-
-**Addresses features from FEATURES.md:** HTTP Request module (P1); URL template, method dropdown, headers editor, body template, response/statusCode output ports.
-
-**Uses from STACK.md:** `Microsoft.Extensions.Http.Resilience 8.7.0`, `IHttpClientFactory` (built-in).
-
-**Avoids pitfalls:** SSRF via LLM-injected URLs (Pitfall 7 — allowlist-first, empty default); credentials leaking through output ports (Pitfall 8 — password field type + header stripping); HTTP timeout blocking heartbeat (Pitfall 9 — 10s default, pass heartbeat `CancellationToken`).
+### Phase 5: Module Management UI
+**Rationale:** With the plugin API hardened by Phases 3-4, the module management UI (install/uninstall/search via `oani` CLI and editor UI) can be built on a stable foundation. Decoupled modules mean the install/unload paths are clean.
+**Delivers:** `oani module install/uninstall/list/search` commands (MODMGMT-01/02/03/06); editor UI for module lifecycle; hot-reload paths with proper `ShutdownAsync` call sequencing
+**Addresses:** MODMGMT requirements
+**Avoids:** Pitfall 11 (EventBus subscription lifecycle leak during hot-reload)
+**Research flag:** Likely needs `/gsd:research-phase` — CLI UX patterns and AssemblyLoadContext hot-reload edge cases warrant deeper investigation
 
 ### Phase Ordering Rationale
 
-- **Phase 1 before all routing work:** `CrossAnimaRouter` is the dependency root for the entire routing feature set. Building it first with full lifecycle management avoids retrofitting deletion cleanup and expiry — both are architecturally load-bearing (Pitfalls 3, 11) and require breaking changes if added later.
-- **Phase 2 before Phase 3:** Routing modules must exist and be wired before prompt injection and format detection can be tested end-to-end. Without `AnimaInputPortModule` initialized, `GetAllRegisteredPorts()` returns empty and injection is untestable in integration.
-- **Phase 4 is independent:** `HttpRequestModule` has zero dependency on `CrossAnimaRouter`. It can be scheduled in parallel with Phase 2 (conservative: wait until Phase 3; aggressive: build alongside Phase 2). Sequential placement after Phase 3 is the safe default.
-- **No LLMModule changes before Phase 3:** Keeping `LLMModule` unmodified during Phases 1 and 2 reduces regression risk for the most-used module in the system.
+- Phase 0 before Phase 1: pre-existing test failures make regression attribution impossible during concurrency work; must be clean baseline
+- Phase 1 before Phase 2: the `_pendingPrompt` and `_failedModules` races must be fixed at source before the Activity Channel hides symptoms
+- Phase 2 before Phase 3: `ActivityRequest` hierarchy lives in Contracts — it is defined in Phase 2 and can be cleanly moved to Contracts in Phase 3 without awkward mid-phase shuffles
+- Phase 3 before Phase 4: modules cannot be decoupled until the interfaces they depend on exist in Contracts
+- Phase 4 before Phase 5: module management UI depends on a stable install/unload path; a module with lingering Core references could cause spurious unload failures during hot-reload
 
 ### Research Flags
 
-Phases requiring deeper research or empirical validation during planning:
+Phases needing deeper research during planning:
+- **Phase 5 (Module Management UI):** AssemblyLoadContext hot-reload edge cases, CLI UX patterns for module lifecycle management — sparse documentation on Blazor Server + ALC hot-reload interaction
 
-- **Phase 3 (Format Detection):** Format compliance is MEDIUM confidence. The exact marker format (`@@ROUTE:port|payload@@` vs `<route service="...">...</route>`) has inconsistency across research files and needs alignment. Compliance across model versions, temperatures, and providers must be validated empirically before the format is locked into prompts shipped to users.
-- **Phase 4 (HTTP Security — DNS rebinding):** SSRF prevention via post-resolution IP checking (blocking DNS rebinding) requires careful implementation. The allowlist UX — how users add permitted domains — needs design work that goes beyond the technical implementation.
-
-Phases with standard, well-documented patterns (skip additional research phase):
-
-- **Phase 1 (CrossAnimaRouter):** `TaskCompletionSource<string>` + `ConcurrentDictionary` is a canonical .NET pattern, documented by Microsoft and used in SignalR. Implementation confidence is HIGH.
-- **Phase 2 (Routing Modules):** Standard `IModuleExecutor` pattern — follows identical structure to all existing v1.5 modules. No novel architectural patterns.
+Phases with standard patterns (skip research-phase):
+- **Phase 0:** Fixing known test isolation issues — root cause documented (ANIMA-08 global singleton)
+- **Phase 1:** Mechanical race fixes — `ConcurrentDictionary` swap and local-capture pattern are established BCL idioms
+- **Phase 2:** `Channel<T>` mailbox pattern is fully documented in official .NET docs; architecture is fully specified in ARCHITECTURE.md
+- **Phase 3:** Interface promotion pattern is established; binary-compat rules are documented; no unknowns
+- **Phase 4:** Purely mechanical `using` directive changes; migration order and validation steps are fully specified
 
 ---
 
@@ -152,51 +149,45 @@ Phases with standard, well-documented patterns (skip additional research phase):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Only one new NuGet package; all other capabilities are BCL. Package version (8.7.0) confirmed on NuGet. Official Microsoft docs for all patterns. |
-| Features | HIGH | Feature set derived from direct comparison with n8n, Node-RED, and AutoGen/LangGraph. Core routing features are well-precedented. Format detection compliance specifics are MEDIUM. |
-| Architecture | HIGH | Based on direct source code analysis of the v1.5 codebase. All integration points verified against existing file structure and component interfaces. |
-| Pitfalls | HIGH | 11 pitfalls identified across 6 domains. Security pitfalls (SSRF, credentials) sourced from OWASP and Microsoft documentation. Isolation pitfalls sourced from direct codebase inspection. |
+| Stack | HIGH | Zero new dependencies — all BCL primitives; verified `System.Threading.Channels` BCL inclusion for .NET 8; NuGet search confirms no package reference needed |
+| Features | HIGH | Requirements derived from direct codebase inspection of 14 modules and their Core imports; MVP vs. v1.x split is principled; concurrency patterns are well-established |
+| Architecture | HIGH | All conclusions from live codebase inspection + official .NET docs; `ActivityChannel` design is a direct application of the documented `Channel<T>` single-reader pattern; no inferred behavior |
+| Pitfalls | HIGH | Two known races confirmed by code inspection; binary-compat pitfall confirmed by Microsoft's own breaking-changes policy; Blazor SynchronizationContext pitfall confirmed by official Blazor docs |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Format marker inconsistency:** ARCHITECTURE.md uses `@@ROUTE:portName|payload@@`; FEATURES.md uses `<route service="ServiceName">payload</route>`. These must be reconciled to a single format before Phase 3 begins. Recommendation: XML-style `<route service="ServiceName">payload</route>` — closest to Claude's native tool-call format and most reliably produced by modern LLMs trained on markup.
-- **Correlation ID passthrough design:** ARCHITECTURE.md identifies two options — text prefix (`[CORR:{id}]\n{text}`) vs. dedicated Trigger wire. The text prefix approach risks corruption if intermediate modules transform the text. Recommendation: dedicated Trigger wire for cleanliness, at the cost of requiring an explicit wire in the graph. Decision must be made before Phase 2 implementation.
-- **Prompt injection token budget calibration:** The 200–300 token cap is a reasonable starting point but should be validated against real usage with 3–10 configured routes before being hardcoded. Plan a calibration step in Phase 3 planning.
-- **HTTP allowlist UX:** The allowlist design (empty default, how users add permitted domains in the config sidebar) needs UI design work in Phase 4 planning. The technical implementation is clear; the user-facing configuration flow is not yet specified.
+- **`ILLMService` scope in v1.7:** Moving `ILLMService` to Contracts also requires moving `ChatMessageInput` — assess whether this is in scope for Phase 3 or deferred to v1.8. The direction is correct; the question is timing. Resolve during Phase 3 planning.
+- **ANIMA-08 resolution depth:** The 3 pre-existing test failures are caused by the global `IEventBus` singleton. Phase 0 may reveal that a full ANIMA-08 fix is needed, not just test isolation shims. Scope must be assessed during Phase 0 execution and a decision made before Phase 2 begins.
+- **Stateless Anima policy boundary:** Research identifies stateless vs. stateful as a meaningful distinction for execution policy, but the mechanism for declaring a module stateless (`bool IsStateless` on `AnimaDescriptor`? `[StatelessModule]` attribute?) is unresolved. Must be decided during Phase 2 planning. The `SemaphoreSlim(N,N)` path vs. the `ActivityChannel` path depends on this flag.
+- **Module Management UI scope:** MODMGMT-01/02/03/06 are listed in the FEATURES.md MVP but Phase 5 is the first time a deeper look at the UI design is called for. Phase 5 should use `/gsd:research-phase` to investigate CLI patterns, Blazor UI scaffolding, and ALC hot-reload interaction before implementation.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- OpenAnima source code — `AnimaRuntime`, `HeartbeatLoop`, `EventBus`, `LLMModule`, `WiringEngine`, `AnimaRuntimeManager` — direct codebase inspection
-- OpenAnima `.planning/PROJECT.md` — ANIMA-08 tech debt, v1.6 target features, architectural decisions
-- [Microsoft Learn — IHttpClientFactory guidelines](https://learn.microsoft.com/en-us/dotnet/core/extensions/httpclient-factory) — socket pooling, lifetime management
-- [Microsoft Learn — Build resilient HTTP apps](https://learn.microsoft.com/en-us/dotnet/core/resilience/http-resilience) — `AddStandardResilienceHandler` API
-- [NuGet — Microsoft.Extensions.Http.Resilience 8.7.0](https://www.nuget.org/packages/Microsoft.Extensions.Http.Resilience) — version confirmed
-- [Microsoft Learn — .NET Regular Expressions](https://learn.microsoft.com/en-us/dotnet/standard/base-types/regular-expressions) — `[GeneratedRegex]` attribute
-- [OWASP SSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html) — allowlist strategy, DNS rebinding prevention
-- [Microsoft Correlation IDs Engineering Playbook](https://microsoft.github.io/code-with-engineering-playbook/observability/correlation-id/) — correlation ID design and orphaned request handling
+- OpenAnima source codebase (`/home/user/OpenAnima/src/`) — direct inspection of LLMModule, WiringEngine, HeartbeatLoop, EventBus, AnimaRuntime, AnimaRuntimeManager, IAnimaContext, IAnimaModuleConfigService — all architecture and pitfall conclusions
+- [Microsoft Learn — Channels in .NET](https://learn.microsoft.com/en-us/dotnet/core/extensions/channels) — `Channel<T>` API, BCL inclusion, `ReadAllAsync` consumer pattern
+- [.NET Blog — Introduction to System.Threading.Channels](https://devblogs.microsoft.com/dotnet/an-introduction-to-system-threading-channels/) — producer-consumer patterns, backpressure, completion semantics
+- [NuGet — System.Threading.Channels 8.0.0](https://www.nuget.org/packages/System.Threading.Channels/8.0.0) — confirms BCL inclusion for .NET 8 targets
+- [Microsoft Learn — SemaphoreSlim](https://learn.microsoft.com/en-us/dotnet/api/system.threading.semaphoreslim) — `WaitAsync(CancellationToken)` API, async throttling pattern
+- [Microsoft Learn — Create .NET app with plugin support](https://learn.microsoft.com/en-us/dotnet/core/tutorials/creating-app-with-plugin-support) — AssemblyLoadContext plugin contracts pattern
+- [Microsoft Docs — Breaking changes and .NET libraries](https://learn.microsoft.com/en-us/dotnet/standard/library-guidance/breaking-changes) — namespace/assembly move is binary breaking
+- [Microsoft Docs — .NET API changes that affect compatibility](https://learn.microsoft.com/en-us/dotnet/core/compatibility/library-change-rules) — interface member addition is a breaking change
+- [Microsoft Docs — Blazor Server SynchronizationContext](https://learn.microsoft.com/en-us/aspnet/core/blazor/components/synchronization-context) — `InvokeAsync` requirement for background threads
+- [GitHub — dotnet/runtime issue #33221](https://github.com/dotnet/runtime/issues/33221) — `ConcurrentDictionary.GetOrAdd` factory outside lock
+- [GitHub — dotnet/runtime issue #75418](https://github.com/dotnet/runtime/issues/75418) — bounded channel deadlock with `WriteAsync`
+- OpenAnima PROJECT.md — ANIMA-08 tech debt, v1.7 active requirements, known race conditions
 
 ### Secondary (MEDIUM confidence)
-- [Correlation Identifier — Enterprise Integration Patterns](https://www.enterpriseintegrationpatterns.com/patterns/messaging/CorrelationIdentifier.html) — correlation ID tracking pattern
-- [Node-RED HTTP Request Node — FlowFuse](https://flowfuse.com/node-red/core-nodes/http-request/) — reference UX for HTTP module config fields (canonical reference)
-- [Building your first multi-agent system with n8n](https://medium.com/mitb-for-all/building-your-first-multi-agent-system-with-n8n-0c959d7139a1) — sub-workflow-as-tool pattern (closest analog to AnimaInputPort)
-- [LLM Structured Output in 2026](https://dev.to/pockit_tools/llm-structured-output-in-2026-stop-parsing-json-with-regex-and-do-it-right-34pk) — format reliability levels: prompt engineering 80–95%, tool_call 99%+
-- [Structured Output Streaming for LLMs](https://medium.com/@prestonblckbrn/structured-output-streaming-for-llms-a836fc0d35a2) — incremental parsing, rolling buffer approach
-- [TaskCompletionSource in .NET](https://code-corner.dev/2024/01/19/NET-%E2%80%94-TaskCompletionSource-and-CancellationTokenSource/) — TCS + CancellationTokenSource async RPC pattern
-- [Gigi Labs — RabbitMQ RPC with TaskCompletionSource](https://gigi.nullneuron.net/gigilabs/abstracting-rabbitmq-rpc-with-taskcompletionsource/) — correlation dictionary pattern walkthrough
-- [C# HttpClient Security Pitfalls](https://xygeni.io/blog/c-httpclient-common-security-pitfalls-and-safe-practices/) — SSRF, SSL validation, timeout handling
-- [How to Handle Timeout Exceptions in HttpClient](https://oneuptime.com/blog/post/2025-12-23-handle-httpclient-timeout-exceptions/view) — HttpClient.Timeout default (100s), short timeout best practices
-- [Request-based Multi-Agent Reference Architecture](https://microsoft.github.io/multi-agent-reference-architecture/docs/agents-communication/Request-Based.html) — request-response patterns in multi-agent systems
-
-### Tertiary (LOW confidence)
-- [Achieving Tool Calling Functionality in LLMs Using Only Prompt Engineering Without Fine-Tuning](https://arxiv.org/html/2407.04997v1) — XML-tag format reliability (needs empirical validation for this specific format/model combination)
-- [Effective Prompt Engineering: Mastering XML Tags](https://medium.com/@TechforHumans/effective-prompt-engineering-mastering-xml-tags-for-clarity-precision-and-security-in-llms-992cae203fdc) — XML-tag format guidance for LLMs
-- [Every Way To Get Structured Output From LLMs — BAML Blog](https://boundaryml.com/blog/structured-output-from-llms) — comparison of prompt-based vs constrained decoding reliability
+- [Blazor University — Thread safety using InvokeAsync](https://blazor-university.com/components/multi-threaded-rendering/invokeasync/) — re-entrancy at await points, InvokeAsync not a full serialization guarantee
+- [Real Plugin Systems in .NET: AssemblyLoadContext — Jan 2026](https://jordansrowles.medium.com/real-plugin-systems-in-net-assemblyloadcontext-unloadability-and-reflection-free-discovery-81f920c83644) — "five lies" of AssemblyLoadContext unloadability
+- [Building High-Performance .NET Apps with C# Channels](https://antondevtips.com/blog/building-high-performance-dotnet-apps-with-csharp-channels) — Channel<T> usage patterns corroborating official docs
+- [blog.semirhamid.com — .NET Concurrency: lock, SemaphoreSlim & Channels](https://blog.semirhamid.com/net-concurrency-lock-semaphore-slim-and-channels) — SemaphoreSlim vs Channel<T> comparison
+- [Orleans — Request scheduling (grain turns)](https://learn.microsoft.com/en-us/dotnet/orleans/grains/request-scheduling) — reference for named-channel / reentrancy pattern analogy
 
 ---
-*Research completed: 2026-03-11*
+*Research completed: 2026-03-14*
 *Ready for roadmap: yes*
