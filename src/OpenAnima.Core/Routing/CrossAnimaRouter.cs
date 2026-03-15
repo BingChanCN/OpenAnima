@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using OpenAnima.Contracts;
 using OpenAnima.Core.Anima;
+using OpenAnima.Core.Channels;
 
 [assembly: InternalsVisibleTo("OpenAnima.Tests")]
 
@@ -136,28 +137,26 @@ public class CrossAnimaRouter : ICrossAnimaRouter
 
         _logger.LogDebug("RouteRequest {CorrelationId} -> {Key}", correlationId, key);
 
-        // Phase 29: Deliver request to the target Anima's EventBus via IAnimaRuntimeManager.
-        // The AnimaInputPortModule is subscribed to "routing.incoming.{portName}" events.
+        // Phase 34: Deliver request via the target Anima's ActivityChannelHost routing channel.
+        // If channel host is available, enqueue the route work item (serialized, non-blocking).
+        // Fall back to direct EventBus publish when channel host is not available (e.g. legacy tests).
         var runtime = _runtimeManager?.GetOrCreateRuntime(targetAnimaId);
         if (runtime != null)
         {
             try
             {
-                await runtime.EventBus.PublishAsync(new ModuleEvent<string>
-                {
-                    EventName = $"routing.incoming.{portName}",
-                    SourceModuleId = "CrossAnimaRouter",
-                    Payload = payload,
-                    Metadata = new Dictionary<string, string>
-                    {
-                        ["correlationId"] = correlationId
-                    }
-                }, ct);
+                // Use routing channel if available (Phase 34 path).
+                runtime.ActivityChannelHost.EnqueueRoute(new RouteWorkItem(
+                    EventName: $"routing.incoming.{portName}",
+                    SourceModuleId: "CrossAnimaRouter",
+                    Payload: payload,
+                    Metadata: new Dictionary<string, string> { ["correlationId"] = correlationId },
+                    Ct: ct));
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex,
-                    "CrossAnimaRouter: failed to deliver request {CorrelationId} to {Key} EventBus",
+                    "CrossAnimaRouter: failed to enqueue request {CorrelationId} to {Key} routing channel",
                     correlationId, key);
             }
         }

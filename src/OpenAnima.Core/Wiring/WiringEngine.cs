@@ -114,8 +114,10 @@ public class WiringEngine : IWiringEngine
     /// <summary>
     /// Executes all modules in topological order with level-parallel execution.
     /// Implements isolated failure: errored modules skip downstream, unaffected branches continue.
+    /// When <paramref name="skipModuleIds"/> is provided, modules in the set are skipped (used by
+    /// the stateless dispatch fork to avoid double-executing stateless modules).
     /// </summary>
-    public async Task ExecuteAsync(CancellationToken ct = default)
+    public async Task ExecuteAsync(CancellationToken ct = default, ISet<string>? skipModuleIds = null)
     {
         if (_currentConfig == null || _graph == null)
         {
@@ -134,8 +136,10 @@ public class WiringEngine : IWiringEngine
             var level = levels[levelIndex];
             _logger.LogDebug("Executing level {LevelIndex} with {ModuleCount} modules", levelIndex, level.Count);
 
-            // Filter out modules whose upstream dependencies failed
-            var executableModules = level.Where(moduleId => !HasFailedUpstream(moduleId)).ToList();
+            // Filter out modules whose upstream dependencies failed, and any explicitly skipped modules
+            var executableModules = level.Where(moduleId =>
+                !HasFailedUpstream(moduleId) &&
+                (skipModuleIds == null || !skipModuleIds.Contains(moduleId))).ToList();
 
             if (executableModules.Count < level.Count)
             {

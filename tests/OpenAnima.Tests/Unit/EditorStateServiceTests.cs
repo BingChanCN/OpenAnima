@@ -311,7 +311,7 @@ public class EditorStateServiceTests
         public bool IsLoaded => false;
         public WiringConfiguration? GetCurrentConfiguration() => null;
         public void LoadConfiguration(WiringConfiguration config) { }
-        public Task ExecuteAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task ExecuteAsync(CancellationToken ct = default, ISet<string>? skipModuleIds = null) => Task.CompletedTask;
         public void UnloadConfiguration() { }
     }
 }

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
+using OpenAnima.Core.Channels;
 using OpenAnima.Core.Events;
 using OpenAnima.Core.Hubs;
 using OpenAnima.Core.Plugins;
@@ -26,6 +27,7 @@ public class HeartbeatLoop : IDisposable
     private readonly SemaphoreSlim _tickLock = new(1, 1);
     private CancellationTokenSource? _cts;
     private Task? _loopTask;
+    private ActivityChannelHost? _channelHost;
 
     private long _tickCount;
     private long _skippedCount;
@@ -51,6 +53,13 @@ public class HeartbeatLoop : IDisposable
         _logger = logger;
         _hubContext = hubContext;
     }
+
+    /// <summary>
+    /// Sets the ActivityChannelHost to use for tick dispatch. When set, ExecuteTickAsync
+    /// enqueues via TryWrite (non-blocking, deadlock-safe) instead of executing directly.
+    /// AnimaRuntime calls this after creating the channel host.
+    /// </summary>
+    internal void SetChannelHost(ActivityChannelHost channelHost) => _channelHost = channelHost;
 
     /// <summary>
     /// Starts the heartbeat loop on a background task.
@@ -117,7 +126,8 @@ public class HeartbeatLoop : IDisposable
     }
 
     /// <summary>
-    /// Executes a single tick: dispatch events, then tick all modules.
+    /// Executes a single tick: if channel host is set, enqueues via TryWrite (non-blocking).
+    /// Otherwise, falls back to direct module ticking for backward compatibility.
     /// </summary>
     private async Task ExecuteTickAsync(CancellationToken ct)
     {
@@ -126,9 +136,25 @@ public class HeartbeatLoop : IDisposable
 
         try
         {
-            // Step 1: EventBus dispatches immediately on publish, so no FlushAsync needed
+            // Channel path: enqueue to heartbeat channel (TryWrite = void, never blocks/deadlocks).
+            // The channel consumer calls the onTick callback (stateless dispatch fork in AnimaRuntime).
+            if (_channelHost != null)
+            {
+                _channelHost.EnqueueTick(new TickWorkItem(ct));
 
-            // Step 2: Tick all ITickable modules
+                sw.Stop();
+                var latencyMsChannel = sw.Elapsed.TotalMilliseconds;
+                _lastTickLatencyMs = latencyMsChannel;
+
+                if (_hubContext != null)
+                {
+                    _ = _hubContext.Clients.All.ReceiveHeartbeatTick(_animaId, _tickCount, latencyMsChannel);
+                }
+                return;
+            }
+
+            // Fallback path (no channel host): directly tick all ITickable modules.
+            // This path is used in tests that create HeartbeatLoop without a full AnimaRuntime.
             var modules = _registry.GetAllModules();
             var tickTasks = new List<Task>();
 

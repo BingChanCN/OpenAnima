@@ -22,8 +22,10 @@ public interface IWiringEngine
 
     /// <summary>
     /// Executes all modules in topological order with level-parallel execution.
+    /// When <paramref name="skipModuleIds"/> is provided, modules whose IDs are in the set are skipped
+    /// (used by the stateless dispatch fork to avoid double-executing stateless modules).
     /// </summary>
-    Task ExecuteAsync(CancellationToken ct = default);
+    Task ExecuteAsync(CancellationToken ct = default, ISet<string>? skipModuleIds = null);
 
     /// <summary>
     /// Unloads the current configuration and disposes all subscriptions.
