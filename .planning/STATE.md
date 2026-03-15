@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Runtime Foundation
 status: in_progress
-last_updated: "2026-03-15T16:26:04Z"
-last_activity: 2026-03-15 — Phase 36 Plan 01 complete (inventory docs normalized; ModuleMetadataRecord + SsrfGuard moved to Contracts; 71 targeted tests green)
+last_updated: "2026-03-15T17:36:22Z"
+last_activity: 2026-03-15 — Phase 36 Plan 03 complete (routing trio + HttpRequestModule moved to Contracts surfaces; 28 targeted tests green)
 progress:
   total_phases: 5
   completed_phases: 4
@@ -23,21 +23,21 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-15)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 36 Plan 01 COMPLETE — authoritative 12-module inventory documented; `ModuleMetadataRecord` and `SsrfGuard` moved to Contracts; Plan 02 next
+**Current focus:** Phase 36 Plans 02-03 COMPLETE — all 11 non-LLM built-in modules now use Contracts-first module-facing surfaces; `LLMModule` and CLI template work remain next
 
 ## Current Position
 
-Phase: 36 of 36 (Built-in Module Decoupling) — Plan 01 of 05 complete
-Plan: 1 of 5 completed
-Status: Phase 36 in progress — canonical inventory fixed, shared helper surfaces moved to Contracts, module cohort migration begins next
-Last activity: 2026-03-15 — Phase 36 Plan 01 complete (inventory docs normalized; ModuleMetadataRecord + SsrfGuard moved to Contracts; 71 targeted tests green)
+Phase: 36 of 36 (Built-in Module Decoupling) — Plan 03 of 05 complete
+Plan: 3 of 5 completed
+Status: Phase 36 in progress — all 11 non-LLM built-in modules are Contracts-first at the source-file level; `LLMModule`, CLI templates, and final audit coverage remain
+Last activity: 2026-03-15 — Phase 36 Plan 03 complete (routing trio + HttpRequestModule moved to Contracts surfaces; 28 targeted tests green)
 
-Progress: [███████░░░] 67% (v1.7)
+Progress: [████████░░] 83% (v1.7)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 79 (across v1.0–v1.7 Phase 36 P01)
+- Total plans completed: 81 (across v1.0–v1.7 Phase 36 P03)
 
 **By Milestone:**
 
@@ -71,6 +71,8 @@ Progress: [███████░░░] 67% (v1.7)
 
 **Phase 36 Metrics:**
 - Plan 01: 35 min, 2 tasks, 10 files created/modified
+- Plan 02: 36 min, 2 tasks, 4 files modified (3 cohort files audited with no source delta)
+- Plan 03: 23 min, 2 tasks, 4 files modified
 
 ## Accumulated Context
 
@@ -99,6 +101,9 @@ Progress: [███████░░░] 67% (v1.7)
 - AnimaModuleConfigService in DI requires await using ServiceProvider (implements IAsyncDisposable, not IDisposable) (Phase 35 P03)
 - ModuleMetadataRecord now lives in OpenAnima.Contracts; the temporary Core.Modules shim inherits from the Contracts record so existing call sites keep compiling during the migration (Phase 36 P01)
 - SsrfGuard now lives in OpenAnima.Contracts.Http; the temporary Core.Http shim delegates to the Contracts helper until HttpRequestModule switches imports directly (Phase 36 P01)
+- The low-risk non-LLM built-in cohort already had ChatInputModule, ChatOutputModule, and HeartbeatModule aligned closely enough that Phase 36 Plan 02 only needed source deltas in the text/branch modules after audit (Phase 36 P02)
+- Inside OpenAnima.Core.Modules files, construct `OpenAnima.Contracts.ModuleMetadataRecord` explicitly to avoid accidentally binding back to the temporary Core shim by unqualified name (Phase 36 P02/P03)
+- Existing test stubs that implement obsolete Core config/context interfaces remain assignable to `IModuleConfig` and `IModuleContext`, so the routing/HTTP regression suite stayed source-compatible during the module migration (Phase 36 P03)
 
 ### Known Blockers
 
@@ -107,6 +112,7 @@ Progress: [███████░░░] 67% (v1.7)
 - [Phase 34]: RESOLVED — ActivityChannelHost wired, all channels active, 266/266 tests green
 - [Phase 35]: ILLMService move also requires ChatMessageInput move — v1.7 vs v1.8 scope decision needed during Phase 35 planning
 - [Phase 36]: `dotnet test ... -q` on `OpenAnima.Tests` can false-fail under the .NET 10 SDK with `Building target "CoreCompile" completely`; rerun with normal verbosity for reliable verification evidence
+- [Phase 36]: Running two `dotnet test` processes against `OpenAnima.Tests.csproj` in parallel can race on shared `obj` outputs (`SharedResources.*.resources`, `AssemblyReference.cache`) — verify this project sequentially
 
 ### Technical Debt (carried forward)
 
@@ -119,4 +125,4 @@ Progress: [███████░░░] 67% (v1.7)
 ---
 
 *State updated: 2026-03-15*
-*Stopped at: Completed 36-01-PLAN.md — authoritative 12-module inventory documented; ModuleMetadataRecord + SsrfGuard moved to Contracts with Core shims; targeted ContractsApiTests + SsrfGuardTests 71/71 green*
+*Stopped at: Completed 36-03-PLAN.md — routing trio + HttpRequestModule now use Contracts-facing config/context/routing/helper surfaces; targeted routing/HTTP tests 28/28 green*
