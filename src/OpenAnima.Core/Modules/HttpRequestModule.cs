@@ -1,10 +1,8 @@
 using System.Text;
 using System.Text.Json;
 using OpenAnima.Contracts;
+using OpenAnima.Contracts.Http;
 using OpenAnima.Contracts.Ports;
-using OpenAnima.Core.Anima;
-using OpenAnima.Core.Http;
-using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.Modules;
 
@@ -26,8 +24,8 @@ public class HttpRequestModule : IModuleExecutor
 {
     private readonly IEventBus _eventBus;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IAnimaModuleConfigService _configService;
-    private readonly IAnimaContext _animaContext;
+    private readonly IModuleConfig _configService;
+    private readonly IModuleContext _animaContext;
     private readonly ILogger<HttpRequestModule> _logger;
     private readonly List<IDisposable> _subscriptions = new();
 
@@ -36,7 +34,7 @@ public class HttpRequestModule : IModuleExecutor
     private string? _lastBodyPayload;
     private readonly SemaphoreSlim _executionGuard = new SemaphoreSlim(1, 1);
 
-    public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
+    public IModuleMetadata Metadata { get; } = new OpenAnima.Contracts.ModuleMetadataRecord(
         "HttpRequestModule",
         "1.0.0",
         "Makes configurable HTTP requests with SSRF protection");
@@ -44,8 +42,8 @@ public class HttpRequestModule : IModuleExecutor
     public HttpRequestModule(
         IEventBus eventBus,
         IHttpClientFactory httpClientFactory,
-        IAnimaModuleConfigService configService,
-        IAnimaContext animaContext,
+        IModuleConfig configService,
+        IModuleContext animaContext,
         ILogger<HttpRequestModule> logger)
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -65,14 +63,7 @@ public class HttpRequestModule : IModuleExecutor
             var existing = _configService.GetConfig(animaId, Metadata.Name);
             if (existing.Count == 0)
             {
-                _ = _configService.SetConfigAsync(animaId, Metadata.Name,
-                    new Dictionary<string, string>
-                    {
-                        ["url"] = "",
-                        ["method"] = "GET",
-                        ["headers"] = "",
-                        ["body"] = ""
-                    });
+                _ = SeedDefaultConfigAsync(animaId);
             }
         }
 
@@ -107,6 +98,14 @@ public class HttpRequestModule : IModuleExecutor
 
         _logger.LogDebug("HttpRequestModule: initialized");
         return Task.CompletedTask;
+    }
+
+    private async Task SeedDefaultConfigAsync(string animaId)
+    {
+        await _configService.SetConfigAsync(animaId, Metadata.Name, "url", string.Empty);
+        await _configService.SetConfigAsync(animaId, Metadata.Name, "method", "GET");
+        await _configService.SetConfigAsync(animaId, Metadata.Name, "headers", string.Empty);
+        await _configService.SetConfigAsync(animaId, Metadata.Name, "body", string.Empty);
     }
 
     private async Task HandleTriggerAsync(CancellationToken ct)

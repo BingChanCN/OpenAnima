@@ -22,7 +22,7 @@ public class AnimaOutputPortModule : IModuleExecutor
     private ModuleExecutionState _state = ModuleExecutionState.Idle;
     private Exception? _lastError;
 
-    public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
+    public IModuleMetadata Metadata { get; } = new OpenAnima.Contracts.ModuleMetadataRecord(
         "AnimaOutputPortModule",
         "1.0.0",
         "Completes a cross-Anima request by returning the response via correlation ID");

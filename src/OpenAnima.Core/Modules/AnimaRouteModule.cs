@@ -30,7 +30,7 @@ public class AnimaRouteModule : IModuleExecutor
     private Exception? _lastError;
     private string? _lastRequestPayload;
 
-    public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
+    public IModuleMetadata Metadata { get; } = new OpenAnima.Contracts.ModuleMetadataRecord(
         "AnimaRouteModule",
         "1.0.0",
         "Sends a request to a remote Anima and awaits the response");

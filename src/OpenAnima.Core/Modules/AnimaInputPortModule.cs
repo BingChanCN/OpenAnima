@@ -26,7 +26,7 @@ public class AnimaInputPortModule : IModuleExecutor
     private string? _serviceName;
     private string? _animaId;
 
-    public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
+    public IModuleMetadata Metadata { get; } = new OpenAnima.Contracts.ModuleMetadataRecord(
         "AnimaInputPortModule",
         "1.0.0",
         "Declares a named service endpoint on this Anima for cross-Anima routing");
