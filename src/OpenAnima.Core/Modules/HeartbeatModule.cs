@@ -18,7 +18,7 @@ public class HeartbeatModule : IModuleExecutor, ITickable
     private ModuleExecutionState _state = ModuleExecutionState.Idle;
     private Exception? _lastError;
 
-    public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
+    public IModuleMetadata Metadata { get; } = new OpenAnima.Contracts.ModuleMetadataRecord(
         "HeartbeatModule", "1.0.0", "Fires trigger events on each heartbeat tick");
 
     public HeartbeatModule(IEventBus eventBus, ILogger<HeartbeatModule> logger)

@@ -25,7 +25,7 @@ public class ChatOutputModule : IModuleExecutor
     /// <summary>Last text received on the displayText input port.</summary>
     public string? LastReceivedText { get; private set; }
 
-    public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
+    public IModuleMetadata Metadata { get; } = new OpenAnima.Contracts.ModuleMetadataRecord(
         "ChatOutputModule", "1.0.0", "Receives text on input port and displays it");
 
     public ChatOutputModule(IEventBus eventBus, ILogger<ChatOutputModule> logger)
