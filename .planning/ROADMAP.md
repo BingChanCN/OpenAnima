@@ -136,7 +136,7 @@ Plans:
   3. HeartbeatLoop uses TryWrite (never WriteAsync) — the tick path cannot deadlock when the channel is full
   4. Modules can declare [StatelessModule] — the runtime routes them through the concurrent path, not the channel
   5. A 10-second soak test with simultaneous heartbeat + chat activity completes with no deadlock or missed ticks
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 34-01-PLAN.md — Create [StatelessModule] attribute, work item types, and ActivityChannelHost with unit tests
@@ -203,7 +203,7 @@ Plans:
 | 31. HTTP Request Module | v1.6 | 2/2 | Complete | 2026-03-14 |
 | 32. Test Baseline | v1.7 | 1/1 | Complete | 2026-03-14 |
 | 33. Concurrency Fixes | v1.7 | 1/1 | Complete | 2026-03-14 |
-| 34. Activity Channel Model | v1.7 | 0/2 | Planned | - |
+| 34. Activity Channel Model | 1/2 | In Progress|  | - |
 | 35. Contracts API Expansion | v1.7 | 0/TBD | Not started | - |
 | 36. Built-in Module Decoupling | v1.7 | 0/TBD | Not started | - |
 

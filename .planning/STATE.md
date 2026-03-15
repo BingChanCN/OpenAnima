@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Runtime Foundation
-status: completed
-last_updated: "2026-03-14T19:06:55.508Z"
-last_activity: 2026-03-15 — Phase 33 Plan 01 complete (all 5 modules race-free, CONC-01 through CONC-04)
+status: in_progress
+last_updated: "2026-03-15T10:13:00Z"
+last_activity: 2026-03-15 — Phase 34 Plan 01 complete (ActivityChannelHost + StatelessModuleAttribute, 256/256 tests green)
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 2
-  completed_plans: 2
-  percent: 40
+  total_plans: 4
+  completed_plans: 3
+  percent: 92
 ---
 
 # Project State: OpenAnima
@@ -23,21 +23,21 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-14)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 33 complete — concurrency fixes applied, race-free module foundation ready for Phase 34 ActivityChannel
+**Current focus:** Phase 34 Plan 01 complete — ActivityChannelHost built, Plan 02 wires it into AnimaRuntime + HeartbeatLoop + ChatInputModule + CrossAnimaRouter
 
 ## Current Position
 
-Phase: 33 of 36 (Concurrency Fixes) — COMPLETE
-Plan: 1 of 1 completed
-Status: Phase 33 done — 244/244 tests passing, all race conditions fixed across WiringEngine + 5 modules
-Last activity: 2026-03-15 — Phase 33 Plan 01 complete (all 5 modules race-free, CONC-01 through CONC-04)
+Phase: 34 of 36 (Activity Channel Model) — IN PROGRESS
+Plan: 1 of 2 completed
+Status: Plan 01 done — ActivityChannelHost + StatelessModuleAttribute built, 256/256 tests green
+Last activity: 2026-03-15 — Phase 34 Plan 01 complete (ActivityChannelHost + StatelessModuleAttribute, 256/256 tests green)
 
-Progress: [████░░░░░░] 40% (v1.7)
+Progress: [█████████░] 92% (v1.7)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 74 (across v1.0–v1.7 Phase 33)
+- Total plans completed: 75 (across v1.0–v1.7 Phase 34 P01)
 
 **By Milestone:**
 
@@ -52,12 +52,16 @@ Progress: [████░░░░░░] 40% (v1.7)
 | v1.6 Cross-Anima Routing | 4 | 8 | 2026-03-14 |
 | v1.7 Phase 32 (Test Baseline) | 1 | 1 | 2026-03-15 |
 | v1.7 Phase 33 (Concurrency Fixes) | 1 | 1 | 2026-03-15 |
+| v1.7 Phase 34 P01 (Activity Channel Foundation) | 1 | 1 | 2026-03-15 |
 
 **Phase 32 Metrics:**
 - Plan 01: 15 min, 2 tasks, 2 files modified
 
 **Phase 33 Metrics:**
 - Plan 01: 20 min, 2 tasks, 7 files modified
+
+**Phase 34 Metrics:**
+- Plan 01: 13 min, 2 tasks, 4 files created
 
 ## Accumulated Context
 
@@ -71,6 +75,8 @@ Progress: [████░░░░░░] 40% (v1.7)
 - SemaphoreSlim Wait(0) over WaitAsync(): synchronous non-blocking TryEnter gives skip-when-busy; WaitAsync() queues callers defeating skip semantics (Phase 33)
 - ExecuteInternalAsync pattern: IModuleExecutor.ExecuteAsync() stays as no-op; real logic in private ExecuteInternalAsync with typed captured parameter (Phase 33)
 - HttpRequestModule guard wraps HandleTriggerAsync at subscription boundary, not inside the handler (Phase 33)
+- Reader.Count on UnboundedChannel throws NotSupportedException when net8.0 assembly consumed by net10.0 test runtime — use Interlocked counter for queue depth tracking (Phase 34)
+- ActivityChannelHost._statelessCache is static ConcurrentDictionary shared across all instances — module types immutable at runtime, cache never stales (Phase 34)
 
 ### Known Blockers
 
@@ -90,4 +96,4 @@ Progress: [████░░░░░░] 40% (v1.7)
 ---
 
 *State updated: 2026-03-15*
-*Stopped at: Completed 33-01-PLAN.md — 244/244 tests green, race-free module foundation ready for Phase 34*
+*Stopped at: Completed 34-01-PLAN.md — ActivityChannelHost + StatelessModuleAttribute, 256/256 tests green*
