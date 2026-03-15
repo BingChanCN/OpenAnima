@@ -152,7 +152,12 @@ Plans:
   3. An external module built using only OpenAnima.Contracts can read its config, identify its Anima, and invoke cross-Anima routing
   4. IModuleConfigSchema exists in Contracts — a module implementing it causes the sidebar to auto-render its declared fields
   5. OpenAnima.Contracts builds in isolation (dotnet build on the project alone) with no ProjectReference to Core
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 35-01-PLAN.md — Define all Contracts API interfaces (IModuleConfig, IModuleContext, IModuleConfigSchema + types) and routing types in Contracts.Routing
+- [ ] 35-02-PLAN.md — Core shims (IAnimaContext extends IModuleContext, IAnimaModuleConfigService extends IModuleConfig), DI dual-registration, routing global using aliases, test stub + using fixes
+- [ ] 35-03-PLAN.md — Canary PortModule round-trip test + Contracts API surface unit tests
 
 ### Phase 36: Built-in Module Decoupling
 **Goal**: All 14 built-in modules reference only OpenAnima.Contracts — Core internals are invisible to module code
@@ -203,12 +208,12 @@ Plans:
 | 31. HTTP Request Module | v1.6 | 2/2 | Complete | 2026-03-14 |
 | 32. Test Baseline | v1.7 | 1/1 | Complete | 2026-03-14 |
 | 33. Concurrency Fixes | v1.7 | 1/1 | Complete | 2026-03-14 |
-| 34. Activity Channel Model | 2/2 | Complete    | 2026-03-15 | - |
-| 35. Contracts API Expansion | v1.7 | 0/TBD | Not started | - |
+| 34. Activity Channel Model | v1.7 | 2/2 | Complete | 2026-03-15 |
+| 35. Contracts API Expansion | v1.7 | 0/3 | Not started | - |
 | 36. Built-in Module Decoupling | v1.7 | 0/TBD | Not started | - |
 
 **Total shipped: 31 phases, 72 plans across 7 milestones**
-**v1.7 in progress: 5 phases, 2/4 plans**
+**v1.7 in progress: 5 phases, 4/7+ plans**
 
 ---
-*Last updated: 2026-03-15 after Phase 34 planning*
+*Last updated: 2026-03-15 after Phase 35 planning*
