@@ -101,4 +101,4 @@ Requirements for v1.7 Runtime Foundation. Each maps to roadmap phases.
 
 ---
 *Requirements defined: 2026-03-14*
-*Last updated: 2026-03-14 after initial definition*
+*Last updated: 2026-03-15 after Phase 36 Plan 01*

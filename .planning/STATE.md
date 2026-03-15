@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Runtime Foundation
-status: completed
-last_updated: "2026-03-15T13:13:14.038Z"
-last_activity: 2026-03-15 — Phase 35 Plan 03 complete (PortModule canary 8 tests + ContractsApiTests 52 tests; 326/326 tests green)
+status: in_progress
+last_updated: "2026-03-15T16:26:04Z"
+last_activity: 2026-03-15 — Phase 36 Plan 01 complete (inventory docs normalized; ModuleMetadataRecord + SsrfGuard moved to Contracts; 71 targeted tests green)
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 7
-  completed_plans: 7
-  percent: 100
+  total_plans: 12
+  completed_plans: 8
+  percent: 67
 ---
 
 # Project State: OpenAnima
@@ -20,24 +20,24 @@ progress:
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-14)
+See: `.planning/PROJECT.md` (updated 2026-03-15)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 35 Plan 03 COMPLETE — PortModule canary tests, ContractsApiTests; 326/326 tests green; Phase 35 complete
+**Current focus:** Phase 36 Plan 01 COMPLETE — authoritative 12-module inventory documented; `ModuleMetadataRecord` and `SsrfGuard` moved to Contracts; Plan 02 next
 
 ## Current Position
 
-Phase: 35 of 36 (Contracts API Expansion) — Plan 03 of 03 complete — PHASE COMPLETE
-Plan: 3 of 3 completed
-Status: Phase 35 complete — all three plans shipped; API-01 through API-07 requirements satisfied
-Last activity: 2026-03-15 — Phase 35 Plan 03 complete (PortModule canary 8 tests + ContractsApiTests 52 tests; 326/326 tests green)
+Phase: 36 of 36 (Built-in Module Decoupling) — Plan 01 of 05 complete
+Plan: 1 of 5 completed
+Status: Phase 36 in progress — canonical inventory fixed, shared helper surfaces moved to Contracts, module cohort migration begins next
+Last activity: 2026-03-15 — Phase 36 Plan 01 complete (inventory docs normalized; ModuleMetadataRecord + SsrfGuard moved to Contracts; 71 targeted tests green)
 
-Progress: [██████████] 100% (v1.7)
+Progress: [███████░░░] 67% (v1.7)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 77 (across v1.0–v1.7 Phase 35 P02)
+- Total plans completed: 79 (across v1.0–v1.7 Phase 36 P01)
 
 **By Milestone:**
 
@@ -69,6 +69,9 @@ Progress: [██████████] 100% (v1.7)
 - Plan 02: 12 min, 2 tasks, 19 files modified
 - Plan 03: 11 min, 2 tasks, 5 files created/modified
 
+**Phase 36 Metrics:**
+- Plan 01: 35 min, 2 tasks, 10 files created/modified
+
 ## Accumulated Context
 
 ### Decisions (v1.7)
@@ -91,10 +94,11 @@ Progress: [██████████] 100% (v1.7)
 - Contracts.Routing sub-namespace established for ICrossAnimaRouter + companion types, parallel to existing Contracts.Ports (Phase 35 P01)
 - RoutingTypesTests.cs keeps Core.Routing alongside Contracts.Routing — PendingRequest is Core-internal, not exported to Contracts (Phase 35 P02)
 - global using alias shims for Core.Routing type files make the assembly backward-compatible without touching any call sites (Phase 35 P02)
-
 - Direct ProjectReference to PortModule from test project for canary validation — simpler than PluginLoadContext subprocess; key proof (constructor accepts Contracts services) is fully demonstrated (Phase 35 P03)
 - ICrossAnimaRouter is null in canary tests — router requires AnimaRuntimeManager chicken-and-egg; IModuleConfig and IModuleContext verified with real Core implementations (Phase 35 P03)
 - AnimaModuleConfigService in DI requires await using ServiceProvider (implements IAsyncDisposable, not IDisposable) (Phase 35 P03)
+- ModuleMetadataRecord now lives in OpenAnima.Contracts; the temporary Core.Modules shim inherits from the Contracts record so existing call sites keep compiling during the migration (Phase 36 P01)
+- SsrfGuard now lives in OpenAnima.Contracts.Http; the temporary Core.Http shim delegates to the Contracts helper until HttpRequestModule switches imports directly (Phase 36 P01)
 
 ### Known Blockers
 
@@ -102,6 +106,7 @@ Progress: [██████████] 100% (v1.7)
 - [Phase 33]: RESOLVED — CONC-01 through CONC-04 all fixed; 244/244 tests green
 - [Phase 34]: RESOLVED — ActivityChannelHost wired, all channels active, 266/266 tests green
 - [Phase 35]: ILLMService move also requires ChatMessageInput move — v1.7 vs v1.8 scope decision needed during Phase 35 planning
+- [Phase 36]: `dotnet test ... -q` on `OpenAnima.Tests` can false-fail under the .NET 10 SDK with `Building target "CoreCompile" completely`; rerun with normal verbosity for reliable verification evidence
 
 ### Technical Debt (carried forward)
 
@@ -114,4 +119,4 @@ Progress: [██████████] 100% (v1.7)
 ---
 
 *State updated: 2026-03-15*
-*Stopped at: Completed 35-03-PLAN.md — PortModule canary (8 tests), ContractsApiTests (52 tests); 326/326 tests green; Phase 35 (Contracts API Expansion) COMPLETE*
+*Stopped at: Completed 36-01-PLAN.md — authoritative 12-module inventory documented; ModuleMetadataRecord + SsrfGuard moved to Contracts with Core shims; targeted ContractsApiTests + SsrfGuardTests 71/71 green*

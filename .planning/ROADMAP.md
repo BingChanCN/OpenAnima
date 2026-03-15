@@ -174,7 +174,14 @@ Plans:
 - `BUILTIN-11` and `BUILTIN-12` were unshipped v1.5 backlog items, not missing live implementations
 - Removed demo modules `TextInput`, `LLMProcessor`, `TextOutput`, and `TriggerButton` are historical and not part of the active inventory
 - Authoritative active inventory: `LLMModule`, `ChatInputModule`, `ChatOutputModule`, `HeartbeatModule`, `FixedTextModule`, `TextJoinModule`, `TextSplitModule`, `ConditionalBranchModule`, `AnimaInputPortModule`, `AnimaOutputPortModule`, `AnimaRouteModule`, `HttpRequestModule`
-**Plans**: TBD
+**Plans:** 1/5 plans complete
+
+Plans:
+- [x] 36-01-PLAN.md — Normalize the 12-module inventory and move `ModuleMetadataRecord` plus `SsrfGuard` to Contracts with Core shims
+- [ ] 36-02-PLAN.md — Migrate the chat, heartbeat, text, and branch module cohort to Contracts-only imports
+- [ ] 36-03-PLAN.md — Migrate the routing trio and `HttpRequestModule` to Contracts-first dependencies
+- [ ] 36-04-PLAN.md — Make `LLMModule` Contracts-first except for the documented Core.LLM exception; modernize CLI templates
+- [ ] 36-05-PLAN.md — Add decoupling audit coverage, DI startup resolution tests, and full-suite verification
 
 ## Progress
 
@@ -215,11 +222,11 @@ Plans:
 | 32. Test Baseline | v1.7 | 1/1 | Complete | 2026-03-14 |
 | 33. Concurrency Fixes | v1.7 | 1/1 | Complete | 2026-03-14 |
 | 34. Activity Channel Model | v1.7 | 2/2 | Complete | 2026-03-15 |
-| 35. Contracts API Expansion | 3/3 | Complete    | 2026-03-15 | - |
-| 36. Built-in Module Decoupling | v1.7 | 0/TBD | Not started | - |
+| 35. Contracts API Expansion | v1.7 | 3/3 | Complete | 2026-03-15 |
+| 36. Built-in Module Decoupling | v1.7 | 1/5 | In Progress | - |
 
 **Total shipped: 31 phases, 72 plans across 7 milestones**
-**v1.7 in progress: 5 phases, 4/7+ plans**
+**v1.7 in progress: 5 phases, 8/12 plans**
 
 ---
-*Last updated: 2026-03-15 after Phase 35 planning*
+*Last updated: 2026-03-15 after Phase 36 Plan 01*
