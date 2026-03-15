@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Runtime Foundation
-status: completed
-last_updated: "2026-03-15T11:14:41.491Z"
-last_activity: 2026-03-15 — Phase 34 Plan 02 complete (ActivityChannelHost wired into AnimaRuntime, 7 modules [StatelessModule], 266/266 tests green)
+status: in-progress
+last_updated: "2026-03-15T12:13:37Z"
+last_activity: 2026-03-15 — Phase 35 Plan 01 complete (9 new Contracts API types — IModuleConfig, IModuleContext, IModuleConfigSchema, ICrossAnimaRouter + routing companion types; 266/266 tests green)
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_plans: 7
+  completed_plans: 5
+  percent: 87
 ---
 
 # Project State: OpenAnima
@@ -23,16 +23,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-14)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 34 COMPLETE — ActivityChannelHost wired into runtime, all three ingress paths channel-based, 7 modules classified stateless, 266/266 tests green
+**Current focus:** Phase 35 Plan 01 COMPLETE — 9 new Contracts API types defined in isolation (IModuleConfig, IModuleContext, IModuleConfigSchema + schema types, ICrossAnimaRouter + 3 routing companion types)
 
 ## Current Position
 
-Phase: 34 of 36 (Activity Channel Model) — COMPLETE
-Plan: 2 of 2 completed
-Status: Both plans complete — ActivityChannelHost built and wired, stateless dispatch fork active
-Last activity: 2026-03-15 — Phase 34 Plan 02 complete (ActivityChannelHost wired into AnimaRuntime, 7 modules [StatelessModule], 266/266 tests green)
+Phase: 35 of 36 (Contracts API Expansion) — Plan 01 of 03 complete
+Plan: 1 of 3 completed
+Status: Plan 01 complete — all interface/type definitions in Contracts; Plan 02 (Core shims + DI wiring) next
+Last activity: 2026-03-15 — Phase 35 Plan 01 complete (9 new Contracts API types — IModuleConfig, IModuleContext, IModuleConfigSchema, ICrossAnimaRouter + routing companion types; 266/266 tests green)
 
-Progress: [██████████] 100% (v1.7)
+Progress: [█████████░] 87% (v1.7)
 
 ## Performance Metrics
 
@@ -64,6 +64,9 @@ Progress: [██████████] 100% (v1.7)
 - Plan 01: 13 min, 2 tasks, 4 files created
 - Plan 02: 30 min, 2 tasks, 14 files modified
 
+**Phase 35 Metrics:**
+- Plan 01: 4 min, 2 tasks, 9 files created
+
 ## Accumulated Context
 
 ### Decisions (v1.7)
@@ -81,6 +84,9 @@ Progress: [██████████] 100% (v1.7)
 - ActivityChannelHost property is internal (not public) on AnimaRuntime — internal type constraint; InternalsVisibleTo covers test access (Phase 34 P02)
 - WiringEngine.ExecuteAsync skipModuleIds is optional ISet<string>? = null — backward compatible, stateless dispatch fork passes set to avoid double-dispatch (Phase 34 P02)
 - CrossAnimaRouter routing channel test uses direct EnqueueRoute — router needs runtimeManager which is chicken-and-egg in unit tests; direct channel enqueue is correct unit of testability (Phase 34 P02)
+- IModuleConfig.SetConfigAsync per-key (string key, string value) NOT bulk Dictionary — locked user decision (Phase 35 P01)
+- IModuleContext.ActiveAnimaId is non-nullable string — platform guarantees initialization before module use (Phase 35 P01)
+- Contracts.Routing sub-namespace established for ICrossAnimaRouter + companion types, parallel to existing Contracts.Ports (Phase 35 P01)
 
 ### Known Blockers
 
@@ -100,4 +106,4 @@ Progress: [██████████] 100% (v1.7)
 ---
 
 *State updated: 2026-03-15*
-*Stopped at: Completed 34-02-PLAN.md — ActivityChannelHost wired into AnimaRuntime, 7 modules [StatelessModule], 266/266 tests green*
+*Stopped at: Completed 35-01-PLAN.md — 9 new Contracts API types (IModuleConfig, IModuleContext, IModuleConfigSchema, ConfigFieldType, ConfigFieldDescriptor, ICrossAnimaRouter + 3 routing companion types); 266/266 tests green*
