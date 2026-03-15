@@ -5,11 +5,11 @@ namespace OpenAnima.Core.Anima;
 /// </summary>
 public class AnimaContext : IAnimaContext
 {
-    private string? _activeAnimaId;
+    private string _activeAnimaId = "";
 
     public event Action? ActiveAnimaChanged;
 
-    public string? ActiveAnimaId => _activeAnimaId;
+    public string ActiveAnimaId => _activeAnimaId;
 
     public void SetActive(string animaId)
     {

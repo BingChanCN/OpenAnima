@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
+using OpenAnima.Contracts;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.Hubs;
 using OpenAnima.Core.Routing;
@@ -25,7 +26,9 @@ public static class AnimaServiceExtensions
         var animasRoot = Path.Combine(dataRoot, "animas");
         Directory.CreateDirectory(animasRoot);
 
-        services.AddSingleton<IAnimaContext, AnimaContext>();
+        services.AddSingleton<AnimaContext>();
+        services.AddSingleton<IModuleContext>(sp => sp.GetRequiredService<AnimaContext>());
+        services.AddSingleton<IAnimaContext>(sp => sp.GetRequiredService<AnimaContext>());
 
         // Register router BEFORE AnimaRuntimeManager.
         // The IAnimaRuntimeManager parameter uses a deferred lambda — since both are singletons,
@@ -47,8 +50,10 @@ public static class AnimaServiceExtensions
         services.AddSingleton<IAnimaModuleStateService>(sp =>
             new AnimaModuleStateService(animasRoot));
 
-        services.AddSingleton<IAnimaModuleConfigService>(sp =>
+        services.AddSingleton<AnimaModuleConfigService>(sp =>
             new AnimaModuleConfigService(animasRoot));
+        services.AddSingleton<IModuleConfig>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
+        services.AddSingleton<IAnimaModuleConfigService>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
 
         return services;
     }

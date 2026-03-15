@@ -34,6 +34,13 @@ public class AnimaModuleConfigService : IAnimaModuleConfigService, IAsyncDisposa
         return new Dictionary<string, string>();
     }
 
+    public async Task SetConfigAsync(string animaId, string moduleId, string key, string value)
+    {
+        var config = GetConfig(animaId, moduleId);
+        config[key] = value;
+        await SetConfigAsync(animaId, moduleId, config);
+    }
+
     public async Task SetConfigAsync(string animaId, string moduleId, Dictionary<string, string> config)
     {
         await _lock.WaitAsync();
