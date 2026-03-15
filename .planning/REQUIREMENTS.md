@@ -14,8 +14,8 @@ Requirements for v1.7 Runtime Foundation. Each maps to roadmap phases.
 - [x] **CONC-03**: LLMModule._pendingPrompt race condition is eliminated via local capture or Channel<T>
 - [x] **CONC-04**: Each module has SemaphoreSlim(1,1) execution guard with skip-when-busy semantics
 - [x] **CONC-05**: ActivityChannel component serializes all state-mutating work per Anima (HeartbeatTick, UserMessage, IncomingRoute)
-- [ ] **CONC-06**: Stateful Anima has named activity channels (heartbeat, chat) — parallel between channels, serial within each
-- [ ] **CONC-07**: Stateless/mechanical Anima supports concurrent request-level execution without channel serialization
+- [x] **CONC-06**: Stateful Anima has named activity channels (heartbeat, chat) — parallel between channels, serial within each
+- [x] **CONC-07**: Stateless/mechanical Anima supports concurrent request-level execution without channel serialization
 - [x] **CONC-08**: Modules can declare concurrency mode via [StatelessModule] attribute — runtime enforces correct execution strategy
 - [x] **CONC-09**: HeartbeatLoop enqueues via TryWrite (never WriteAsync) to prevent deadlock in tick path
 - [x] **CONC-10**: Pre-existing 3 test failures are resolved before concurrency work begins (clean baseline)
@@ -74,8 +74,8 @@ Requirements for v1.7 Runtime Foundation. Each maps to roadmap phases.
 | CONC-03 | Phase 33 | Complete |
 | CONC-04 | Phase 33 | Complete |
 | CONC-05 | Phase 34 | Complete |
-| CONC-06 | Phase 34 | Pending |
-| CONC-07 | Phase 34 | Pending |
+| CONC-06 | Phase 34 | Complete |
+| CONC-07 | Phase 34 | Complete |
 | CONC-08 | Phase 34 | Complete |
 | CONC-09 | Phase 34 | Complete |
 | API-01 | Phase 35 | Pending |
