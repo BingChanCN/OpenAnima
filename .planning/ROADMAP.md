@@ -87,7 +87,7 @@
 
 </details>
 
-### 🚧 v1.7 Runtime Foundation (In Progress)
+### v1.7 Runtime Foundation (In Progress)
 
 **Milestone Goal:** Harden the runtime foundation — fix concurrency bugs, introduce Activity Channel execution model, thicken the Contracts API, and decouple built-in modules from Core.
 
@@ -136,7 +136,11 @@ Plans:
   3. HeartbeatLoop uses TryWrite (never WriteAsync) — the tick path cannot deadlock when the channel is full
   4. Modules can declare [StatelessModule] — the runtime routes them through the concurrent path, not the channel
   5. A 10-second soak test with simultaneous heartbeat + chat activity completes with no deadlock or missed ticks
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 34-01-PLAN.md — Create [StatelessModule] attribute, work item types, and ActivityChannelHost with unit tests
+- [ ] 34-02-PLAN.md — Wire ActivityChannelHost into AnimaRuntime, redirect ingress paths, apply attributes, soak test
 
 ### Phase 35: Contracts API Expansion
 **Goal**: External module authors can access config, context, and routing services via OpenAnima.Contracts alone — no Core assembly reference required
@@ -198,13 +202,13 @@ Plans:
 | 30. Prompt Injection & Format Detection | v1.6 | 2/2 | Complete | 2026-03-13 |
 | 31. HTTP Request Module | v1.6 | 2/2 | Complete | 2026-03-14 |
 | 32. Test Baseline | v1.7 | 1/1 | Complete | 2026-03-14 |
-| 33. Concurrency Fixes | 1/1 | Complete    | 2026-03-14 | - |
-| 34. Activity Channel Model | v1.7 | 0/TBD | Not started | - |
+| 33. Concurrency Fixes | v1.7 | 1/1 | Complete | 2026-03-14 |
+| 34. Activity Channel Model | v1.7 | 0/2 | Planned | - |
 | 35. Contracts API Expansion | v1.7 | 0/TBD | Not started | - |
 | 36. Built-in Module Decoupling | v1.7 | 0/TBD | Not started | - |
 
 **Total shipped: 31 phases, 72 plans across 7 milestones**
-**v1.7 in progress: 5 phases, 1/2 plans**
+**v1.7 in progress: 5 phases, 2/4 plans**
 
 ---
-*Last updated: 2026-03-15 after Phase 33 planning*
+*Last updated: 2026-03-15 after Phase 34 planning*
