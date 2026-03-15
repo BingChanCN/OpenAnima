@@ -26,7 +26,7 @@ Requirements for v1.7 Runtime Foundation. Each maps to roadmap phases.
 - [x] **API-02**: IAnimaContext (or IModuleContext with immutable AnimaId) exists in OpenAnima.Contracts
 - [x] **API-03**: ICrossAnimaRouter interface exists in OpenAnima.Contracts with type-forward shim in Core
 - [x] **API-04**: IModuleConfigSchema interface in Contracts — modules declare config fields, platform auto-renders sidebar
-- [ ] **API-05**: Binary compatibility maintained — type-forward aliases in old Core namespaces for moved interfaces
+- [x] **API-05**: Binary compatibility maintained — type-forward aliases in old Core namespaces for moved interfaces
 - [ ] **API-06**: Canary .oamod round-trip test validates external plugin compatibility after interface moves
 - [ ] **API-07**: External modules achieve feature parity with built-in modules via Contracts-only dependency
 
@@ -82,7 +82,7 @@ Requirements for v1.7 Runtime Foundation. Each maps to roadmap phases.
 | API-02 | Phase 35 | Complete |
 | API-03 | Phase 35 | Complete |
 | API-04 | Phase 35 | Complete |
-| API-05 | Phase 35 | Pending |
+| API-05 | Phase 35 | Complete |
 | API-06 | Phase 35 | Pending |
 | API-07 | Phase 35 | Pending |
 | DECPL-01 | Phase 36 | Pending |

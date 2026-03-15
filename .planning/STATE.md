@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Runtime Foundation
 status: in-progress
-last_updated: "2026-03-15T12:13:37Z"
-last_activity: 2026-03-15 — Phase 35 Plan 01 complete (9 new Contracts API types — IModuleConfig, IModuleContext, IModuleConfigSchema, ICrossAnimaRouter + routing companion types; 266/266 tests green)
+last_updated: "2026-03-15T12:34:44Z"
+last_activity: 2026-03-15 — Phase 35 Plan 02 complete (Core shim interfaces, DI dual-registration, per-key SetConfigAsync, test stubs fixed; 266/266 tests green)
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 7
-  completed_plans: 5
-  percent: 87
+  completed_plans: 6
+  percent: 93
 ---
 
 # Project State: OpenAnima
@@ -23,21 +23,21 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-14)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 35 Plan 01 COMPLETE — 9 new Contracts API types defined in isolation (IModuleConfig, IModuleContext, IModuleConfigSchema + schema types, ICrossAnimaRouter + 3 routing companion types)
+**Current focus:** Phase 35 Plan 02 COMPLETE — Core shim interfaces wired to Contracts types; DI dual-registration; 266/266 tests green
 
 ## Current Position
 
-Phase: 35 of 36 (Contracts API Expansion) — Plan 01 of 03 complete
-Plan: 1 of 3 completed
-Status: Plan 01 complete — all interface/type definitions in Contracts; Plan 02 (Core shims + DI wiring) next
-Last activity: 2026-03-15 — Phase 35 Plan 01 complete (9 new Contracts API types — IModuleConfig, IModuleContext, IModuleConfigSchema, ICrossAnimaRouter + routing companion types; 266/266 tests green)
+Phase: 35 of 36 (Contracts API Expansion) — Plan 02 of 03 complete
+Plan: 2 of 3 completed
+Status: Plan 02 complete — Core shims + DI wiring done; Plan 03 (module migration) next
+Last activity: 2026-03-15 — Phase 35 Plan 02 complete (Core shim interfaces, DI dual-registration, per-key SetConfigAsync, test stubs fixed; 266/266 tests green)
 
-Progress: [█████████░] 87% (v1.7)
+Progress: [█████████░] 93% (v1.7)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 76 (across v1.0–v1.7 Phase 34 P02)
+- Total plans completed: 77 (across v1.0–v1.7 Phase 35 P02)
 
 **By Milestone:**
 
@@ -66,6 +66,7 @@ Progress: [█████████░] 87% (v1.7)
 
 **Phase 35 Metrics:**
 - Plan 01: 4 min, 2 tasks, 9 files created
+- Plan 02: 12 min, 2 tasks, 19 files modified
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ Progress: [█████████░] 87% (v1.7)
 - IModuleConfig.SetConfigAsync per-key (string key, string value) NOT bulk Dictionary — locked user decision (Phase 35 P01)
 - IModuleContext.ActiveAnimaId is non-nullable string — platform guarantees initialization before module use (Phase 35 P01)
 - Contracts.Routing sub-namespace established for ICrossAnimaRouter + companion types, parallel to existing Contracts.Ports (Phase 35 P01)
+- RoutingTypesTests.cs keeps Core.Routing alongside Contracts.Routing — PendingRequest is Core-internal, not exported to Contracts (Phase 35 P02)
+- global using alias shims for Core.Routing type files make the assembly backward-compatible without touching any call sites (Phase 35 P02)
 
 ### Known Blockers
 
@@ -106,4 +109,4 @@ Progress: [█████████░] 87% (v1.7)
 ---
 
 *State updated: 2026-03-15*
-*Stopped at: Completed 35-01-PLAN.md — 9 new Contracts API types (IModuleConfig, IModuleContext, IModuleConfigSchema, ConfigFieldType, ConfigFieldDescriptor, ICrossAnimaRouter + 3 routing companion types); 266/266 tests green*
+*Stopped at: Completed 35-02-PLAN.md — Core shim interfaces (IAnimaContext extends IModuleContext, IAnimaModuleConfigService extends IModuleConfig), DI dual-registration, global using routing shims, per-key SetConfigAsync, all test stubs fixed; 266/266 tests green*

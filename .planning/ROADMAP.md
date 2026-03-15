@@ -152,7 +152,7 @@ Plans:
   3. An external module built using only OpenAnima.Contracts can read its config, identify its Anima, and invoke cross-Anima routing
   4. IModuleConfigSchema exists in Contracts — a module implementing it causes the sidebar to auto-render its declared fields
   5. OpenAnima.Contracts builds in isolation (dotnet build on the project alone) with no ProjectReference to Core
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 35-01-PLAN.md — Define all Contracts API interfaces (IModuleConfig, IModuleContext, IModuleConfigSchema + types) and routing types in Contracts.Routing
@@ -209,7 +209,7 @@ Plans:
 | 32. Test Baseline | v1.7 | 1/1 | Complete | 2026-03-14 |
 | 33. Concurrency Fixes | v1.7 | 1/1 | Complete | 2026-03-14 |
 | 34. Activity Channel Model | v1.7 | 2/2 | Complete | 2026-03-15 |
-| 35. Contracts API Expansion | 1/3 | In Progress|  | - |
+| 35. Contracts API Expansion | 2/3 | In Progress|  | - |
 | 36. Built-in Module Decoupling | v1.7 | 0/TBD | Not started | - |
 
 **Total shipped: 31 phases, 72 plans across 7 milestones**
