@@ -11,6 +11,7 @@ namespace OpenAnima.Core.Modules;
 /// Text split module that splits input text by a configurable delimiter and outputs a JSON array string.
 /// Example: input "a,b,c" with delimiter "," outputs ["a","b","c"].
 /// </summary>
+[StatelessModule]
 [InputPort("input", PortType.Text)]
 [OutputPort("output", PortType.Text)]
 public class TextSplitModule : IModuleExecutor

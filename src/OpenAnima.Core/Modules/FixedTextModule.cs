@@ -11,6 +11,7 @@ namespace OpenAnima.Core.Modules;
 /// Variables are sourced from module config key-value pairs. Triggered by execute event or
 /// input port data (future enhancement for dynamic variables).
 /// </summary>
+[StatelessModule]
 [OutputPort("output", PortType.Text)]
 public class FixedTextModule : IModuleExecutor
 {

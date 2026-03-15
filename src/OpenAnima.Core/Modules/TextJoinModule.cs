@@ -11,6 +11,7 @@ namespace OpenAnima.Core.Modules;
 /// Text join module that concatenates multiple text inputs into one output with a configurable separator.
 /// Buffers received inputs and joins them on each execution. Merges BUILTIN-03 (concat) and BUILTIN-05 (merge).
 /// </summary>
+[StatelessModule]
 [InputPort("input1", PortType.Text)]
 [InputPort("input2", PortType.Text)]
 [InputPort("input3", PortType.Text)]

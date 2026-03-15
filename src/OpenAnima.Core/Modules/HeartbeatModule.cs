@@ -8,6 +8,7 @@ namespace OpenAnima.Core.Modules;
 /// Heartbeat module that fires trigger events at configured interval via output port.
 /// Implements ITickable — TickAsync is called by the heartbeat loop on each cycle.
 /// </summary>
+[StatelessModule]
 [OutputPort("tick", PortType.Trigger)]
 public class HeartbeatModule : IModuleExecutor, ITickable
 {

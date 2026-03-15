@@ -8,6 +8,7 @@ namespace OpenAnima.Core.Modules;
 /// Chat output module that receives text on input port and makes it available for display.
 /// Sink module — no output ports. UI subscribes to OnMessageReceived event.
 /// </summary>
+[StatelessModule]
 [InputPort("displayText", PortType.Text)]
 public class ChatOutputModule : IModuleExecutor
 {

@@ -20,6 +20,7 @@ namespace OpenAnima.Core.Modules;
 ///   - Logical: expr1 &amp;&amp; expr2, expr1 || expr2, !expr
 ///   - Grouping: (expr)
 /// </summary>
+[StatelessModule]
 [InputPort("input", PortType.Text)]
 [OutputPort("true", PortType.Text)]
 [OutputPort("false", PortType.Text)]
