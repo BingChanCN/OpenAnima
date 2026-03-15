@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\OpenAnima.Core\OpenAnima.Core.csproj" />
     <ProjectReference Include="..\..\src\OpenAnima.Contracts\OpenAnima.Contracts.csproj" />
+    <ProjectReference Include="..\..\PortModule\PortModule.csproj" />
   </ItemGroup>
 
 </Project>
