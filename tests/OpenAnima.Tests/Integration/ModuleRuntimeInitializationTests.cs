@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
+using OpenAnima.Contracts.Routing;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.DependencyInjection;
 using OpenAnima.Core.Events;
@@ -11,6 +11,8 @@ using OpenAnima.Core.Hosting;
 using OpenAnima.Core.LLM;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Ports;
+using OpenAnima.Core.Routing;
+using OpenAnima.Core.Services;
 
 namespace OpenAnima.Tests.Integration;
 
@@ -23,11 +25,33 @@ public class ModuleRuntimeInitializationTests : IDisposable
 {
     private readonly ServiceProvider _provider;
     private readonly string _tempConfigDir;
+    private readonly string _tempDataRoot;
+
+    private static readonly Type[] ExpectedBuiltInModuleTypes =
+    {
+        typeof(LLMModule),
+        typeof(ChatInputModule),
+        typeof(ChatOutputModule),
+        typeof(HeartbeatModule),
+        typeof(FixedTextModule),
+        typeof(TextJoinModule),
+        typeof(TextSplitModule),
+        typeof(ConditionalBranchModule),
+        typeof(AnimaInputPortModule),
+        typeof(AnimaOutputPortModule),
+        typeof(AnimaRouteModule),
+        typeof(HttpRequestModule)
+    };
+
+    private static readonly string[] ExpectedBuiltInModuleNames =
+        ExpectedBuiltInModuleTypes.Select(type => type.Name).OrderBy(name => name).ToArray();
 
     public ModuleRuntimeInitializationTests()
     {
         _tempConfigDir = Path.Combine(Path.GetTempPath(), $"module-init-test-{Guid.NewGuid()}");
+        _tempDataRoot = Path.Combine(Path.GetTempPath(), $"module-init-data-{Guid.NewGuid()}");
         Directory.CreateDirectory(_tempConfigDir);
+        Directory.CreateDirectory(_tempDataRoot);
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
@@ -36,30 +60,38 @@ public class ModuleRuntimeInitializationTests : IDisposable
         services.AddSingleton<EventBus>();
         services.AddSingleton<IEventBus>(sp => sp.GetRequiredService<EventBus>());
 
-        // Register AnimaContext and AnimaRuntimeManager (required by WiringInitializationService)
-        var tempAnimaRoot = Path.Combine(Path.GetTempPath(), $"anima-init-test-{Guid.NewGuid()}");
-        var animaContext = new AnimaContext();
-        animaContext.SetActive("test-anima");
-        services.AddSingleton<IAnimaContext>(animaContext);
+        // Register the real config/context/router/runtime surfaces that built-in modules now require.
+        var animasRoot = Path.Combine(_tempDataRoot, "animas");
+        services.AddSingleton<AnimaContext>();
+        services.AddSingleton<IModuleContext>(sp => sp.GetRequiredService<AnimaContext>());
+        services.AddSingleton<IAnimaContext>(sp => sp.GetRequiredService<AnimaContext>());
+        services.AddSingleton<AnimaModuleConfigService>(_ => new AnimaModuleConfigService(animasRoot));
+        services.AddSingleton<IModuleConfig>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
+        services.AddSingleton<IAnimaModuleConfigService>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
         services.AddSingleton<IAnimaRuntimeManager>(sp =>
             new AnimaRuntimeManager(
-                tempAnimaRoot,
-                NullLogger<AnimaRuntimeManager>.Instance,
-                NullLoggerFactory.Instance,
-                animaContext));
+                animasRoot,
+                sp.GetRequiredService<ILogger<AnimaRuntimeManager>>(),
+                sp.GetRequiredService<ILoggerFactory>(),
+                sp.GetRequiredService<IAnimaContext>()));
+        services.AddSingleton<ICrossAnimaRouter>(sp =>
+            new CrossAnimaRouter(
+                sp.GetRequiredService<ILogger<CrossAnimaRouter>>(),
+                sp.GetRequiredService<IAnimaRuntimeManager>()));
+
+        services.AddHttpClient("HttpRequest");
 
         services.AddWiringServices(_tempConfigDir);
 
         _provider = services.BuildServiceProvider();
+        _provider.GetRequiredService<AnimaContext>().SetActive("test-anima");
     }
 
     public void Dispose()
     {
-        _provider?.Dispose();
-        if (Directory.Exists(_tempConfigDir))
-        {
-            Directory.Delete(_tempConfigDir, recursive: true);
-        }
+        _provider?.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        DeleteDirectoryIfExists(_tempConfigDir);
+        DeleteDirectoryIfExists(_tempDataRoot);
     }
 
     private WiringInitializationService ResolveHostedService()
@@ -80,6 +112,13 @@ public class ModuleRuntimeInitializationTests : IDisposable
 
         // Assert
         var registry = _provider.GetRequiredService<IPortRegistry>();
+        var registeredModuleNames = registry.GetAllPorts()
+            .Select(port => port.ModuleName)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name)
+            .ToArray();
+
+        Assert.Equal(ExpectedBuiltInModuleNames, registeredModuleNames);
 
         var llmPorts = registry.GetPorts("LLMModule");
         Assert.Equal(3, llmPorts.Count);
@@ -146,18 +185,45 @@ public class ModuleRuntimeInitializationTests : IDisposable
         // Assert
         var registry = _provider.GetRequiredService<IPortRegistry>();
         var allPorts = registry.GetAllPorts();
+        var registeredModuleNames = allPorts
+            .Select(port => port.ModuleName)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name)
+            .ToArray();
 
-        // Real modules present
-        Assert.Contains(allPorts, p => p.ModuleName == "LLMModule");
-        Assert.Contains(allPorts, p => p.ModuleName == "ChatInputModule");
-        Assert.Contains(allPorts, p => p.ModuleName == "ChatOutputModule");
-        Assert.Contains(allPorts, p => p.ModuleName == "HeartbeatModule");
+        Assert.Equal(ExpectedBuiltInModuleNames, registeredModuleNames);
+        Assert.Equal(12, registeredModuleNames.Length);
 
         // Demo modules absent
         Assert.DoesNotContain(allPorts, p => p.ModuleName == "TextInput");
         Assert.DoesNotContain(allPorts, p => p.ModuleName == "LLMProcessor");
         Assert.DoesNotContain(allPorts, p => p.ModuleName == "TextOutput");
         Assert.DoesNotContain(allPorts, p => p.ModuleName == "TriggerButton");
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public void BuiltInModules_AllResolveFromTheRealDIContainer()
+    {
+        var failures = new List<string>();
+
+        foreach (var moduleType in ExpectedBuiltInModuleTypes)
+        {
+            try
+            {
+                var resolved = _provider.GetRequiredService(moduleType);
+                if (resolved is not IModule)
+                {
+                    failures.Add($"{moduleType.Name}: resolved instance does not implement IModule");
+                }
+            }
+            catch (Exception ex)
+            {
+                failures.Add($"{moduleType.Name}: {ex.GetType().Name} - {ex.Message}");
+            }
+        }
+
+        Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
     }
 
     /// <summary>Fake LLM service — LLMModule requires it in DI but tests don't exercise LLM calls.</summary>
@@ -171,5 +237,38 @@ public class ModuleRuntimeInitializationTests : IDisposable
 
         public IAsyncEnumerable<StreamingResult> StreamWithUsageAsync(IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
             => throw new NotImplementedException();
+    }
+
+    private static void DeleteDirectoryIfExists(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            try
+            {
+                Directory.Delete(path, recursive: true);
+                return;
+            }
+            catch (IOException) when (attempt < 4)
+            {
+                Thread.Sleep(50);
+            }
+            catch (UnauthorizedAccessException) when (attempt < 4)
+            {
+                Thread.Sleep(50);
+            }
+            catch (IOException)
+            {
+                return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return;
+            }
+        }
     }
 }
