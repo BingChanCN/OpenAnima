@@ -38,15 +38,16 @@ created: 2026-03-15
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 35-01-01 | 01 | 1 | API-01 | unit | `dotnet test tests/OpenAnima.Tests/ -q --filter "FullyQualifiedName~IModuleConfig"` | ❌ W0 | ⬜ pending |
-| 35-01-02 | 01 | 1 | API-02 | unit | `dotnet test tests/OpenAnima.Tests/ -q --filter "FullyQualifiedName~IModuleContext"` | ❌ W0 | ⬜ pending |
-| 35-01-03 | 01 | 1 | API-03 | unit/integration | `dotnet test tests/OpenAnima.Tests/ -q --filter "Category=Routing"` | ✅ | ⬜ pending |
-| 35-01-04 | 01 | 1 | API-04 | unit | `dotnet build src/OpenAnima.Contracts/OpenAnima.Contracts.csproj` | ❌ W0 | ⬜ pending |
-| 35-02-01 | 02 | 2 | API-05 | compile | `dotnet build tests/OpenAnima.Tests/` | ✅ | ⬜ pending |
-| 35-02-02 | 02 | 2 | API-06 | integration | `dotnet test tests/OpenAnima.Tests/ -q --filter "FullyQualifiedName~Canary"` | ❌ W0 | ⬜ pending |
-| 35-02-03 | 02 | 2 | API-07 | integration | Part of canary test | ❌ W0 | ⬜ pending |
+| 35-01-01 | 01 | 1 | API-01 | unit | `dotnet test tests/OpenAnima.Tests/ -q --filter "FullyQualifiedName~IModuleConfig"` | W0 | pending |
+| 35-01-02 | 01 | 1 | API-02 | unit | `dotnet test tests/OpenAnima.Tests/ -q --filter "FullyQualifiedName~IModuleContext"` | W0 | pending |
+| 35-01-03 | 01 | 1 | API-03 | unit/integration | `dotnet test tests/OpenAnima.Tests/ -q --filter "Category=Routing"` | yes | pending |
+| 35-01-04 | 01 | 1 | API-04 | unit | `dotnet build src/OpenAnima.Contracts/OpenAnima.Contracts.csproj` | W0 | pending |
+| 35-02-01 | 02 | 2 | API-05 | compile | `dotnet build src/OpenAnima.Core/OpenAnima.Core.csproj` | yes | pending |
+| 35-02-02 | 02 | 2 | API-05 | test | `dotnet test tests/OpenAnima.Tests/ -q` | yes | pending |
+| 35-03-01 | 03 | 3 | API-06 | integration | `dotnet test tests/OpenAnima.Tests/ -q --filter "FullyQualifiedName~Canary"` | W0 | pending |
+| 35-03-02 | 03 | 3 | API-07 | integration | Part of canary test | W0 | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending / green / red / flaky*
 
 ---
 
