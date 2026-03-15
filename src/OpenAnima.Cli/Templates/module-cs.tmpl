@@ -6,7 +6,10 @@ namespace {{Namespace}};
 {{PortAttributes}}
 public class {{ModuleName}} : IModule{{ImplementsExecutor}}
 {
-    public IModuleMetadata Metadata { get; } = new {{ModuleName}}Metadata();
+    public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
+        "{{ModuleName}}",
+        "{{ModuleVersion}}",
+        "{{ModuleDescription}}");
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -23,11 +26,4 @@ public class {{ModuleName}} : IModule{{ImplementsExecutor}}
         return Task.CompletedTask;
     }
 {{ExecuteMethod}}
-}
-
-internal class {{ModuleName}}Metadata : IModuleMetadata
-{
-    public string Name => "{{ModuleName}}";
-    public string Version => "{{ModuleVersion}}";
-    public string Description => "{{ModuleDescription}}";
 }

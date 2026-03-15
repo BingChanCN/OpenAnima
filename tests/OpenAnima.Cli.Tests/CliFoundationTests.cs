@@ -5,7 +5,57 @@ using OpenAnima.Core.Plugins;
 using System.IO.Compression;
 using System.Text.Json;
 
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace OpenAnima.Cli.Tests;
+
+internal static class CliConsoleCapture
+{
+    private static readonly object Sync = new();
+
+    public static int Run(string[] args) => Capture(args).ExitCode;
+
+    public static (int ExitCode, string StdErr) RunWithStdErr(string[] args)
+    {
+        var result = Capture(args);
+        return (result.ExitCode, result.StdErr);
+    }
+
+    public static (int ExitCode, string StdOut) RunWithStdOut(string[] args)
+    {
+        var result = Capture(args);
+        return (result.ExitCode, result.StdOut);
+    }
+
+    private static (int ExitCode, string StdOut, string StdErr) Capture(string[] args)
+    {
+        lock (Sync)
+        {
+            var originalOut = Console.Out;
+            var originalError = Console.Error;
+            var outWriter = new StringWriter();
+            var errorWriter = new StringWriter();
+
+            try
+            {
+                Console.SetOut(TextWriter.Synchronized(outWriter));
+                Console.SetError(TextWriter.Synchronized(errorWriter));
+
+                var exitCode = Program.Main(args);
+
+                Console.Out.Flush();
+                Console.Error.Flush();
+
+                return (exitCode, outWriter.ToString(), errorWriter.ToString());
+            }
+            finally
+            {
+                Console.SetOut(originalOut);
+                Console.SetError(originalError);
+            }
+        }
+    }
+}
 
 /// <summary>
 /// Unit tests for CLI exit codes and help functionality.
@@ -115,27 +165,7 @@ public class CliFoundationTests
     /// Helper method to run CLI with captured output.
     /// </summary>
     private static int RunCliWithArgs(string[] args)
-    {
-        // Capture stdout/stderr to avoid polluting test output
-        var originalOut = Console.Out;
-        var originalError = Console.Error;
-
-        try
-        {
-            using var outWriter = new StringWriter();
-            using var errorWriter = new StringWriter();
-
-            Console.SetOut(outWriter);
-            Console.SetError(errorWriter);
-
-            return Program.Main(args);
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-            Console.SetError(originalError);
-        }
-    }
+        => CliConsoleCapture.Run(args);
 }
 
 /// <summary>
@@ -178,6 +208,23 @@ public class TemplateEngineTests
     {
         var result = _engine.RenderModuleCs("TestModule");
         Assert.Contains("ShutdownAsync", result);
+    }
+
+    [Fact]
+    public void RenderModuleCs_UsesModuleMetadataRecord()
+    {
+        var result = _engine.RenderModuleCs("TestModule");
+
+        Assert.Contains("ModuleMetadataRecord", result);
+        Assert.DoesNotContain("TestModuleMetadata", result);
+    }
+
+    [Fact]
+    public void RenderModuleCs_DoesNotReferenceOpenAnimaCore()
+    {
+        var result = _engine.RenderModuleCs("TestModule");
+
+        Assert.DoesNotContain("OpenAnima.Core", result);
     }
 
     [Fact]
@@ -518,58 +565,13 @@ public class ValidateCommandTests
     /// Helper method to run CLI with captured output and error.
     /// </summary>
     private static (int ExitCode, string StdErr) RunCliWithArgsAndCaptureError(string[] args)
-    {
-        var originalOut = Console.Out;
-        var originalError = Console.Error;
-
-        var outWriter = new StringWriter();
-        var errorWriter = new StringWriter();
-
-        try
-        {
-            Console.SetOut(outWriter);
-            Console.SetError(errorWriter);
-
-            var exitCode = Program.Main(args);
-            var stderr = errorWriter.ToString();
-
-            return (exitCode, stderr);
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-            Console.SetError(originalError);
-            outWriter.Dispose();
-            errorWriter.Dispose();
-        }
-    }
+        => CliConsoleCapture.RunWithStdErr(args);
 
     /// <summary>
     /// Helper method to run CLI with captured output.
     /// </summary>
     private static int RunCliWithArgs(string[] args)
-    {
-        var originalOut = Console.Out;
-        var originalError = Console.Error;
-
-        var outWriter = new StringWriter();
-        var errorWriter = new StringWriter();
-
-        try
-        {
-            Console.SetOut(outWriter);
-            Console.SetError(errorWriter);
-
-            return Program.Main(args);
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-            Console.SetError(originalError);
-            outWriter.Dispose();
-            errorWriter.Dispose();
-        }
-    }
+        => CliConsoleCapture.Run(args);
 }
 
 /// <summary>
@@ -936,60 +938,13 @@ public class PackCommandTests
     /// Helper method to run CLI with captured output.
     /// </summary>
     private static (int ExitCode, string StdOut) RunCliWithArgsAndCaptureOutput(string[] args)
-    {
-        var originalOut = Console.Out;
-        var originalError = Console.Error;
-
-        var outWriter = new StringWriter();
-        var errorWriter = new StringWriter();
-
-        try
-        {
-            Console.SetOut(outWriter);
-            Console.SetError(errorWriter);
-
-            var exitCode = Program.Main(args);
-
-            // Get the string BEFORE restoring console
-            var stdout = outWriter.ToString();
-
-            return (exitCode, stdout);
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-            Console.SetError(originalError);
-            outWriter.Dispose();
-            errorWriter.Dispose();
-        }
-    }
+        => CliConsoleCapture.RunWithStdOut(args);
 
     /// <summary>
     /// Helper method to run CLI with captured output.
     /// </summary>
     private static int RunCliWithArgs(string[] args)
-    {
-        var originalOut = Console.Out;
-        var originalError = Console.Error;
-
-        var outWriter = new StringWriter();
-        var errorWriter = new StringWriter();
-
-        try
-        {
-            Console.SetOut(outWriter);
-            Console.SetError(errorWriter);
-
-            return Program.Main(args);
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-            Console.SetError(originalError);
-            outWriter.Dispose();
-            errorWriter.Dispose();
-        }
-    }
+        => CliConsoleCapture.Run(args);
 }
 /// <summary>
 /// Unit tests for OamodExtractor.
@@ -1283,6 +1238,14 @@ public class NewCommandTests
             Assert.True(File.Exists(Path.Combine(tempDir, "TestModule", "TestModule.cs")));
             Assert.True(File.Exists(Path.Combine(tempDir, "TestModule", "TestModule.csproj")));
             Assert.True(File.Exists(Path.Combine(tempDir, "TestModule", "module.json")));
+
+            var csContent = File.ReadAllText(Path.Combine(tempDir, "TestModule", "TestModule.cs"));
+            var csprojContent = File.ReadAllText(Path.Combine(tempDir, "TestModule", "TestModule.csproj"));
+
+            Assert.Contains("ModuleMetadataRecord", csContent);
+            Assert.DoesNotContain("TestModuleMetadata", csContent);
+            Assert.DoesNotContain("OpenAnima.Core", csContent);
+            Assert.DoesNotContain("OpenAnima.Core", csprojContent);
         }
         finally
         {
@@ -1511,88 +1474,19 @@ public class NewCommandTests
     /// Helper method to run CLI with captured output and error.
     /// </summary>
     private static (int ExitCode, string StdErr) RunCliWithArgsAndCaptureError(string[] args)
-    {
-        var originalOut = Console.Out;
-        var originalError = Console.Error;
-
-        var outWriter = new StringWriter();
-        var errorWriter = new StringWriter();
-
-        try
-        {
-            Console.SetOut(outWriter);
-            Console.SetError(errorWriter);
-
-            var exitCode = Program.Main(args);
-            var stderr = errorWriter.ToString();
-
-            return (exitCode, stderr);
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-            Console.SetError(originalError);
-            outWriter.Dispose();
-            errorWriter.Dispose();
-        }
-    }
+        => CliConsoleCapture.RunWithStdErr(args);
 
     /// <summary>
     /// Helper method to run CLI with captured output.
     /// </summary>
     private static (int ExitCode, string StdOut) RunCliWithArgsAndCaptureOutput(string[] args)
-    {
-        var originalOut = Console.Out;
-        var originalError = Console.Error;
-
-        var outWriter = new StringWriter();
-        var errorWriter = new StringWriter();
-
-        try
-        {
-            Console.SetOut(outWriter);
-            Console.SetError(errorWriter);
-
-            var exitCode = Program.Main(args);
-            var stdout = outWriter.ToString();
-
-            return (exitCode, stdout);
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-            Console.SetError(originalError);
-            outWriter.Dispose();
-            errorWriter.Dispose();
-        }
-    }
+        => CliConsoleCapture.RunWithStdOut(args);
 
     /// <summary>
     /// Helper method to run CLI with captured output.
     /// </summary>
     private static int RunCliWithArgs(string[] args)
-    {
-        var originalOut = Console.Out;
-        var originalError = Console.Error;
-
-        var outWriter = new StringWriter();
-        var errorWriter = new StringWriter();
-
-        try
-        {
-            Console.SetOut(outWriter);
-            Console.SetError(errorWriter);
-
-            return Program.Main(args);
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-            Console.SetError(originalError);
-            outWriter.Dispose();
-            errorWriter.Dispose();
-        }
-    }
+        => CliConsoleCapture.Run(args);
 }
 
 /// <summary>
