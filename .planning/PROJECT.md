@@ -138,6 +138,7 @@ Agents that proactively think and act on their own, while module connections rem
 ### Phase 36 Inventory Note
 
 - Phase 36 uses **12 active built-in modules** as the authoritative runtime inventory, based on the registrations in `WiringServiceExtensions` and `WiringInitializationService`.
+- The authoritative active inventory is: `LLMModule`, `ChatInputModule`, `ChatOutputModule`, `HeartbeatModule`, `FixedTextModule`, `TextJoinModule`, `TextSplitModule`, `ConditionalBranchModule`, `AnimaInputPortModule`, `AnimaOutputPortModule`, `AnimaRouteModule`, and `HttpRequestModule`.
 - `FormatDetector` and `ModuleMetadataRecord` remain in scope as helper/support types for built-in modules, but they are not counted as active built-in module instances.
 - `LLMModule` is the one documented `OpenAnima.Core.LLM` exception until a later phase promotes the LLM service surface into Contracts.
 - The historical candidates behind the old count are dispositioned explicitly: `BUILTIN-11` and `BUILTIN-12` stayed unshipped v1.5 backlog items, and removed demo modules `TextInput`, `LLMProcessor`, `TextOutput`, and `TriggerButton` are not part of the live inventory.

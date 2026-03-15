@@ -33,6 +33,7 @@ Requirements for v1.7 Runtime Foundation. Each maps to roadmap phases.
 ### Module Decoupling
 
 - Inventory note: Phase 36 uses **12 active built-in modules** as the authoritative runtime count. `FormatDetector` and `ModuleMetadataRecord` are helper/support scope, `BUILTIN-11` and `BUILTIN-12` were never shipped, and removed demo modules `TextInput`, `LLMProcessor`, `TextOutput`, and `TriggerButton` are not part of the live inventory.
+- Inventory note: The authoritative active inventory is `LLMModule`, `ChatInputModule`, `ChatOutputModule`, `HeartbeatModule`, `FixedTextModule`, `TextJoinModule`, `TextSplitModule`, `ConditionalBranchModule`, `AnimaInputPortModule`, `AnimaOutputPortModule`, `AnimaRouteModule`, and `HttpRequestModule`.
 - Inventory note: `LLMModule` is the one documented `OpenAnima.Core.LLM` exception until the LLM service surface moves into Contracts.
 - [ ] **DECPL-01**: The 12 active built-in modules consume Contracts-first APIs; zero `using OpenAnima.Core.*` remain in non-`LLMModule` module files, and `LLMModule` keeps only the documented exception
 - [ ] **DECPL-02**: DI resolution succeeds for all 12 active module types after decoupling (startup smoke test)

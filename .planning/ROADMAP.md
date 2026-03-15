@@ -173,6 +173,7 @@ Plans:
 - `FormatDetector` and `ModuleMetadataRecord` are helper/support files, not active built-in modules
 - `BUILTIN-11` and `BUILTIN-12` were unshipped v1.5 backlog items, not missing live implementations
 - Removed demo modules `TextInput`, `LLMProcessor`, `TextOutput`, and `TriggerButton` are historical and not part of the active inventory
+- Authoritative active inventory: `LLMModule`, `ChatInputModule`, `ChatOutputModule`, `HeartbeatModule`, `FixedTextModule`, `TextJoinModule`, `TextSplitModule`, `ConditionalBranchModule`, `AnimaInputPortModule`, `AnimaOutputPortModule`, `AnimaRouteModule`, `HttpRequestModule`
 **Plans**: TBD
 
 ## Progress
