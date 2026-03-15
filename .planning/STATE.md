@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Runtime Foundation
-status: in-progress
-last_updated: "2026-03-15T12:34:44Z"
+status: completed
+last_updated: "2026-03-15T13:00:20.125Z"
 last_activity: 2026-03-15 — Phase 35 Plan 02 complete (Core shim interfaces, DI dual-registration, per-key SetConfigAsync, test stubs fixed; 266/266 tests green)
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
   percent: 93
 ---
 
@@ -23,16 +23,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-14)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 35 Plan 02 COMPLETE — Core shim interfaces wired to Contracts types; DI dual-registration; 266/266 tests green
+**Current focus:** Phase 35 Plan 03 COMPLETE — PortModule canary tests, ContractsApiTests; 326/326 tests green; Phase 35 complete
 
 ## Current Position
 
-Phase: 35 of 36 (Contracts API Expansion) — Plan 02 of 03 complete
-Plan: 2 of 3 completed
-Status: Plan 02 complete — Core shims + DI wiring done; Plan 03 (module migration) next
-Last activity: 2026-03-15 — Phase 35 Plan 02 complete (Core shim interfaces, DI dual-registration, per-key SetConfigAsync, test stubs fixed; 266/266 tests green)
+Phase: 35 of 36 (Contracts API Expansion) — Plan 03 of 03 complete — PHASE COMPLETE
+Plan: 3 of 3 completed
+Status: Phase 35 complete — all three plans shipped; API-01 through API-07 requirements satisfied
+Last activity: 2026-03-15 — Phase 35 Plan 03 complete (PortModule canary 8 tests + ContractsApiTests 52 tests; 326/326 tests green)
 
-Progress: [█████████░] 93% (v1.7)
+Progress: [██████████] 100% (v1.7)
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [█████████░] 93% (v1.7)
 **Phase 35 Metrics:**
 - Plan 01: 4 min, 2 tasks, 9 files created
 - Plan 02: 12 min, 2 tasks, 19 files modified
+- Plan 03: 11 min, 2 tasks, 5 files created/modified
 
 ## Accumulated Context
 
@@ -91,6 +92,10 @@ Progress: [█████████░] 93% (v1.7)
 - RoutingTypesTests.cs keeps Core.Routing alongside Contracts.Routing — PendingRequest is Core-internal, not exported to Contracts (Phase 35 P02)
 - global using alias shims for Core.Routing type files make the assembly backward-compatible without touching any call sites (Phase 35 P02)
 
+- Direct ProjectReference to PortModule from test project for canary validation — simpler than PluginLoadContext subprocess; key proof (constructor accepts Contracts services) is fully demonstrated (Phase 35 P03)
+- ICrossAnimaRouter is null in canary tests — router requires AnimaRuntimeManager chicken-and-egg; IModuleConfig and IModuleContext verified with real Core implementations (Phase 35 P03)
+- AnimaModuleConfigService in DI requires await using ServiceProvider (implements IAsyncDisposable, not IDisposable) (Phase 35 P03)
+
 ### Known Blockers
 
 - [Phase 32]: RESOLVED — 3 pre-existing failures fixed; ANIMA-08 was NOT the root cause
@@ -109,4 +114,4 @@ Progress: [█████████░] 93% (v1.7)
 ---
 
 *State updated: 2026-03-15*
-*Stopped at: Completed 35-02-PLAN.md — Core shim interfaces (IAnimaContext extends IModuleContext, IAnimaModuleConfigService extends IModuleConfig), DI dual-registration, global using routing shims, per-key SetConfigAsync, all test stubs fixed; 266/266 tests green*
+*Stopped at: Completed 35-03-PLAN.md — PortModule canary (8 tests), ContractsApiTests (52 tests); 326/326 tests green; Phase 35 (Contracts API Expansion) COMPLETE*

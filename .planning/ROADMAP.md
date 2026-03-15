@@ -94,7 +94,7 @@
 - [x] **Phase 32: Test Baseline** - Resolve 3 pre-existing test failures to establish a clean regression baseline (completed 2026-03-14)
 - [x] **Phase 33: Concurrency Fixes** - Eliminate race conditions on shared mutable fields across WiringEngine and modules (completed 2026-03-14)
 - [x] **Phase 34: Activity Channel Model** - Introduce per-Anima Channel<T> mailbox serializing all state-mutating work (completed 2026-03-15)
-- [ ] **Phase 35: Contracts API Expansion** - Promote essential interfaces to OpenAnima.Contracts for external module parity
+- [x] **Phase 35: Contracts API Expansion** - Promote essential interfaces to OpenAnima.Contracts for external module parity (completed 2026-03-15)
 - [ ] **Phase 36: Built-in Module Decoupling** - Migrate all 14 built-in modules to depend only on Contracts
 
 ## Phase Details
@@ -152,7 +152,7 @@ Plans:
   3. An external module built using only OpenAnima.Contracts can read its config, identify its Anima, and invoke cross-Anima routing
   4. IModuleConfigSchema exists in Contracts — a module implementing it causes the sidebar to auto-render its declared fields
   5. OpenAnima.Contracts builds in isolation (dotnet build on the project alone) with no ProjectReference to Core
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 35-01-PLAN.md — Define all Contracts API interfaces (IModuleConfig, IModuleContext, IModuleConfigSchema + types) and routing types in Contracts.Routing
@@ -209,7 +209,7 @@ Plans:
 | 32. Test Baseline | v1.7 | 1/1 | Complete | 2026-03-14 |
 | 33. Concurrency Fixes | v1.7 | 1/1 | Complete | 2026-03-14 |
 | 34. Activity Channel Model | v1.7 | 2/2 | Complete | 2026-03-15 |
-| 35. Contracts API Expansion | 2/3 | In Progress|  | - |
+| 35. Contracts API Expansion | 3/3 | Complete   | 2026-03-15 | - |
 | 36. Built-in Module Decoupling | v1.7 | 0/TBD | Not started | - |
 
 **Total shipped: 31 phases, 72 plans across 7 milestones**
