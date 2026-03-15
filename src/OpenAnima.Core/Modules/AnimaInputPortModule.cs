@@ -1,8 +1,6 @@
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
-using OpenAnima.Core.Anima;
-using OpenAnima.Core.Routing;
-using OpenAnima.Core.Services;
+using OpenAnima.Contracts.Routing;
 
 namespace OpenAnima.Core.Modules;
 
@@ -17,8 +15,8 @@ public class AnimaInputPortModule : IModuleExecutor
 {
     private readonly IEventBus _eventBus;
     private readonly ICrossAnimaRouter _router;
-    private readonly IAnimaModuleConfigService _configService;
-    private readonly IAnimaContext _animaContext;
+    private readonly IModuleConfig _configService;
+    private readonly IModuleContext _animaContext;
     private readonly ILogger<AnimaInputPortModule> _logger;
     private readonly List<IDisposable> _subscriptions = new();
 
@@ -36,8 +34,8 @@ public class AnimaInputPortModule : IModuleExecutor
     public AnimaInputPortModule(
         IEventBus eventBus,
         ICrossAnimaRouter router,
-        IAnimaModuleConfigService configService,
-        IAnimaContext animaContext,
+        IModuleConfig configService,
+        IModuleContext animaContext,
         ILogger<AnimaInputPortModule> logger)
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -61,13 +59,7 @@ public class AnimaInputPortModule : IModuleExecutor
         // Initialise default config if not set (so sidebar shows the fields)
         if (config.Count == 0)
         {
-            _ = _configService.SetConfigAsync(_animaId, Metadata.Name,
-                new Dictionary<string, string>
-                {
-                    ["serviceName"] = "",
-                    ["serviceDescription"] = "",
-                    ["inputFormatHint"] = ""
-                });
+            _ = SeedDefaultConfigAsync(_animaId);
             // Re-read after setting defaults (returns empty until persisted, which is fine)
         }
 
@@ -103,6 +95,13 @@ public class AnimaInputPortModule : IModuleExecutor
         _logger.LogDebug("AnimaInputPortModule: subscribed to '{EventName}'", eventName);
 
         return Task.CompletedTask;
+    }
+
+    private async Task SeedDefaultConfigAsync(string animaId)
+    {
+        await _configService.SetConfigAsync(animaId, Metadata.Name, "serviceName", string.Empty);
+        await _configService.SetConfigAsync(animaId, Metadata.Name, "serviceDescription", string.Empty);
+        await _configService.SetConfigAsync(animaId, Metadata.Name, "inputFormatHint", string.Empty);
     }
 
     private async Task HandleIncomingRequestAsync(ModuleEvent<string> evt, CancellationToken ct)

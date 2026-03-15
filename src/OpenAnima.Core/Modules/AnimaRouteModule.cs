@@ -1,9 +1,7 @@
 using System.Text.Json;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
-using OpenAnima.Core.Anima;
-using OpenAnima.Core.Routing;
-using OpenAnima.Core.Services;
+using OpenAnima.Contracts.Routing;
 
 namespace OpenAnima.Core.Modules;
 
@@ -23,8 +21,8 @@ public class AnimaRouteModule : IModuleExecutor
 {
     private readonly IEventBus _eventBus;
     private readonly ICrossAnimaRouter _router;
-    private readonly IAnimaModuleConfigService _configService;
-    private readonly IAnimaContext _animaContext;
+    private readonly IModuleConfig _configService;
+    private readonly IModuleContext _animaContext;
     private readonly ILogger<AnimaRouteModule> _logger;
     private readonly List<IDisposable> _subscriptions = new();
 
@@ -40,8 +38,8 @@ public class AnimaRouteModule : IModuleExecutor
     public AnimaRouteModule(
         IEventBus eventBus,
         ICrossAnimaRouter router,
-        IAnimaModuleConfigService configService,
-        IAnimaContext animaContext,
+        IModuleConfig configService,
+        IModuleContext animaContext,
         ILogger<AnimaRouteModule> logger)
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -61,12 +59,7 @@ public class AnimaRouteModule : IModuleExecutor
             var existing = _configService.GetConfig(animaId, Metadata.Name);
             if (existing.Count == 0)
             {
-                _ = _configService.SetConfigAsync(animaId, Metadata.Name,
-                    new Dictionary<string, string>
-                    {
-                        ["targetAnimaId"] = "",
-                        ["targetPortName"] = ""
-                    });
+                _ = SeedDefaultConfigAsync(animaId);
             }
         }
 
@@ -90,6 +83,12 @@ public class AnimaRouteModule : IModuleExecutor
 
         _logger.LogDebug("AnimaRouteModule: initialized");
         return Task.CompletedTask;
+    }
+
+    private async Task SeedDefaultConfigAsync(string animaId)
+    {
+        await _configService.SetConfigAsync(animaId, Metadata.Name, "targetAnimaId", string.Empty);
+        await _configService.SetConfigAsync(animaId, Metadata.Name, "targetPortName", string.Empty);
     }
 
     /// <summary>
