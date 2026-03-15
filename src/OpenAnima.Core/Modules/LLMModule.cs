@@ -3,10 +3,8 @@ using OpenAI.Chat;
 using System.ClientModel;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
-using OpenAnima.Core.Anima;
+using OpenAnima.Contracts.Routing;
 using OpenAnima.Core.LLM;
-using OpenAnima.Core.Routing;
-using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.Modules;
 
@@ -29,8 +27,8 @@ public class LLMModule : IModuleExecutor
     private const int MaxRetries = 2;
 
     private readonly ILLMService _llmService;
-    private readonly IAnimaModuleConfigService _configService;
-    private readonly IAnimaContext _animaContext;
+    private readonly IModuleConfig _configService;
+    private readonly IModuleContext _animaContext;
     private readonly IEventBus _eventBus;
     private readonly ILogger<LLMModule> _logger;
     private readonly ICrossAnimaRouter? _router;
@@ -41,11 +39,11 @@ public class LLMModule : IModuleExecutor
     private Exception? _lastError;
     private readonly SemaphoreSlim _executionGuard = new SemaphoreSlim(1, 1);
 
-    public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
+    public IModuleMetadata Metadata { get; } = new OpenAnima.Contracts.ModuleMetadataRecord(
         "LLMModule", "1.0.0", "Sends prompt to LLM and outputs response");
 
     public LLMModule(ILLMService llmService, IEventBus eventBus, ILogger<LLMModule> logger,
-        IAnimaModuleConfigService configService, IAnimaContext animaContext,
+        IModuleConfig configService, IModuleContext animaContext,
         ICrossAnimaRouter? router = null)
     {
         _llmService = llmService;
@@ -227,7 +225,7 @@ public class LLMModule : IModuleExecutor
 
     /// <summary>
     /// Returns the set of known service names for the current Anima.
-    /// Queries IAnimaModuleConfigService for AnimaRouteModule's targetPortName config.
+    /// Queries IModuleConfig for AnimaRouteModule's targetPortName config.
     /// Returns an empty set if no route config found or router is null.
     /// </summary>
     private HashSet<string> BuildKnownServiceNames(string animaId)
