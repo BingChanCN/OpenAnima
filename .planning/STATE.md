@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Runtime Foundation
 status: in_progress
-last_updated: "2026-03-15T17:36:22Z"
-last_activity: 2026-03-15 — Phase 36 Plan 03 complete (routing trio + HttpRequestModule moved to Contracts surfaces; 28 targeted tests green)
+last_updated: "2026-03-15T18:43:36Z"
+last_activity: 2026-03-15 — Phase 36 Plan 04 complete (LLMModule now keeps only the documented Core.LLM exception; CLI template/baseline repaired; 110 targeted tests green)
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 12
-  completed_plans: 8
-  percent: 67
+  completed_plans: 9
+  percent: 75
 ---
 
 # Project State: OpenAnima
@@ -23,21 +23,21 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-15)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 36 Plans 02-03 COMPLETE — all 11 non-LLM built-in modules now use Contracts-first module-facing surfaces; `LLMModule` and CLI template work remain next
+**Current focus:** Phase 36 Plan 04 COMPLETE — `LLMModule` now uses Contracts-facing metadata/config/context/routing surfaces except for `OpenAnima.Core.LLM`, `oani new` generates Contracts-only module code, and the final audit/test wave remains
 
 ## Current Position
 
-Phase: 36 of 36 (Built-in Module Decoupling) — Plan 03 of 05 complete
-Plan: 3 of 5 completed
-Status: Phase 36 in progress — all 11 non-LLM built-in modules are Contracts-first at the source-file level; `LLMModule`, CLI templates, and final audit coverage remain
-Last activity: 2026-03-15 — Phase 36 Plan 03 complete (routing trio + HttpRequestModule moved to Contracts surfaces; 28 targeted tests green)
+Phase: 36 of 36 (Built-in Module Decoupling) — Plan 04 of 05 complete
+Plan: 4 of 5 completed
+Status: Phase 36 in progress — all 12 built-in modules now use Contracts-first module-facing surfaces except for the documented `OpenAnima.Core.LLM` dependency, and only the final audit/full-suite verification wave remains
+Last activity: 2026-03-15 — Phase 36 Plan 04 complete (LLMModule exception isolated, CLI scaffolding modernized, 110 targeted tests green)
 
-Progress: [████████░░] 83% (v1.7)
+Progress: [█████████░] 92% (v1.7)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 81 (across v1.0–v1.7 Phase 36 P03)
+- Total plans completed: 82 (across v1.0–v1.7 Phase 36 P04)
 
 **By Milestone:**
 
@@ -73,6 +73,7 @@ Progress: [████████░░] 83% (v1.7)
 - Plan 01: 35 min, 2 tasks, 10 files created/modified
 - Plan 02: 36 min, 2 tasks, 4 files modified (3 cohort files audited with no source delta)
 - Plan 03: 23 min, 2 tasks, 4 files modified
+- Plan 04: 67 min, 2 tasks, 3 files modified
 
 ## Accumulated Context
 
@@ -104,6 +105,8 @@ Progress: [████████░░] 83% (v1.7)
 - The low-risk non-LLM built-in cohort already had ChatInputModule, ChatOutputModule, and HeartbeatModule aligned closely enough that Phase 36 Plan 02 only needed source deltas in the text/branch modules after audit (Phase 36 P02)
 - Inside OpenAnima.Core.Modules files, construct `OpenAnima.Contracts.ModuleMetadataRecord` explicitly to avoid accidentally binding back to the temporary Core shim by unqualified name (Phase 36 P02/P03)
 - Existing test stubs that implement obsolete Core config/context interfaces remain assignable to `IModuleConfig` and `IModuleContext`, so the routing/HTTP regression suite stayed source-compatible during the module migration (Phase 36 P03)
+- `LLMModule` keeps `OpenAnima.Core.LLM` as the only remaining Core import; all other module-facing surfaces in the file should come from Contracts (Phase 36 P04)
+- In-process CLI command tests must serialize `Console.SetOut`/`Console.SetError` usage and disable assembly-level parallelization to avoid false failures from shared console capture state (Phase 36 P04)
 
 ### Known Blockers
 
@@ -112,7 +115,7 @@ Progress: [████████░░] 83% (v1.7)
 - [Phase 34]: RESOLVED — ActivityChannelHost wired, all channels active, 266/266 tests green
 - [Phase 35]: ILLMService move also requires ChatMessageInput move — v1.7 vs v1.8 scope decision needed during Phase 35 planning
 - [Phase 36]: `dotnet test ... -q` on `OpenAnima.Tests` can false-fail under the .NET 10 SDK with `Building target "CoreCompile" completely`; rerun with normal verbosity for reliable verification evidence
-- [Phase 36]: Running two `dotnet test` processes against `OpenAnima.Tests.csproj` in parallel can race on shared `obj` outputs (`SharedResources.*.resources`, `AssemblyReference.cache`) — verify this project sequentially
+- [Phase 36]: Running two `dotnet test` processes against either test project in parallel can race on shared `obj` outputs (`SharedResources.*.resources`, `AssemblyReference.cache`, static web assets caches) — verify test projects sequentially
 
 ### Technical Debt (carried forward)
 
@@ -125,4 +128,4 @@ Progress: [████████░░] 83% (v1.7)
 ---
 
 *State updated: 2026-03-15*
-*Stopped at: Completed 36-03-PLAN.md — routing trio + HttpRequestModule now use Contracts-facing config/context/routing/helper surfaces; targeted routing/HTTP tests 28/28 green*
+*Stopped at: Completed 36-04-PLAN.md — LLMModule now keeps only the documented Core.LLM exception, `oani new` generates Contracts-only module code, and targeted verification passed 110/110 tests*

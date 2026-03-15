@@ -174,13 +174,13 @@ Plans:
 - `BUILTIN-11` and `BUILTIN-12` were unshipped v1.5 backlog items, not missing live implementations
 - Removed demo modules `TextInput`, `LLMProcessor`, `TextOutput`, and `TriggerButton` are historical and not part of the active inventory
 - Authoritative active inventory: `LLMModule`, `ChatInputModule`, `ChatOutputModule`, `HeartbeatModule`, `FixedTextModule`, `TextJoinModule`, `TextSplitModule`, `ConditionalBranchModule`, `AnimaInputPortModule`, `AnimaOutputPortModule`, `AnimaRouteModule`, `HttpRequestModule`
-**Plans:** 3/5 plans complete
+**Plans:** 4/5 plans complete
 
 Plans:
 - [x] 36-01-PLAN.md — Normalize the 12-module inventory and move `ModuleMetadataRecord` plus `SsrfGuard` to Contracts with Core shims
 - [x] 36-02-PLAN.md — Migrate the chat, heartbeat, text, and branch module cohort to Contracts-only imports
 - [x] 36-03-PLAN.md — Migrate the routing trio and `HttpRequestModule` to Contracts-first dependencies
-- [ ] 36-04-PLAN.md — Make `LLMModule` Contracts-first except for the documented Core.LLM exception; modernize CLI templates
+- [x] 36-04-PLAN.md — Make `LLMModule` Contracts-first except for the documented Core.LLM exception; modernize CLI templates
 - [ ] 36-05-PLAN.md — Add decoupling audit coverage, DI startup resolution tests, and full-suite verification
 
 ## Progress
