@@ -1,3 +1,4 @@
+using OpenAnima.Contracts.Routing;
 using OpenAnima.Core.Routing;
 
 namespace OpenAnima.Tests.Unit;

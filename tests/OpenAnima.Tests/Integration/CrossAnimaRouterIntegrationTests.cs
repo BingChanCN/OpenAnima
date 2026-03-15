@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Contracts;
+using OpenAnima.Contracts.Routing;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.Routing;
 

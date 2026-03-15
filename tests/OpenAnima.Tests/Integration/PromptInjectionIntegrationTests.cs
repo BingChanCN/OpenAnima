@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Contracts;
+using OpenAnima.Contracts.Routing;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.Events;
 using OpenAnima.Core.LLM;
@@ -446,6 +447,14 @@ public class PromptInjectionIntegrationTests
             return _configs.TryGetValue($"{animaId}:{moduleId}", out var cfg)
                 ? new Dictionary<string, string>(cfg)
                 : new Dictionary<string, string>();
+        }
+
+        public Task SetConfigAsync(string animaId, string moduleId, string key, string value)
+        {
+            var config = GetConfig(animaId, moduleId);
+            config[key] = value;
+            SetConfig(animaId, moduleId, config);
+            return Task.CompletedTask;
         }
 
         public Task SetConfigAsync(string animaId, string moduleId, Dictionary<string, string> config)

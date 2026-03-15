@@ -49,6 +49,9 @@ public class HttpRequestModuleTests
 
         public Dictionary<string, string> GetConfig(string animaId, string moduleId) => _config;
 
+        public Task SetConfigAsync(string animaId, string moduleId, string key, string value)
+            => Task.CompletedTask;
+
         public Task SetConfigAsync(string animaId, string moduleId, Dictionary<string, string> config)
             => Task.CompletedTask;
 

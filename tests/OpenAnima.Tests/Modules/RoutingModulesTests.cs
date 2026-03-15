@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Contracts;
+using OpenAnima.Contracts.Routing;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.Events;
 using OpenAnima.Core.Modules;
@@ -846,6 +847,9 @@ public class RoutingModulesTests
 
         public Dictionary<string, string> GetConfig(string animaId, string moduleId)
             => new(_config);
+
+        public Task SetConfigAsync(string animaId, string moduleId, string key, string value)
+            => Task.CompletedTask;
 
         public Task SetConfigAsync(string animaId, string moduleId, Dictionary<string, string> config)
             => Task.CompletedTask;
