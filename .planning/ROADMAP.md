@@ -95,7 +95,7 @@
 - [x] **Phase 33: Concurrency Fixes** - Eliminate race conditions on shared mutable fields across WiringEngine and modules (completed 2026-03-14)
 - [x] **Phase 34: Activity Channel Model** - Introduce per-Anima Channel<T> mailbox serializing all state-mutating work (completed 2026-03-15)
 - [x] **Phase 35: Contracts API Expansion** - Promote essential interfaces to OpenAnima.Contracts for external module parity (completed 2026-03-15)
-- [ ] **Phase 36: Built-in Module Decoupling** - Migrate all 14 built-in modules to depend only on Contracts
+- [ ] **Phase 36: Built-in Module Decoupling** - Decouple the 12 active built-in modules from Core module-facing APIs, move shared helpers to Contracts, and document the `LLMModule` exception
 
 ## Phase Details
 
@@ -160,14 +160,19 @@ Plans:
 - [ ] 35-03-PLAN.md — Canary PortModule round-trip test + Contracts API surface unit tests
 
 ### Phase 36: Built-in Module Decoupling
-**Goal**: All 14 built-in modules reference only OpenAnima.Contracts — Core internals are invisible to module code
+**Goal**: The 12 active built-in modules consume Contracts-first module-facing APIs, helper/support types move to Contracts where needed, and `LLMModule` keeps only the documented `OpenAnima.Core.LLM` exception until a later phase promotes the LLM service surface
 **Depends on**: Phase 35
 **Requirements**: DECPL-01, DECPL-02, DECPL-03, DECPL-04, DECPL-05
 **Success Criteria** (what must be TRUE):
-  1. Zero `using OpenAnima.Core.*` directives remain in any of the 14 built-in module files
-  2. All 14 module types resolve correctly via DI at startup — no InvalidOperationException on application start
-  3. All tests that passed after Phase 35 still pass after migration (zero regressions)
-  4. `oani new` generates a module project with Contracts-only dependency — no Core reference in the template
+  1. The authoritative inventory is documented as **12 active built-in modules**, with `FormatDetector` and `ModuleMetadataRecord` tracked as helper/support scope rather than counted module instances
+  2. Zero `using OpenAnima.Core.*` directives remain in the 11 non-`LLMModule` built-in module files, and `LLMModule` retains only the documented `OpenAnima.Core.LLM` exception
+  3. All 12 active module types resolve correctly via DI at startup — no InvalidOperationException on application start
+  4. All tests that passed after Phase 35 still pass after migration (zero regressions)
+  5. `oani new` generates a module project with Contracts-only dependency — no Core reference in the template
+**Discrepancy disposition**:
+- `FormatDetector` and `ModuleMetadataRecord` are helper/support files, not active built-in modules
+- `BUILTIN-11` and `BUILTIN-12` were unshipped v1.5 backlog items, not missing live implementations
+- Removed demo modules `TextInput`, `LLMProcessor`, `TextOutput`, and `TriggerButton` are historical and not part of the active inventory
 **Plans**: TBD
 
 ## Progress

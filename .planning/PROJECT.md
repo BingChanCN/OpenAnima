@@ -7,7 +7,7 @@
 **Target features:**
 - Concurrency model: fix race conditions, Activity Channel for stateful Animas, request-level isolation for stateless Animas
 - Module API: move essential interfaces (config, context, routing) from Core to Contracts
-- Built-in module decoupling: migrate all 14 internal modules to depend only on Contracts
+- Built-in module decoupling: migrate the 12 active built-in modules plus shared helper surfaces to Contracts-first boundaries, with one documented `LLMModule` exception
 
 ## What This Is
 
@@ -128,12 +128,19 @@ Agents that proactively think and act on their own, while module connections rem
 - [ ] Stateful/main Animas use Activity Channel model — channels parallel, channel-internal serial (CONC-03)
 - [ ] Essential module APIs (config, context, routing) available in Contracts layer (API-01)
 - [ ] External modules achieve feature parity with built-in modules via Contracts (API-02)
-- [ ] All 14 built-in modules depend only on OpenAnima.Contracts, not Core internals (DECPL-01)
+- [ ] The 12 active built-in modules follow Contracts-first module APIs; `LLMModule` may keep the one documented `OpenAnima.Core.LLM` exception until a later surface-move phase (DECPL-01)
 - [ ] Each Anima has independent module instances (ANIMA-08 — global singleton kept for DI compatibility)
 - [ ] User can view list of all installed modules (MODMGMT-01)
 - [ ] User can install module from .oamod package (MODMGMT-02)
 - [ ] User can uninstall module (MODMGMT-03)
 - [ ] User can search and filter modules by name (MODMGMT-06)
+
+### Phase 36 Inventory Note
+
+- Phase 36 uses **12 active built-in modules** as the authoritative runtime inventory, based on the registrations in `WiringServiceExtensions` and `WiringInitializationService`.
+- `FormatDetector` and `ModuleMetadataRecord` remain in scope as helper/support types for built-in modules, but they are not counted as active built-in module instances.
+- `LLMModule` is the one documented `OpenAnima.Core.LLM` exception until a later phase promotes the LLM service surface into Contracts.
+- The historical candidates behind the old count are dispositioned explicitly: `BUILTIN-11` and `BUILTIN-12` stayed unshipped v1.5 backlog items, and removed demo modules `TextInput`, `LLMProcessor`, `TextOutput`, and `TriggerButton` are not part of the live inventory.
 
 ### Future
 
