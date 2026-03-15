@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
-using OpenAnima.Core.Anima;
-using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.Modules;
 
@@ -27,8 +25,8 @@ namespace OpenAnima.Core.Modules;
 public class ConditionalBranchModule : IModuleExecutor
 {
     private readonly IEventBus _eventBus;
-    private readonly IAnimaModuleConfigService _configService;
-    private readonly IAnimaContext _animaContext;
+    private readonly IModuleConfig _configService;
+    private readonly IModuleContext _animaContext;
     private readonly ILogger<ConditionalBranchModule> _logger;
     private readonly List<IDisposable> _subscriptions = new();
 
@@ -36,13 +34,13 @@ public class ConditionalBranchModule : IModuleExecutor
     private Exception? _lastError;
     private readonly SemaphoreSlim _executionGuard = new SemaphoreSlim(1, 1);
 
-    public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
+    public IModuleMetadata Metadata { get; } = new OpenAnima.Contracts.ModuleMetadataRecord(
         "ConditionalBranchModule", "1.0.0", "Routes input to true/false branch based on expression");
 
     public ConditionalBranchModule(
         IEventBus eventBus,
-        IAnimaModuleConfigService configService,
-        IAnimaContext animaContext,
+        IModuleConfig configService,
+        IModuleContext animaContext,
         ILogger<ConditionalBranchModule> logger)
     {
         _eventBus = eventBus;

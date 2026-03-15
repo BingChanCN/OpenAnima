@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
-using OpenAnima.Core.Anima;
-using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.Modules;
 
@@ -16,21 +14,21 @@ namespace OpenAnima.Core.Modules;
 public class FixedTextModule : IModuleExecutor
 {
     private readonly IEventBus _eventBus;
-    private readonly IAnimaModuleConfigService _configService;
-    private readonly IAnimaContext _animaContext;
+    private readonly IModuleConfig _configService;
+    private readonly IModuleContext _animaContext;
     private readonly ILogger<FixedTextModule> _logger;
     private readonly List<IDisposable> _subscriptions = new();
 
     private ModuleExecutionState _state = ModuleExecutionState.Idle;
     private Exception? _lastError;
 
-    public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
+    public IModuleMetadata Metadata { get; } = new OpenAnima.Contracts.ModuleMetadataRecord(
         "FixedTextModule", "1.0.0", "Outputs configurable text with template interpolation");
 
     public FixedTextModule(
         IEventBus eventBus,
-        IAnimaModuleConfigService configService,
-        IAnimaContext animaContext,
+        IModuleConfig configService,
+        IModuleContext animaContext,
         ILogger<FixedTextModule> logger)
     {
         _eventBus = eventBus;
