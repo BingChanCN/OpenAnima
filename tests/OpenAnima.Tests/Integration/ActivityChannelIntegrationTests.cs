@@ -4,7 +4,6 @@ using OpenAnima.Contracts.Routing;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.Channels;
 using OpenAnima.Core.Events;
-using OpenAnima.Core.Modules;
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Routing;
 using OpenAnima.Core.Wiring;

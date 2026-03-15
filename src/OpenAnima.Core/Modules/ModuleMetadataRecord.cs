@@ -1,8 +1,7 @@
-using OpenAnima.Contracts;
-
 namespace OpenAnima.Core.Modules;
 
 /// <summary>
-/// Simple record implementation of IModuleMetadata for concrete modules.
+/// Temporary compatibility shim while module consumers move to OpenAnima.Contracts.ModuleMetadataRecord.
 /// </summary>
-public record ModuleMetadataRecord(string Name, string Version, string Description) : IModuleMetadata;
+public record ModuleMetadataRecord(string Name, string Version, string Description)
+    : OpenAnima.Contracts.ModuleMetadataRecord(Name, Version, Description);

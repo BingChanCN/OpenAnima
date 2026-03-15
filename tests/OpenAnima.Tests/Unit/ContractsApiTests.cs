@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Routing;
 using OpenAnima.Core.Anima;
+using CoreModuleMetadataRecord = OpenAnima.Core.Modules.ModuleMetadataRecord;
 using OpenAnima.Core.Services;
 
 namespace OpenAnima.Tests.Unit;
@@ -176,6 +177,34 @@ public class ContractsApiTests
         Assert.Equal("API Key", descriptor.DisplayName);
         Assert.True(descriptor.Required);
         Assert.Equal(1, descriptor.Order);
+    }
+
+    [Fact]
+    public void ModuleMetadataRecord_ExistsIn_OpenAnima_Contracts_Namespace()
+    {
+        var type = typeof(ModuleMetadataRecord);
+
+        Assert.Equal("OpenAnima.Contracts", type.Namespace);
+        Assert.Equal(typeof(IModuleMetadata).Assembly, type.Assembly);
+    }
+
+    [Fact]
+    public void ModuleMetadataRecord_Implements_IModuleMetadata_With_Expected_Values()
+    {
+        IModuleMetadata metadata = new ModuleMetadataRecord("SampleModule", "1.2.3", "Sample description");
+
+        Assert.Equal("SampleModule", metadata.Name);
+        Assert.Equal("1.2.3", metadata.Version);
+        Assert.Equal("Sample description", metadata.Description);
+    }
+
+    [Fact]
+    public void Core_ModuleMetadataRecord_Remains_A_Compatibility_Shim()
+    {
+        var shim = new CoreModuleMetadataRecord("ShimModule", "1.0.0", "Shim");
+
+        Assert.IsAssignableFrom<ModuleMetadataRecord>(shim);
+        Assert.Equal("OpenAnima.Core.Modules", typeof(CoreModuleMetadataRecord).Namespace);
     }
 
     // -----------------------------------------------------------------------
