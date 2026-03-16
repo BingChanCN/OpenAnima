@@ -54,13 +54,6 @@ public class FixedTextModule : IModuleExecutor
         try
         {
             var animaId = _animaContext.ActiveAnimaId;
-            if (animaId == null)
-            {
-                _logger.LogWarning("FixedTextModule: no active Anima, skipping execution");
-                _state = ModuleExecutionState.Completed;
-                return;
-            }
-
             var config = _configService.GetConfig(animaId, Metadata.Name);
             var template = config.TryGetValue("template", out var tmpl) ? tmpl : string.Empty;
 

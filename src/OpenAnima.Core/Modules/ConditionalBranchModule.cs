@@ -278,7 +278,7 @@ public class ConditionalBranchModule : IModuleExecutor
         if ((value.StartsWith("\"") && value.EndsWith("\"")) ||
             (value.StartsWith("'") && value.EndsWith("'")))
         {
-            return value[1..^1];
+            return value[1..^1].Replace("\\\"", "\"").Replace("\\'", "'");
         }
         throw new ArgumentException($"Expected a quoted string literal, got: '{value}'");
     }
