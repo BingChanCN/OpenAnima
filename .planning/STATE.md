@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Runtime Foundation
 status: in_progress
-last_updated: "2026-03-16T06:34:23Z"
-last_activity: 2026-03-16 — Completed quick task 5: Phase 36 code review fixes (W1, W2, S1, S2, S3)
+last_updated: "2026-03-16T07:00:33Z"
+last_activity: 2026-03-16 — Completed quick task 6: code review phase 34 35
 progress:
   total_phases: 5
   completed_phases: 5
@@ -30,7 +30,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-15)
 Phase: 36 of 36 (Built-in Module Decoupling) — COMPLETE
 Plan: 5 of 5 completed
 Status: Phase 36 complete and verified — the authoritative 12-module inventory is codified in tests, the one `OpenAnima.Core.LLM` exception is enforced automatically, all built-ins resolve from startup DI, and the full regression suite is green
-Last activity: 2026-03-16 — Phase 36 complete and verified (334/334 OpenAnima.Tests + 76/76 OpenAnima.Cli.Tests)
+Last activity: 2026-03-16 — Completed quick task 6: code review phase 34 35
 
 Progress: [██████████] 100% (v1.7)
 
@@ -135,8 +135,9 @@ Progress: [██████████] 100% (v1.7)
 | 3 | 交叉评审一下phase 36 | 2026-03-16 | e7464d2 | [3-phase-36](./quick/3-phase-36/) |
 | 4 | Phase 36 code quality review | 2026-03-16 | f5feaf8 | [4-phase-36-code-review](./quick/4-phase-36-code-review/) |
 | 5 | Phase 36 code review fixes (W1, W2, S1, S2, S3) | 2026-03-16 | 9bc2d97 | [5-phase-36-code-review-2-warnings-3-sugges](./quick/5-phase-36-code-review-2-warnings-3-sugges/) |
+| 6 | code review phase 34 35 | 2026-03-16 | 4b26aa9 | [6-code-review-phase-34-35](./quick/6-code-review-phase-34-35/) |
 
 ---
 
 *State updated: 2026-03-16*
-*Stopped at: Completed quick task 5: Phase 36 code review fixes (W1, W2, S1, S2, S3) — fixed 2 warnings and implemented 3 suggestions, 410/410 tests green*
+*Stopped at: Completed quick task 6: code review phase 34 35 — found 4 blockers and 2 warnings across the Phase 34/35 runtime and Contracts work*
