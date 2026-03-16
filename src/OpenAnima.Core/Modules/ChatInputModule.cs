@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
+using OpenAnima.Core.Channels;
 
 namespace OpenAnima.Core.Modules;
 
@@ -14,6 +15,7 @@ public class ChatInputModule : IModuleExecutor
 {
     private readonly IEventBus _eventBus;
     private readonly ILogger<ChatInputModule> _logger;
+    private ActivityChannelHost? _channelHost;
 
     private ModuleExecutionState _state = ModuleExecutionState.Idle;
     private Exception? _lastError;
@@ -28,8 +30,19 @@ public class ChatInputModule : IModuleExecutor
     }
 
     /// <summary>
+    /// Wires this module to use the ActivityChannelHost for chat message routing.
+    /// When set, messages are enqueued to the chat channel for serial processing.
+    /// When null, messages fall back to direct EventBus publish (backward compat).
+    /// </summary>
+    internal void SetChannelHost(ActivityChannelHost host)
+    {
+        _channelHost = host;
+    }
+
+    /// <summary>
     /// Called by chat UI when user sends a message.
-    /// Publishes directly to the event bus for downstream wiring.
+    /// Routes through ActivityChannelHost chat channel when available (production path),
+    /// or falls back to direct EventBus publish when no channel host is wired (test path).
     /// </summary>
     public async Task SendMessageAsync(string message, CancellationToken ct = default)
     {
@@ -38,21 +51,31 @@ public class ChatInputModule : IModuleExecutor
 
         try
         {
-            await _eventBus.PublishAsync(new ModuleEvent<string>
+            if (_channelHost != null)
             {
-                EventName = $"{Metadata.Name}.port.userMessage",
-                SourceModuleId = Metadata.Name,
-                Payload = message
-            }, ct);
-
-            _state = ModuleExecutionState.Completed;
-            _logger.LogDebug("ChatInputModule published user message");
+                // Production path: enqueue to chat channel for serial processing
+                _channelHost.EnqueueChat(new ChatWorkItem(message, ct));
+                _state = ModuleExecutionState.Completed;
+                _logger.LogDebug("ChatInputModule enqueued message to chat channel");
+            }
+            else
+            {
+                // Fallback path: direct EventBus publish (backward compat for standalone tests)
+                await _eventBus.PublishAsync(new ModuleEvent<string>
+                {
+                    EventName = $"{Metadata.Name}.port.userMessage",
+                    SourceModuleId = Metadata.Name,
+                    Payload = message
+                }, ct);
+                _state = ModuleExecutionState.Completed;
+                _logger.LogDebug("ChatInputModule published message directly (no channel host)");
+            }
         }
         catch (Exception ex)
         {
             _state = ModuleExecutionState.Error;
             _lastError = ex;
-            _logger.LogError(ex, "ChatInputModule failed to publish message");
+            _logger.LogError(ex, "ChatInputModule failed to process message");
             throw;
         }
     }
