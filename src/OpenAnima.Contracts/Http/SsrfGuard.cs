@@ -106,6 +106,7 @@ public static class SsrfGuard
 
         if (remainderBits > 0)
         {
+            // Create mask for prefix bits: remainderBits=5 → 0b11111000 (0xFF << 3)
             var mask = (byte)(0xFF << (8 - remainderBits));
             if ((addrBytes[fullBytes] & mask) != (netBytes[fullBytes] & mask))
                 return false;

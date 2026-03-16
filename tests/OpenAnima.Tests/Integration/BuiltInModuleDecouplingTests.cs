@@ -8,8 +8,19 @@ namespace OpenAnima.Tests.Integration;
 /// </summary>
 public class BuiltInModuleDecouplingTests
 {
-    private static readonly string RepoRoot =
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+    private static readonly string RepoRoot = FindRepositoryRoot();
+
+    private static string FindRepositoryRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current != null)
+        {
+            if (Directory.Exists(Path.Combine(current.FullName, ".git")))
+                return current.FullName;
+            current = current.Parent;
+        }
+        throw new InvalidOperationException("Could not find repository root (.git directory not found)");
+    }
 
     private static readonly string ModulesDirectory =
         Path.Combine(RepoRoot, "src", "OpenAnima.Core", "Modules");

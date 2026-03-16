@@ -24,7 +24,7 @@ namespace OpenAnima.Core.Modules;
 [OutputPort("error", PortType.Text)]
 public class LLMModule : IModuleExecutor
 {
-    private const int MaxRetries = 2;
+    private const int DefaultMaxRetries = 2;
 
     private readonly ILLMService _llmService;
     private readonly IModuleConfig _configService;
@@ -84,6 +84,14 @@ public class LLMModule : IModuleExecutor
 
             // Build the known service names set for this Anima's AnimaRoute module.
             var knownServiceNames = BuildKnownServiceNames(animaId);
+
+            // Get configurable retry limit (default: 2)
+            var maxRetries = DefaultMaxRetries;
+            var config = _configService.GetConfig(animaId, Metadata.Name);
+            if (config.TryGetValue("llmMaxRetries", out var retriesStr) && int.TryParse(retriesStr, out var retriesVal) && retriesVal >= 0)
+            {
+                maxRetries = retriesVal;
+            }
 
             // Build messages list: system message (if routes configured) + user message.
             var messages = new List<ChatMessageInput>();
@@ -150,10 +158,10 @@ public class LLMModule : IModuleExecutor
                 _logger.LogDebug("LLMModule: malformed marker on attempt {Attempt}: {Error}",
                     attempt + 1, detection.MalformedMarkerError);
 
-                if (attempt >= MaxRetries)
+                if (attempt >= maxRetries)
                 {
                     // Exhausted retries — publish error.
-                    var errorMsg = $"Format error after {MaxRetries + 1} attempts: {detection.MalformedMarkerError}";
+                    var errorMsg = $"Format error after {maxRetries + 1} attempts: {detection.MalformedMarkerError}";
                     _logger.LogWarning("LLMModule: {ErrorMsg}", errorMsg);
                     await _eventBus.PublishAsync(new ModuleEvent<string>
                     {
