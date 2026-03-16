@@ -1,5 +1,26 @@
 # Milestones
 
+## v1.7 Runtime Foundation (Shipped: 2026-03-16)
+
+**Phases:** 32-37 | **Plans:** 13 | **Tasks:** 26 | **LOC:** ~10,100 C# added (+14,079 insertions)
+**Git range:** feat(32-01)..docs(phase-37) | **Timeline:** 2026-03-14 → 2026-03-16 (3 days)
+
+**Delivered:** Hardened runtime foundation — race-free module execution, per-Anima Activity Channel serialization model, Contracts-first module API surface, and full built-in module decoupling — completing the architectural prerequisites for external module parity.
+
+**Key accomplishments:**
+- Race-free module execution via ConcurrentDictionary, local variable capture, and SemaphoreSlim(1,1) skip-when-busy guards across WiringEngine and 5 modules
+- ActivityChannelHost with 3 unbounded named channels (heartbeat/chat/routing) — serial within each channel, parallel between channels, with [StatelessModule] attribute for concurrent dispatch classification
+- 9 new contract types in OpenAnima.Contracts (IModuleConfig, IModuleContext, IModuleConfigSchema, ICrossAnimaRouter + routing companions) — external modules achieve feature parity via Contracts-only dependency
+- 12 active built-in modules migrated to Contracts-first APIs; LLMModule keeps only the documented Core.LLM exception
+- ChatInputModule wired through ActivityChannelHost chat channel for production serial execution guarantee (CONC-05/CONC-06 gap closure)
+- Full test suite: 337/337 green, zero regressions across all 6 phases
+
+**Tech debt (accepted):** ANIMA-08 global singleton kept for DI, ILLMService remains in Core (requires ChatMessageInput move), Nyquist validation partial across phases, IModuleConfigSchema has no production consumer yet
+
+**Archive:** [milestones/v1.7-ROADMAP.md](milestones/v1.7-ROADMAP.md) | [milestones/v1.7-REQUIREMENTS.md](milestones/v1.7-REQUIREMENTS.md) | [milestones/v1.7-MILESTONE-AUDIT.md](milestones/v1.7-MILESTONE-AUDIT.md)
+
+---
+
 ## v1.6 Cross-Anima Routing (Shipped: 2026-03-14)
 
 **Phases:** 28-31 | **Plans:** 8 | **Tasks:** 16 | **LOC:** ~4,910 C# added (+4,910 insertions)

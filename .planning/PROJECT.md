@@ -1,13 +1,9 @@
 # OpenAnima
 
-## Current Milestone: v1.7 Runtime Foundation
+## Current State
 
-**Goal:** Harden the runtime foundation — fix concurrency bugs, introduce Activity Channel execution model, thicken the Contracts API, and decouple built-in modules from Core.
-
-**Target features:**
-- Concurrency model: fix race conditions, Activity Channel for stateful Animas, request-level isolation for stateless Animas
-- Module API: move essential interfaces (config, context, routing) from Core to Contracts
-- Built-in module decoupling: migrate the 12 active built-in modules plus shared helper surfaces to Contracts-first boundaries, with one documented `LLMModule` exception
+**Latest shipped:** v1.7 Runtime Foundation (2026-03-16)
+**Next milestone:** Planning — use `/gsd:new-milestone` to start
 
 ## What This Is
 
@@ -123,17 +119,19 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Active
 
-- [ ] Module execution is concurrency-safe — no race conditions under parallel invocation (CONC-01)
-- [ ] Stateless/mechanical Animas support concurrent request-level isolation (CONC-02)
-- [ ] Stateful/main Animas use Activity Channel model — channels parallel, channel-internal serial (CONC-03)
-- [ ] Essential module APIs (config, context, routing) available in Contracts layer (API-01)
-- [ ] External modules achieve feature parity with built-in modules via Contracts (API-02)
-- [ ] The 12 active built-in modules follow Contracts-first module APIs; `LLMModule` may keep the one documented `OpenAnima.Core.LLM` exception until a later surface-move phase (DECPL-01)
-- [ ] Each Anima has independent module instances (ANIMA-08 — global singleton kept for DI compatibility)
-- [ ] User can view list of all installed modules (MODMGMT-01)
-- [ ] User can install module from .oamod package (MODMGMT-02)
-- [ ] User can uninstall module (MODMGMT-03)
-- [ ] User can search and filter modules by name (MODMGMT-06)
+- ✓ Module execution is concurrency-safe — no race conditions under parallel invocation (CONC-01) — v1.7
+- ✓ Stateless/mechanical Animas support concurrent request-level isolation (CONC-02) — v1.7
+- ✓ Stateful/main Animas use Activity Channel model — channels parallel, channel-internal serial (CONC-03) — v1.7
+- ✓ Essential module APIs (config, context, routing) available in Contracts layer (API-01) — v1.7
+- ✓ External modules achieve feature parity with built-in modules via Contracts (API-02) — v1.7
+- ✓ The 12 active built-in modules follow Contracts-first module APIs; `LLMModule` keeps the one documented `OpenAnima.Core.LLM` exception (DECPL-01) — v1.7
+- ✓ ActivityChannel serializes all state-mutating work per Anima — heartbeat, chat, routing channels (CONC-05/06) — v1.7
+- ✓ [StatelessModule] attribute for concurrent dispatch classification (CONC-08) — v1.7
+- ✓ HeartbeatLoop TryWrite prevents tick-path deadlock (CONC-09) — v1.7
+- ✓ IModuleConfig, IModuleContext, ICrossAnimaRouter in Contracts with type-forward shims (API-03/04/05) — v1.7
+- ✓ Canary .oamod round-trip validates external plugin compatibility (API-06) — v1.7
+- ✓ DI startup resolution succeeds for all 12 module types (DECPL-02) — v1.7
+- ✓ `oani new` generates Contracts-only module project (DECPL-04) — v1.7
 
 ### Phase 36 Inventory Note
 
@@ -141,7 +139,14 @@ Agents that proactively think and act on their own, while module connections rem
 - The authoritative active inventory is: `LLMModule`, `ChatInputModule`, `ChatOutputModule`, `HeartbeatModule`, `FixedTextModule`, `TextJoinModule`, `TextSplitModule`, `ConditionalBranchModule`, `AnimaInputPortModule`, `AnimaOutputPortModule`, `AnimaRouteModule`, and `HttpRequestModule`.
 - `FormatDetector` and `ModuleMetadataRecord` remain in scope as helper/support types for built-in modules, but they are not counted as active built-in module instances.
 - `LLMModule` is the one documented `OpenAnima.Core.LLM` exception until a later phase promotes the LLM service surface into Contracts.
-- The historical candidates behind the old count are dispositioned explicitly: `BUILTIN-11` and `BUILTIN-12` stayed unshipped v1.5 backlog items, and removed demo modules `TextInput`, `LLMProcessor`, `TextOutput`, and `TriggerButton` are not part of the live inventory.
+
+### Active
+
+- [ ] Each Anima has independent module instances (ANIMA-08 — global singleton kept for DI compatibility)
+- [ ] User can view list of all installed modules (MODMGMT-01)
+- [ ] User can install module from .oamod package (MODMGMT-02)
+- [ ] User can uninstall module (MODMGMT-03)
+- [ ] User can search and filter modules by name (MODMGMT-06)
 
 ### Future
 
@@ -173,22 +178,23 @@ Agents that proactively think and act on their own, while module connections rem
 
 ## Context
 
-Shipped v1.6 with ~13,610 LOC across all source files (C#, Razor, CSS, JS).
+Shipped v1.7 with ~23,734 LOC across all source files (C#, Razor, CSS, JS).
 Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4, Microsoft.Extensions.Http.Resilience 8.7.0.
 
-v1.6 delivered cross-Anima routing:
-- CrossAnimaRouter singleton with compound-key port registry, Guid correlation IDs, timeout enforcement, periodic cleanup
-- AnimaInputPort, AnimaOutputPort, AnimaRoute modules with cascading dropdown config UI
-- LLM prompt auto-injection with FormatDetector XML marker parsing and self-correction retry loop
-- HttpRequestModule with SsrfGuard IP blocking, IHttpClientFactory resilience pipeline, configurable sidebar UI
-- ModuleEvent.Metadata for correlationId passthrough across module boundaries
+v1.7 delivered runtime foundation hardening:
+- Race-free module execution via ConcurrentDictionary + SemaphoreSlim guards
+- ActivityChannelHost with 3 named channels (heartbeat/chat/routing) — serial within, parallel between
+- 9 new contract types in OpenAnima.Contracts (IModuleConfig, IModuleContext, ICrossAnimaRouter, etc.)
+- 12 active built-in modules decoupled to Contracts-first APIs
+- ChatInputModule wired through chat channel for production serial execution
+- Full test suite: 337/337 green, zero regressions
 
 Known tech debt:
 - ANIMA-08: Global IEventBus singleton kept for module constructor DI — full module instance isolation deferred
-- MODMGMT-01/02/03/06: Full install/uninstall/search UI deferred — basic card UI with .oamod install works
-- Schema mismatch between CLI and Runtime (extended manifest fields)
-- Pre-existing test isolation issues (3 failures)
-- LLMModule dispatch uses hardcoded event name strings
+- MODMGMT-01/02/03/06: Full install/uninstall/search UI deferred
+- ILLMService remains in Core (requires ChatMessageInput move)
+- Nyquist validation partial across phases
+- IModuleConfigSchema has no production consumer yet
 
 ## Key Decisions
 
@@ -245,6 +251,17 @@ Known tech debt:
 | IHttpClientFactory with named client + resilience | Prevents socket exhaustion under heartbeat-driven repeated execution | ✓ Good — v1.6 |
 | Self-correction retry loop (MaxRetries=2) | LLM malformed markers get error feedback + format example for re-call | ✓ Good — v1.6 |
 
+| ActivityChannel: Channel.CreateUnbounded<T>() with SingleReader=true | Always TryWrite from tick path — WriteAsync risks deadlock | ✓ Good — v1.7 |
+| SemaphoreSlim Wait(0) over WaitAsync() | Synchronous non-blocking TryEnter gives skip-when-busy; WaitAsync() queues callers defeating skip semantics | ✓ Good — v1.7 |
+| IModuleConfig.SetConfigAsync per-key (string key, string value) | NOT bulk Dictionary — locked user decision | ✓ Good — v1.7 |
+| IModuleContext.ActiveAnimaId is non-nullable string | Platform guarantees initialization before module use | ✓ Good — v1.7 |
+| Contracts.Routing sub-namespace | ICrossAnimaRouter + companion types, parallel to existing Contracts.Ports | ✓ Good — v1.7 |
+| ModuleMetadataRecord moved to Contracts | Temporary Core.Modules shim inherits from Contracts record for backward compat | ✓ Good — v1.7 |
+| SsrfGuard moved to Contracts.Http | Temporary Core.Http shim delegates to Contracts helper | ✓ Good — v1.7 |
+| LLMModule keeps OpenAnima.Core.LLM exception | All other module-facing surfaces come from Contracts | ✓ Good — v1.7 |
+| ChatInputModule.SetChannelHost is internal | ActivityChannelHost is internal sealed class — InternalsVisibleTo covers test access | ✓ Good — v1.7 |
+| Channel-first dispatch uses explicit if/else | Not null-conditional `?.` — fallback behavior is clear and testable | ✓ Good — v1.7 |
+
 ## Constraints
 
 - **Platform**: Windows-first — must work on Windows 10/11 without WSL or Docker
@@ -254,4 +271,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-14 after v1.7 milestone started*
+*Last updated: 2026-03-16 after v1.7 Runtime Foundation milestone*

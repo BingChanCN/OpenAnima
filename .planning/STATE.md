@@ -1,43 +1,41 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.7
-milestone_name: Runtime Foundation
-status: completed
-last_updated: "2026-03-16T09:46:14.114Z"
-last_activity: "2026-03-16 — Completed Phase 37 Plan 01: Wire Chat Channel"
+milestone: null
+milestone_name: null
+status: planning
+last_updated: "2026-03-16T10:30:00.000Z"
+last_activity: "2026-03-16 — Completed v1.7 Runtime Foundation milestone"
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State: OpenAnima
 
 **Last updated:** 2026-03-16
-**Current milestone:** v1.7 Runtime Foundation
+**Current milestone:** Planning next milestone
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-15)
+See: `.planning/PROJECT.md` (updated 2026-03-16)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 37 COMPLETE — ChatInputModule wired to ActivityChannelHost chat channel, CONC-05 and CONC-06 requirements satisfied, v1.7 Runtime Foundation milestone complete
+**Current focus:** v1.7 Runtime Foundation shipped — ready for next milestone planning
 
 ## Current Position
 
-Phase: 37 of 37 (Wire Chat Channel) — COMPLETE
-Plan: 1 of 1 completed
-Status: Phase 37 complete — ChatInputModule routes through ActivityChannelHost chat channel with serial FIFO processing; 337/337 tests green
-Last activity: 2026-03-16 — Completed Phase 37 Plan 01: Wire Chat Channel
+Status: Milestone complete — v1.7 Runtime Foundation shipped 2026-03-16
+Next: Use `/gsd:new-milestone` to start next milestone cycle
 
-Progress: [██████████] 100% (v1.7)
+Progress: [██████████] 100% (v1.7 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 84 (across v1.0–v1.7 Phase 37 complete)
+- Total plans completed: 85 (across v1.0–v1.7)
 
 **By Milestone:**
 
@@ -50,91 +48,17 @@ Progress: [██████████] 100% (v1.7)
 | v1.4 Module SDK | 3 | 8 | 2026-02-28 |
 | v1.5 Multi-Anima | 5 | 13 | 2026-03-09 |
 | v1.6 Cross-Anima Routing | 4 | 8 | 2026-03-14 |
-| v1.7 Phase 32 (Test Baseline) | 1 | 1 | 2026-03-15 |
-| v1.7 Phase 33 (Concurrency Fixes) | 1 | 1 | 2026-03-15 |
-| v1.7 Phase 34 (Activity Channel Model) | 1 | 2 | 2026-03-15 |
-
-**Phase 32 Metrics:**
-- Plan 01: 15 min, 2 tasks, 2 files modified
-
-**Phase 33 Metrics:**
-- Plan 01: 20 min, 2 tasks, 7 files modified
-
-**Phase 34 Metrics:**
-- Plan 01: 13 min, 2 tasks, 4 files created
-- Plan 02: 30 min, 2 tasks, 14 files modified
-
-**Phase 35 Metrics:**
-- Plan 01: 4 min, 2 tasks, 9 files created
-- Plan 02: 12 min, 2 tasks, 19 files modified
-- Plan 03: 11 min, 2 tasks, 5 files created/modified
-
-**Phase 36 Metrics:**
-- Plan 01: 35 min, 2 tasks, 10 files created/modified
-- Plan 02: 36 min, 2 tasks, 4 files modified (3 cohort files audited with no source delta)
-- Plan 03: 23 min, 2 tasks, 4 files modified
-- Plan 04: 67 min, 2 tasks, 3 files modified
-- Plan 05: resumed session, 2 tasks, 2 files created/modified
-
-**Phase 37 Metrics:**
-- Plan 01: 13 min, 2 tasks, 6 files modified
+| v1.7 Runtime Foundation | 6 | 13 | 2026-03-16 |
 
 ## Accumulated Context
 
-### Decisions (v1.7)
+### Technical Debt (carried forward to next milestone)
 
-- ActivityChannel: use Channel.CreateUnbounded<T>() with SingleReader=true; always TryWrite from tick path — WriteAsync risks deadlock
-- Interface moves to Contracts: type-forward aliases in old Core namespaces must ship in same commit — binary compat for .oamod packages
-- Module migration order: simplest first (ChatInput/Output/Heartbeat → text utils → routing → LLM/HTTP); DI smoke test after each
-- ANIMA-08 singleton ruled out as root cause of 3 test failures — failures were test infrastructure bugs (missing Compile Include, type identity split, EventBus type-bucket mismatch); no change needed to ANIMA-08 scope
-- PluginLoadContext type identity: delete OpenAnima.Contracts.dll from plugin output dir after build so AssemblyDependencyResolver falls back to Default context's shared assembly copy
-- SemaphoreSlim Wait(0) over WaitAsync(): synchronous non-blocking TryEnter gives skip-when-busy; WaitAsync() queues callers defeating skip semantics (Phase 33)
-- ExecuteInternalAsync pattern: IModuleExecutor.ExecuteAsync() stays as no-op; real logic in private ExecuteInternalAsync with typed captured parameter (Phase 33)
-- HttpRequestModule guard wraps HandleTriggerAsync at subscription boundary, not inside the handler (Phase 33)
-- Reader.Count on UnboundedChannel throws NotSupportedException when net8.0 assembly consumed by net10.0 test runtime — use Interlocked counter for queue depth tracking (Phase 34)
-- ActivityChannelHost._statelessCache is static ConcurrentDictionary shared across all instances — module types immutable at runtime, cache never stales (Phase 34)
-- ActivityChannelHost property is internal (not public) on AnimaRuntime — internal type constraint; InternalsVisibleTo covers test access (Phase 34 P02)
-- WiringEngine.ExecuteAsync skipModuleIds is optional ISet<string>? = null — backward compatible, stateless dispatch fork passes set to avoid double-dispatch (Phase 34 P02)
-- CrossAnimaRouter routing channel test uses direct EnqueueRoute — router needs runtimeManager which is chicken-and-egg in unit tests; direct channel enqueue is correct unit of testability (Phase 34 P02)
-- IModuleConfig.SetConfigAsync per-key (string key, string value) NOT bulk Dictionary — locked user decision (Phase 35 P01)
-- IModuleContext.ActiveAnimaId is non-nullable string — platform guarantees initialization before module use (Phase 35 P01)
-- Contracts.Routing sub-namespace established for ICrossAnimaRouter + companion types, parallel to existing Contracts.Ports (Phase 35 P01)
-- RoutingTypesTests.cs keeps Core.Routing alongside Contracts.Routing — PendingRequest is Core-internal, not exported to Contracts (Phase 35 P02)
-- global using alias shims for Core.Routing type files make the assembly backward-compatible without touching any call sites (Phase 35 P02)
-- Direct ProjectReference to PortModule from test project for canary validation — simpler than PluginLoadContext subprocess; key proof (constructor accepts Contracts services) is fully demonstrated (Phase 35 P03)
-- ICrossAnimaRouter is null in canary tests — router requires AnimaRuntimeManager chicken-and-egg; IModuleConfig and IModuleContext verified with real Core implementations (Phase 35 P03)
-- AnimaModuleConfigService in DI requires await using ServiceProvider (implements IAsyncDisposable, not IDisposable) (Phase 35 P03)
-- ModuleMetadataRecord now lives in OpenAnima.Contracts; the temporary Core.Modules shim inherits from the Contracts record so existing call sites keep compiling during the migration (Phase 36 P01)
-- SsrfGuard now lives in OpenAnima.Contracts.Http; the temporary Core.Http shim delegates to the Contracts helper until HttpRequestModule switches imports directly (Phase 36 P01)
-- The low-risk non-LLM built-in cohort already had ChatInputModule, ChatOutputModule, and HeartbeatModule aligned closely enough that Phase 36 Plan 02 only needed source deltas in the text/branch modules after audit (Phase 36 P02)
-- Inside OpenAnima.Core.Modules files, construct `OpenAnima.Contracts.ModuleMetadataRecord` explicitly to avoid accidentally binding back to the temporary Core shim by unqualified name (Phase 36 P02/P03)
-- Existing test stubs that implement obsolete Core config/context interfaces remain assignable to `IModuleConfig` and `IModuleContext`, so the routing/HTTP regression suite stayed source-compatible during the module migration (Phase 36 P03)
-- `LLMModule` keeps `OpenAnima.Core.LLM` as the only remaining Core import; all other module-facing surfaces in the file should come from Contracts (Phase 36 P04)
-- In-process CLI command tests must serialize `Console.SetOut`/`Console.SetError` usage and disable assembly-level parallelization to avoid false failures from shared console capture state (Phase 36 P04)
-- Source-audit tests that inspect repo files from the test output directory must walk up five parent segments from `AppContext.BaseDirectory` to reach the repository root in this solution layout (Phase 36 P05)
-- Test fixtures that register real `AnimaModuleConfigService`/router/runtime services must dispose the ServiceProvider asynchronously and keep temp-directory cleanup best-effort to avoid teardown-only false failures (Phase 36 P05)
-- ChatInputModule.SetChannelHost is internal (not public) because ActivityChannelHost is internal sealed class — InternalsVisibleTo covers test access (Phase 37 P01)
-- AnimaRuntimeManager.chatInputModule is optional parameter (null default) for backward compat with tests that construct without ChatInputModule (Phase 37 P01)
-- Channel-first dispatch uses explicit if/else (not null-conditional) so fallback behavior is clear and testable (Phase 37 P01)
-- BuiltInModuleDecouplingTests updated to allow OpenAnima.Core.Channels exception for ChatInputModule — Phase 37 architectural requirement since ActivityChannelHost is internal (Phase 37 P01)
-
-### Known Blockers
-
-- [Phase 32]: RESOLVED — 3 pre-existing failures fixed; ANIMA-08 was NOT the root cause
-- [Phase 33]: RESOLVED — CONC-01 through CONC-04 all fixed; 244/244 tests green
-- [Phase 34]: RESOLVED — ActivityChannelHost wired, all channels active, 266/266 tests green
-- [Phase 35]: ILLMService move also requires ChatMessageInput move — v1.7 vs v1.8 scope decision needed during Phase 35 planning
-- [Phase 36]: `dotnet test ... -q` on `OpenAnima.Tests` can false-fail under the .NET 10 SDK with `Building target "CoreCompile" completely`; rerun with normal verbosity for reliable verification evidence
-- [Phase 36]: Running two `dotnet test` processes against either test project in parallel can race on shared `obj` outputs (`SharedResources.*.resources`, `AssemblyReference.cache`, static web assets caches) — verify test projects sequentially
-- [Phase 37]: RESOLVED — ChatInputModule wired to ActivityChannelHost chat channel; CONC-05 and CONC-06 complete; 337/337 tests green
-
-### Technical Debt (carried forward)
-
-- MODMGMT-01/02/03/06: Full install/uninstall/search UI deferred to v1.8
+- MODMGMT-01/02/03/06: Full install/uninstall/search UI deferred
+- ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred to v2+
+- ILLMService remains in Core (requires ChatMessageInput move)
 - Schema mismatch between CLI and Runtime (extended manifest fields)
 - TextJoin fixed 3 input ports — static port system limitation
-- ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred to v2+
-- ModuleTestHarness subprocess compilation: fragile; consider Roslyn CSharpCompilation API refactor in future (deferred, not needed for CONC-10)
 
 ### Quick Tasks Completed
 
@@ -148,4 +72,4 @@ Progress: [██████████] 100% (v1.7)
 ---
 
 *State updated: 2026-03-16*
-*Stopped at: Completed quick task 6: code review phase 34 35 — found 4 blockers and 2 warnings across the Phase 34/35 runtime and Contracts work*
+*Stopped at: v1.7 Runtime Foundation milestone complete — ready for next milestone*
