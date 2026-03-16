@@ -4,7 +4,7 @@ milestone: v1.7
 milestone_name: Runtime Foundation
 status: in_progress
 last_updated: "2026-03-16T05:32:22Z"
-last_activity: 2026-03-16 — Phase 36 complete and verified (decoupling audit + DI startup coverage landed; full suite green 410/410)
+last_activity: 2026-03-16 — Completed quick task 3: 交叉评审一下phase 36
 progress:
   total_phases: 5
   completed_phases: 5
@@ -127,6 +127,12 @@ Progress: [██████████] 100% (v1.7)
 - TextJoin fixed 3 input ports — static port system limitation
 - ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred to v2+
 - ModuleTestHarness subprocess compilation: fragile; consider Roslyn CSharpCompilation API refactor in future (deferred, not needed for CONC-10)
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|--------------|
+| 3 | 交叉评审一下phase 36 | 2026-03-16 | e7464d2 | [3-phase-36](./quick/3-phase-36/) |
 
 ---
 
