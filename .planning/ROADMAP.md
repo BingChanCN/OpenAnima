@@ -195,7 +195,7 @@ Plans:
   3. ChatInputModule.SendMessageAsync calls _channelHost.EnqueueChat(new ChatWorkItem(...)) when host is available, with fallback to direct EventBus publish
   4. Production chat path (ChatPanel → ChatInputModule → ActivityChannelHost → onChat → EventBus) is verified by integration test
   5. All 410 tests still pass after wiring (zero regressions)
-**Plans:** 0/1 plans
+**Plans:** 1 plan
 
 Plans:
 - [ ] 37-01-PLAN.md — Wire ChatInputModule to ActivityChannelHost chat channel with production path integration test
