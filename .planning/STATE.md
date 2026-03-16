@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: null
-milestone_name: null
+milestone: v1.8
+milestone_name: SDK Runtime Parity
 status: planning
-last_updated: "2026-03-16T10:30:00.000Z"
-last_activity: "2026-03-16 — Completed v1.7 Runtime Foundation milestone"
+last_updated: "2026-03-16T12:00:00.000Z"
+last_activity: "2026-03-16 — Milestone v1.8 started"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -16,21 +16,23 @@ progress:
 # Project State: OpenAnima
 
 **Last updated:** 2026-03-16
-**Current milestone:** Planning next milestone
+**Current milestone:** v1.8 SDK Runtime Parity
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-16)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** v1.7 Runtime Foundation shipped — ready for next milestone planning
+**Current focus:** v1.8 SDK Runtime Parity — DI injection, storage paths, structured messages, external ContextModule validation
 
 ## Current Position
 
-Status: Milestone complete — v1.7 Runtime Foundation shipped 2026-03-16
-Next: Use `/gsd:new-milestone` to start next milestone cycle
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-16 — Milestone v1.8 started
 
-Progress: [██████████] 100% (v1.7 complete)
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 

@@ -3,7 +3,7 @@
 ## Current State
 
 **Latest shipped:** v1.7 Runtime Foundation (2026-03-16)
-**Next milestone:** Planning — use `/gsd:new-milestone` to start
+**Current milestone:** v1.8 SDK Runtime Parity
 
 ## What This Is
 
@@ -117,30 +117,24 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ Configuration files stored per Anima in separate directories (ARCH-05) — v1.5
 - ✓ Service disposal prevents memory leaks (ARCH-06) — v1.5
 
-### Active
+## Current Milestone: v1.8 SDK Runtime Parity
 
-- ✓ Module execution is concurrency-safe — no race conditions under parallel invocation (CONC-01) — v1.7
-- ✓ Stateless/mechanical Animas support concurrent request-level isolation (CONC-02) — v1.7
-- ✓ Stateful/main Animas use Activity Channel model — channels parallel, channel-internal serial (CONC-03) — v1.7
-- ✓ Essential module APIs (config, context, routing) available in Contracts layer (API-01) — v1.7
-- ✓ External modules achieve feature parity with built-in modules via Contracts (API-02) — v1.7
-- ✓ The 12 active built-in modules follow Contracts-first module APIs; `LLMModule` keeps the one documented `OpenAnima.Core.LLM` exception (DECPL-01) — v1.7
-- ✓ ActivityChannel serializes all state-mutating work per Anima — heartbeat, chat, routing channels (CONC-05/06) — v1.7
-- ✓ [StatelessModule] attribute for concurrent dispatch classification (CONC-08) — v1.7
-- ✓ HeartbeatLoop TryWrite prevents tick-path deadlock (CONC-09) — v1.7
-- ✓ IModuleConfig, IModuleContext, ICrossAnimaRouter in Contracts with type-forward shims (API-03/04/05) — v1.7
-- ✓ Canary .oamod round-trip validates external plugin compatibility (API-06) — v1.7
-- ✓ DI startup resolution succeeds for all 12 module types (DECPL-02) — v1.7
-- ✓ `oani new` generates Contracts-only module project (DECPL-04) — v1.7
+**Goal:** Make external SDK modules truly functional — DI injection, storage paths, structured message input — validated by a real external ContextModule.
 
-### Phase 36 Inventory Note
-
-- Phase 36 uses **12 active built-in modules** as the authoritative runtime inventory, based on the registrations in `WiringServiceExtensions` and `WiringInitializationService`.
-- The authoritative active inventory is: `LLMModule`, `ChatInputModule`, `ChatOutputModule`, `HeartbeatModule`, `FixedTextModule`, `TextJoinModule`, `TextSplitModule`, `ConditionalBranchModule`, `AnimaInputPortModule`, `AnimaOutputPortModule`, `AnimaRouteModule`, and `HttpRequestModule`.
-- `FormatDetector` and `ModuleMetadataRecord` remain in scope as helper/support types for built-in modules, but they are not counted as active built-in module instances.
-- `LLMModule` is the one documented `OpenAnima.Core.LLM` exception until a later phase promotes the LLM service surface into Contracts.
+**Target features:**
+- PluginLoader DI injection for external modules
+- IModuleContext.DataDirectory per-Anima per-Module storage path
+- LLMModule structured message list input
+- External ContextModule (SDK validation)
 
 ### Active
+
+- [ ] External modules receive Contracts DI services via PluginLoader (PLUG-01)
+- [ ] IModuleContext exposes DataDirectory for per-Anima per-Module storage (STOR-01)
+- [ ] LLMModule accepts structured message list input, not just single string (MSG-01)
+- [ ] External ContextModule loads via SDK, maintains conversation history, passes structured messages to LLM (ECTX-01)
+
+### Deferred (not in v1.8)
 
 - [ ] Each Anima has independent module instances (ANIMA-08 — global singleton kept for DI compatibility)
 - [ ] User can view list of all installed modules (MODMGMT-01)
@@ -189,12 +183,16 @@ v1.7 delivered runtime foundation hardening:
 - ChatInputModule wired through chat channel for production serial execution
 - Full test suite: 337/337 green, zero regressions
 
+v1.8 focus: External modules currently get zero DI — PluginLoader uses Activator.CreateInstance() with parameterless constructor. Contracts surface is public but unreachable. Chat is single-turn (no history sent to LLM). No per-module storage path convention.
+
 Known tech debt:
 - ANIMA-08: Global IEventBus singleton kept for module constructor DI — full module instance isolation deferred
 - MODMGMT-01/02/03/06: Full install/uninstall/search UI deferred
 - ILLMService remains in Core (requires ChatMessageInput move)
 - Nyquist validation partial across phases
 - IModuleConfigSchema has no production consumer yet
+- PluginLoader zero-DI: external modules cannot access any Contracts services
+- LLMModule single-turn: no conversation history in API calls
 
 ## Key Decisions
 
@@ -271,4 +269,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-16 after v1.7 Runtime Foundation milestone*
+*Last updated: 2026-03-16 after v1.8 SDK Runtime Parity milestone started*
