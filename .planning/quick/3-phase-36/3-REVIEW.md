@@ -120,4 +120,82 @@ This is consistent: DECPL-01 spans multiple plans (the migration work happened i
 
 ## Evidence Validation
 
-*(Populated by Task 2)*
+**Validation performed:** 2026-03-16
+
+### Test Files Verified
+
+| File | Status |
+|------|--------|
+| tests/OpenAnima.Tests/Integration/BuiltInModuleDecouplingTests.cs | FOUND |
+| tests/OpenAnima.Tests/Integration/ModuleRuntimeInitializationTests.cs | FOUND |
+| tests/OpenAnima.Cli.Tests/CliFoundationTests.cs | FOUND |
+
+**Count:** 3/3 test files exist
+
+### Key Source Files Verified
+
+| File | Status |
+|------|--------|
+| src/OpenAnima.Core/Modules/LLMModule.cs | FOUND |
+| src/OpenAnima.Cli/Templates/module-cs.tmpl | FOUND |
+| src/OpenAnima.Contracts/ModuleMetadataRecord.cs | FOUND |
+
+**Count:** 3/3 key source files exist
+
+### 12 Authoritative Module Files Verified
+
+| Module | Status |
+|--------|--------|
+| LLMModule.cs | FOUND |
+| ChatInputModule.cs | FOUND |
+| ChatOutputModule.cs | FOUND |
+| HeartbeatModule.cs | FOUND |
+| FixedTextModule.cs | FOUND |
+| TextJoinModule.cs | FOUND |
+| TextSplitModule.cs | FOUND |
+| ConditionalBranchModule.cs | FOUND |
+| AnimaInputPortModule.cs | FOUND |
+| AnimaOutputPortModule.cs | FOUND |
+| AnimaRouteModule.cs | FOUND |
+| HttpRequestModule.cs | FOUND |
+
+**Count:** 12/12 authoritative module files exist
+
+### Spot-Check: ChatInputModule.cs
+
+**Imports found:**
+```csharp
+using Microsoft.Extensions.Logging;
+using OpenAnima.Contracts;
+using OpenAnima.Contracts.Ports;
+```
+
+**Result:** PASS — Uses Contracts-only imports, no Core module-facing imports
+
+### Spot-Check: module-cs.tmpl
+
+**Imports found:**
+```csharp
+using OpenAnima.Contracts;
+using OpenAnima.Contracts.Ports;
+```
+
+**Metadata construction:**
+```csharp
+public IModuleMetadata Metadata { get; } = new ModuleMetadataRecord(
+    "{{ModuleName}}",
+    "{{ModuleVersion}}",
+    "{{ModuleDescription}}");
+```
+
+**Result:** PASS — Template generates Contracts-only module code with direct ModuleMetadataRecord construction
+
+---
+
+### Overall Evidence Quality Assessment
+
+**Files verified:** 18/18 (3 test files + 3 key source files + 12 module files)
+**Missing files:** 0
+**Spot-check findings:** Both ChatInputModule and the CLI template use Contracts-only imports as claimed
+
+**Conclusion:** All evidence claims in 36-VERIFICATION.md are backed by actual files. The verification document is trustworthy and accurate.
