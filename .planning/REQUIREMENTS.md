@@ -35,11 +35,11 @@ Requirements for v1.7 Runtime Foundation. Each maps to roadmap phases.
 - Inventory note: Phase 36 uses **12 active built-in modules** as the authoritative runtime count. `FormatDetector` and `ModuleMetadataRecord` are helper/support scope, `BUILTIN-11` and `BUILTIN-12` were never shipped, and removed demo modules `TextInput`, `LLMProcessor`, `TextOutput`, and `TriggerButton` are not part of the live inventory.
 - Inventory note: The authoritative active inventory is `LLMModule`, `ChatInputModule`, `ChatOutputModule`, `HeartbeatModule`, `FixedTextModule`, `TextJoinModule`, `TextSplitModule`, `ConditionalBranchModule`, `AnimaInputPortModule`, `AnimaOutputPortModule`, `AnimaRouteModule`, and `HttpRequestModule`.
 - Inventory note: `LLMModule` is the one documented `OpenAnima.Core.LLM` exception until the LLM service surface moves into Contracts.
-- [ ] **DECPL-01**: The 12 active built-in modules consume Contracts-first APIs; zero `using OpenAnima.Core.*` remain in non-`LLMModule` module files, and `LLMModule` keeps only the documented exception
-- [ ] **DECPL-02**: DI resolution succeeds for all 12 active module types after decoupling (startup smoke test)
-- [ ] **DECPL-03**: All existing tests compile and pass after module migration
-- [ ] **DECPL-04**: `oani new` project template generates Contracts-only module code
-- [ ] **DECPL-05**: ModuleMetadataRecord moved to Contracts so decoupled modules can reference it
+- [x] **DECPL-01**: The 12 active built-in modules consume Contracts-first APIs; zero `using OpenAnima.Core.*` remain in non-`LLMModule` module files, and `LLMModule` keeps only the documented exception
+- [x] **DECPL-02**: DI resolution succeeds for all 12 active module types after decoupling (startup smoke test)
+- [x] **DECPL-03**: All existing tests compile and pass after module migration
+- [x] **DECPL-04**: `oani new` project template generates Contracts-only module code
+- [x] **DECPL-05**: ModuleMetadataRecord moved to Contracts so decoupled modules can reference it
 
 ## Future Requirements
 
@@ -88,11 +88,11 @@ Requirements for v1.7 Runtime Foundation. Each maps to roadmap phases.
 | API-05 | Phase 35 | Complete |
 | API-06 | Phase 35 | Complete |
 | API-07 | Phase 35 | Complete |
-| DECPL-01 | Phase 36 | Pending |
-| DECPL-02 | Phase 36 | Pending |
-| DECPL-03 | Phase 36 | Pending |
-| DECPL-04 | Phase 36 | Pending |
-| DECPL-05 | Phase 36 | Pending |
+| DECPL-01 | Phase 36 | Complete |
+| DECPL-02 | Phase 36 | Complete |
+| DECPL-03 | Phase 36 | Complete |
+| DECPL-04 | Phase 36 | Complete |
+| DECPL-05 | Phase 36 | Complete |
 
 **Coverage:**
 - v1.7 requirements: 22 total
@@ -101,4 +101,4 @@ Requirements for v1.7 Runtime Foundation. Each maps to roadmap phases.
 
 ---
 *Requirements defined: 2026-03-14*
-*Last updated: 2026-03-15 after Phase 36 Plan 01*
+*Last updated: 2026-03-16 after Phase 36 completion*

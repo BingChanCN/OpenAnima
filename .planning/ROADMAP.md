@@ -9,7 +9,7 @@
 - ✅ **v1.4 Module SDK** — Phases 20-22 (shipped 2026-02-28)
 - ✅ **v1.5 Multi-Anima Architecture** — Phases 23-27 (shipped 2026-03-09)
 - ✅ **v1.6 Cross-Anima Routing** — Phases 28-31 (shipped 2026-03-14)
-- 🚧 **v1.7 Runtime Foundation** — Phases 32-36 (in progress)
+- 🚧 **v1.7 Runtime Foundation** — Phases 32-36 (all phases complete; milestone closeout pending)
 
 ## Phases
 
@@ -87,7 +87,7 @@
 
 </details>
 
-### v1.7 Runtime Foundation (In Progress)
+### v1.7 Runtime Foundation (Phase Work Complete)
 
 **Milestone Goal:** Harden the runtime foundation — fix concurrency bugs, introduce Activity Channel execution model, thicken the Contracts API, and decouple built-in modules from Core.
 
@@ -95,7 +95,7 @@
 - [x] **Phase 33: Concurrency Fixes** - Eliminate race conditions on shared mutable fields across WiringEngine and modules (completed 2026-03-14)
 - [x] **Phase 34: Activity Channel Model** - Introduce per-Anima Channel<T> mailbox serializing all state-mutating work (completed 2026-03-15)
 - [x] **Phase 35: Contracts API Expansion** - Promote essential interfaces to OpenAnima.Contracts for external module parity (completed 2026-03-15)
-- [ ] **Phase 36: Built-in Module Decoupling** - Decouple the 12 active built-in modules from Core module-facing APIs, move shared helpers to Contracts, and document the `LLMModule` exception
+- [x] **Phase 36: Built-in Module Decoupling** - Decouple the 12 active built-in modules from Core module-facing APIs, move shared helpers to Contracts, and document the `LLMModule` exception (completed 2026-03-16)
 
 ## Phase Details
 
@@ -174,14 +174,14 @@ Plans:
 - `BUILTIN-11` and `BUILTIN-12` were unshipped v1.5 backlog items, not missing live implementations
 - Removed demo modules `TextInput`, `LLMProcessor`, `TextOutput`, and `TriggerButton` are historical and not part of the active inventory
 - Authoritative active inventory: `LLMModule`, `ChatInputModule`, `ChatOutputModule`, `HeartbeatModule`, `FixedTextModule`, `TextJoinModule`, `TextSplitModule`, `ConditionalBranchModule`, `AnimaInputPortModule`, `AnimaOutputPortModule`, `AnimaRouteModule`, `HttpRequestModule`
-**Plans:** 4/5 plans complete
+**Plans:** 5/5 plans complete
 
 Plans:
 - [x] 36-01-PLAN.md — Normalize the 12-module inventory and move `ModuleMetadataRecord` plus `SsrfGuard` to Contracts with Core shims
 - [x] 36-02-PLAN.md — Migrate the chat, heartbeat, text, and branch module cohort to Contracts-only imports
 - [x] 36-03-PLAN.md — Migrate the routing trio and `HttpRequestModule` to Contracts-first dependencies
 - [x] 36-04-PLAN.md — Make `LLMModule` Contracts-first except for the documented Core.LLM exception; modernize CLI templates
-- [ ] 36-05-PLAN.md — Add decoupling audit coverage, DI startup resolution tests, and full-suite verification
+- [x] 36-05-PLAN.md — Add decoupling audit coverage, DI startup resolution tests, and full-suite verification
 
 ## Progress
 
@@ -223,10 +223,10 @@ Plans:
 | 33. Concurrency Fixes | v1.7 | 1/1 | Complete | 2026-03-14 |
 | 34. Activity Channel Model | v1.7 | 2/2 | Complete | 2026-03-15 |
 | 35. Contracts API Expansion | v1.7 | 3/3 | Complete | 2026-03-15 |
-| 36. Built-in Module Decoupling | v1.7 | 3/5 | In Progress | - |
+| 36. Built-in Module Decoupling | v1.7 | 5/5 | Complete | 2026-03-16 |
 
 **Total shipped: 31 phases, 72 plans across 7 milestones**
-**v1.7 in progress: 5 phases, 10/12 plans**
+**v1.7 in progress: 5 phases, 12/12 plans**
 
 ---
-*Last updated: 2026-03-15 after Phase 36 Plan 03*
+*Last updated: 2026-03-16 after Phase 36 completion and verification*

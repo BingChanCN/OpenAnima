@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Runtime Foundation
 status: in_progress
-last_updated: "2026-03-15T18:43:36Z"
-last_activity: 2026-03-15 — Phase 36 Plan 04 complete (LLMModule now keeps only the documented Core.LLM exception; CLI template/baseline repaired; 110 targeted tests green)
+last_updated: "2026-03-16T05:32:22Z"
+last_activity: 2026-03-16 — Phase 36 complete and verified (decoupling audit + DI startup coverage landed; full suite green 410/410)
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 12
-  completed_plans: 9
-  percent: 75
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State: OpenAnima
 
-**Last updated:** 2026-03-15
+**Last updated:** 2026-03-16
 **Current milestone:** v1.7 Runtime Foundation
 
 ## Project Reference
@@ -23,21 +23,21 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-15)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 36 Plan 04 COMPLETE — `LLMModule` now uses Contracts-facing metadata/config/context/routing surfaces except for `OpenAnima.Core.LLM`, `oani new` generates Contracts-only module code, and the final audit/test wave remains
+**Current focus:** Phase 36 COMPLETE and verified — the built-in module decoupling work is done, v1.7 phase work is complete, and the next workflow step is milestone closeout or planning the next milestone
 
 ## Current Position
 
-Phase: 36 of 36 (Built-in Module Decoupling) — Plan 04 of 05 complete
-Plan: 4 of 5 completed
-Status: Phase 36 in progress — all 12 built-in modules now use Contracts-first module-facing surfaces except for the documented `OpenAnima.Core.LLM` dependency, and only the final audit/full-suite verification wave remains
-Last activity: 2026-03-15 — Phase 36 Plan 04 complete (LLMModule exception isolated, CLI scaffolding modernized, 110 targeted tests green)
+Phase: 36 of 36 (Built-in Module Decoupling) — COMPLETE
+Plan: 5 of 5 completed
+Status: Phase 36 complete and verified — the authoritative 12-module inventory is codified in tests, the one `OpenAnima.Core.LLM` exception is enforced automatically, all built-ins resolve from startup DI, and the full regression suite is green
+Last activity: 2026-03-16 — Phase 36 complete and verified (334/334 OpenAnima.Tests + 76/76 OpenAnima.Cli.Tests)
 
-Progress: [█████████░] 92% (v1.7)
+Progress: [██████████] 100% (v1.7)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 82 (across v1.0–v1.7 Phase 36 P04)
+- Total plans completed: 83 (across v1.0–v1.7 Phase 36 complete)
 
 **By Milestone:**
 
@@ -74,6 +74,7 @@ Progress: [█████████░] 92% (v1.7)
 - Plan 02: 36 min, 2 tasks, 4 files modified (3 cohort files audited with no source delta)
 - Plan 03: 23 min, 2 tasks, 4 files modified
 - Plan 04: 67 min, 2 tasks, 3 files modified
+- Plan 05: resumed session, 2 tasks, 2 files created/modified
 
 ## Accumulated Context
 
@@ -107,6 +108,8 @@ Progress: [█████████░] 92% (v1.7)
 - Existing test stubs that implement obsolete Core config/context interfaces remain assignable to `IModuleConfig` and `IModuleContext`, so the routing/HTTP regression suite stayed source-compatible during the module migration (Phase 36 P03)
 - `LLMModule` keeps `OpenAnima.Core.LLM` as the only remaining Core import; all other module-facing surfaces in the file should come from Contracts (Phase 36 P04)
 - In-process CLI command tests must serialize `Console.SetOut`/`Console.SetError` usage and disable assembly-level parallelization to avoid false failures from shared console capture state (Phase 36 P04)
+- Source-audit tests that inspect repo files from the test output directory must walk up five parent segments from `AppContext.BaseDirectory` to reach the repository root in this solution layout (Phase 36 P05)
+- Test fixtures that register real `AnimaModuleConfigService`/router/runtime services must dispose the ServiceProvider asynchronously and keep temp-directory cleanup best-effort to avoid teardown-only false failures (Phase 36 P05)
 
 ### Known Blockers
 
@@ -127,5 +130,5 @@ Progress: [█████████░] 92% (v1.7)
 
 ---
 
-*State updated: 2026-03-15*
-*Stopped at: Completed 36-04-PLAN.md — LLMModule now keeps only the documented Core.LLM exception, `oani new` generates Contracts-only module code, and targeted verification passed 110/110 tests*
+*State updated: 2026-03-16*
+*Stopped at: Completed Phase 36 verification — built-in decoupling is fully proven and both test projects passed 410/410 tests; next action is milestone closeout or next-milestone planning*
