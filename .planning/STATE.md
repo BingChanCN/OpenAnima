@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Runtime Foundation
-status: in_progress
-last_updated: "2026-03-16T07:00:33Z"
-last_activity: 2026-03-16 — Completed quick task 6: code review phase 34 35
+status: verifying
+last_updated: "2026-03-16T09:28:07.820Z"
+last_activity: "2026-03-16 — Completed Phase 37 Plan 01: Wire Chat Channel"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 12
-  completed_plans: 12
+  total_phases: 6
+  completed_phases: 6
+  total_plans: 13
+  completed_plans: 13
   percent: 100
 ---
 
@@ -23,21 +23,21 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-15)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 36 COMPLETE and verified — the built-in module decoupling work is done, v1.7 phase work is complete, and the next workflow step is milestone closeout or planning the next milestone
+**Current focus:** Phase 37 COMPLETE — ChatInputModule wired to ActivityChannelHost chat channel, CONC-05 and CONC-06 requirements satisfied, v1.7 Runtime Foundation milestone complete
 
 ## Current Position
 
-Phase: 36 of 36 (Built-in Module Decoupling) — COMPLETE
-Plan: 5 of 5 completed
-Status: Phase 36 complete and verified — the authoritative 12-module inventory is codified in tests, the one `OpenAnima.Core.LLM` exception is enforced automatically, all built-ins resolve from startup DI, and the full regression suite is green
-Last activity: 2026-03-16 — Completed quick task 6: code review phase 34 35
+Phase: 37 of 37 (Wire Chat Channel) — COMPLETE
+Plan: 1 of 1 completed
+Status: Phase 37 complete — ChatInputModule routes through ActivityChannelHost chat channel with serial FIFO processing; 337/337 tests green
+Last activity: 2026-03-16 — Completed Phase 37 Plan 01: Wire Chat Channel
 
 Progress: [██████████] 100% (v1.7)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 83 (across v1.0–v1.7 Phase 36 complete)
+- Total plans completed: 84 (across v1.0–v1.7 Phase 37 complete)
 
 **By Milestone:**
 
@@ -76,6 +76,9 @@ Progress: [██████████] 100% (v1.7)
 - Plan 04: 67 min, 2 tasks, 3 files modified
 - Plan 05: resumed session, 2 tasks, 2 files created/modified
 
+**Phase 37 Metrics:**
+- Plan 01: 13 min, 2 tasks, 6 files modified
+
 ## Accumulated Context
 
 ### Decisions (v1.7)
@@ -110,6 +113,10 @@ Progress: [██████████] 100% (v1.7)
 - In-process CLI command tests must serialize `Console.SetOut`/`Console.SetError` usage and disable assembly-level parallelization to avoid false failures from shared console capture state (Phase 36 P04)
 - Source-audit tests that inspect repo files from the test output directory must walk up five parent segments from `AppContext.BaseDirectory` to reach the repository root in this solution layout (Phase 36 P05)
 - Test fixtures that register real `AnimaModuleConfigService`/router/runtime services must dispose the ServiceProvider asynchronously and keep temp-directory cleanup best-effort to avoid teardown-only false failures (Phase 36 P05)
+- ChatInputModule.SetChannelHost is internal (not public) because ActivityChannelHost is internal sealed class — InternalsVisibleTo covers test access (Phase 37 P01)
+- AnimaRuntimeManager.chatInputModule is optional parameter (null default) for backward compat with tests that construct without ChatInputModule (Phase 37 P01)
+- Channel-first dispatch uses explicit if/else (not null-conditional) so fallback behavior is clear and testable (Phase 37 P01)
+- BuiltInModuleDecouplingTests updated to allow OpenAnima.Core.Channels exception for ChatInputModule — Phase 37 architectural requirement since ActivityChannelHost is internal (Phase 37 P01)
 
 ### Known Blockers
 
@@ -119,6 +126,7 @@ Progress: [██████████] 100% (v1.7)
 - [Phase 35]: ILLMService move also requires ChatMessageInput move — v1.7 vs v1.8 scope decision needed during Phase 35 planning
 - [Phase 36]: `dotnet test ... -q` on `OpenAnima.Tests` can false-fail under the .NET 10 SDK with `Building target "CoreCompile" completely`; rerun with normal verbosity for reliable verification evidence
 - [Phase 36]: Running two `dotnet test` processes against either test project in parallel can race on shared `obj` outputs (`SharedResources.*.resources`, `AssemblyReference.cache`, static web assets caches) — verify test projects sequentially
+- [Phase 37]: RESOLVED — ChatInputModule wired to ActivityChannelHost chat channel; CONC-05 and CONC-06 complete; 337/337 tests green
 
 ### Technical Debt (carried forward)
 

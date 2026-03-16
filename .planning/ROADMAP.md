@@ -96,7 +96,7 @@
 - [x] **Phase 34: Activity Channel Model** - Introduce per-Anima Channel<T> mailbox serializing all state-mutating work (completed 2026-03-15)
 - [x] **Phase 35: Contracts API Expansion** - Promote essential interfaces to OpenAnima.Contracts for external module parity (completed 2026-03-15)
 - [x] **Phase 36: Built-in Module Decoupling** - Decouple the 12 active built-in modules from Core module-facing APIs, move shared helpers to Contracts, and document the `LLMModule` exception (completed 2026-03-16)
-- [ ] **Phase 37: Wire Chat Channel** - Complete ActivityChannel integration by routing ChatInputModule through the chat channel (gap closure from audit)
+- [x] **Phase 37: Wire Chat Channel** - Complete ActivityChannel integration by routing ChatInputModule through the chat channel (gap closure from audit)
 
 ## Phase Details
 
@@ -198,7 +198,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 37-01-PLAN.md — Wire ChatInputModule to ActivityChannelHost chat channel with production path integration test
+- [x] 37-01-PLAN.md — Wire ChatInputModule to ActivityChannelHost chat channel with production path integration test
 
 ## Progress
 
