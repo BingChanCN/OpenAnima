@@ -88,7 +88,7 @@ Each task was committed atomically:
 1. **Task 1: Define IModuleConfig, IModuleContext, IModuleConfigSchema contracts** - `45b3f51` (feat)
 2. **Task 2: Define routing types in Contracts.Routing namespace** - `eb5331e` (feat)
 
-**Plan metadata:** (docs commit follows)
+**Plan metadata:** `a1d8aa9` (docs: complete plan)
 
 ## Files Created/Modified
 
@@ -131,3 +131,11 @@ None - no external service configuration required.
 ---
 *Phase: 35-contracts-api-expansion*
 *Completed: 2026-03-15*
+
+## Self-Check: PASSED
+
+- All 9 source files exist at correct paths
+- Both task commits verified (45b3f51, eb5331e)
+- Contracts builds in isolation with 0 errors, 0 warnings
+- 266/266 tests pass (no Core changes)
+- SUMMARY.md created, STATE.md updated, ROADMAP.md updated, requirements marked complete

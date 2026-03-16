@@ -77,7 +77,7 @@ Each task was committed atomically:
 1. **Task 1: StatelessModuleAttribute + WorkItems** - `eb34143` (feat)
 2. **Task 2: ActivityChannelHost + unit tests** - `6a7d10b` (feat)
 
-**Plan metadata:** (to be added after SUMMARY commit)
+**Plan metadata:** `f8403a9` (docs: complete plan)
 
 _Note: TDD tasks produced RED → GREEN cycles; both tasks committed after GREEN._
 
