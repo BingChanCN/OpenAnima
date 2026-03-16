@@ -87,7 +87,7 @@
 
 </details>
 
-### v1.7 Runtime Foundation (Phase Work Complete)
+### v1.7 Runtime Foundation (Gap Closure in Progress)
 
 **Milestone Goal:** Harden the runtime foundation — fix concurrency bugs, introduce Activity Channel execution model, thicken the Contracts API, and decouple built-in modules from Core.
 
@@ -96,6 +96,7 @@
 - [x] **Phase 34: Activity Channel Model** - Introduce per-Anima Channel<T> mailbox serializing all state-mutating work (completed 2026-03-15)
 - [x] **Phase 35: Contracts API Expansion** - Promote essential interfaces to OpenAnima.Contracts for external module parity (completed 2026-03-15)
 - [x] **Phase 36: Built-in Module Decoupling** - Decouple the 12 active built-in modules from Core module-facing APIs, move shared helpers to Contracts, and document the `LLMModule` exception (completed 2026-03-16)
+- [ ] **Phase 37: Wire Chat Channel** - Complete ActivityChannel integration by routing ChatInputModule through the chat channel (gap closure from audit)
 
 ## Phase Details
 
@@ -183,6 +184,22 @@ Plans:
 - [x] 36-04-PLAN.md — Make `LLMModule` Contracts-first except for the documented Core.LLM exception; modernize CLI templates
 - [x] 36-05-PLAN.md — Add decoupling audit coverage, DI startup resolution tests, and full-suite verification
 
+### Phase 37: Wire Chat Channel
+**Goal**: Complete ActivityChannel integration — ChatInputModule routes through the chat channel for serial execution guarantee
+**Depends on**: Phase 34 (ActivityChannelHost exists), Phase 36 (all modules verified)
+**Requirements**: CONC-05, CONC-06
+**Gap Closure**: Closes gaps from v1.7 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. ChatInputModule has SetChannelHost(ActivityChannelHost) method and _channelHost field
+  2. AnimaRuntime constructor calls chatInputModule.SetChannelHost(ActivityChannelHost)
+  3. ChatInputModule.SendMessageAsync calls _channelHost.EnqueueChat(new ChatWorkItem(...)) when host is available, with fallback to direct EventBus publish
+  4. Production chat path (ChatPanel → ChatInputModule → ActivityChannelHost → onChat → EventBus) is verified by integration test
+  5. All 410 tests still pass after wiring (zero regressions)
+**Plans:** 0/1 plans
+
+Plans:
+- [ ] 37-01-PLAN.md — Wire ChatInputModule to ActivityChannelHost chat channel with production path integration test
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -224,9 +241,10 @@ Plans:
 | 34. Activity Channel Model | v1.7 | 2/2 | Complete | 2026-03-15 |
 | 35. Contracts API Expansion | v1.7 | 3/3 | Complete | 2026-03-15 |
 | 36. Built-in Module Decoupling | v1.7 | 5/5 | Complete | 2026-03-16 |
+| 37. Wire Chat Channel | v1.7 | 0/1 | Pending | — |
 
 **Total shipped: 31 phases, 72 plans across 7 milestones**
-**v1.7 in progress: 5 phases, 12/12 plans**
+**v1.7 in progress: 6 phases, 12/13 plans (1 gap closure phase pending)**
 
 ---
-*Last updated: 2026-03-16 after Phase 36 completion and verification*
+*Last updated: 2026-03-16 after Phase 37 gap closure phase added*
