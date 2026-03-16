@@ -4,6 +4,7 @@ using OpenAnima.Contracts;
 using OpenAnima.Core.Channels;
 using OpenAnima.Core.Events;
 using OpenAnima.Core.Hubs;
+using OpenAnima.Core.Modules;
 using OpenAnima.Core.Plugins;
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Runtime;
@@ -126,6 +127,15 @@ public sealed class AnimaRuntime : IAsyncDisposable
 
         // Start all three channel consumer loops.
         ActivityChannelHost.Start();
+    }
+
+    /// <summary>
+    /// Wires the singleton ChatInputModule to route messages through this runtime's
+    /// ActivityChannelHost chat channel. Called by AnimaRuntimeManager after runtime creation.
+    /// </summary>
+    internal void WireChatInputModule(ChatInputModule chatInputModule)
+    {
+        chatInputModule.SetChannelHost(ActivityChannelHost);
     }
 
     public async ValueTask DisposeAsync()

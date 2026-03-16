@@ -79,7 +79,7 @@ public class BuiltInModuleDecouplingTests
     {
         var failures = new List<string>();
 
-        foreach (var fileName in ActiveModuleSourceFiles.Where(name => name != "LLMModule.cs"))
+        foreach (var fileName in ActiveModuleSourceFiles.Where(name => name != "LLMModule.cs" && name != "ChatInputModule.cs"))
         {
             var coreUsings = GetCoreUsings(fileName);
             if (coreUsings.Count > 0)
@@ -88,11 +88,22 @@ public class BuiltInModuleDecouplingTests
             }
         }
 
+        // LLMModule exception: OpenAnima.Core.LLM (documented in Phase 36)
         var llmCoreUsings = GetCoreUsings("LLMModule.cs");
         if (llmCoreUsings.Count != 1 || llmCoreUsings[0] != "using OpenAnima.Core.LLM;")
         {
             failures.Add(
                 $"LLMModule.cs: expected only 'using OpenAnima.Core.LLM;' but found {FormatUsings(llmCoreUsings)}");
+        }
+
+        // ChatInputModule exception: OpenAnima.Core.Channels (Phase 37 wiring requirement)
+        // ChatInputModule routes through ActivityChannelHost (internal sealed class in Core.Channels).
+        // Since ActivityChannelHost is internal, ChatInputModule must be in the same assembly.
+        var chatInputCoreUsings = GetCoreUsings("ChatInputModule.cs");
+        if (chatInputCoreUsings.Count != 1 || chatInputCoreUsings[0] != "using OpenAnima.Core.Channels;")
+        {
+            failures.Add(
+                $"ChatInputModule.cs: expected only 'using OpenAnima.Core.Channels;' but found {FormatUsings(chatInputCoreUsings)}");
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));

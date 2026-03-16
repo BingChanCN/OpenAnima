@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 using OpenAnima.Contracts;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.Hubs;
+using OpenAnima.Core.Modules;
 using OpenAnima.Core.Routing;
 using OpenAnima.Core.Services;
 
@@ -45,7 +46,8 @@ public static class AnimaServiceExtensions
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetRequiredService<IAnimaContext>(),
                 sp.GetService<IHubContext<RuntimeHub, IRuntimeClient>>(),
-                sp.GetRequiredService<ICrossAnimaRouter>()));
+                sp.GetRequiredService<ICrossAnimaRouter>(),
+                sp.GetRequiredService<ChatInputModule>()));
 
         services.AddSingleton<IAnimaModuleStateService>(sp =>
             new AnimaModuleStateService(animasRoot));

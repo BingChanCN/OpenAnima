@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using OpenAnima.Core.Hubs;
+using OpenAnima.Core.Modules;
 using OpenAnima.Core.Routing;
 
 namespace OpenAnima.Core.Anima;
@@ -23,6 +24,7 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
     private readonly IAnimaContext _animaContext;
     private readonly IHubContext<RuntimeHub, IRuntimeClient>? _hubContext;
     private readonly ICrossAnimaRouter? _router;
+    private readonly ChatInputModule? _chatInputModule;
     private readonly Dictionary<string, AnimaDescriptor> _animas = new();
     private readonly Dictionary<string, AnimaRuntime> _runtimes = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -35,7 +37,8 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
         ILoggerFactory loggerFactory,
         IAnimaContext animaContext,
         IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null,
-        ICrossAnimaRouter? router = null)
+        ICrossAnimaRouter? router = null,
+        ChatInputModule? chatInputModule = null)
     {
         _animasRoot = animasRoot;
         _logger = logger;
@@ -43,6 +46,7 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
         _animaContext = animaContext;
         _hubContext = hubContext;
         _router = router;
+        _chatInputModule = chatInputModule;
         Directory.CreateDirectory(_animasRoot);
     }
 
@@ -215,6 +219,11 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
 
         var runtime = new AnimaRuntime(animaId, _loggerFactory, _hubContext);
         _runtimes[animaId] = runtime;
+
+        // Wire ChatInputModule to route through this runtime's chat channel
+        if (_chatInputModule != null)
+            runtime.WireChatInputModule(_chatInputModule);
+
         return runtime;
     }
 
