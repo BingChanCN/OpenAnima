@@ -1,491 +1,405 @@
 # Pitfalls Research
 
-**Domain:** .NET 8 Blazor Server — Runtime Foundation (Concurrency, Contracts API, Module Decoupling)
-**Researched:** 2026-03-14
+**Domain:** .NET 8 Modular Runtime — SDK Runtime Parity (DI Injection, Structured Messages, Storage Paths)
+**Researched:** 2026-03-16
 **Confidence:** HIGH
 
 ## Context
 
-This document covers pitfalls specific to v1.7: adding Activity Channel concurrency, thickening the
-Contracts API surface, and decoupling all 14 built-in modules from `OpenAnima.Core` internals.
+This document covers pitfalls specific to v1.8: adding PluginLoader DI injection for external modules,
+IModuleContext.DataDirectory per-Anima per-Module storage, LLMModule structured message list input,
+and validating all of the above with a real external ContextModule.
 
-The system already ships with:
-- Per-Anima isolated EventBus, HeartbeatLoop, WiringEngine (v1.5)
-- `ConcurrentDictionary`-based lock-free EventBus with lazy cleanup (v1.2)
-- `SemaphoreSlim(1,1)` tick-skip guard in HeartbeatLoop (v1.1)
-- Global `IEventBus` singleton kept as DI compatibility shim (ANIMA-08 tech debt)
-- 14 built-in modules all importing `OpenAnima.Core.Anima`, `OpenAnima.Core.Services`,
-  `OpenAnima.Core.Routing` directly
-- 3 pre-existing test isolation failures
-- Known race: `LLMModule._pendingPrompt` unguarded field written from EventBus callback
-- Known race: `WiringEngine._failedModules` HashSet written from parallel `Task.WhenAll`
+The system already ships with (v1.7 baseline):
+- PluginLoader using Activator.CreateInstance() with parameterless constructor — zero DI for external modules
+- IModuleContext exposing only ActiveAnimaId and ActiveAnimaChanged — no DataDirectory
+- LLMModule accepting single string prompt, building messages list internally
+- ChatMessageInput record in OpenAnima.Core.LLM (not in Contracts)
+- AnimaRuntimeManager.DeleteAsync deleting the Anima directory recursively
+- AssemblyLoadContext isolation: PluginLoadContext falls back to Default context for unknown assemblies
+- Name-based type comparison for IModule cross-context identity
 
-The five pitfall domains for v1.7:
+The four pitfall domains for v1.8:
 
-1. Concurrency — Channel-based execution model, race conditions in existing code
-2. Blazor Server SynchronizationContext — async context traps when touching UI from module events
-3. Contracts API surface expansion — binary compat, interface changes breaking external modules
-4. Module decoupling — DI registration, circular dependencies, AssemblyLoadContext issues
-5. Integration (tests, EventBus subscription lifecycle, existing failure amplification)
+1. DI injection into ALC-isolated plugins — type identity, service lifetime, constructor resolution
+2. WiringEngine string-to-structured data — backward compat with existing string-port modules
+3. Storage paths — DataDirectory convention, cleanup on delete, path traversal
+4. LLMModule multi-turn messages — token budget, context window overflow, history growth
 
 ---
-
 ## Critical Pitfalls
 
-### Pitfall 1: LLMModule._pendingPrompt Race Condition Under Concurrent Invocation
+### Pitfall 1: DI Services Injected into Plugins Fail Due to Cross-Context Type Identity
 
 **What goes wrong:**
-`LLMModule._pendingPrompt` is a plain `string?` field assigned in an EventBus subscription
-callback and read in `ExecuteAsync`. The EventBus fans out handlers in parallel via
-`Task.WhenAll`. If two heartbeat ticks overlap (rare but possible when a tick runs long), or if
-the heartbeat and a direct `ExecuteAsync` call happen to run concurrently, two writes to
-`_pendingPrompt` interleave. The second write overwrites the first, causing the first prompt to be
-silently dropped and the second to be executed twice.
+PluginLoader currently uses Activator.CreateInstance(moduleType) with a parameterless constructor.
+When DI injection is added, the natural approach is to pass an IServiceProvider to PluginLoader
+and call ActivatorUtilities.CreateInstance(serviceProvider, moduleType). This fails silently or
+throws InvalidOperationException because the moduleType was loaded in PluginLoadContext (an
+isolated AssemblyLoadContext), while the IServiceProvider holds registrations against types loaded
+in the Default context. The CLR treats IModuleContext from PluginLoadContext and IModuleContext
+from Default context as different types — even though they have the same FullName. The DI
+container cannot match the constructor parameter type to any registered service.
 
 **Why it happens:**
-The subscription callback and `ExecuteAsync` do not share a lock. The existing tick-skip guard
-(`_tickLock.Wait(0)`) prevents two ticks from running simultaneously within the same Anima, but
-it does not guard against concurrent direct `ExecuteAsync` calls from integration tests or future
-callers that bypass the heartbeat. When adding Activity Channel concurrency, the natural
-instinct is to fire channel items in parallel — but `_pendingPrompt` is not thread-safe.
+PluginLoadContext.Load() returns null for OpenAnima.Contracts (falls back to Default context),
+which means Contracts types ARE shared. However, if the plugin's DLL was compiled against a
+different version of Contracts (or if the .deps.json resolution picks up a local copy), the
+plugin's Contracts assembly loads into PluginLoadContext instead of falling back to Default.
+The fallback only works when the resolver returns null — if the plugin ships its own copy of
+OpenAnima.Contracts.dll, the resolver finds it and loads it into the plugin context, breaking
+type identity for every Contracts interface.
 
 **How to avoid:**
-- Replace `_pendingPrompt` with `Channel<string>.CreateUnbounded<string>()` (unbounded so
-  producers never block): subscription callback writes into the channel; `ExecuteAsync` reads from
-  it one item at a time
-- Alternatively, if per-invocation isolation is required, pass the prompt as a parameter to
-  `ExecuteAsync` rather than storing it as a field
-- Under Activity Channel model: stateful Animas get serial channel processing; this naturally
-  serialises LLMModule execution within one Anima without a lock
-- Add a regression test: two concurrent EventBus publishes to `LLMModule.port.prompt` must both
-  execute — not silently drop one
+- In PluginLoadContext.Load(), explicitly return null for any assembly whose name starts with
+  "OpenAnima.Contracts" — do not rely solely on the resolver returning null:
+  if (assemblyName.Name == "OpenAnima.Contracts") return null;
+- After loading the plugin assembly, verify that the IModuleContext type the plugin references
+  is the same object as the Default context's IModuleContext:
+  var pluginContractsRef = assembly.GetReferencedAssemblies()
+      .FirstOrDefault(a => a.Name == "OpenAnima.Contracts");
+  Assert pluginContractsRef resolves to the Default context's Contracts assembly.
+- Use ActivatorUtilities.CreateInstance only after confirming type identity; fall back to
+  manual constructor resolution via reflection if needed.
+- Add a test: load a plugin that declares IModuleContext in its constructor; verify the
+  injected instance is the same object as the host's IModuleContext singleton.
 
 **Warning signs:**
-- Test: two rapid prompt publishes → only one LLM call observed in mock
-- `_pendingPrompt` being `null` inside `ExecuteAsync` even though a prompt was just published
-- LLM call count in logs is lower than EventBus publish count
+- InvalidOperationException: "Unable to resolve service for type 'OpenAnima.Contracts.IModuleContext'"
+  when ActivatorUtilities.CreateInstance is called with the plugin type
+- Plugin loads successfully (IModule found, instantiated) but constructor parameters are null
+- Two different Assembly objects for "OpenAnima.Contracts" visible in AppDomain.CurrentDomain.GetAssemblies()
+- Plugin's module.json references a specific Contracts version that differs from the host
 
 **Phase to address:**
-Concurrency Fix phase (first in v1.7) — fix this race before introducing Activity Channel model,
-which would otherwise hide the symptom while leaving the root cause.
+PluginLoader DI Injection phase — explicit Contracts assembly exclusion in PluginLoadContext.Load()
+must be the first change, before any service injection is attempted.
 
 ---
 
-### Pitfall 2: WiringEngine._failedModules Not Thread-Safe Under Parallel Task.WhenAll
+### Pitfall 2: Service Lifetime Mismatch — Singleton Services Injected into Per-Load Plugin Instances
 
 **What goes wrong:**
-`WiringEngine.ExecuteAsync` executes modules at each level via `Task.WhenAll(tasks)`. The `tasks`
-array calls `ExecuteModuleAsync(moduleId, ct)` concurrently. Both the catch block inside
-`ExecuteModuleAsync` and the per-level `HasFailedUpstream` check read and write
-`_failedModules`, a plain `HashSet<string>`. `HashSet<T>` is not thread-safe. Concurrent `Add`
-from two failed modules in the same level causes data corruption, with possible infinite loops in
-the internal bucket probing logic, `ArgumentException` from the capacity resizer, or silent loss
-of failure records.
+IModuleContext, IModuleConfig, IEventBus, and ICrossAnimaRouter are all registered as singletons
+in the host DI container. External modules are loaded once per PluginLoader.LoadModule() call and
+stored in PluginRegistry. If a module is unloaded and reloaded (hot-reload), a new module instance
+is created but the same singleton services are injected. This is correct for singletons. However,
+if the module stores a reference to a service that is later disposed (e.g., if IEventBus is
+replaced during Anima reset), the module holds a stale reference to a disposed service and throws
+ObjectDisposedException on the next execution.
+
+The inverse problem: if a module is designed to be per-Anima (one instance per Anima), but the
+host registers it as a singleton and injects it once, all Animas share the same module instance
+and its internal state (conversation history, pending prompts, etc.) bleeds across Animas.
 
 **Why it happens:**
-The original implementation was written before the parallel execution path was stress-tested with
-multiple simultaneous failures in the same level. Single-module-per-level graphs pass all tests.
-Only graphs with 2+ modules at the same level AND multiple simultaneous failures expose the race.
+The current architecture keeps a global IEventBus singleton (ANIMA-08 tech debt). External modules
+injected with this singleton will subscribe to events from ALL Animas, not just the one they
+belong to. The module has no way to filter by Anima unless it uses IModuleContext.ActiveAnimaId —
+but ActiveAnimaId is a global cursor, not a per-module scope.
 
 **How to avoid:**
-- Replace `HashSet<string>` with `ConcurrentDictionary<string, byte>` (use `.TryAdd(id, 0)` for
-  set semantics): no lock required, all operations are atomic
-- Alternatively, use `ImmutableHashSet` with `Interlocked.Exchange`-based updates if the set
-  needs snapshot semantics
-- Add a test: wiring graph with 4 modules at level 0 that all throw → verify `_failedModules`
-  contains all 4 entries after `ExecuteAsync`
+- Document clearly in SDK: external modules receive singleton services; they must use
+  IModuleContext.ActiveAnimaId to scope their behavior per-Anima, not assume one instance per Anima
+- For ContextModule specifically: history must be keyed by animaId (Dictionary<string, List<...>>),
+  not stored as a flat list field
+- Do NOT inject per-Anima scoped services into plugins via the singleton DI container — there is
+  no scoped lifetime for plugins in this architecture
+- Add a test: two Animas active simultaneously; ContextModule receives a message for Anima A;
+  verify Anima B's history is not affected
 
 **Warning signs:**
-- `ArgumentException` or `InvalidOperationException` from `HashSet<T>` in logs during parallel
-  wiring execution
-- Level-2 modules executing despite all level-0 dependencies having failed
-- `_failedModules.Count` < actual number of failed modules in post-execution assertions
+- ContextModule conversation history growing with messages from multiple Animas mixed together
+- ObjectDisposedException from IEventBus after Anima deletion and recreation
+- Module state (e.g., history list) not resetting when switching between Animas
 
 **Phase to address:**
-Concurrency Fix phase — address before Activity Channel work to prevent the channel model from
-masking the race.
+PluginLoader DI Injection phase — document the singleton-only constraint before ContextModule
+is written; ContextModule author must key all state by animaId from the start.
 
 ---
 
-### Pitfall 3: Activity Channel Deadlock from Unbounded Backpressure
+### Pitfall 3: ActivatorUtilities.CreateInstance Fails on Optional Constructor Parameters
 
 **What goes wrong:**
-Activity Channel model: stateful Animas queue incoming work items into a `Channel<T>` and process
-them serially (one consumer, many producers). If the channel is bounded AND a producer awaits
-`WriteAsync` while holding the tick lock (even indirectly via `Task.WhenAll`), and the consumer
-cannot drain because it is itself waiting for the tick to advance, the system deadlocks. Bounded
-channels stall `WriteAsync` when full, and if the stall is inside the tick execution path, the
-tick lock is never released, so the consumer's next tick never starts — circular wait.
+LLMModule's constructor has ICrossAnimaRouter? router = null as an optional parameter.
+ActivatorUtilities.CreateInstance resolves ALL constructor parameters from DI, including optional
+ones. If ICrossAnimaRouter is not registered (or registered as null), ActivatorUtilities throws
+InvalidOperationException rather than using the default null value. This is different from
+Activator.CreateInstance behavior and different from how ASP.NET Core DI handles optional
+parameters in controllers (which uses GetService, not GetRequiredService, for optional params).
+
+For external modules, if the module author declares an optional service parameter that is not
+registered in the host, the entire module fails to load — with a confusing error that says
+"unable to resolve" rather than "parameter is optional, using default."
 
 **Why it happens:**
-Bounded `Channel<T>` blocks `WriteAsync` at capacity. The HeartbeatLoop's `_tickLock` is held
-for the entire tick via `SemaphoreSlim`. If any module's EventBus handler (called from inside the
-tick via `Task.WhenAll`) tries to write to a full bounded channel, it blocks. The channel consumer
-runs on the next tick — but the next tick cannot start because `_tickLock` is still held waiting
-for the blocked write to complete.
+ActivatorUtilities.CreateInstance uses a greedy constructor selection algorithm. It picks the
+constructor with the most parameters it can satisfy. Optional parameters with defaults are not
+treated as "optional" by ActivatorUtilities — they are treated as required unless the caller
+explicitly handles them. The behavior differs from standard DI container resolution.
 
 **How to avoid:**
-- Use `Channel.CreateUnbounded<T>()` for Activity Channels in this system — the bounded variant
-  requires careful capacity planning and a non-blocking write path (`TryWrite` not `WriteAsync`)
-  inside the tick execution path
-- Never `await channel.Writer.WriteAsync(...)` from within a HeartbeatLoop tick; use
-  `channel.Writer.TryWrite(...)` and log a warning if the write fails (channel closed/full)
-- Do NOT set `BoundedChannelFullMode.Wait` on any channel touched from a tick callback
-- If backpressure is required, use `BoundedChannelFullMode.DropOldest` with a monitoring counter
-- Document the rule explicitly: Activity Channel writes from tick context = `TryWrite` only
+- Use a custom instantiation helper that mirrors ASP.NET Core's controller activation:
+  for each constructor parameter, call sp.GetService(paramType) (not GetRequiredService);
+  if null and parameter has a default value, use the default; otherwise fail with a clear error
+- Alternatively, use ActivatorUtilities.CreateFactory to pre-compile the factory and handle
+  optional parameters explicitly
+- Document in SDK: optional constructor parameters in external modules must have a default value
+  of null; the host will pass null if the service is not registered
+- Add a test: load a plugin with an optional ICrossAnimaRouter? parameter; verify it loads
+  successfully when ICrossAnimaRouter is not registered
 
 **Warning signs:**
-- HeartbeatLoop `SkippedCount` grows monotonically after Activity Channel is introduced
-- Tick latency spikes to seconds immediately after wiring a stateful module
-- `PeriodicTimer.WaitForNextTickAsync` never returns in tests
-- `_tickLock.Wait(0)` returns false on every tick (lock never released)
+- InvalidOperationException: "No service for type 'OpenAnima.Contracts.Routing.ICrossAnimaRouter'"
+  when loading a module that declares it as optional
+- Module loads in unit tests (which mock all services) but fails in production (where some
+  optional services may not be registered)
+- PluginLoader error log showing "constructor resolution failed" for a module that compiles cleanly
 
 **Phase to address:**
-Activity Channel Implementation phase — channel variant (bounded vs unbounded) and write path
-(TryWrite vs WriteAsync) must be the first design decision, before any module uses channels.
+PluginLoader DI Injection phase — implement the custom instantiation helper before testing with
+any module that has optional constructor parameters.
 
 ---
 
-### Pitfall 4: Blazor Server Circuit SynchronizationContext Corruption
+### Pitfall 4: WiringEngine Port Subscription Breaks When LLMModule Input Changes from string to IReadOnlyList
 
 **What goes wrong:**
-Module event handlers (EventBus callbacks) run on the .NET ThreadPool — outside Blazor Server's
-per-circuit `SynchronizationContext`. When a module callback triggers UI state updates
-(e.g., `AnimaContext.SetActive` or `SignalR hub push`) and the Blazor component calls
-`StateHasChanged()` directly from the callback, Blazor throws:
-`"The current thread is not associated with the Dispatcher"` (or silently produces UI corruption
-in .NET 8 where the exception is swallowed in some paths).
+WiringEngine.CreateRoutingSubscription uses a switch on PortType to create typed EventBus
+subscriptions: PortType.Text subscribes as Subscribe<string>. If LLMModule's "prompt" input port
+changes from accepting string to accepting IReadOnlyList<ChatMessageInput>, the WiringEngine
+subscription for that port must also change to Subscribe<IReadOnlyList<ChatMessageInput>>. But
+WiringEngine only knows about PortType (Text, Trigger) — it has no knowledge of the CLR type
+behind a port. All Text ports are treated as string. A module that publishes
+IReadOnlyList<ChatMessageInput> to a Text port will have its payload silently dropped because
+the WiringEngine subscription is typed to string, not the list type.
 
 **Why it happens:**
-Blazor Server enforces one-thread-at-a-time execution within a circuit via its
-`SynchronizationContext`. EventBus callbacks execute on arbitrary ThreadPool threads because
-`Task.WhenAll` resumes continuations on the pool by default. The symptom appears when:
-1. A module event causes state shared with Blazor components to change
-2. A component's event subscription directly calls `StateHasChanged()` rather than
-   `await InvokeAsync(StateHasChanged)`
-
-The existing `HeartbeatLoop` correctly uses fire-and-forget hub push (SignalR, not direct
-component calls), which avoids this. The risk is HIGH when adding new Blazor components that
-subscribe to module events or channel completions.
+The port type system (PortType enum) is a semantic category, not a CLR type. PortType.Text means
+"text data" but the WiringEngine hardcodes string as the CLR type for all Text ports. This worked
+when all Text ports carried strings. Adding a structured type to a Text port breaks the implicit
+contract without any compile-time error.
 
 **How to avoid:**
-- Rule: any Blazor component subscribing to EventBus, Action events, or Task callbacks MUST
-  wrap all UI mutations in `await InvokeAsync(...)` — not `StateHasChanged()` directly
-- Rule: any Blazor component receiving events from background threads (timers, channels,
-  module callbacks) must use `InvokeAsync` — no exceptions
-- `ConfigureAwait(false)` on service-layer awaits is fine; the Blazor component receiving the
-  result must then use `InvokeAsync` to re-enter the circuit
-- Audit all Blazor pages and components when Activity Channel events are added: search for
-  `StateHasChanged()` without `InvokeAsync` wrapper
-- Add integration test: trigger EventBus event from background `Task.Run` → verify component
-  re-renders without exception
+- Do NOT change LLMModule's "prompt" input port CLR type from string to a structured type.
+  Instead, keep the port as string and have LLMModule internally parse the structured format,
+  OR add a NEW port (e.g., "messages" of a new PortType.MessageList) alongside the existing
+  "prompt" port for backward compatibility.
+- The cleanest approach for v1.8: LLMModule adds a second input port "messages" that accepts
+  a serialized JSON string of ChatMessageInput[]; ContextModule serializes its history to JSON
+  and publishes to "messages"; LLMModule deserializes internally. This keeps all ports as string
+  and avoids WiringEngine changes.
+- If a new PortType is added (e.g., PortType.MessageList), WiringEngine.CreateRoutingSubscription
+  must be updated to handle it with the correct CLR type.
+- Add a test: wire ContextModule.messages_out -> LLMModule.messages; verify the payload arrives
+  correctly typed at LLMModule.
 
 **Warning signs:**
-- `InvalidOperationException: The current thread is not associated with the Dispatcher` in
-  browser console or server logs
-- UI updates appearing to stutter or skip when module events fire rapidly
-- `StateHasChanged()` call inside an `async void` event handler (guaranteed problem)
-- Component subscriptions to `Action` events from services that fire from background threads
-  without `InvokeAsync`
+- LLMModule receives null or empty payload on the "messages" port despite ContextModule publishing
+- WiringEngine logs show "subscription created for Text port" but LLMModule never fires
+- EventBus publish count for "ContextModule.port.messages" > 0 but LLMModule execution count = 0
+- No compile error when changing port CLR type — the mismatch is entirely runtime
 
 **Phase to address:**
-Activity Channel Implementation phase — when channel completion callbacks can fire on any thread,
-all existing component subscriptions must be audited before the channel is wired to UI state.
+LLMModule Structured Input phase — decide the port strategy (new port vs. JSON-in-string vs.
+new PortType) before writing any code; the decision affects WiringEngine, ContextModule, and
+LLMModule simultaneously.
 
 ---
 
-### Pitfall 5: Moving Interfaces from Core to Contracts Is a Binary Breaking Change
+### Pitfall 5: ChatMessageInput Lives in OpenAnima.Core.LLM — External Modules Cannot Reference It
 
 **What goes wrong:**
-`IAnimaContext`, `IAnimaModuleConfigService`, and `ICrossAnimaRouter` currently live in
-`OpenAnima.Core.Anima`, `OpenAnima.Core.Services`, and `OpenAnima.Core.Routing` respectively.
-Moving them to `OpenAnima.Contracts` changes their assembly and namespace. Any external module
-compiled against the old locations will fail to load with `TypeLoadException` or
-`MissingMethodException` at runtime because the assembly-qualified type name no longer matches.
-Even if the namespace string is preserved with a `using` alias, the CLR uses assembly identity,
-not namespace strings, for type resolution.
+ChatMessageInput is defined in OpenAnima.Core.LLM namespace, inside the Core project. External
+modules (ContextModule) that need to build a list of ChatMessageInput records cannot reference
+this type without taking a dependency on OpenAnima.Core — which is the host runtime, not the
+SDK contract. This creates a circular dependency: external module depends on Core, Core loads
+external modules.
+
+Even if the external module references Core as a NuGet package (not a project reference), the
+type identity problem from Pitfall 1 reappears: Core is loaded in the Default context, but if
+the module ships its own copy of Core.dll, the ChatMessageInput type from the module's copy is
+a different CLR type than the one the host uses.
 
 **Why it happens:**
-Developers underestimate the binary breaking impact of moving types between assemblies. The build
-compiles successfully after the move (the solution builds clean), but external `.oamod` packages
-compiled against the old `OpenAnima.Core` assembly will fail to instantiate any type that
-previously resolved through the moved interface.
-
-The project uses **name-based type discovery** (`interface.FullName` comparison) for
-cross-AssemblyLoadContext compatibility — but this only covers `IModule` resolution in the plugin
-loader, not injected service interfaces. Moved service interfaces break DI registration in plugins.
+ChatMessageInput was placed in Core.LLM because it was only used by LLMService and LLMModule,
+both of which are Core-internal. The v1.8 requirement to have an external ContextModule produce
+ChatMessageInput lists exposes this placement as wrong — it should be in Contracts.
 
 **How to avoid:**
-- Keep the original interface declaration in place; add `[Obsolete]` and a `using` type-forward:
-  `using IAnimaContext = OpenAnima.Contracts.IAnimaContext;` in the old namespace for the
-  transition period
-- Alternatively, use partial class / forwarding approach: keep old type as a `sealed class`
-  inheriting the new interface in the Contracts layer, preserving the old identity
-- Version bump `OpenAnima.Contracts` to v2.0 when the breaking namespace move ships
-- Document in SDK changelog: "Modules compiled against Contracts v1.x must be recompiled against
-  v2.x after v1.7 upgrade"
-- Run the full `.oamod` round-trip test (CLI pack → Runtime load → module instantiation) against
-  a dummy external module on every interface-move commit
+- Move ChatMessageInput (and LLMResult, StreamingResult) from OpenAnima.Core.LLM to
+  OpenAnima.Contracts before writing ContextModule
+- Add a type-forward shim in Core.LLM: using ChatMessageInput = OpenAnima.Contracts.ChatMessageInput;
+  so existing Core code compiles without changes
+- ILLMService interface must also move to Contracts (or a new ILLMService in Contracts that
+  uses the Contracts ChatMessageInput) — otherwise external modules cannot call ILLMService
+- Verify: ContextModule project references only OpenAnima.Contracts, not OpenAnima.Core
 
 **Warning signs:**
-- `TypeLoadException: Could not load type 'OpenAnima.Core.Anima.IAnimaContext'` in module load logs
-- External module loads successfully (DLL found, metadata reads) but fails on first `ExecuteAsync`
-  call with `MissingMethodException`
-- Integration tests pass (they use the in-solution build) but manual `.oamod` package tests fail
-- `IAnimaContext` appearing in both `OpenAnima.Core` and `OpenAnima.Contracts` namespaces with
-  identical methods but different assembly identities
+- ContextModule.csproj has a ProjectReference to OpenAnima.Core
+- Build error in ContextModule: "The type 'ChatMessageInput' is defined in an assembly that is
+  not referenced"
+- Two different ChatMessageInput types visible at runtime (one from Core, one from Contracts)
+- LLMModule receiving a payload typed as Contracts.ChatMessageInput but expecting Core.LLM.ChatMessageInput
 
 **Phase to address:**
-Contracts API Expansion phase — interface move must include binary-compat forwarding from day one;
-never do a raw namespace move without a compatibility shim.
+LLMModule Structured Input phase — ChatMessageInput must move to Contracts as the first step,
+before any structured message passing is implemented.
 
 ---
 
-### Pitfall 6: Adding Members to IEventBus or IModule Breaks All Existing External Modules
+### Pitfall 6: DataDirectory Path Traversal — Module Can Escape Its Sandbox
 
 **What goes wrong:**
-`IEventBus` and `IModule` are in `OpenAnima.Contracts` — the public plugin contract. Adding a new
-method to either interface (e.g., `IModule.GetCapabilities()` or `IEventBus.SubscribeOnce(...)`)
-causes every external module that implements `IModule` to fail to load with
-`TypeLoadException: Method not found` or to silently not implement the new method, causing
-`NotImplementedException` at runtime.
-
-C# interfaces have no default implementations in this codebase's consumption pattern — the plugin
-loader uses `interface.FullName` comparison and reflection-based invocation. Adding a new required
-method with no default means every plugin that doesn't implement it is broken.
+IModuleContext.DataDirectory returns a path like:
+  {animasRoot}/{animaId}/modules/{moduleId}/
+If the moduleId is derived from user input or module manifest without sanitization, a malicious
+or buggy module.json could set id to "../../../system" and escape the Anima directory. Even
+without malicious intent, a module that uses Path.Combine(DataDirectory, userInput) without
+validation can write files outside its designated directory.
 
 **Why it happens:**
-In the heat of adding new capabilities to the Contracts layer (API-01/API-02 requirements), the
-natural impulse is to extend the existing interfaces. .NET does support default interface members
-(DIM) since C# 8, but they are rarely used for plugin contracts because they can cause subtle
-resolution ambiguities when types are loaded across `AssemblyLoadContext` boundaries.
+Path.Combine on Windows does not sanitize ".." segments. A path like:
+  Path.Combine("data/animas/abc123/modules/mymod", "../../config.json")
+resolves to "data/animas/abc123/config.json" — outside the module's directory but still within
+the Anima directory. With a deeper traversal, it can reach anywhere on the filesystem.
 
 **How to avoid:**
-- Rule: NEVER add required methods to `IEventBus`, `IModule`, `IModuleExecutor`, or `ITickable`
-  without a default implementation in the interface (or a versioned interface approach)
-- Use interface extension pattern: create `IModuleV2 : IModule` with the new method; plugin loader
-  checks for `IModuleV2` via `is` pattern before calling new method
-- For new Contracts capabilities (`IAnimaModuleConfigService`, `IAnimaContext` in Contracts),
-  create NEW interfaces — don't modify existing ones
-- Bump `OpenAnima.Contracts` minor version (1.1.0 → 1.2.0) when new optional interfaces are added,
-  major version (1.x → 2.0) when existing interface members change
-- Test with a "canary module" compiled against the current Contracts version before releasing any
-  interface change
+- When computing DataDirectory, normalize the full path and assert it starts with animasRoot:
+  var fullPath = Path.GetFullPath(Path.Combine(animasRoot, animaId, "modules", moduleId));
+  if (!fullPath.StartsWith(Path.GetFullPath(animasRoot)))
+      throw new SecurityException("Module data directory escapes animas root");
+- Sanitize moduleId before using it as a path component: allow only alphanumeric, hyphen, dot;
+  reject any moduleId containing path separators or ".."
+- Document in SDK: DataDirectory is a pre-created, pre-validated path; modules must not
+  construct sub-paths using user-controlled strings without their own validation
+- Add a test: moduleId = "../escape"; verify DataDirectory computation throws or returns a
+  safe path within animasRoot
 
 **Warning signs:**
-- Any commit that modifies an existing `interface` in `OpenAnima.Contracts/` without a
-  corresponding `default` implementation
-- SDK documentation references new interface methods without noting minimum Contracts version
-- `ModuleLoadException` appearing in logs for external modules after a Contracts release
-- Generated `oani new` template module failing to implement new required members
+- module.json id field containing "/" or "" or ".."
+- DataDirectory path containing ".." segments after Path.Combine
+- Files appearing outside the expected {animasRoot}/{animaId}/modules/ tree
 
 **Phase to address:**
-Contracts API Expansion phase — interface change policy must be documented before any member is
-added; use `IModuleV2` extension pattern from first addition.
+DataDirectory Storage phase — path validation must be implemented before DataDirectory is
+exposed in IModuleContext; never expose an unvalidated path.
 
 ---
 
-### Pitfall 7: Circular Dependency When Moving Interfaces into Contracts
+### Pitfall 7: DataDirectory Not Cleaned Up on Anima Delete or Module Uninstall
 
 **What goes wrong:**
-`IAnimaContext` needs `IAnimaRuntimeManager` to fully resolve (to answer "which Anima is active").
-`IAnimaRuntimeManager` creates `AnimaRuntime` objects which need `IEventBus`. `IEventBus` is
-already in `Contracts`. If `IAnimaContext` is moved to `Contracts` but still references types that
-remain in `Core` (e.g., `AnimaDescriptor`), the Contracts project must reference Core, creating
-a circular dependency: `Contracts → Core → Contracts`.
+AnimaRuntimeManager.DeleteAsync deletes the Anima directory recursively:
+  Directory.Delete(dir, recursive: true)
+where dir = {animasRoot}/{animaId}. If DataDirectory is {animasRoot}/{animaId}/modules/{moduleId}/,
+it IS inside the Anima directory and WILL be deleted on Anima delete. This is correct behavior.
+
+However, if DataDirectory is placed outside the Anima directory (e.g., a shared data root like
+{appRoot}/module-data/{moduleId}/), it will NOT be cleaned up on Anima delete. The orphaned
+data accumulates indefinitely. Similarly, if a module is "uninstalled" (future MODMGMT-03),
+its per-Anima data directories across all Animas must be cleaned up — but there is no current
+mechanism to enumerate all Animas and delete their module-specific subdirectories.
 
 **Why it happens:**
-The interfaces in Core were designed for use within Core and carry Core-specific types in their
-signatures. Moving only the interface without also moving the types it references is a partial
-migration that immediately creates a circular reference. The project structure does not allow
-`Contracts → Core` (Contracts must be the dependency leaf that both Core and external plugins
-depend on).
+The natural temptation is to put module data in a flat structure keyed only by moduleId (not
+animaId) to make it easy for the module to find its data regardless of which Anima is active.
+This breaks the per-Anima isolation guarantee and makes cleanup impossible without a registry.
 
 **How to avoid:**
-- Before moving any interface to Contracts, audit its full type signature: every parameter type
-  and return type must either already be in Contracts or be a primitive/BCL type
-- Create Contracts-native DTO types as needed: `AnimaInfo` (replacing `AnimaDescriptor`),
-  `ModuleConfigData` (replacing `Dictionary<string, string>` with a typed wrapper)
-- Move interfaces in dependency order: move leaf interfaces first (those with no non-BCL
-  parameter types), then work up the dependency tree
-- CI must enforce: `OpenAnima.Contracts.csproj` has ZERO project references — only BCL/NuGet
-- Add a build-time test: `dotnet build OpenAnima.Contracts` in isolation (no solution context)
-  must succeed
+- DataDirectory MUST be nested inside the Anima directory:
+  {animasRoot}/{animaId}/modules/{moduleId}/
+  This ensures Anima delete automatically cleans up all module data for that Anima.
+- For module uninstall (future): enumerate all Anima directories and delete the module's
+  subdirectory from each; this is a future concern but the directory structure must support it
+- Create the DataDirectory on first access (lazy creation), not at module load time — avoids
+  creating empty directories for modules that never write data
+- Add a test: create an Anima, have ContextModule write to DataDirectory, delete the Anima,
+  verify the DataDirectory no longer exists
 
 **Warning signs:**
-- `OpenAnima.Contracts.csproj` gaining a `<ProjectReference>` to `OpenAnima.Core`
-- Build error: "A project reference to 'OpenAnima.Core' was found in 'OpenAnima.Contracts'"
-- Interfaces in Contracts using types like `AnimaDescriptor`, `AnimaRuntime`, or any type with
-  `namespace OpenAnima.Core.*`
+- DataDirectory path not containing the animaId segment
+- Module data directories surviving Anima deletion
+- {appRoot}/module-data/ directory growing unboundedly across Anima create/delete cycles
 
 **Phase to address:**
-Contracts API Expansion phase — dependency graph review is the first step; never add a
-ProjectReference to Contracts during this phase.
+DataDirectory Storage phase — directory structure decision is the first design choice; must be
+{animasRoot}/{animaId}/modules/{moduleId}/ from the start.
 
 ---
 
-### Pitfall 8: DI Registration Breaks When Moving Built-in Modules Off Core Internals
+### Pitfall 8: ContextModule History Grows Without Bound — Context Window Overflow
 
 **What goes wrong:**
-All 14 built-in modules are currently registered as singletons in DI and resolve
-`IAnimaModuleConfigService`, `IAnimaContext`, and `ICrossAnimaRouter` from the DI container
-using their Core namespace types. After the interface move, if the Contracts types and Core types
-coexist as separate registrations (or only one is registered), module constructors that declare
-the old Core type will fail to resolve with `InvalidOperationException: No service for type
-'OpenAnima.Core.Services.IAnimaModuleConfigService' has been registered`.
+ContextModule maintains a conversation history list. On each heartbeat tick (or chat message),
+it appends to the list and passes the full list to LLMModule. With no eviction policy, the list
+grows indefinitely. After enough turns, the total token count of the history exceeds the LLM's
+context window. The LLM API returns a 400 error (context_length_exceeded) or silently truncates
+the input. The module has no way to know which messages were dropped, and the conversation
+becomes incoherent.
+
+The existing ChatContextManager tracks token counts for the chat UI but is not accessible to
+external modules (it lives in Core.Services). ContextModule has no token counting capability
+unless it implements its own.
 
 **Why it happens:**
-DI registration in `AnimaServiceExtensions.AddAnimaServices()` registers the IMPLEMENTATION
-against a specific interface type. If that interface type changes identity (assembly or namespace),
-the old registration no longer satisfies the new parameter type in the module constructor. This
-manifests as a runtime DI resolution failure, not a compile error — the build succeeds but the
-first request to resolve a module fails.
+Conversation history management is a solved problem in chat UIs (the existing ChatContextManager
+handles it for the built-in chat), but external modules have no access to token counting
+utilities. The natural first implementation of ContextModule is a simple List<ChatMessageInput>
+with no eviction — it works for short conversations and fails silently for long ones.
 
 **How to avoid:**
-- Migrate module constructors and DI registration atomically: change all 14 modules AND the
-  registration in a single commit so the compiler catches any missed reference
-- Use `services.AddSingleton<IContractsInterface>(sp => sp.GetRequiredService<ICoreImpl>())`
-  bridging registrations during the transition period to support both old and new type names
-- After migration, remove the old Core interface registrations
-- Run the full integration test suite immediately after each module migration commit; do not
-  batch-migrate and test at the end
-- Add a startup smoke test: create an `IServiceProvider` and try to resolve all 14 module types;
-  log clear errors for any that fail
+- ContextModule must implement a sliding window eviction policy: keep the system message (if any)
+  plus the N most recent turns that fit within a configurable token budget
+- Token counting: either expose a token counting utility in Contracts (ITokenCounter interface),
+  or have ContextModule use a simple heuristic (4 chars per token) for budget estimation
+- The configurable budget should default to a safe value (e.g., 80% of a 4096-token context)
+  and be overridable via IModuleConfig
+- Add a test: ContextModule with 200 turns of history; verify the messages list passed to
+  LLMModule never exceeds the configured token budget
 
 **Warning signs:**
-- `InvalidOperationException: No service for type '...' has been registered` at startup or on
-  first module load
-- Modules that were migrated resolve correctly in unit tests (which use mock DI) but fail in
-  integration tests (which use the real DI container)
-- Any module constructor still importing from `OpenAnima.Core.*` after the decoupling phase
+- LLM API returning 400 context_length_exceeded after many conversation turns
+- ContextModule history list length growing without bound in long-running tests
+- LLM responses becoming incoherent or referencing very old context that should have been evicted
+- No token counting logic in ContextModule implementation
 
 **Phase to address:**
-Module Decoupling phase — migrate one module at a time, validate DI resolution after each, before
-moving to the next.
+External ContextModule phase — eviction policy must be part of the initial ContextModule design,
+not added as a fix after context overflow is observed.
 
 ---
 
-### Pitfall 9: AssemblyLoadContext Unload Failure After Module Refactoring
+### Pitfall 9: ContextModule Persisting History to DataDirectory Blocks the EventBus Callback
 
 **What goes wrong:**
-`PluginLoadContext` is configured with `isCollectible: true`. After refactoring built-in modules to
-use Contracts interfaces, if any static reference, delegate, or event subscription holds a strong
-reference into the loaded assembly (from the host context into the plugin context), the GC
-cannot collect the `AssemblyLoadContext`. The assembly is never unloaded, and repeated
-load/unload cycles leak memory. This was not a problem before because built-in modules are not
-in `PluginLoadContext` — but external modules that implement the new Contracts interfaces may
-accidentally capture closures over Core types exposed through Contracts, creating cross-context
-reference chains.
+ContextModule subscribes to chat events via EventBus and appends to history. If it also persists
+history to DataDirectory on every message (for crash recovery), the file I/O happens inside the
+EventBus callback. EventBus callbacks are awaited via Task.WhenAll in the heartbeat tick. Slow
+file I/O (especially on Windows with antivirus scanning) can cause the tick to exceed 100ms,
+triggering the tick-skip guard and dropping subsequent ticks.
 
 **Why it happens:**
-The "five lies of AssemblyLoadContext" (January 2026 analysis): calling `Unload()` does not
-immediately unload — the CLR must GC the context, and any strong reference prevents collection.
-Common culprits in this codebase:
-- EventBus subscription delegates capturing module state from the plugin context
-- `_subscriptions` list in module holding `IDisposable` handles that reference the plugin's
-  `EventBus` type identity
-- Static fields on module types (not the instance, but the class itself)
-- Logging infrastructure capturing type names as strings (safe) vs. type objects (unsafe)
+The natural implementation is: receive message -> append to history -> save to disk -> pass to LLM.
+All three steps happen synchronously in the callback. File I/O is the bottleneck.
 
 **How to avoid:**
-- After `ShutdownAsync()` and subscription disposal, the module should hold no references to
-  Core types; verify with a `WeakReference<IModule>` test: force GC after unload and assert
-  the reference is dead
-- EventBus subscriptions in modules must be disposed before `PluginLoadContext.Unload()` is called
-- The `IDisposable` handles returned from `EventBus.Subscribe` must not be held by the host —
-  only the module itself should hold them
-- Use `InternalsVisibleTo` only for test assemblies; do NOT expose plugin types via host-held
-  strong references
-- Add a memory leak test in the test suite: load a mock plugin, execute it, unload it, GC collect,
-  assert `WeakReference.TryGetTarget` returns false
+- Separate history persistence from history update: update the in-memory list synchronously,
+  then fire-and-forget the disk write (or use a background Channel<T> for persistence)
+- For v1.8, persistence is not required — history can be in-memory only (lost on restart);
+  add persistence only if explicitly required
+- If persistence is added, use async file I/O with ConfigureAwait(false) and do not await it
+  inside the EventBus callback; use a dedicated persistence channel
 
 **Warning signs:**
-- Memory profiler shows `AssemblyLoadContext` instances surviving GC after `Unload()`
-- Module count in `PluginRegistry` decreases after unload, but total managed heap grows over
-  repeated load/unload cycles
-- `ObjectDisposedException` during module execution following a previous unload cycle
-- `WeakReference<IModule>.TryGetTarget()` returns true after GC.Collect in tests
+- Heartbeat tick latency > 100ms after ContextModule is loaded
+- HeartbeatLoop SkippedCount increasing after ContextModule starts persisting history
+- File I/O appearing in EventBus callback stack traces in profiler
 
 **Phase to address:**
-Module Decoupling phase — add the WeakReference unload test before any module refactoring;
-establishes a regression baseline.
-
----
-
-### Pitfall 10: Existing 3 Test Failures Amplified by Concurrency Changes
-
-**What goes wrong:**
-The codebase has 3 known pre-existing test isolation failures. These are silent until concurrency
-changes make them load-bearing. Activity Channel model changes the execution order of module
-callbacks; the new serial-within-channel semantics may order events differently than the current
-heartbeat-tick-parallel model. Tests that accidentally relied on the old parallel ordering start
-failing in new ways, masking which failures are pre-existing vs. regression.
-
-**Why it happens:**
-Order-sensitive tests that were written against the current concurrent-per-tick model may expect
-that multiple events arriving in the same tick are processed "simultaneously" (all handlers
-notified before any handler completes). The channel model may process them serially. The 3 known
-failures likely share the root cause of shared singleton state leaking between tests (the global
-`IEventBus` singleton, ANIMA-08).
-
-**How to avoid:**
-- Before any v1.7 work, run the full test suite and document the exact 3 failing test names, their
-  failure modes, and root causes in a tracking note
-- Fix the 3 pre-existing failures first (they are likely symptoms of ANIMA-08 singleton pollution)
-  before starting concurrency work — a clean baseline is essential
-- When Activity Channel changes are committed, run the full suite; any NEW failure is a regression
-  (not a pre-existing issue) and must be investigated before continuing
-- Mark known-flaky tests with `[Trait("Flaky", "pre-existing")]` so CI distinguishes them from
-  new failures
-
-**Warning signs:**
-- More than 3 test failures after any v1.7 commit (the 4th failure is a new regression)
-- Tests that pass in isolation but fail when run in the full suite (singleton state bleeding)
-- Test failure messages mentioning `IEventBus`, `AnimaContext`, or `AnimaRuntimeManager` from
-  previous test runs (leftover state)
-
-**Phase to address:**
-Pre-flight phase (before any other v1.7 work) — fix the 3 failures and achieve a clean baseline.
-
----
-
-### Pitfall 11: EventBus Subscription Lifecycle Memory Leak During Module Hot-Reload
-
-**What goes wrong:**
-Built-in modules subscribe to events in `InitializeAsync()` and store `IDisposable` handles in
-`_subscriptions`. `ShutdownAsync()` disposes them. If a module is unloaded (via the module
-management UI) and then reloaded, `InitializeAsync()` is called again on the new instance. If the
-old instance was not properly disposed (e.g., `ShutdownAsync` was not called, or it was called
-but the EventBus was already replaced), the old subscriptions remain in the `ConcurrentBag<T>` as
-inactive entries. The lazy cleanup runs every 100 publishes, but between cleanup cycles, each
-active subscription trigger also iterates over dead subscriptions — O(dead_count) overhead per
-publish.
-
-**Why it happens:**
-`ConcurrentBag<T>` does not support efficient removal. The lazy cleanup rebuilds the bag every
-100 publishes. If a module is hot-reloaded 50 times without hitting the cleanup cycle (e.g., in
-a test that reloads modules in rapid succession), there are 50 × (number of subscriptions per
-module) dead entries in the bag. Under v1.7's Activity Channel model, where channel completion
-can trigger many rapid publishes, the cleanup interval may feel too infrequent.
-
-**How to avoid:**
-- Ensure `WiringEngine.UnloadConfiguration()` always calls `ShutdownAsync()` on all modules
-  before disposing; audit the call site for every module unload path
-- Consider reducing the cleanup interval: from every 100 publishes to every 25 publishes in high
-  frequency execution contexts
-- Add a `SubscriptionCount` diagnostic property to `EventBus` for monitoring dead vs. active
-  ratio in tests
-- Add a test: load a module, subscribe, unload (with proper shutdown), reload, subscribe again —
-  assert subscription count equals expected (not 2x expected)
-
-**Warning signs:**
-- `EventBus._subscriptions` ConcurrentBag grows unboundedly in long-running integration tests
-- Publish latency increases after repeated module hot-reload cycles
-- Dead subscriptions accumulating in `ConcurrentBag` observable via debugger
-
-**Phase to address:**
-Module Decoupling phase — audit subscription lifecycle as part of each module's decoupling
-validation; the decoupling refactor is the natural checkpoint to verify clean shutdown paths.
+External ContextModule phase — decide upfront whether v1.8 requires persistence; if not,
+explicitly defer it and document the decision.
 
 ---
 
@@ -493,124 +407,115 @@ validation; the decoupling refactor is the natural checkpoint to verify clean sh
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Keep `_pendingPrompt` field, add `lock` around it | Minimal change to LLMModule | Lock under async code is wrong; blocks thread pool | Never — use Channel<T> |
-| Move interfaces with raw namespace change, no forwarding | Clean code immediately | Binary breaks all existing .oamod packages | Never |
-| Add required methods to `IEventBus` without default impl | Feature available immediately | Every existing external module fails to load | Never |
-| Use bounded Channel<T> inside tick execution path | Backpressure support | Deadlock when channel full and tick lock held | Never — use TryWrite or unbounded |
-| Migrate all 14 modules in one large commit | Faster to batch | Single large breakage impossible to bisect | Never in active test suite |
-| Skip WeakReference unload test | Saves test time | Memory leaks from uncollectable AssemblyLoadContext | Never |
-| Fix ANIMA-08 (global singleton) as part of another phase | Reduced scope creep | 3 pre-existing test failures become permanent debt | Acceptable to defer to v1.8 if failures are marked |
+| Keep ChatMessageInput in Core.LLM, have ContextModule reference Core | Avoids Contracts change | External modules depend on Core; type identity breaks across ALC | Never |
+| Use Activator.CreateInstance with property injection for DI | Avoids constructor resolution complexity | Modules can silently miss services; no compile-time safety | Never for required services |
+| DataDirectory outside Anima directory (flat by moduleId) | Simpler path construction | Orphaned data on Anima delete; no per-Anima isolation | Never |
+| No token eviction in ContextModule v1 | Faster to implement | Context overflow after ~20 turns; silent LLM errors | Acceptable only if max history is capped at a small fixed number (e.g., 10 turns) |
+| Rely on PluginLoadContext fallback for Contracts assembly sharing | No explicit exclusion needed | If plugin ships its own Contracts.dll, type identity breaks silently | Never — explicit exclusion is 1 line |
+| Store ContextModule history as flat List without animaId key | Simpler code | History bleeds across Animas; all Animas share one history | Never |
+| Skip DataDirectory path traversal validation | Faster to implement | Module can write outside its sandbox | Never |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Activity Channel + HeartbeatLoop | `await channel.Writer.WriteAsync(...)` inside tick | `channel.Writer.TryWrite(...)` only inside tick; WriteAsync only from outside tick |
-| Blazor component + module events | `StateHasChanged()` directly from EventBus callback | `await InvokeAsync(StateHasChanged)` always for background-thread callbacks |
-| Interface move to Contracts | Raw move with no forwarding shim | Keep old type in Core, add `[Obsolete]`, add type-forward alias or delegation |
-| DI registration after interface move | Register only new Contracts type | Register both old Core type and new Contracts type during transition; remove old after migration |
-| Module hot-reload | Skip `ShutdownAsync` on old instance | Always call `ShutdownAsync` before disposing a module; assert subscription count in tests |
-| `_failedModules` in WiringEngine | `HashSet<string>` for parallel writes | `ConcurrentDictionary<string, byte>` with `TryAdd` |
-| AssemblyLoadContext unload | Hold strong reference to unloaded module type | Use `WeakReference<IModule>`; verify collection after GC.Collect(2) in tests |
-| External module compiled against old Contracts | Load without testing against new package | Always test with a canary .oamod built from old SDK before releasing Contracts changes |
+| PluginLoader + DI | ActivatorUtilities.CreateInstance without explicit Contracts exclusion in ALC | Exclude "OpenAnima.Contracts" in PluginLoadContext.Load() before attempting DI injection |
+| ContextModule + IModuleContext | Using ActiveAnimaId as a field key without null check | ActiveAnimaId is guaranteed non-null at module use time (per IModuleContext contract) but key all state by animaId from the start |
+| LLMModule + structured messages | Changing "prompt" port CLR type from string | Add a new "messages" port; keep "prompt" port as string for backward compat |
+| DataDirectory + Path.Combine | Path.Combine(DataDirectory, userInput) without validation | Validate that the resulting path starts with DataDirectory after Path.GetFullPath |
+| ContextModule + EventBus | Awaiting file I/O inside EventBus callback | Fire-and-forget persistence; keep callback fast |
+| ChatMessageInput + Contracts | Referencing Core.LLM.ChatMessageInput from external module | Move ChatMessageInput to Contracts first; external modules reference only Contracts |
+| Module uninstall + DataDirectory | Assuming Anima delete cleans up module data | It does IF DataDirectory is inside the Anima directory; verify the path structure |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Dead EventBus subscriptions accumulating in ConcurrentBag | Publish latency grows with each hot-reload cycle | Reduce cleanup interval; assert count in tests | After 50+ module reloads without cleanup |
-| Bounded channel blocking WriteAsync in tick path | SkippedCount grows monotonically; tick latency > 500ms | Unbounded channel or TryWrite-only in tick path | When channel capacity is exceeded (even once) |
-| Reflection-based tick invocation on every module every 100ms | CPU overhead from MethodInfo.Invoke at scale | Cache MethodInfo per type; use compiled delegates | With 20+ ITickable modules running simultaneously |
-| `ConcurrentDictionary` in EventBus cleanup rebuilding entire bag | GC pressure during cleanup cycle | Keep `_subscriptions` as `ConcurrentDictionary<Guid, Subscription>` for O(1) removal | With 1000+ subscriptions per EventBus |
+| ContextModule history unbounded growth | LLM API 400 errors after many turns; incoherent responses | Sliding window eviction with token budget | After ~20-50 turns depending on message length |
+| File I/O in EventBus callback for history persistence | Tick latency > 100ms; SkippedCount growing | Background Channel for persistence; in-memory only for v1.8 | On first file write if antivirus is active |
+| ActivatorUtilities.CreateInstance with many optional params | Module load time increases; confusing errors | Custom instantiation helper with GetService for optional params | With 3+ optional constructor parameters |
+| ContextModule passing full history on every tick | Unnecessary LLM calls on heartbeat ticks | Only pass history when a new message arrives; gate on chat event, not heartbeat | With heartbeat at 100ms and history > 10 messages |
 
 ## Security Mistakes
 
-This milestone has no new security surface. Existing SSRF/credential pitfalls from v1.6
-PITFALLS.md remain current.
-
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Moving `IAnimaModuleConfigService` to Contracts exposes config API to all plugins | Plugin reads config of other modules | Config API in Contracts must be scoped: `GetConfig(myModuleId)` only, not `GetConfig(anyAnimaId, anyModuleId)` |
-| Activity Channel items carrying raw user input without sanitization | Cross-module injection via channel payload | Channel item type must be a typed DTO, not `string`; validate at channel boundary |
+| DataDirectory path not validated against animasRoot | Module writes outside its sandbox to arbitrary filesystem paths | Path.GetFullPath normalization + StartsWith(animasRoot) check |
+| moduleId used as path component without sanitization | Path traversal via "../" in module.json id field | Allowlist validation: alphanumeric, hyphen, dot only; max 64 chars |
+| IModuleConfig.GetConfig exposed to external modules with full animaId+moduleId scope | Module reads config of other modules or other Animas | Scope the Contracts-facing API: module receives a pre-scoped IModuleConfig that only exposes its own config |
+| ContextModule persisting conversation history to disk unencrypted | Sensitive conversation data readable by any process | Document: DataDirectory is unencrypted local storage; users must be aware; encryption is out of scope for v1.8 |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Activity Channel serial execution causing visible latency | Stateful Anima appears slower than v1.6 (serial vs parallel) | Show "processing" indicator on module status; set user expectation that serial = consistent, not broken |
-| Module decoupling refactor breaks existing wiring configs | User's saved wiring fails to load after update | Wiring config stores module names as strings; decoupling does not change module names; test round-trip |
-| Interface move changes compile error from SDK modules | Developer's custom module fails to build after v1.7 update | Publish SDK migration guide before v1.7 release; include `#pragma warning disable` stubs |
+| ContextModule history eviction silently drops old messages | User references old context; LLM has no memory of it | Log eviction events; optionally show "context trimmed" indicator in chat UI |
+| DataDirectory created eagerly for all modules on load | Empty directories for every module even if never used | Create DataDirectory lazily on first access |
+| LLMModule "messages" port not visible in editor palette | User cannot wire ContextModule to LLMModule visually | Ensure new port is declared with InputPortAttribute so PortDiscovery finds it |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **LLMModule race fix:** Looks done when unit tests pass. Verify: two concurrent EventBus
-  publishes to `LLMModule.port.prompt` both trigger LLM calls — assert call count = 2.
-- [ ] **WiringEngine race fix:** Looks done when single-module-per-level tests pass. Verify:
-  4-module parallel level with all modules failing — assert `_failedModules.Count == 4`.
-- [ ] **Activity Channel no-deadlock:** Looks done when happy path works. Verify: write to channel
-  from inside tick via `TryWrite` — assert no tick lock contention under 10-second soak test.
-- [ ] **Contracts interface move:** Looks done when build succeeds. Verify: load an `.oamod` package
-  compiled against OLD Contracts — confirm it still loads without TypeLoadException.
-- [ ] **No new members on IEventBus/IModule:** Looks done when code compiles. Verify: create a
-  minimal external module implementing only old `IModule` contract — confirm it still loads.
-- [ ] **DI registration after module decoupling:** Looks done when integration tests pass. Verify:
-  the actual `Program.cs` DI container resolves all 14 module types at startup — log any failures.
-- [ ] **AssemblyLoadContext unload:** Looks done when `PluginLoadContext.Unload()` returns. Verify:
-  `WeakReference<IModule>.TryGetTarget()` returns false after GC.Collect(2).
-- [ ] **Blazor SynchronizationContext:** Looks done when no exceptions appear. Verify: trigger
-  EventBus event from `Task.Run` — assert component re-renders correctly without dispatcher error.
-- [ ] **Pre-existing 3 test failures resolved:** Looks done when count drops to 0. Verify: run
-  full test suite with parallelism enabled — confirm exactly 0 failures, not 3 hidden by
-  `[Skip]` or test ordering.
-- [ ] **EventBus subscription cleanup after hot-reload:** Looks done when module loads. Verify:
-  load/unload a module 10 times — assert EventBus subscription count equals 1× (not 10×).
+- [ ] **PluginLoader DI injection:** Looks done when a module with IModuleContext constructor loads.
+  Verify: load a plugin that ships its own copy of OpenAnima.Contracts.dll; confirm it still
+  receives the host's IModuleContext singleton (not a new instance from the plugin's Contracts copy).
+- [ ] **ChatMessageInput in Contracts:** Looks done when ContextModule compiles. Verify: ContextModule
+  project has zero references to OpenAnima.Core; only OpenAnima.Contracts is referenced.
+- [ ] **DataDirectory path safety:** Looks done when the path is returned. Verify: moduleId = "../escape";
+  confirm DataDirectory computation throws SecurityException or returns a safe path.
+- [ ] **DataDirectory cleanup on Anima delete:** Looks done when DeleteAsync runs. Verify: create Anima,
+  write a file to DataDirectory, delete Anima, assert the file no longer exists.
+- [ ] **ContextModule history isolation:** Looks done when one Anima works. Verify: two Animas active;
+  send messages to Anima A; assert Anima B's ContextModule history is empty.
+- [ ] **Token budget eviction:** Looks done when short conversations work. Verify: 100-turn conversation;
+  assert messages list passed to LLMModule never exceeds configured token budget.
+- [ ] **Backward compat — existing string prompt port:** Looks done when LLMModule compiles. Verify:
+  wire a FixedTextModule to LLMModule.prompt; confirm it still works after structured input is added.
+- [ ] **Optional constructor params in plugins:** Looks done when a module with required params loads.
+  Verify: load a plugin with ICrossAnimaRouter? router = null; confirm it loads when ICrossAnimaRouter
+  is not registered.
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| LLMModule race condition (_pendingPrompt) | MEDIUM | Replace field with Channel<string>; update InitializeAsync and ExecuteAsync; re-run LLM integration tests |
-| WiringEngine _failedModules race | LOW | Replace HashSet with ConcurrentDictionary<string, byte>; 1-line change; immediate test coverage |
-| Activity Channel deadlock | HIGH | Change bounded to unbounded channel; replace WriteAsync with TryWrite in all tick-path producers; add 10-second soak test |
-| Blazor SynchronizationContext corruption | MEDIUM | Grep for StateHasChanged without InvokeAsync; wrap each found instance; re-test all affected pages |
-| Interface move binary break | HIGH | Re-add old type as type-forward in original namespace; version-bump Contracts; publish migration notice |
-| DI resolution failure after decoupling | MEDIUM | Add bridging registration for old→new type identity; run startup smoke test; remove old registration after all modules migrated |
-| AssemblyLoadContext memory leak | HIGH | Audit EventBus subscription disposal; add WeakReference unload test; force GC in test to detect leak |
-| Pre-existing test failures worsened | MEDIUM | Revert to clean test baseline first; fix ANIMA-08 singleton; document which 3 tests were failing pre-v1.7 |
+| Contracts assembly loaded in plugin context (type identity break) | MEDIUM | Add explicit exclusion in PluginLoadContext.Load(); reload all plugins; verify with assembly identity test |
+| ChatMessageInput in wrong assembly | HIGH | Move to Contracts; add type-forward shim in Core.LLM; recompile all modules; test round-trip |
+| DataDirectory path traversal | LOW | Add Path.GetFullPath + StartsWith validation; add test; no data migration needed |
+| ContextModule history bleeding across Animas | MEDIUM | Refactor history storage to Dictionary<string, List<...>> keyed by animaId; existing history lost |
+| Context window overflow | LOW | Add sliding window eviction; configure token budget; existing history truncated on next load |
+| File I/O blocking EventBus callback | MEDIUM | Extract persistence to background Channel; test tick latency after change |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| LLMModule _pendingPrompt race | Phase 1: Concurrency Fix | Concurrent publish test: 2 prompts → 2 LLM calls |
-| WiringEngine _failedModules race | Phase 1: Concurrency Fix | Parallel failure test: 4 modules fail → count == 4 |
-| Pre-existing 3 test failures | Phase 0: Pre-flight | Full suite run: exactly 0 failures |
-| Activity Channel deadlock | Phase 2: Activity Channel | 10s soak test: zero tick skips from channel backpressure |
-| Blazor SynchronizationContext | Phase 2: Activity Channel | Background-event test: component renders without dispatcher error |
-| Interface move binary break | Phase 3: Contracts API | Canary .oamod load test: old-SDK module loads without TypeLoadException |
-| IEventBus/IModule member addition | Phase 3: Contracts API | Old-contract module test: minimal IModule implementor still loads |
-| Circular dependency in Contracts | Phase 3: Contracts API | `dotnet build OpenAnima.Contracts` in isolation: zero project references |
-| DI registration break | Phase 4: Module Decoupling | Startup smoke test: all 14 module types resolve from DI container |
-| AssemblyLoadContext unload leak | Phase 4: Module Decoupling | WeakReference test: TryGetTarget() false after GC.Collect(2) |
-| EventBus subscription lifecycle | Phase 4: Module Decoupling | Hot-reload test: 10 load/unload cycles → subscription count = 1× |
+| Contracts assembly in plugin context | Phase 1: PluginLoader DI | Plugin-ships-own-Contracts test: host singleton received, not new instance |
+| Optional constructor params | Phase 1: PluginLoader DI | Optional-param test: module loads without ICrossAnimaRouter registered |
+| Singleton lifetime + per-Anima state | Phase 1: PluginLoader DI | Two-Anima isolation test: history does not bleed |
+| ChatMessageInput in Core.LLM | Phase 2: LLMModule Structured Input | ContextModule zero-Core-reference build check |
+| WiringEngine string-only port routing | Phase 2: LLMModule Structured Input | Backward compat test: FixedTextModule -> LLMModule.prompt still works |
+| DataDirectory path traversal | Phase 3: DataDirectory Storage | Path traversal test: moduleId="../escape" throws or is sanitized |
+| DataDirectory cleanup on delete | Phase 3: DataDirectory Storage | Delete-Anima test: DataDirectory files removed |
+| ContextModule history unbounded | Phase 4: External ContextModule | 100-turn test: messages list within token budget |
+| File I/O in EventBus callback | Phase 4: External ContextModule | Tick latency test: < 100ms with ContextModule loaded and active |
 
 ## Sources
 
-- [GitHub Issue #75418 – BoundedChannelReader.TryRead deadlocks with WriteAsync at capacity](https://github.com/dotnet/runtime/issues/75418) — Bounded channel + concurrent writer/reader deadlock (HIGH confidence)
-- [GitHub Issue #33858 – Deadlock in BoundedChannelWriter.TryWrite with CancellationToken callback](https://github.com/dotnet/runtime/issues/33858) — Lock + cancellation re-entrancy deadlock in Channel<T> (HIGH confidence)
-- [GitHub Issue #111486 – AllowSynchronousContinuations reduces throughput .NET 8 Jan 2025](https://github.com/dotnet/runtime/issues/111486) — AllowSynchronousContinuations side effects (HIGH confidence)
-- [Microsoft Docs – System.Threading.Channels](https://learn.microsoft.com/en-us/dotnet/core/extensions/channels) — Official Channel<T> documentation (HIGH confidence)
-- [Microsoft Docs – Blazor Server SynchronizationContext](https://learn.microsoft.com/en-us/aspnet/core/blazor/components/synchronization-context) — InvokeAsync requirement for background threads (HIGH confidence)
-- [Blazor University – Thread safety using InvokeAsync](https://blazor-university.com/components/multi-threaded-rendering/invokeasync/) — InvokeAsync not a full serialization guarantee; re-entrancy at await points (HIGH confidence)
-- [Microsoft Docs – .NET API changes that affect compatibility](https://learn.microsoft.com/en-us/dotnet/core/compatibility/library-change-rules) — Interface member addition is breaking change (HIGH confidence)
-- [Microsoft Docs – Breaking changes and .NET libraries](https://learn.microsoft.com/en-us/dotnet/standard/library-guidance/breaking-changes) — Namespace/assembly move is binary breaking (HIGH confidence)
-- [Real Plugin Systems in .NET: AssemblyLoadContext – Jan 2026](https://jordansrowles.medium.com/real-plugin-systems-in-net-assemblyloadcontext-unloadability-and-reflection-free-discovery-81f920c83644) — "Five lies" of AssemblyLoadContext unloadability (MEDIUM confidence)
-- [Understanding and Avoiding Memory Leaks with Event Handlers](https://www.markheath.net/post/understanding-and-avoiding-memory-leaks) — IDisposable subscription pattern; strong reference chains (HIGH confidence)
-- [5 Techniques to avoid Memory Leaks by Events in C# .NET](https://michaelscodingspot.com/5-techniques-to-avoid-memory-leaks-by-events-in-c-net-you-should-know/) — Subscription lifecycle, WeakReference strategy (HIGH confidence)
-- [xUnit – Sharing Context between Tests](https://xunit.net/docs/shared-context) — CollectionFixture for singleton isolation (HIGH confidence)
-- OpenAnima source code — LLMModule, WiringEngine, HeartbeatLoop, EventBus, AnimaRuntimeManager, AnimaRuntime (HIGH confidence — direct inspection)
-- OpenAnima PROJECT.md — ANIMA-08 tech debt, v1.7 active requirements, known race conditions (HIGH confidence)
+- OpenAnima source code — PluginLoader, PluginLoadContext, AnimaRuntimeManager, LLMModule,
+  WiringEngine, IModuleContext, IModuleConfig, ChatContextManager, TokenCounter (HIGH confidence)
+- OpenAnima PROJECT.md — v1.8 requirements, known tech debt, key decisions (HIGH confidence)
+- Microsoft Docs — AssemblyLoadContext: https://learn.microsoft.com/en-us/dotnet/core/dependency-loading/understanding-assemblyloadcontext
+  (HIGH confidence — explicit fallback behavior documented)
+- Microsoft Docs — ActivatorUtilities: https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.dependencyinjection.activatorutilities
+  (HIGH confidence — optional parameter behavior documented)
+- Microsoft Docs — Path.GetFullPath for path traversal prevention:
+  https://learn.microsoft.com/en-us/dotnet/standard/io/file-path-formats (HIGH confidence)
+- .NET Runtime GitHub — AssemblyLoadContext isolation patterns:
+  https://github.com/dotnet/runtime/blob/main/docs/design/features/assemblyloadcontext.md
+  (HIGH confidence)
+- OpenAI API docs — context_length_exceeded error:
+  https://platform.openai.com/docs/guides/error-codes (HIGH confidence)
 
 ---
-*Pitfalls research for: Runtime Foundation (Concurrency, Contracts API, Module Decoupling) — OpenAnima v1.7*
-*Researched: 2026-03-14*
+*Pitfalls research for: SDK Runtime Parity (DI Injection, Structured Messages, Storage Paths) — OpenAnima v1.8*
+*Researched: 2026-03-16*
