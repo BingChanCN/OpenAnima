@@ -22,8 +22,8 @@ public class EditorStateServiceTests
         _service = new EditorStateService(
             _portRegistry,
             _configLoader,
-            _wiringEngine,
-            NullLogger<EditorStateService>.Instance
+            NullLogger<EditorStateService>.Instance,
+            _wiringEngine
         );
     }
 

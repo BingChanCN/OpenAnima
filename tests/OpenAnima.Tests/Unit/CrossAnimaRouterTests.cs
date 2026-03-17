@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Contracts.Routing;
+using OpenAnima.Core.Anima;
 using OpenAnima.Core.Routing;
 
 namespace OpenAnima.Tests.Unit;
@@ -14,7 +15,7 @@ public class CrossAnimaRouterTests : IDisposable
 
     public CrossAnimaRouterTests()
     {
-        _router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        _router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance, (Lazy<IAnimaRuntimeManager>?)null);
     }
 
     public void Dispose()
@@ -313,7 +314,7 @@ public class CrossAnimaRouterTests : IDisposable
     [Fact]
     public void Dispose_StopsCleanupLoop_WithoutThrowing()
     {
-        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance, (Lazy<IAnimaRuntimeManager>?)null);
         var exception = Record.Exception(() => router.Dispose());
         Assert.Null(exception);
     }
@@ -321,7 +322,7 @@ public class CrossAnimaRouterTests : IDisposable
     [Fact]
     public void Dispose_Idempotent_DoesNotThrowOnSecondCall()
     {
-        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance, (Lazy<IAnimaRuntimeManager>?)null);
         router.Dispose();
         var exception = Record.Exception(() => router.Dispose());
         Assert.Null(exception);

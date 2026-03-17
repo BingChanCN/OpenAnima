@@ -162,7 +162,7 @@ public class RoutingModulesTests
     public async Task CrossAnimaRouter_RouteRequestAsync_NullRuntimeManager_TimesOutGracefully()
     {
         // Arrange — router without runtime manager (no delivery)
-        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance, (Lazy<IAnimaRuntimeManager>?)null);
         router.RegisterPort("anima-target", "port", "Test");
 
         // Act — should time out since no one delivers the event
@@ -186,7 +186,7 @@ public class RoutingModulesTests
     {
         // Arrange
         var eventBus = CreateEventBus();
-        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance, (Lazy<IAnimaRuntimeManager>?)null);
         var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
         {
             ["serviceName"] = "summarize",
@@ -216,7 +216,7 @@ public class RoutingModulesTests
     {
         // Arrange
         var eventBus = CreateEventBus();
-        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance, (Lazy<IAnimaRuntimeManager>?)null);
         var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
         {
             ["serviceName"] = "translate",
@@ -246,7 +246,7 @@ public class RoutingModulesTests
     {
         // Arrange
         var eventBus = CreateEventBus();
-        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance, (Lazy<IAnimaRuntimeManager>?)null);
         var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
         {
             ["serviceName"] = "cleanup-test",
@@ -276,7 +276,7 @@ public class RoutingModulesTests
     {
         // Arrange
         var eventBus = CreateEventBus();
-        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance, (Lazy<IAnimaRuntimeManager>?)null);
         var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
         {
             ["serviceName"] = "myService",
@@ -337,7 +337,7 @@ public class RoutingModulesTests
     {
         // Arrange
         var eventBus = CreateEventBus();
-        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance, (Lazy<IAnimaRuntimeManager>?)null);
         var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
         {
             ["matchedService"] = "summarize"
@@ -392,7 +392,7 @@ public class RoutingModulesTests
     {
         // Arrange
         var eventBus = CreateEventBus();
-        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance, (Lazy<IAnimaRuntimeManager>?)null);
         var config = new StubAnimaModuleConfigService(new Dictionary<string, string>
         {
             ["matchedService"] = "summarize"

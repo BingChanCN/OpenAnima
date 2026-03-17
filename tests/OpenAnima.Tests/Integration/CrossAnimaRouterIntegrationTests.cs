@@ -26,7 +26,7 @@ public class CrossAnimaRouterIntegrationTests : IAsyncDisposable
 
     private static (AnimaRuntimeManager manager, CrossAnimaRouter router) CreateManagerWithRouter(string tempRoot)
     {
-        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance);
+        var router = new CrossAnimaRouter(NullLogger<CrossAnimaRouter>.Instance, (Lazy<IAnimaRuntimeManager>?)null);
         var manager = new AnimaRuntimeManager(
             tempRoot,
             NullLogger<AnimaRuntimeManager>.Instance,

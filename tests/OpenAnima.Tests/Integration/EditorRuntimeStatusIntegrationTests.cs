@@ -65,8 +65,8 @@ public class EditorRuntimeStatusIntegrationTests
         return new EditorStateService(
             new TestPortRegistry(),
             new TestConfigurationLoader(),
-            new TestWiringEngine(),
-            NullLogger<EditorStateService>.Instance);
+            NullLogger<EditorStateService>.Instance,
+            new TestWiringEngine());
     }
 
     private sealed class TestPortRegistry : IPortRegistry
