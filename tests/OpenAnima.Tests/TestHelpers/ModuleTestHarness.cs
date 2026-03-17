@@ -11,6 +11,105 @@ namespace OpenAnima.Tests.TestHelpers;
 public static class ModuleTestHarness
 {
     /// <summary>
+    /// Mapping of Contracts interface short names to their full type names.
+    /// </summary>
+    private static readonly Dictionary<string, string> ContractsTypeMap = new()
+    {
+        ["IModuleConfig"] = "OpenAnima.Contracts.IModuleConfig",
+        ["IModuleContext"] = "OpenAnima.Contracts.IModuleContext",
+        ["IEventBus"] = "OpenAnima.Contracts.IEventBus",
+        ["ICrossAnimaRouter"] = "OpenAnima.Contracts.Routing.ICrossAnimaRouter",
+        ["ILogger"] = "Microsoft.Extensions.Logging.ILogger",
+    };
+
+    /// <summary>
+    /// Creates a test module directory with a constructor that accepts specified Contracts services.
+    /// </summary>
+    /// <param name="basePath">Base directory for test modules</param>
+    /// <param name="moduleName">Name of the module to create</param>
+    /// <param name="constructorParamTypes">Array of parameter type short names (e.g., ["IModuleConfig", "ILogger"])</param>
+    /// <param name="optionalParams">Array of parameter names that should have default values (= null)</param>
+    /// <returns>Path to the created module directory</returns>
+    public static string CreateTestModuleWithConstructor(
+        string basePath,
+        string moduleName,
+        string[] constructorParamTypes,
+        string[]? optionalParams = null)
+    {
+        optionalParams ??= Array.Empty<string>();
+        var optionalSet = new HashSet<string>(optionalParams);
+
+        // Create module directory
+        string moduleDir = Path.Combine(basePath, moduleName);
+        Directory.CreateDirectory(moduleDir);
+
+        // Create module.json manifest
+        var manifest = new
+        {
+            name = moduleName,
+            version = "1.0.0",
+            description = $"Test module {moduleName} with constructor DI",
+            entryAssembly = $"{moduleName}.dll"
+        };
+
+        string manifestPath = Path.Combine(moduleDir, "module.json");
+        File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifest, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        }));
+
+        // Create DLL with constructor parameters
+        string dllPath = Path.Combine(moduleDir, $"{moduleName}.dll");
+        CreateModuleDllWithConstructor(dllPath, moduleName, constructorParamTypes, optionalSet);
+
+        return moduleDir;
+    }
+
+    /// <summary>
+    /// Creates a test module with all Contracts services as optional constructor parameters.
+    /// Constructor signature: (IModuleConfig config, IModuleContext context, IEventBus eventBus, ICrossAnimaRouter router, ILogger logger)
+    /// </summary>
+    public static string CreateTestModuleWithAllContracts(string basePath, string moduleName)
+    {
+        return CreateTestModuleWithConstructor(
+            basePath,
+            moduleName,
+            new[] { "IModuleConfig", "IModuleContext", "IEventBus", "ICrossAnimaRouter", "ILogger" },
+            new[] { "config", "context", "eventBus", "router", "logger" });
+    }
+
+    /// <summary>
+    /// Creates a test module with a required (non-optional) constructor parameter of a custom type.
+    /// Used to test that required non-Contracts parameters produce LoadResult errors.
+    /// </summary>
+    public static string CreateTestModuleWithRequiredParam(string basePath, string moduleName, string requiredParamType)
+    {
+        // Create module directory
+        string moduleDir = Path.Combine(basePath, moduleName);
+        Directory.CreateDirectory(moduleDir);
+
+        // Create module.json manifest
+        var manifest = new
+        {
+            name = moduleName,
+            version = "1.0.0",
+            description = $"Test module {moduleName} with required param",
+            entryAssembly = $"{moduleName}.dll"
+        };
+
+        string manifestPath = Path.Combine(moduleDir, "module.json");
+        File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifest, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        }));
+
+        // Create DLL with required custom parameter
+        string dllPath = Path.Combine(moduleDir, $"{moduleName}.dll");
+        CreateModuleDllWithRequiredParam(dllPath, moduleName, requiredParamType);
+
+        return moduleDir;
+    }
+    /// <summary>
     /// Creates a test module directory with module.json and a minimal DLL implementing IModule.
     /// </summary>
     /// <param name="basePath">Base directory for test modules</param>
@@ -253,6 +352,251 @@ namespace {moduleName}
                 foreach (string contractsFile in Directory.GetFiles(tempDir, "OpenAnima.Contracts*"))
                 {
                     File.Delete(contractsFile);
+                }
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
+        }
+    }
+
+    /// <summary>
+    /// Creates a module DLL with constructor parameters by compiling C# source.
+    /// </summary>
+    private static void CreateModuleDllWithConstructor(
+        string dllPath,
+        string moduleName,
+        string[] constructorParamTypes,
+        HashSet<string> optionalParams)
+    {
+        // Get the directory containing OpenAnima.Contracts.dll
+        var contractsAssembly = typeof(IModule).Assembly;
+        var contractsPath = contractsAssembly.Location;
+        var contractsDir = Path.GetDirectoryName(contractsPath)!;
+
+        // Find Microsoft.Extensions.Logging.Abstractions.dll
+        var loggingAssembly = AppDomain.CurrentDomain.GetAssemblies()
+            .FirstOrDefault(a => a.GetName().Name == "Microsoft.Extensions.Logging.Abstractions");
+        var loggingPath = loggingAssembly?.Location ?? Path.Combine(contractsDir, "Microsoft.Extensions.Logging.Abstractions.dll");
+
+        // Build constructor parameters
+        var paramList = new List<string>();
+        var fieldList = new List<string>();
+        var propertyList = new List<string>();
+        var assignmentList = new List<string>();
+
+        foreach (var paramType in constructorParamTypes)
+        {
+            var fullTypeName = ContractsTypeMap.TryGetValue(paramType, out var fullName)
+                ? fullName
+                : paramType;
+
+            var paramName = paramType.StartsWith("I")
+                ? char.ToLower(paramType[1]) + paramType.Substring(2)
+                : paramType.ToLowerInvariant();
+
+            // Handle generic types in parameter name
+            paramName = paramName.Replace("<", "").Replace(">", "").Replace(".", "_");
+
+            var isOptional = optionalParams.Contains(paramName);
+            var defaultValue = isOptional ? " = null" : "";
+
+            paramList.Add($"{fullTypeName} {paramName}{defaultValue}");
+            fieldList.Add($"        private readonly {fullTypeName} _{paramName};");
+            propertyList.Add($"        public {fullTypeName} Injected{paramName} => _{paramName};");
+            assignmentList.Add($"            _{paramName} = {paramName};");
+        }
+
+        var paramsStr = string.Join(", ", paramList);
+        var fieldsStr = string.Join("\n", fieldList);
+        var propertiesStr = string.Join("\n", propertyList);
+        var assignmentsStr = string.Join("\n", assignmentList);
+
+        // Create C# source
+        string sourceCode = $@"
+using System.Threading;
+using System.Threading.Tasks;
+using OpenAnima.Contracts;
+using OpenAnima.Contracts.Routing;
+using Microsoft.Extensions.Logging;
+
+namespace {moduleName}
+{{
+    public class Metadata : IModuleMetadata
+    {{
+        public string Name => ""{moduleName}"";
+        public string Version => ""1.0.0"";
+        public string Description => ""Test module {moduleName} with constructor DI"";
+    }}
+
+    public class Module : IModule
+    {{
+        private readonly IModuleMetadata _metadata = new Metadata();
+{fieldsStr}
+
+        public IModuleMetadata Metadata => _metadata;
+{propertiesStr}
+
+        public Module({paramsStr})
+        {{
+{assignmentsStr}
+        }}
+
+        public Task InitializeAsync(CancellationToken cancellationToken = default)
+        {{
+            return Task.CompletedTask;
+        }}
+
+        public Task ShutdownAsync(CancellationToken cancellationToken = default)
+        {{
+            return Task.CompletedTask;
+        }}
+    }}
+}}";
+
+        CompileModuleSource(dllPath, moduleName, sourceCode, contractsPath, loggingPath);
+    }
+
+    /// <summary>
+    /// Creates a module DLL with a required (non-optional) custom parameter.
+    /// </summary>
+    private static void CreateModuleDllWithRequiredParam(string dllPath, string moduleName, string requiredParamType)
+    {
+        // Get the directory containing OpenAnima.Contracts.dll
+        var contractsAssembly = typeof(IModule).Assembly;
+        var contractsPath = contractsAssembly.Location;
+        var contractsDir = Path.GetDirectoryName(contractsPath)!;
+
+        // Find Microsoft.Extensions.Logging.Abstractions.dll
+        var loggingAssembly = AppDomain.CurrentDomain.GetAssemblies()
+            .FirstOrDefault(a => a.GetName().Name == "Microsoft.Extensions.Logging.Abstractions");
+        var loggingPath = loggingAssembly?.Location ?? Path.Combine(contractsDir, "Microsoft.Extensions.Logging.Abstractions.dll");
+
+        // Create C# source with a custom interface and required parameter
+        string sourceCode = $@"
+using System.Threading;
+using System.Threading.Tasks;
+using OpenAnima.Contracts;
+
+namespace {moduleName}
+{{
+    // Custom service interface defined in the module itself
+    public interface ICustomService
+    {{
+        void DoSomething();
+    }}
+
+    public class Metadata : IModuleMetadata
+    {{
+        public string Name => ""{moduleName}"";
+        public string Version => ""1.0.0"";
+        public string Description => ""Test module {moduleName} with required param"";
+    }}
+
+    public class Module : IModule
+    {{
+        private readonly IModuleMetadata _metadata = new Metadata();
+        private readonly ICustomService _customService;
+
+        public IModuleMetadata Metadata => _metadata;
+        public ICustomService CustomService => _customService;
+
+        // Required parameter (no default value) - should cause LoadResult error
+        public Module(ICustomService customService)
+        {{
+            _customService = customService;
+        }}
+
+        public Task InitializeAsync(CancellationToken cancellationToken = default)
+        {{
+            return Task.CompletedTask;
+        }}
+
+        public Task ShutdownAsync(CancellationToken cancellationToken = default)
+        {{
+            return Task.CompletedTask;
+        }}
+    }}
+}}";
+
+        CompileModuleSource(dllPath, moduleName, sourceCode, contractsPath, loggingPath);
+    }
+
+    /// <summary>
+    /// Compiles module source code to a DLL using dotnet CLI.
+    /// </summary>
+    private static void CompileModuleSource(
+        string dllPath,
+        string moduleName,
+        string sourceCode,
+        string contractsPath,
+        string? loggingPath = null)
+    {
+        string tempDir = Path.GetDirectoryName(dllPath)!;
+        string sourceFile = Path.Combine(tempDir, $"{moduleName}.cs");
+        File.WriteAllText(sourceFile, sourceCode);
+
+        // Create csproj with references
+        var loggingReference = loggingPath != null && File.Exists(loggingPath)
+            ? $@"
+    <Reference Include=""Microsoft.Extensions.Logging.Abstractions"">
+      <HintPath>{loggingPath}</HintPath>
+    </Reference>"
+            : "";
+
+        string csprojContent = $@"
+<Project Sdk=""Microsoft.NET.Sdk"" xmlns=""http://schemas.microsoft.com/developer/msbuild/2003"">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>{moduleName}</AssemblyName>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include=""{moduleName}.cs"" />
+    <Reference Include=""OpenAnima.Contracts"">
+      <HintPath>{contractsPath}</HintPath>
+    </Reference>{loggingReference}
+  </ItemGroup>
+</Project>";
+
+        string csprojPath = Path.Combine(tempDir, $"{moduleName}.csproj");
+        File.WriteAllText(csprojPath, csprojContent);
+
+        // Compile using dotnet CLI
+        var startInfo = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "dotnet",
+            Arguments = $"build -c Release -o \"{tempDir}\" /p:OutputType=Library /p:TargetFramework=net8.0",
+            WorkingDirectory = tempDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = System.Diagnostics.Process.Start(startInfo);
+        if (process != null)
+        {
+            process.WaitForExit();
+            // Clean up temp files
+            try
+            {
+                File.Delete(sourceFile);
+                File.Delete(csprojPath);
+                // Remove contracts and logging copies to prevent type identity issues
+                foreach (string contractsFile in Directory.GetFiles(tempDir, "OpenAnima.Contracts*"))
+                {
+                    File.Delete(contractsFile);
+                }
+                foreach (string loggingFile in Directory.GetFiles(tempDir, "Microsoft.Extensions.Logging*"))
+                {
+                    File.Delete(loggingFile);
+                }
+                // Remove build artifacts
+                if (Directory.Exists(Path.Combine(tempDir, "obj")))
+                {
+                    Directory.Delete(Path.Combine(tempDir, "obj"), true);
                 }
             }
             catch
