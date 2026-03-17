@@ -9,9 +9,9 @@ Requirements for SDK Runtime Parity milestone. Each maps to roadmap phases.
 
 ### Plugin DI Injection
 
-- [ ] **PLUG-01**: PluginLoader reflects external module constructor parameters and injects IModuleConfig/IModuleContext/IEventBus/ICrossAnimaRouter via FullName matching against host DI container
-- [ ] **PLUG-02**: PluginLoader creates typed ILogger instances for external modules via ILoggerFactory
-- [ ] **PLUG-03**: Optional constructor parameters resolve to null with warning log on failure; required parameters produce clear LoadResult error
+- [x] **PLUG-01**: PluginLoader reflects external module constructor parameters and injects IModuleConfig/IModuleContext/IEventBus/ICrossAnimaRouter via FullName matching against host DI container
+- [x] **PLUG-02**: PluginLoader creates typed ILogger instances for external modules via ILoggerFactory
+- [x] **PLUG-03**: Optional constructor parameters resolve to null with warning log on failure; required parameters produce clear LoadResult error
 
 ### Structured Messages
 
@@ -48,9 +48,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLUG-01 | Phase 38 | Pending |
-| PLUG-02 | Phase 38 | Pending |
-| PLUG-03 | Phase 38 | Pending |
+| PLUG-01 | Phase 38 | Complete |
+| PLUG-02 | Phase 38 | Complete |
+| PLUG-03 | Phase 38 | Complete |
 | MSG-01 | Phase 39 | Pending |
 | MSG-02 | Phase 39 | Pending |
 | MSG-03 | Phase 39 | Pending |

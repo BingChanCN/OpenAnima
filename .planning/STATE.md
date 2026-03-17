@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: SDK Runtime Parity
-status: planning
-last_updated: "2026-03-16T12:00:00.000Z"
-last_activity: "2026-03-16 — Milestone v1.8 started"
+status: executing
+last_updated: "2026-03-17T12:52:29.232Z"
+last_activity: "2026-03-17 — Completed Phase 38 Plan 01: PluginLoader DI Injection"
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
+  percent: 50
 ---
 
 # Project State: OpenAnima
 
-**Last updated:** 2026-03-16
+**Last updated:** 2026-03-17
 **Current milestone:** v1.8 SDK Runtime Parity
 
 ## Project Reference
@@ -27,12 +27,20 @@ See: `.planning/PROJECT.md` (updated 2026-03-16)
 
 ## Current Position
 
-Phase: Not started (roadmap created)
-Plan: —
-Status: Ready for phase planning
-Last activity: 2026-03-16 — Milestone v1.8 roadmap created (4 phases, 9 requirements)
+Phase: 38-pluginloader-di-injection
+Plan: 01 (complete)
+Status: In Progress — Plan 01 complete, ready for Plan 02
+Last activity: 2026-03-17 — Completed Phase 38 Plan 01: PluginLoader DI Injection
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
+
+## Decisions Made
+
+1. **FullName type matching**: Cross-AssemblyLoadContext type resolution uses FullName string comparison (consistent with existing IModule discovery pattern)
+2. **Contracts services optional**: IModuleConfig, IModuleContext, IEventBus, ICrossAnimaRouter resolve to null with warning on failure (graceful degradation)
+3. **Non-Contracts required params error**: Unknown parameters without default values produce LoadResult error (fail fast)
+4. **ILogger via ILoggerFactory**: Non-generic ILogger created via ILoggerFactory.CreateLogger(moduleType.FullName) to avoid cross-context generic type issues
+5. **Greedy constructor selection**: Constructor with most parameters wins (ASP.NET Core DI compatible)
 
 ## Performance Metrics
 
@@ -51,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 | v1.5 Multi-Anima | 5 | 13 | 2026-03-09 |
 | v1.6 Cross-Anima Routing | 4 | 8 | 2026-03-14 |
 | v1.7 Runtime Foundation | 6 | 13 | 2026-03-16 |
+| Phase 38-pluginloader-di-injection P01 | 621 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
