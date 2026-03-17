@@ -198,7 +198,7 @@ Plans:
 | 35. Contracts API Expansion | v1.7 | 3/3 | Complete | 2026-03-15 |
 | 36. Built-in Module Decoupling | v1.7 | 5/5 | Complete | 2026-03-16 |
 | 37. Wire Chat Channel | v1.7 | 1/1 | Complete | 2026-03-16 |
-| 38. PluginLoader DI Injection | 3/3 | Complete   | 2026-03-17 | — |
+| 38. PluginLoader DI Injection | 3/3 | Complete    | 2026-03-17 | — |
 | 39. Contracts Type Migration & Structured Messages | v1.8 | 0/2 | Pending | — |
 | 40. Module Storage Path | v1.8 | 0/0 | Pending | — |
 | 41. External ContextModule | v1.8 | 0/0 | Pending | — |
