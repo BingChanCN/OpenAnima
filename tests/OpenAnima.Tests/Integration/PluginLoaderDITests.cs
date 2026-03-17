@@ -67,11 +67,11 @@ public class PluginLoaderDITests : IDisposable
 
         // Verify injected services via reflection
         var moduleType = result.Module.GetType();
-        var configProperty = moduleType.GetProperty("InjectedConfig");
-        var contextProperty = moduleType.GetProperty("InjectedContext");
-        var eventBusProperty = moduleType.GetProperty("InjectedEventBus");
-        var routerProperty = moduleType.GetProperty("InjectedRouter");
-        var loggerProperty = moduleType.GetProperty("InjectedLogger");
+        var configProperty = moduleType.GetProperty("InjectedmoduleConfig");
+        var contextProperty = moduleType.GetProperty("InjectedmoduleContext");
+        var eventBusProperty = moduleType.GetProperty("InjectedeventBus");
+        var routerProperty = moduleType.GetProperty("InjectedcrossAnimaRouter");
+        var loggerProperty = moduleType.GetProperty("Injectedlogger");
 
         Assert.NotNull(configProperty);
         Assert.NotNull(contextProperty);
@@ -110,7 +110,7 @@ public class PluginLoaderDITests : IDisposable
 
         // Verify logger was injected
         var moduleType = result.Module.GetType();
-        var loggerProperty = moduleType.GetProperty("InjectedLogger");
+        var loggerProperty = moduleType.GetProperty("Injectedlogger");
         Assert.NotNull(loggerProperty);
         Assert.NotNull(loggerProperty.GetValue(result.Module));
     }
@@ -138,7 +138,7 @@ public class PluginLoaderDITests : IDisposable
 
         // Verify injected services are null
         var moduleType = result.Module.GetType();
-        var configProperty = moduleType.GetProperty("InjectedConfig");
+        var configProperty = moduleType.GetProperty("InjectedmoduleConfig");
         Assert.NotNull(configProperty);
         Assert.Null(configProperty.GetValue(result.Module));
     }

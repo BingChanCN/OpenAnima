@@ -75,7 +75,7 @@ public static class ModuleTestHarness
             basePath,
             moduleName,
             new[] { "IModuleConfig", "IModuleContext", "IEventBus", "ICrossAnimaRouter", "ILogger" },
-            new[] { "config", "context", "eventBus", "router", "logger" });
+            new[] { "moduleConfig", "moduleContext", "eventBus", "crossAnimaRouter", "logger" });
     }
 
     /// <summary>
