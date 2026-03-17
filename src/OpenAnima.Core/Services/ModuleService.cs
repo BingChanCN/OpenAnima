@@ -19,6 +19,7 @@ public class ModuleService : IModuleService
     private readonly IHubContext<RuntimeHub, IRuntimeClient> _hubContext;
     private readonly PortDiscovery _portDiscovery;
     private readonly IPortRegistry _portRegistry;
+    private readonly IServiceProvider _serviceProvider;
 
     public ModuleService(
         PluginRegistry registry,
@@ -26,7 +27,8 @@ public class ModuleService : IModuleService
         ILogger<ModuleService> logger,
         IHubContext<RuntimeHub, IRuntimeClient> hubContext,
         PortDiscovery portDiscovery,
-        IPortRegistry portRegistry)
+        IPortRegistry portRegistry,
+        IServiceProvider serviceProvider)
     {
         _registry = registry;
         _loader = loader;
@@ -34,6 +36,7 @@ public class ModuleService : IModuleService
         _hubContext = hubContext;
         _portDiscovery = portDiscovery;
         _portRegistry = portRegistry;
+        _serviceProvider = serviceProvider;
     }
 
     public int Count => _registry.Count;
@@ -43,7 +46,7 @@ public class ModuleService : IModuleService
 
     public ModuleOperationResult LoadModule(string moduleDirectory)
     {
-        var result = _loader.LoadModule(moduleDirectory);
+        var result = _loader.LoadModule(moduleDirectory, _serviceProvider);
 
         if (!result.Success || result.Module == null || result.Manifest == null)
         {
@@ -106,7 +109,7 @@ public class ModuleService : IModuleService
             return results;
         }
 
-        var loadResults = _loader.ScanDirectory(modulesPath);
+        var loadResults = _loader.ScanDirectory(modulesPath, _serviceProvider);
 
         foreach (var result in loadResults)
         {
