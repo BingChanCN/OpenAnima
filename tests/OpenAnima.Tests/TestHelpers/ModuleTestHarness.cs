@@ -308,13 +308,14 @@ namespace {moduleName}
         var startInfo = new System.Diagnostics.ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"build -c Release -o \"{tempDir}\" /p:OutputType=Library /p:TargetFramework=net8.0",
+            Arguments = $"build -c Release -o \"{tempDir}\" /p:OutputType=Library /p:TargetFramework=net8.0 /nodeReuse:false",
             WorkingDirectory = tempDir,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
+            RedirectStandardOutput = false,
+            RedirectStandardError = false,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        startInfo.EnvironmentVariables["MSBUILDDISABLENODEREUSE"] = "1";
 
         // Create a minimal csproj file
         string csprojContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
@@ -567,13 +568,14 @@ namespace {moduleName}
         var startInfo = new System.Diagnostics.ProcessStartInfo
         {
             FileName = "dotnet",
-            Arguments = $"build -c Release -o \"{tempDir}\" /p:OutputType=Library /p:TargetFramework=net8.0",
+            Arguments = $"build -c Release -o \"{tempDir}\" /p:OutputType=Library /p:TargetFramework=net8.0 /nodeReuse:false",
             WorkingDirectory = tempDir,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
+            RedirectStandardOutput = false,
+            RedirectStandardError = false,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        startInfo.EnvironmentVariables["MSBUILDDISABLENODEREUSE"] = "1";
 
         using var process = System.Diagnostics.Process.Start(startInfo);
         if (process != null)
