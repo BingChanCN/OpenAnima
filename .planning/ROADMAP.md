@@ -105,6 +105,11 @@
 #### Phase 38: PluginLoader DI Injection
 **Goal:** External modules receive Contracts services via constructor injection
 **Requirements:** PLUG-01, PLUG-02, PLUG-03
+**Plans:** 2 plans
+
+Plans:
+- [ ] 38-01-PLAN.md — PluginLoader DI-aware constructor resolution + test harness extension
+- [ ] 38-02-PLAN.md — ModuleService wiring + integration tests
 
 **Success Criteria:**
 1. External .oamod module with constructor accepting IModuleConfig + IModuleContext + IEventBus loads successfully
@@ -187,7 +192,7 @@
 | 35. Contracts API Expansion | v1.7 | 3/3 | Complete | 2026-03-15 |
 | 36. Built-in Module Decoupling | v1.7 | 5/5 | Complete | 2026-03-16 |
 | 37. Wire Chat Channel | v1.7 | 1/1 | Complete | 2026-03-16 |
-| 38. PluginLoader DI Injection | v1.8 | 0/0 | Pending | — |
+| 38. PluginLoader DI Injection | v1.8 | 0/2 | Planned | — |
 | 39. Contracts Type Migration & Structured Messages | v1.8 | 0/0 | Pending | — |
 | 40. Module Storage Path | v1.8 | 0/0 | Pending | — |
 | 41. External ContextModule | v1.8 | 0/0 | Pending | — |
@@ -196,4 +201,4 @@
 **v1.8 in progress: 4 phases, 9 requirements**
 
 ---
-*Last updated: 2026-03-16 after v1.8 SDK Runtime Parity roadmap created*
+*Last updated: 2026-03-17 after Phase 38 planning*
