@@ -10,6 +10,7 @@
 - ✅ **v1.5 Multi-Anima Architecture** — Phases 23-27 (shipped 2026-03-09)
 - ✅ **v1.6 Cross-Anima Routing** — Phases 28-31 (shipped 2026-03-14)
 - ✅ **v1.7 Runtime Foundation** — Phases 32-37 (shipped 2026-03-16)
+- ◆ **v1.8 SDK Runtime Parity** — Phases 38-41
 
 ## Phases
 
@@ -99,6 +100,51 @@
 
 </details>
 
+### v1.8 SDK Runtime Parity (Phases 38-41)
+
+#### Phase 38: PluginLoader DI Injection
+**Goal:** External modules receive Contracts services via constructor injection
+**Requirements:** PLUG-01, PLUG-02, PLUG-03
+
+**Success Criteria:**
+1. External .oamod module with constructor accepting IModuleConfig + IModuleContext + IEventBus loads successfully
+2. External module receives typed ILogger instance via ILoggerFactory
+3. Module with unresolvable optional parameter loads with null and warning log
+4. Module with unresolvable required parameter fails with descriptive LoadResult error
+5. Existing 12 built-in modules continue to load without regression
+
+#### Phase 39: Contracts Type Migration & Structured Messages
+**Goal:** ChatMessageInput in Contracts; LLMModule accepts structured message list
+**Requirements:** MSG-01, MSG-02, MSG-03
+
+**Success Criteria:**
+1. External module can reference ChatMessageInput from OpenAnima.Contracts without Core dependency
+2. LLMModule messages port receives JSON-serialized List<ChatMessageInput> and sends multi-turn conversation to LLM API
+3. LLMModule prompt port continues to work as single-turn (backward compatibility)
+4. ChatMessageInput.SerializeList/DeserializeList round-trips correctly
+5. Existing wiring configurations load without modification
+
+#### Phase 40: Module Storage Path
+**Goal:** Modules can persist data to a stable per-Anima per-Module directory
+**Requirements:** STOR-01
+
+**Success Criteria:**
+1. IModuleContext.GetDataDirectory("MyModule") returns path under data/animas/{animaId}/module-data/MyModule/
+2. Directory is auto-created on first call
+3. Path changes when ActiveAnimaId changes (switching Animas)
+4. Deleting an Anima removes its module-data directory
+
+#### Phase 41: External ContextModule (SDK Validation)
+**Goal:** End-to-end validation of SDK surface via a real external module
+**Requirements:** ECTX-01, ECTX-02
+
+**Success Criteria:**
+1. ContextModule loads from .oamod package via PluginLoader with DI injection
+2. User can have multi-turn conversation — LLM receives full history and responds in context
+3. Conversation history persists to DataDirectory/history.json
+4. After application restart, previous conversation history is restored
+5. History is isolated per Anima — switching Animas shows different history
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -141,8 +187,13 @@
 | 35. Contracts API Expansion | v1.7 | 3/3 | Complete | 2026-03-15 |
 | 36. Built-in Module Decoupling | v1.7 | 5/5 | Complete | 2026-03-16 |
 | 37. Wire Chat Channel | v1.7 | 1/1 | Complete | 2026-03-16 |
+| 38. PluginLoader DI Injection | v1.8 | 0/0 | Pending | — |
+| 39. Contracts Type Migration & Structured Messages | v1.8 | 0/0 | Pending | — |
+| 40. Module Storage Path | v1.8 | 0/0 | Pending | — |
+| 41. External ContextModule | v1.8 | 0/0 | Pending | — |
 
 **Total shipped: 37 phases, 85 plans across 8 milestones**
+**v1.8 in progress: 4 phases, 9 requirements**
 
 ---
-*Last updated: 2026-03-16 after v1.7 Runtime Foundation milestone shipped*
+*Last updated: 2026-03-16 after v1.8 SDK Runtime Parity roadmap created*

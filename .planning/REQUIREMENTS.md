@@ -48,20 +48,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLUG-01 | — | Pending |
-| PLUG-02 | — | Pending |
-| PLUG-03 | — | Pending |
-| MSG-01 | — | Pending |
-| MSG-02 | — | Pending |
-| MSG-03 | — | Pending |
-| STOR-01 | — | Pending |
-| ECTX-01 | — | Pending |
-| ECTX-02 | — | Pending |
+| PLUG-01 | Phase 38 | Pending |
+| PLUG-02 | Phase 38 | Pending |
+| PLUG-03 | Phase 38 | Pending |
+| MSG-01 | Phase 39 | Pending |
+| MSG-02 | Phase 39 | Pending |
+| MSG-03 | Phase 39 | Pending |
+| STOR-01 | Phase 40 | Pending |
+| ECTX-01 | Phase 41 | Pending |
+| ECTX-02 | Phase 41 | Pending |
 
 **Coverage:**
 - v1.8 requirements: 9 total
-- Mapped to phases: 0
-- Unmapped: 9 ⚠️
+- Mapped to phases: 9
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-16*
