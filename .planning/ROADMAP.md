@@ -138,6 +138,10 @@ Plans:
 #### Phase 40: Module Storage Path
 **Goal:** Modules can persist data to a stable per-Anima per-Module directory
 **Requirements:** STOR-01
+**Plans:** 1 plan
+
+Plans:
+- [ ] 40-01-PLAN.md — IModuleStorage interface, ModuleStorageService, DI + PluginLoader integration, tests
 
 **Success Criteria:**
 1. IModuleContext.GetDataDirectory("MyModule") returns path under data/animas/{animaId}/module-data/MyModule/
@@ -200,7 +204,7 @@ Plans:
 | 37. Wire Chat Channel | v1.7 | 1/1 | Complete | 2026-03-16 |
 | 38. PluginLoader DI Injection | 3/3 | Complete    | 2026-03-17 | — |
 | 39. Contracts Type Migration & Structured Messages | 2/2 | Complete    | 2026-03-18 | — |
-| 40. Module Storage Path | v1.8 | 0/0 | Pending | — |
+| 40. Module Storage Path | v1.8 | 0/1 | Planning | — |
 | 41. External ContextModule | v1.8 | 0/0 | Pending | — |
 
 **Total shipped: 37 phases, 85 plans across 8 milestones**
