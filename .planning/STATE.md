@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: SDK Runtime Parity
 status: completed
-last_updated: "2026-03-17T18:23:32.630Z"
+last_updated: "2026-03-18T11:12:35.063Z"
 last_activity: "2026-03-18 — Completed Phase 38 Plan 03: Gap Closure — Test Build and Harness Alignment"
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
   percent: 85
 ---
 
@@ -27,12 +27,12 @@ See: `.planning/PROJECT.md` (updated 2026-03-16)
 
 ## Current Position
 
-Phase: 38-pluginloader-di-injection
-Plan: 03 (complete)
-Status: Phase 38 Complete — All 3 plans done, PLUG-01/02/03 validated, 343 tests passing
-Last activity: 2026-03-18 — Completed Phase 38 Plan 03: Gap Closure — Test Build and Harness Alignment
+Phase: 39-contracts-type-migration-structured-messages
+Plan: 01 (complete)
+Status: Phase 39 In Progress — Plan 01 done, MSG-01/MSG-03 validated, 353 tests passing
+Last activity: 2026-03-18 — Completed Phase 39 Plan 01: ChatMessageInput migrated to Contracts
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 92%
 
 ## Decisions Made
 
@@ -44,6 +44,7 @@ Progress: [█████████░] 85%
 - [Phase 38-pluginloader-di-injection]: IServiceProvider injected into ModuleService via constructor — no interface change needed, implementation detail, auto-registered by ASP.NET Core
 - [Phase 38-pluginloader-di-injection]: CrossAnimaRouter disambiguated via (Lazy<IAnimaRuntimeManager>?)null cast — primary Lazy overload is canonical
 - [Phase 38-pluginloader-di-injection]: MSBuild node reuse disabled via MSBUILDDISABLENODEREUSE=1 env var when spawning dotnet build from tests
+- [Phase 39-contracts-type-migration-structured-messages]: using alias pattern for Core files — explicit scoped import, avoids namespace pollution in LLM layer
 
 ## Performance Metrics
 
@@ -65,6 +66,7 @@ Progress: [█████████░] 85%
 | Phase 38-pluginloader-di-injection P01 | 621 | 2 tasks | 2 files |
 | Phase 38-pluginloader-di-injection P02 | 260 | 2 tasks | 2 files |
 | Phase 38-pluginloader-di-injection P03 | 45 | 2 tasks | 7 files |
+| Phase 39-contracts-type-migration-structured-messages P01 | 8 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -72,7 +74,7 @@ Progress: [█████████░] 85%
 
 - MODMGMT-01/02/03/06: Full install/uninstall/search UI deferred
 - ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred to v2+
-- ILLMService remains in Core (requires ChatMessageInput move)
+- ILLMService remains in Core (ChatMessageInput now moved to Contracts — resolved)
 - Schema mismatch between CLI and Runtime (extended manifest fields)
 - TextJoin fixed 3 input ports — static port system limitation
 
@@ -88,4 +90,4 @@ Progress: [█████████░] 85%
 ---
 
 *State updated: 2026-03-18*
-*Stopped at: Phase 38 complete — all 3 plans done, 343 tests passing, PLUG-01/02/03 validated end-to-end*
+*Stopped at: Phase 39 Plan 01 complete — ChatMessageInput in Contracts, 353 tests passing, MSG-01/MSG-03 validated*
