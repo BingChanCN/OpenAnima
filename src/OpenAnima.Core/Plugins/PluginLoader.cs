@@ -1,5 +1,6 @@
 using System.Reflection;
 using OpenAnima.Contracts;
+using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.Plugins;
 
@@ -239,7 +240,7 @@ public class PluginLoader
         for (int i = 0; i < parameters.Length; i++)
         {
             var param = parameters[i];
-            var resolution = ResolveParameter(param, serviceProvider, moduleType);
+            var resolution = ResolveParameter(param, serviceProvider, moduleType, manifest);
 
             if (resolution.IsError)
             {
@@ -280,7 +281,7 @@ public class PluginLoader
     /// <summary>
     /// Resolves a single constructor parameter using FullName-based matching.
     /// </summary>
-    private ParameterResolution ResolveParameter(ParameterInfo param, IServiceProvider serviceProvider, Type moduleType)
+    private ParameterResolution ResolveParameter(ParameterInfo param, IServiceProvider serviceProvider, Type moduleType, PluginManifest? manifest = null)
     {
         var paramTypeFullName = param.ParameterType.FullName;
 
@@ -301,7 +302,24 @@ public class PluginLoader
             return ParameterResolution.Success(null);
         }
 
-        // 2. Contracts services - resolve via FullName mapping
+        // 2. IModuleStorage special case - create a bound instance per module using manifest.Id
+        if (paramTypeFullName == "OpenAnima.Contracts.IModuleStorage")
+        {
+            var unboundStorage = serviceProvider.GetService(typeof(IModuleStorage)) as ModuleStorageService;
+            var moduleId = manifest?.Id ?? manifest?.Name;
+            if (unboundStorage != null && moduleId != null)
+            {
+                return ParameterResolution.Success(unboundStorage.CreateBound(moduleId));
+            }
+
+            _logger?.LogWarning(
+                "IModuleStorage requested by module {ModuleType} but unbound storage or manifest.Id not available. " +
+                "Passing null.",
+                moduleType.FullName);
+            return ParameterResolution.Success(null);
+        }
+
+        // 3. Contracts services - resolve via FullName mapping
         if (paramTypeFullName != null && ContractsTypeMap.TryGetValue(paramTypeFullName, out var hostType))
         {
             var service = serviceProvider.GetService(hostType);
@@ -316,7 +334,7 @@ public class PluginLoader
             return ParameterResolution.Success(service);
         }
 
-        // 3. Unknown parameter type - check for default value
+        // 4. Unknown parameter type - check for default value
         if (param.HasDefaultValue)
         {
             _logger?.LogWarning(
@@ -328,7 +346,7 @@ public class PluginLoader
             return ParameterResolution.Success(param.DefaultValue);
         }
 
-        // 4. Required non-Contracts parameter - this is an error
+        // 5. Required non-Contracts parameter - this is an error
         _logger?.LogError(
             "Required parameter '{ParamName}' of type '{ParamType}' in module {ModuleType} could not be resolved. " +
             "Type is not a known Contracts interface and has no default value.",

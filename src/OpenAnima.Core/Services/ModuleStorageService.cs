@@ -32,6 +32,15 @@ public class ModuleStorageService : IModuleStorage
         _boundModuleId = boundModuleId;
     }
 
+    /// <summary>
+    /// Creates a new ModuleStorageService bound to the given moduleId, sharing the same
+    /// animasRoot, dataRoot, and context as this instance.
+    /// </summary>
+    public ModuleStorageService CreateBound(string moduleId)
+    {
+        return new ModuleStorageService(_animasRoot, _dataRoot, _context, moduleId);
+    }
+
     /// <inheritdoc/>
     public string GetDataDirectory()
     {

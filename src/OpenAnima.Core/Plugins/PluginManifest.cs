@@ -9,6 +9,12 @@ namespace OpenAnima.Core.Plugins;
 public class PluginManifest
 {
     /// <summary>
+    /// Module unique identifier (optional, falls back to Name if not set).
+    /// </summary>
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    /// <summary>
     /// Module name (required).
     /// </summary>
     [JsonPropertyName("name")]

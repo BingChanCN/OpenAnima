@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Routing;
 using OpenAnima.Core.Plugins;
+using OpenAnima.Core.Services;
 using OpenAnima.Tests.TestHelpers;
 
 namespace OpenAnima.Tests.Integration;
@@ -354,6 +355,158 @@ namespace {moduleName}
             _context = context;
             _eventBus = eventBus;
             _constructorUsed = ""3-param"";
+        }}
+
+        public Task InitializeAsync(CancellationToken cancellationToken = default)
+        {{
+            return Task.CompletedTask;
+        }}
+
+        public Task ShutdownAsync(CancellationToken cancellationToken = default)
+        {{
+            return Task.CompletedTask;
+        }}
+    }}
+}}";
+
+        CompileSource(dllPath, moduleName, sourceCode, contractsPath, loggingPath);
+    }
+
+    /// <summary>
+    /// ECTX-01: PluginLoader injects a bound IModuleStorage instance per external module.
+    /// The bound instance's GetDataDirectory() returns a valid path without throwing.
+    /// </summary>
+    [Fact]
+    public void ExternalModule_WithIModuleStorage_ReceivesBoundInstance()
+    {
+        // Arrange
+        string moduleName = "TestStorageModule";
+        string moduleDir = CreateTestModuleWithIModuleStorage(_tempDir, moduleName);
+
+        string animasRoot = Path.Combine(_tempDir, "animas");
+        string dataRoot = Path.Combine(_tempDir, "data");
+        Directory.CreateDirectory(animasRoot);
+        Directory.CreateDirectory(dataRoot);
+
+        var services = new ServiceCollection();
+        var fakeContext = new FakeModuleContext();
+        services.AddSingleton<IModuleContext>(fakeContext);
+        services.AddSingleton<IModuleStorage>(sp =>
+            new ModuleStorageService(animasRoot, dataRoot, sp.GetRequiredService<IModuleContext>()));
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Act
+        var result = _loader.LoadModule(moduleDir, serviceProvider);
+
+        // Assert
+        Assert.True(result.Success, $"Expected success but got error: {result.Error?.Message}");
+        Assert.NotNull(result.Module);
+
+        // Verify the injected IModuleStorage is bound (GetDataDirectory() does not throw)
+        var moduleType = result.Module.GetType();
+        var storageProperty = moduleType.GetProperty("InjectedStorage");
+        Assert.NotNull(storageProperty);
+        var storage = storageProperty.GetValue(result.Module) as IModuleStorage;
+        Assert.NotNull(storage);
+
+        // GetDataDirectory() must not throw — it would throw if boundModuleId is null
+        var path = storage.GetDataDirectory();
+        Assert.NotNull(path);
+        Assert.NotEmpty(path);
+
+        // Path should contain the manifest id (moduleName used as id in test manifest)
+        Assert.Contains(moduleName, path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// ECTX-02: Unbound IModuleStorage singleton in DI is not affected by the special-case injection.
+    /// Existing modules that don't request IModuleStorage continue to load without regression.
+    /// </summary>
+    [Fact]
+    public void ExistingModules_WithoutIModuleStorage_LoadWithoutRegression()
+    {
+        // Arrange
+        string moduleName = "TestNoStorageModule";
+        string moduleDir = ModuleTestHarness.CreateTestModuleWithConstructor(
+            _tempDir, moduleName, new[] { "IModuleConfig", "IModuleContext" },
+            new[] { "moduleConfig", "moduleContext" });
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IModuleConfig>(new FakeModuleConfig());
+        services.AddSingleton<IModuleContext>(new FakeModuleContext());
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Act
+        var result = _loader.LoadModule(moduleDir, serviceProvider);
+
+        // Assert - no regression
+        Assert.True(result.Success, $"Expected success but got error: {result.Error?.Message}");
+        Assert.NotNull(result.Module);
+    }
+
+    /// <summary>
+    /// Creates a test module directory with a constructor that accepts IModuleStorage.
+    /// </summary>
+    private static string CreateTestModuleWithIModuleStorage(string basePath, string moduleName)
+    {
+        string moduleDir = Path.Combine(basePath, moduleName);
+        Directory.CreateDirectory(moduleDir);
+
+        // Use moduleName as the manifest id so we can verify path contains it
+        var manifest = new
+        {
+            id = moduleName,
+            name = moduleName,
+            version = "1.0.0",
+            description = $"Test module {moduleName} with IModuleStorage",
+            entryAssembly = $"{moduleName}.dll"
+        };
+
+        string manifestPath = Path.Combine(moduleDir, "module.json");
+        File.WriteAllText(manifestPath, System.Text.Json.JsonSerializer.Serialize(manifest,
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+
+        string dllPath = Path.Combine(moduleDir, $"{moduleName}.dll");
+        CreateModuleDllWithIModuleStorage(dllPath, moduleName);
+
+        return moduleDir;
+    }
+
+    private static void CreateModuleDllWithIModuleStorage(string dllPath, string moduleName)
+    {
+        var contractsAssembly = typeof(IModule).Assembly;
+        var contractsPath = contractsAssembly.Location;
+        var contractsDir = Path.GetDirectoryName(contractsPath)!;
+
+        var loggingAssembly = AppDomain.CurrentDomain.GetAssemblies()
+            .FirstOrDefault(a => a.GetName().Name == "Microsoft.Extensions.Logging.Abstractions");
+        var loggingPath = loggingAssembly?.Location ?? Path.Combine(contractsDir, "Microsoft.Extensions.Logging.Abstractions.dll");
+
+        string sourceCode = $@"
+using System.Threading;
+using System.Threading.Tasks;
+using OpenAnima.Contracts;
+
+namespace {moduleName}
+{{
+    public class Metadata : IModuleMetadata
+    {{
+        public string Name => ""{moduleName}"";
+        public string Version => ""1.0.0"";
+        public string Description => ""Test module {moduleName} with IModuleStorage"";
+    }}
+
+    public class Module : IModule
+    {{
+        private readonly IModuleMetadata _metadata = new Metadata();
+        private readonly IModuleStorage? _storage;
+
+        public IModuleMetadata Metadata => _metadata;
+        public IModuleStorage? InjectedStorage => _storage;
+
+        public Module(IModuleStorage? storage = null)
+        {{
+            _storage = storage;
         }}
 
         public Task InitializeAsync(CancellationToken cancellationToken = default)
