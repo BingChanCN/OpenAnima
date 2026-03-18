@@ -16,7 +16,7 @@ Requirements for SDK Runtime Parity milestone. Each maps to roadmap phases.
 ### Structured Messages
 
 - [x] **MSG-01**: ChatMessageInput record type moved from OpenAnima.Core.LLM to OpenAnima.Contracts; Core retains using alias for backward compatibility
-- [ ] **MSG-02**: LLMModule has new `messages` input port (PortType.Text) accepting JSON-serialized List<ChatMessageInput>; messages port takes priority over prompt port when both fire
+- [x] **MSG-02**: LLMModule has new `messages` input port (PortType.Text) accepting JSON-serialized List<ChatMessageInput>; messages port takes priority over prompt port when both fire
 - [x] **MSG-03**: Contracts provides ChatMessageInput.SerializeList / DeserializeList static helper methods using System.Text.Json
 
 ### Module Storage
@@ -52,7 +52,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PLUG-02 | Phase 38 | Complete |
 | PLUG-03 | Phase 38 | Complete |
 | MSG-01 | Phase 39 | Complete |
-| MSG-02 | Phase 39 | Pending |
+| MSG-02 | Phase 39 | Complete |
 | MSG-03 | Phase 39 | Complete |
 | STOR-01 | Phase 40 | Pending |
 | ECTX-01 | Phase 41 | Pending |

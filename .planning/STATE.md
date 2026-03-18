@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: SDK Runtime Parity
-status: completed
-last_updated: "2026-03-18T11:12:35.063Z"
-last_activity: "2026-03-18 — Completed Phase 38 Plan 03: Gap Closure — Test Build and Harness Alignment"
+status: executing
+last_updated: "2026-03-18T11:34:19.296Z"
+last_activity: "2026-03-18 — Completed Phase 39 Plan 01: ChatMessageInput migrated to Contracts"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
-  percent: 85
+  completed_plans: 5
+  percent: 92
 ---
 
 # Project State: OpenAnima
@@ -28,11 +28,11 @@ See: `.planning/PROJECT.md` (updated 2026-03-16)
 ## Current Position
 
 Phase: 39-contracts-type-migration-structured-messages
-Plan: 01 (complete)
-Status: Phase 39 In Progress — Plan 01 done, MSG-01/MSG-03 validated, 353 tests passing
-Last activity: 2026-03-18 — Completed Phase 39 Plan 01: ChatMessageInput migrated to Contracts
+Plan: 02 (complete)
+Status: Phase 39 Complete — Plan 01 + Plan 02 done, MSG-01/MSG-02/MSG-03 validated, 360 tests passing
+Last activity: 2026-03-18 — Completed Phase 39 Plan 02: LLMModule messages input port
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## Decisions Made
 
@@ -45,6 +45,8 @@ Progress: [█████████░] 92%
 - [Phase 38-pluginloader-di-injection]: CrossAnimaRouter disambiguated via (Lazy<IAnimaRuntimeManager>?)null cast — primary Lazy overload is canonical
 - [Phase 38-pluginloader-di-injection]: MSBuild node reuse disabled via MSBUILDDISABLENODEREUSE=1 env var when spawning dotnet build from tests
 - [Phase 39-contracts-type-migration-structured-messages]: using alias pattern for Core files — explicit scoped import, avoids namespace pollution in LLM layer
+- [Phase 39-contracts-type-migration-structured-messages]: Semaphore is primary priority mechanism for messages vs prompt port — messages acquires first, prompt Wait(0) returns false
+- [Phase 39-contracts-type-migration-structured-messages]: ExecuteWithMessagesListAsync extracted as shared pipeline — both prompt and messages paths use it after building their message list
 
 ## Performance Metrics
 
@@ -67,6 +69,7 @@ Progress: [█████████░] 92%
 | Phase 38-pluginloader-di-injection P02 | 260 | 2 tasks | 2 files |
 | Phase 38-pluginloader-di-injection P03 | 45 | 2 tasks | 7 files |
 | Phase 39-contracts-type-migration-structured-messages P01 | 8 | 2 tasks | 6 files |
+| Phase 39-contracts-type-migration-structured-messages P02 | 884 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -90,4 +93,4 @@ Progress: [█████████░] 92%
 ---
 
 *State updated: 2026-03-18*
-*Stopped at: Phase 39 Plan 01 complete — ChatMessageInput in Contracts, 353 tests passing, MSG-01/MSG-03 validated*
+*Stopped at: Phase 39 Plan 02 complete — LLMModule messages port, 360 tests passing, MSG-02 validated*

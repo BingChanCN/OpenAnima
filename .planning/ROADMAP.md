@@ -122,7 +122,7 @@ Plans:
 #### Phase 39: Contracts Type Migration & Structured Messages
 **Goal:** ChatMessageInput in Contracts; LLMModule accepts structured message list
 **Requirements:** MSG-01, MSG-02, MSG-03
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 39-01-PLAN.md — ChatMessageInput migration to Contracts + SerializeList/DeserializeList helpers
@@ -199,7 +199,7 @@ Plans:
 | 36. Built-in Module Decoupling | v1.7 | 5/5 | Complete | 2026-03-16 |
 | 37. Wire Chat Channel | v1.7 | 1/1 | Complete | 2026-03-16 |
 | 38. PluginLoader DI Injection | 3/3 | Complete    | 2026-03-17 | — |
-| 39. Contracts Type Migration & Structured Messages | 1/2 | In Progress|  | — |
+| 39. Contracts Type Migration & Structured Messages | 2/2 | Complete   | 2026-03-18 | — |
 | 40. Module Storage Path | v1.8 | 0/0 | Pending | — |
 | 41. External ContextModule | v1.8 | 0/0 | Pending | — |
 
