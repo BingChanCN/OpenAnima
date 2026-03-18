@@ -1,25 +1,30 @@
+using ChatMessageInput = OpenAnima.Contracts.ChatMessageInput;
 using SharpToken;
 
 namespace OpenAnima.Core.LLM;
 
 /// <summary>
 /// Wrapper around SharpToken for model-aware token counting.
+/// Uses lazy initialization to avoid blocking DI container build.
 /// </summary>
 public class TokenCounter
 {
-    private readonly GptEncoding _encoding;
+    private readonly Lazy<GptEncoding> _encoding;
 
     public TokenCounter(string modelName)
     {
-        try
+        _encoding = new Lazy<GptEncoding>(() =>
         {
-            _encoding = GptEncoding.GetEncodingForModel(modelName);
-        }
-        catch
-        {
-            // Fallback to cl100k_base for unknown models (e.g., gpt-5-chat)
-            _encoding = GptEncoding.GetEncoding("cl100k_base");
-        }
+            try
+            {
+                return GptEncoding.GetEncodingForModel(modelName);
+            }
+            catch
+            {
+                // Fallback to cl100k_base for unknown models (e.g., gpt-5-chat)
+                return GptEncoding.GetEncoding("cl100k_base");
+            }
+        });
     }
 
     /// <summary>
@@ -30,7 +35,7 @@ public class TokenCounter
         if (string.IsNullOrEmpty(text))
             return 0;
 
-        return _encoding.Encode(text).Count;
+        return _encoding.Value.Encode(text).Count;
     }
 
     /// <summary>

@@ -1,6 +1,6 @@
-namespace OpenAnima.Core.LLM;
+using ChatMessageInput = OpenAnima.Contracts.ChatMessageInput;
 
-public record ChatMessageInput(string Role, string Content);
+namespace OpenAnima.Core.LLM;
 
 public record LLMResult(bool Success, string? Content, string? Error);
 
