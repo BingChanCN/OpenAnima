@@ -152,6 +152,11 @@ Plans:
 #### Phase 41: External ContextModule (SDK Validation)
 **Goal:** End-to-end validation of SDK surface via a real external module
 **Requirements:** ECTX-01, ECTX-02
+**Plans:** 2 plans
+
+Plans:
+- [ ] 41-01-PLAN.md — PluginLoader bound IModuleStorage injection for external modules
+- [ ] 41-02-PLAN.md — ContextModule implementation + integration tests
 
 **Success Criteria:**
 1. ContextModule loads from .oamod package via PluginLoader with DI injection
@@ -205,10 +210,10 @@ Plans:
 | 38. PluginLoader DI Injection | 3/3 | Complete    | 2026-03-17 | — |
 | 39. Contracts Type Migration & Structured Messages | 2/2 | Complete    | 2026-03-18 | — |
 | 40. Module Storage Path | 1/1 | Complete    | 2026-03-18 | — |
-| 41. External ContextModule | v1.8 | 0/0 | Pending | — |
+| 41. External ContextModule | v1.8 | 0/2 | Planning | — |
 
 **Total shipped: 37 phases, 85 plans across 8 milestones**
 **v1.8 in progress: 4 phases, 9 requirements**
 
 ---
-*Last updated: 2026-03-17 after Phase 39 planning*
+*Last updated: 2026-03-18 after Phase 41 planning*
