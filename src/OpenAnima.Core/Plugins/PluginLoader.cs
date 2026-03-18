@@ -1,7 +1,5 @@
 using System.Reflection;
-using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
-using OpenAnima.Contracts.Routing;
 
 namespace OpenAnima.Core.Plugins;
 
