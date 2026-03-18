@@ -33,6 +33,7 @@ public class PluginLoader
         ["OpenAnima.Contracts.IModuleContext"] = typeof(IModuleContext),
         ["OpenAnima.Contracts.IEventBus"] = typeof(IEventBus),
         ["OpenAnima.Contracts.Routing.ICrossAnimaRouter"] = typeof(ICrossAnimaRouter),
+        ["OpenAnima.Contracts.IModuleStorage"] = typeof(IModuleStorage),
     };
 
     private readonly ILogger<PluginLoader>? _logger;

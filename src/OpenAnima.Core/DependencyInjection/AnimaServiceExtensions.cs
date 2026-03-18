@@ -31,14 +31,7 @@ public static class AnimaServiceExtensions
         services.AddSingleton<IModuleContext>(sp => sp.GetRequiredService<AnimaContext>());
         services.AddSingleton<IAnimaContext>(sp => sp.GetRequiredService<AnimaContext>());
 
-        // Register router BEFORE AnimaRuntimeManager.
-        // The IAnimaRuntimeManager parameter uses a deferred lambda — since both are singletons,
-        // the lambda is evaluated on first use (not at registration), so circular resolution works.
-        services.AddSingleton<ICrossAnimaRouter>(sp =>
-            new CrossAnimaRouter(
-                sp.GetRequiredService<ILogger<CrossAnimaRouter>>(),
-                sp.GetRequiredService<IAnimaRuntimeManager>()));
-
+        // Register AnimaRuntimeManager first.
         services.AddSingleton<IAnimaRuntimeManager>(sp =>
             new AnimaRuntimeManager(
                 animasRoot,
@@ -46,8 +39,18 @@ public static class AnimaServiceExtensions
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetRequiredService<IAnimaContext>(),
                 sp.GetService<IHubContext<RuntimeHub, IRuntimeClient>>(),
-                sp.GetRequiredService<ICrossAnimaRouter>(),
+                router: null,  // Injected after construction to break circular dependency
                 sp.GetRequiredService<ChatInputModule>()));
+
+        // Register router — uses Lazy to break circular singleton dependency with IAnimaRuntimeManager.
+        services.AddSingleton<ICrossAnimaRouter>(sp =>
+        {
+            var lazyManager = new Lazy<IAnimaRuntimeManager>(
+                () => sp.GetRequiredService<IAnimaRuntimeManager>());
+            return new CrossAnimaRouter(
+                sp.GetRequiredService<ILogger<CrossAnimaRouter>>(),
+                lazyManager);
+        });
 
         services.AddSingleton<IAnimaModuleStateService>(sp =>
             new AnimaModuleStateService(animasRoot));
@@ -56,6 +59,12 @@ public static class AnimaServiceExtensions
             new AnimaModuleConfigService(animasRoot));
         services.AddSingleton<IModuleConfig>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
         services.AddSingleton<IAnimaModuleConfigService>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
+
+        services.AddSingleton<IModuleStorage>(sp =>
+            new ModuleStorageService(
+                animasRoot,
+                dataRoot,
+                sp.GetRequiredService<IModuleContext>()));
 
         return services;
     }
