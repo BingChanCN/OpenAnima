@@ -203,9 +203,9 @@ public class LLMModuleMessagesPortTests
     [Fact]
     public async Task MessagesPort_TakesPriorityOverPromptPort_WhenBothFire()
     {
-        // Arrange
+        // Arrange — use a slow LLM so the messages handler is still running when prompt fires
         var eventBus = CreateEventBus();
-        var capturingLlm = new CapturingFakeLlmService("messages response");
+        var capturingLlm = new SlowCapturingFakeLlmService("messages response", delayMs: 50);
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
             NullAnimaModuleConfigService.Instance, new TestAnimaContext(), router: null);
         await module.InitializeAsync();
@@ -222,23 +222,27 @@ public class LLMModuleMessagesPortTests
         var json = ChatMessageInput.SerializeList(messages);
 
         // Act — fire messages port first, then prompt port immediately after
-        await eventBus.PublishAsync(new ModuleEvent<string>
+        // Messages handler will be running (slow LLM) when prompt fires
+        var messagesPublish = eventBus.PublishAsync(new ModuleEvent<string>
         {
             EventName = "LLMModule.port.messages",
             SourceModuleId = "test",
             Payload = json
         });
+        // Small delay to ensure messages handler has acquired the semaphore
+        await Task.Delay(10);
         await eventBus.PublishAsync(new ModuleEvent<string>
         {
             EventName = "LLMModule.port.prompt",
             SourceModuleId = "test",
             Payload = "from prompt port"
         });
+        await messagesPublish;
 
         await WaitWithTimeout(responseTcs.Task, TimeSpan.FromSeconds(5));
-        await Task.Delay(200); // let any second call settle
+        await Task.Delay(100); // let any second call settle
 
-        // Assert — LLM called exactly once (prompt was suppressed), with messages list
+        // Assert — LLM called exactly once (prompt was suppressed by semaphore), with messages list
         Assert.Equal(1, capturingLlm.CallCount);
         Assert.NotNull(capturingLlm.LastMessages);
         Assert.Equal(2, capturingLlm.LastMessages.Count);
@@ -327,6 +331,36 @@ public class LLMModuleMessagesPortTests
             LastMessages = messages;
             CallCount++;
             return Task.FromResult(new LLMResult(true, _fixedResponse, null));
+        }
+
+        public IAsyncEnumerable<string> StreamAsync(IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
+        public IAsyncEnumerable<StreamingResult> StreamWithUsageAsync(IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+            => throw new NotImplementedException();
+    }
+
+    /// <summary>Fake LLM service with configurable async delay — used for priority/concurrency tests.</summary>
+    private class SlowCapturingFakeLlmService : ILLMService
+    {
+        private readonly string _fixedResponse;
+        private readonly int _delayMs;
+
+        public IReadOnlyList<ChatMessageInput>? LastMessages { get; private set; }
+        public int CallCount { get; private set; }
+
+        public SlowCapturingFakeLlmService(string response, int delayMs)
+        {
+            _fixedResponse = response;
+            _delayMs = delayMs;
+        }
+
+        public async Task<LLMResult> CompleteAsync(IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+        {
+            LastMessages = messages;
+            CallCount++;
+            await Task.Delay(_delayMs, ct);
+            return new LLMResult(true, _fixedResponse, null);
         }
 
         public IAsyncEnumerable<string> StreamAsync(IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)

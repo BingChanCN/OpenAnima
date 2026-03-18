@@ -18,7 +18,11 @@ namespace OpenAnima.Core.Modules;
 /// LLMModule injects a system message describing the available routing services and invokes
 /// FormatDetector on the LLM response to extract and dispatch routing markers.
 /// Malformed markers trigger a self-correction loop (up to MaxRetries = 2 retries).
+///
+/// The messages port accepts a JSON-serialized List&lt;ChatMessageInput&gt; for multi-turn
+/// conversation. When both messages and prompt ports fire, messages takes priority.
 /// </summary>
+[InputPort("messages", PortType.Text)]
 [InputPort("prompt", PortType.Text)]
 [OutputPort("response", PortType.Text)]
 [OutputPort("error", PortType.Text)]
@@ -38,6 +42,7 @@ public class LLMModule : IModuleExecutor
     private ModuleExecutionState _state = ModuleExecutionState.Idle;
     private Exception? _lastError;
     private readonly SemaphoreSlim _executionGuard = new SemaphoreSlim(1, 1);
+    private volatile bool _messagesPortFired;
 
     public IModuleMetadata Metadata { get; } = new OpenAnima.Contracts.ModuleMetadataRecord(
         "LLMModule", "1.0.0", "Sends prompt to LLM and outputs response");
@@ -56,14 +61,36 @@ public class LLMModule : IModuleExecutor
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
     {
+        // Register prompt FIRST so messages (added second) is retrieved first from ConcurrentBag (LIFO).
+        // This ensures messages handler acquires the semaphore before prompt handler when both fire.
         var sub = _eventBus.Subscribe<string>(
             $"{Metadata.Name}.port.prompt",
             async (evt, ct) =>
             {
+                // Yield to let any concurrently-fired messages handler set the priority flag first.
+                await Task.Yield();
                 var prompt = evt.Payload;
                 await ExecuteInternalAsync(prompt, ct);
             });
         _subscriptions.Add(sub);
+
+        // Register messages SECOND — ConcurrentBag LIFO means this is retrieved first.
+        var msgSub = _eventBus.Subscribe<string>(
+            $"{Metadata.Name}.port.messages",
+            async (evt, ct) =>
+            {
+                _messagesPortFired = true;
+                try
+                {
+                    await ExecuteFromMessagesAsync(evt.Payload, ct);
+                }
+                finally
+                {
+                    _messagesPortFired = false;
+                }
+            });
+        _subscriptions.Add(msgSub);
+
         return Task.CompletedTask;
     }
 
@@ -71,125 +98,17 @@ public class LLMModule : IModuleExecutor
 
     private async Task ExecuteInternalAsync(string prompt, CancellationToken ct)
     {
+        // Priority rule: if messages port fired, suppress prompt execution.
+        if (_messagesPortFired) return;
+
         if (!_executionGuard.Wait(0)) return;
 
         try
         {
             if (prompt == null) return;
 
-            _state = ModuleExecutionState.Running;
-            _lastError = null;
-
-            var animaId = _animaContext.ActiveAnimaId ?? "";
-
-            // Build the known service names set for this Anima's AnimaRoute module.
-            var knownServiceNames = BuildKnownServiceNames(animaId);
-
-            // Get configurable retry limit (default: 2)
-            var maxRetries = DefaultMaxRetries;
-            var config = _configService.GetConfig(animaId, Metadata.Name);
-            if (config.TryGetValue("llmMaxRetries", out var retriesStr) && int.TryParse(retriesStr, out var retriesVal) && retriesVal >= 0)
-            {
-                maxRetries = retriesVal;
-            }
-
-            // Build messages list: system message (if routes configured) + user message.
-            var messages = new List<ChatMessageInput>();
-
-            if (knownServiceNames.Count > 0 && _router != null)
-            {
-                // Query the router for port descriptions to build the system message.
-                var routeConfig = _configService.GetConfig(animaId, "AnimaRouteModule");
-                if (routeConfig.TryGetValue("targetAnimaId", out var targetAnimaId) &&
-                    !string.IsNullOrWhiteSpace(targetAnimaId))
-                {
-                    var ports = _router.GetPortsForAnima(targetAnimaId);
-                    if (ports.Count > 0)
-                    {
-                        messages.Add(new ChatMessageInput("system", BuildSystemMessage(ports)));
-                    }
-                }
-            }
-
-            messages.Add(new ChatMessageInput("user", prompt));
-
-            // Determine whether to apply FormatDetector (router present + routes configured).
-            var useFormatDetection = _router != null && knownServiceNames.Count > 0;
-
-            // Call LLM (custom client or global service).
-            var result = await CallLlmAsync(animaId, messages, ct);
-
-            if (!result.Success || result.Content == null)
-            {
-                _state = ModuleExecutionState.Completed;
-                return;
-            }
-
-            if (!useFormatDetection)
-            {
-                // Original behavior: publish response directly.
-                await PublishResponseAsync(result.Content, ct);
-                _state = ModuleExecutionState.Completed;
-                _logger.LogDebug("LLMModule execution completed (no format detection)");
-                return;
-            }
-
-            // Format detection + self-correction loop.
-            var currentContent = result.Content;
-            var currentMessages = new List<ChatMessageInput>(messages);
-            var attempt = 0;
-
-            while (true)
-            {
-                var detection = _formatDetector.Detect(currentContent, knownServiceNames);
-
-                if (detection.MalformedMarkerError == null)
-                {
-                    // Well-formed: publish passthrough text and dispatch routes.
-                    await PublishResponseAsync(detection.PassthroughText, ct);
-                    await DispatchRoutesAsync(detection.Routes, ct);
-                    _state = ModuleExecutionState.Completed;
-                    _logger.LogDebug("LLMModule execution completed with format detection ({RouteCount} routes dispatched)",
-                        detection.Routes.Count);
-                    return;
-                }
-
-                // Malformed marker detected.
-                _logger.LogDebug("LLMModule: malformed marker on attempt {Attempt}: {Error}",
-                    attempt + 1, detection.MalformedMarkerError);
-
-                if (attempt >= maxRetries)
-                {
-                    // Exhausted retries — publish error.
-                    var errorMsg = $"Format error after {maxRetries + 1} attempts: {detection.MalformedMarkerError}";
-                    _logger.LogWarning("LLMModule: {ErrorMsg}", errorMsg);
-                    await _eventBus.PublishAsync(new ModuleEvent<string>
-                    {
-                        EventName = $"{Metadata.Name}.port.error",
-                        SourceModuleId = Metadata.Name,
-                        Payload = errorMsg
-                    }, ct);
-                    _state = ModuleExecutionState.Completed;
-                    return;
-                }
-
-                // Self-correction: append the bad response as assistant turn + correction as user turn.
-                attempt++;
-                currentMessages = new List<ChatMessageInput>(currentMessages)
-                {
-                    new("assistant", currentContent),
-                    new("user", BuildCorrectionMessage(detection.MalformedMarkerError))
-                };
-
-                var retryResult = await CallLlmAsync(animaId, currentMessages, ct);
-                if (!retryResult.Success || retryResult.Content == null)
-                {
-                    _state = ModuleExecutionState.Completed;
-                    return;
-                }
-
-                currentContent = retryResult.Content;
-            }
+            var messages = new List<ChatMessageInput> { new("user", prompt) };
+            await ExecuteWithMessagesListAsync(messages, ct);
         }
         catch (Exception ex)
         {
@@ -201,6 +120,137 @@ public class LLMModule : IModuleExecutor
         finally
         {
             _executionGuard.Release();
+        }
+    }
+
+    private async Task ExecuteFromMessagesAsync(string json, CancellationToken ct)
+    {
+        var messages = ChatMessageInput.DeserializeList(json);
+        if (messages.Count == 0) return;
+
+        if (!_executionGuard.Wait(0)) return;
+
+        try
+        {
+            await ExecuteWithMessagesListAsync(new List<ChatMessageInput>(messages), ct);
+        }
+        catch (Exception ex)
+        {
+            _state = ModuleExecutionState.Error;
+            _lastError = ex;
+            _logger.LogError(ex, "LLMModule execution failed (messages port)");
+            throw;
+        }
+        finally
+        {
+            _executionGuard.Release();
+        }
+    }
+
+    private async Task ExecuteWithMessagesListAsync(List<ChatMessageInput> messages, CancellationToken ct)
+    {
+        _state = ModuleExecutionState.Running;
+        _lastError = null;
+
+        var animaId = _animaContext.ActiveAnimaId ?? "";
+
+        // Build the known service names set for this Anima's AnimaRoute module.
+        var knownServiceNames = BuildKnownServiceNames(animaId);
+
+        // Get configurable retry limit (default: 2)
+        var maxRetries = DefaultMaxRetries;
+        var config = _configService.GetConfig(animaId, Metadata.Name);
+        if (config.TryGetValue("llmMaxRetries", out var retriesStr) && int.TryParse(retriesStr, out var retriesVal) && retriesVal >= 0)
+        {
+            maxRetries = retriesVal;
+        }
+
+        // Prepend system message if AnimaRoute configured.
+        if (knownServiceNames.Count > 0 && _router != null)
+        {
+            var routeConfig = _configService.GetConfig(animaId, "AnimaRouteModule");
+            if (routeConfig.TryGetValue("targetAnimaId", out var targetAnimaId) &&
+                !string.IsNullOrWhiteSpace(targetAnimaId))
+            {
+                var ports = _router.GetPortsForAnima(targetAnimaId);
+                if (ports.Count > 0)
+                {
+                    messages.Insert(0, new ChatMessageInput("system", BuildSystemMessage(ports)));
+                }
+            }
+        }
+
+        // Determine whether to apply FormatDetector (router present + routes configured).
+        var useFormatDetection = _router != null && knownServiceNames.Count > 0;
+
+        // Call LLM (custom client or global service).
+        var result = await CallLlmAsync(animaId, messages, ct);
+
+        if (!result.Success || result.Content == null)
+        {
+            _state = ModuleExecutionState.Completed;
+            return;
+        }
+
+        if (!useFormatDetection)
+        {
+            await PublishResponseAsync(result.Content, ct);
+            _state = ModuleExecutionState.Completed;
+            _logger.LogDebug("LLMModule execution completed (no format detection)");
+            return;
+        }
+
+        // Format detection + self-correction loop.
+        var currentContent = result.Content;
+        var currentMessages = new List<ChatMessageInput>(messages);
+        var attempt = 0;
+
+        while (true)
+        {
+            var detection = _formatDetector.Detect(currentContent, knownServiceNames);
+
+            if (detection.MalformedMarkerError == null)
+            {
+                await PublishResponseAsync(detection.PassthroughText, ct);
+                await DispatchRoutesAsync(detection.Routes, ct);
+                _state = ModuleExecutionState.Completed;
+                _logger.LogDebug("LLMModule execution completed with format detection ({RouteCount} routes dispatched)",
+                    detection.Routes.Count);
+                return;
+            }
+
+            _logger.LogDebug("LLMModule: malformed marker on attempt {Attempt}: {Error}",
+                attempt + 1, detection.MalformedMarkerError);
+
+            if (attempt >= maxRetries)
+            {
+                var errorMsg = $"Format error after {maxRetries + 1} attempts: {detection.MalformedMarkerError}";
+                _logger.LogWarning("LLMModule: {ErrorMsg}", errorMsg);
+                await _eventBus.PublishAsync(new ModuleEvent<string>
+                {
+                    EventName = $"{Metadata.Name}.port.error",
+                    SourceModuleId = Metadata.Name,
+                    Payload = errorMsg
+                }, ct);
+                _state = ModuleExecutionState.Completed;
+                return;
+            }
+
+            attempt++;
+            currentMessages = new List<ChatMessageInput>(currentMessages)
+            {
+                new("assistant", currentContent),
+                new("user", BuildCorrectionMessage(detection.MalformedMarkerError))
+            };
+
+            var retryResult = await CallLlmAsync(animaId, currentMessages, ct);
+            if (!retryResult.Success || retryResult.Content == null)
+            {
+                _state = ModuleExecutionState.Completed;
+                return;
+            }
+
+            currentContent = retryResult.Content;
         }
     }
 
