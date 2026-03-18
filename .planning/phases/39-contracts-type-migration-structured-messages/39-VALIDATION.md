@@ -38,15 +38,12 @@ created: 2026-03-17
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 39-01-01 | 01 | 1 | MSG-01 | unit (reflection) | `dotnet test --filter "FullyQualifiedName~ChatMessageInputContractsTests"` | ❌ W0 | ⬜ pending |
-| 39-01-02 | 01 | 1 | MSG-01 | unit (compile) | `dotnet build src/OpenAnima.Core/OpenAnima.Core.csproj` | ❌ W0 | ⬜ pending |
-| 39-02-01 | 02 | 1 | MSG-03 | unit | `dotnet test --filter "FullyQualifiedName~ChatMessageInputContractsTests"` | ❌ W0 | ⬜ pending |
-| 39-02-02 | 02 | 1 | MSG-03 | unit | `dotnet test --filter "FullyQualifiedName~ChatMessageInputContractsTests"` | ❌ W0 | ⬜ pending |
-| 39-03-01 | 03 | 2 | MSG-02 | integration | `dotnet test --filter "FullyQualifiedName~LLMModuleMessagesPortTests"` | ❌ W0 | ⬜ pending |
-| 39-03-02 | 03 | 2 | MSG-02 | integration | `dotnet test --filter "FullyQualifiedName~LLMModuleMessagesPortTests"` | ❌ W0 | ⬜ pending |
-| 39-03-03 | 03 | 2 | MSG-02 | integration | `dotnet test --filter "FullyQualifiedName~PromptInjectionIntegrationTests"` | ✅ | ⬜ pending |
+| 39-01-01 | 01 | 1 | MSG-01 | unit (reflection) | `dotnet test --filter "FullyQualifiedName~ChatMessageInputContractsTests"` | W0 | pending |
+| 39-01-02 | 01 | 1 | MSG-01 | unit (compile) | `dotnet build src/OpenAnima.Core/OpenAnima.Core.csproj` | N/A | pending |
+| 39-02-01 | 02 | 2 | MSG-02 | integration | `dotnet test --filter "FullyQualifiedName~LLMModuleMessagesPortTests"` | W0 | pending |
+| 39-02-02 | 02 | 2 | MSG-02 | regression (full suite) | `dotnet test tests/OpenAnima.Tests/OpenAnima.Tests.csproj` | N/A | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending / green / red / flaky*
 
 ---
 
