@@ -1,5 +1,4 @@
 using ChatMessageInput = OpenAnima.Contracts.ChatMessageInput;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAnima.Contracts;
 using OpenAnima.Core.LLM;

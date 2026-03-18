@@ -1,5 +1,4 @@
 using ChatMessageInput = OpenAnima.Contracts.ChatMessageInput;
-using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
 using System.ClientModel;
 using System.Runtime.CompilerServices;
