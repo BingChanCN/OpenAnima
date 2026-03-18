@@ -460,4 +460,74 @@ public class ContractsApiTests
     {
         Assert.Equal(typeof(IModule).Assembly, typeof(ConfigFieldDescriptor).Assembly);
     }
+
+    // -----------------------------------------------------------------------
+    // 10. IModuleStorage surface
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void IModuleStorage_ExistsIn_OpenAnima_Contracts_Namespace()
+    {
+        var type = typeof(IModuleStorage);
+        Assert.Equal("OpenAnima.Contracts", type.Namespace);
+    }
+
+    [Fact]
+    public void IModuleStorage_Has_GetDataDirectory_NoArg_Method()
+    {
+        var method = typeof(IModuleStorage).GetMethod("GetDataDirectory", Type.EmptyTypes);
+        Assert.NotNull(method);
+        Assert.Equal(typeof(string), method!.ReturnType);
+    }
+
+    [Fact]
+    public void IModuleStorage_Has_GetDataDirectory_WithModuleId_Method()
+    {
+        var method = typeof(IModuleStorage).GetMethod("GetDataDirectory", new[] { typeof(string) });
+        Assert.NotNull(method);
+        Assert.Equal(typeof(string), method!.ReturnType);
+    }
+
+    [Fact]
+    public void IModuleStorage_Has_GetGlobalDataDirectory_Method()
+    {
+        var method = typeof(IModuleStorage).GetMethod("GetGlobalDataDirectory", new[] { typeof(string) });
+        Assert.NotNull(method);
+        Assert.Equal(typeof(string), method!.ReturnType);
+    }
+
+    [Fact]
+    public void IModuleStorage_And_IModule_Are_In_Same_Assembly()
+    {
+        Assert.Equal(typeof(IModule).Assembly, typeof(IModuleStorage).Assembly);
+    }
+
+    [Fact]
+    public void DI_Resolves_IModuleStorage()
+    {
+        var tempDataRoot = Path.Combine(Path.GetTempPath(), $"contracts-api-storage-{Guid.NewGuid():N}");
+        var tempAnimasRoot = Path.Combine(tempDataRoot, "animas");
+        Directory.CreateDirectory(tempAnimasRoot);
+
+        try
+        {
+            var services = new ServiceCollection();
+            services.AddSingleton<AnimaContext>();
+            services.AddSingleton<IModuleContext>(sp => sp.GetRequiredService<AnimaContext>());
+            services.AddSingleton<IModuleStorage>(sp =>
+                new ModuleStorageService(
+                    tempAnimasRoot,
+                    tempDataRoot,
+                    sp.GetRequiredService<IModuleContext>()));
+
+            using var provider = services.BuildServiceProvider();
+
+            var storage = provider.GetRequiredService<IModuleStorage>();
+            Assert.NotNull(storage);
+        }
+        finally
+        {
+            Directory.Delete(tempDataRoot, recursive: true);
+        }
+    }
 }
