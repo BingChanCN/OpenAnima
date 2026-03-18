@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: SDK Runtime Parity
 status: completed
-last_updated: "2026-03-18T11:44:07.340Z"
-last_activity: "2026-03-18 — Completed Phase 39 Plan 02: LLMModule messages input port"
+last_updated: "2026-03-18T13:51:59.798Z"
+last_activity: "2026-03-18 — Completed Phase 40 Plan 01: IModuleStorage interface and implementation"
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
   percent: 100
 ---
 
@@ -27,10 +27,10 @@ See: `.planning/PROJECT.md` (updated 2026-03-16)
 
 ## Current Position
 
-Phase: 39-contracts-type-migration-structured-messages
-Plan: 02 (complete)
-Status: Phase 39 Complete — Plan 01 + Plan 02 done, MSG-01/MSG-02/MSG-03 validated, 360 tests passing
-Last activity: 2026-03-18 — Completed Phase 39 Plan 02: LLMModule messages input port
+Phase: 40-module-storage-path
+Plan: 01 (complete)
+Status: Phase 40 Plan 01 Complete — IModuleStorage, ModuleStorageService, DI, PluginLoader, 374 tests passing
+Last activity: 2026-03-18 — Completed Phase 40 Plan 01: IModuleStorage interface and implementation
 
 Progress: [██████████] 100%
 
@@ -47,6 +47,8 @@ Progress: [██████████] 100%
 - [Phase 39-contracts-type-migration-structured-messages]: using alias pattern for Core files — explicit scoped import, avoids namespace pollution in LLM layer
 - [Phase 39-contracts-type-migration-structured-messages]: Semaphore is primary priority mechanism for messages vs prompt port — messages acquires first, prompt Wait(0) returns false
 - [Phase 39-contracts-type-migration-structured-messages]: ExecuteWithMessagesListAsync extracted as shared pipeline — both prompt and messages paths use it after building their message list
+- [Phase 40-module-storage-path]: IModuleStorage DI singleton has no boundModuleId — built-in modules use explicit GetDataDirectory(moduleId); external modules receive bound instance via PluginLoader
+- [Phase 40-module-storage-path]: ValidateModuleId rejects null/whitespace, .., /, \ — dots and hyphens allowed for qualified module names
 
 ## Performance Metrics
 
@@ -70,6 +72,7 @@ Progress: [██████████] 100%
 | Phase 38-pluginloader-di-injection P03 | 45 | 2 tasks | 7 files |
 | Phase 39-contracts-type-migration-structured-messages P01 | 8 | 2 tasks | 6 files |
 | Phase 39-contracts-type-migration-structured-messages P02 | 884 | 2 tasks | 3 files |
+| Phase 40-module-storage-path P01 | 365 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -93,4 +96,4 @@ Progress: [██████████] 100%
 ---
 
 *State updated: 2026-03-18*
-*Stopped at: Phase 39 Plan 02 complete — LLMModule messages port, 360 tests passing, MSG-02 validated*
+*Stopped at: Phase 40 Plan 01 complete — IModuleStorage, 374 tests passing, STOR-01 validated*

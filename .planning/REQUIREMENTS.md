@@ -21,7 +21,7 @@ Requirements for SDK Runtime Parity milestone. Each maps to roadmap phases.
 
 ### Module Storage
 
-- [ ] **STOR-01**: IModuleContext exposes GetDataDirectory(string moduleId) returning per-Anima per-Module path (data/animas/{animaId}/module-data/{moduleId}/); directory auto-created on first call
+- [x] **STOR-01**: IModuleContext exposes GetDataDirectory(string moduleId) returning per-Anima per-Module path (data/animas/{animaId}/module-data/{moduleId}/); directory auto-created on first call
 
 ### SDK Validation
 
@@ -54,7 +54,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MSG-01 | Phase 39 | Complete |
 | MSG-02 | Phase 39 | Complete |
 | MSG-03 | Phase 39 | Complete |
-| STOR-01 | Phase 40 | Pending |
+| STOR-01 | Phase 40 | Complete |
 | ECTX-01 | Phase 41 | Pending |
 | ECTX-02 | Phase 41 | Pending |
 
