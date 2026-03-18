@@ -1,6 +1,6 @@
 # Phase 39: Contracts Type Migration & Structured Messages - Research
 
-**Researched:** 2026-03-17
+**Researched:** 2026-03-18
 **Domain:** C# record type migration, System.Text.Json serialization, EventBus port subscription pattern
 **Confidence:** HIGH
 
@@ -51,59 +51,67 @@ None — discussion stayed within phase scope
 
 | ID | Description | Research Support |
 |----|-------------|-----------------|
-| MSG-01 | ChatMessageInput record type moved from OpenAnima.Core.LLM to OpenAnima.Contracts; Core retains using alias for backward compatibility | Direct move of 1-line record; using alias pattern already established in project (ModuleMetadataRecord shim precedent). All Core.LLM consumers (LLMService, TokenCounter, ChatContextManager) need alias added. |
-| MSG-02 | LLMModule has new `messages` input port (PortType.Text) accepting JSON-serialized List<ChatMessageInput>; messages port takes priority over prompt port when both fire | EventBus subscription pattern is established — add second Subscribe call in InitializeAsync. Priority rule requires a shared flag or timestamp to detect concurrent fires; semaphore already guards execution. |
-| MSG-03 | Contracts provides ChatMessageInput.SerializeList / DeserializeList static helper methods using System.Text.Json | System.Text.Json is already available in .NET 8 BCL — no new package needed. Static methods on a record are straightforward C#. CamelCase JsonSerializerOptions is a one-liner. |
+| MSG-01 | ChatMessageInput record type moved from OpenAnima.Core.LLM to OpenAnima.Contracts; Core retains using alias for backward compatibility | 1-line record in ILLMService.cs confirmed. Affected consumers: ILLMService.cs, LLMService.cs, TokenCounter.cs, ChatContextManager.cs, and 6 test files. |
+| MSG-02 | LLMModule has new `messages` input port (PortType.Text) accepting JSON-serialized List<ChatMessageInput>; messages port takes priority over prompt port when both fire | EventBus subscription pattern confirmed in LLMModule.InitializeAsync. SemaphoreSlim guard already present. Priority via volatile flag before guard acquisition. |
+| MSG-03 | Contracts provides ChatMessageInput.SerializeList / DeserializeList static helper methods using System.Text.Json | System.Text.Json is BCL in .NET 8 — no PackageReference needed. Contracts.csproj targets net8.0 confirmed. |
 </phase_requirements>
 
 ## Summary
 
-Phase 39 is a focused refactoring and feature addition with three tightly coupled changes. The type migration (MSG-01) is mechanical: move a 1-line record declaration from `OpenAnima.Core.LLM.ILLMService.cs` to a new file in `OpenAnima.Contracts`, then add a `using` alias in every Core file that references `ChatMessageInput` directly. The serialization helpers (MSG-03) are pure static methods on the record using the BCL's `System.Text.Json` — no new dependencies. The messages port (MSG-02) follows the exact same EventBus subscription pattern already used by the prompt port in `LLMModule.InitializeAsync()`.
+Phase 39 is a surgical refactor with three tightly scoped changes: move a one-line record type, add static serialization helpers to it, and add a second input port subscription to LLMModule. All patterns already exist in the codebase — this is purely additive work within established conventions.
 
-The main design decision is how to implement the "messages takes priority over prompt" rule. Since both ports are independent EventBus subscriptions and the `_executionGuard` semaphore already prevents concurrent execution (it returns immediately if busy), the simplest correct approach is: the messages handler sets a volatile flag before acquiring the guard, and the prompt handler checks that flag and bails if set. Alternatively, since the semaphore already serializes execution, the priority rule only matters when both events arrive in the same async window — a `_pendingMessages` field that the messages handler sets before the prompt handler reads it is sufficient.
+The type migration (MSG-01) touches more files than it might appear: `ILLMService.cs`, `LLMService.cs`, `TokenCounter.cs`, `ChatContextManager.cs` in Core, plus 6 test files that import `OpenAnima.Core.LLM` and reference `ChatMessageInput` directly. Each needs a `using ChatMessageInput = OpenAnima.Contracts.ChatMessageInput;` alias added. The record definition itself is a single line removed from `ILLMService.cs` and placed in a new `ChatMessageInput.cs` in Contracts.
 
-The existing `ContractsApiTests.cs` pattern (reflection-based shape verification) is the right model for new tests verifying `ChatMessageInput` is in the Contracts assembly and has the expected static methods.
+The messages port (MSG-02) follows the exact same EventBus subscription pattern as the prompt port. The priority rule is implementable with a `volatile bool _messagesPortFired` flag: the messages handler sets it before acquiring the semaphore guard, and the prompt handler checks it and returns early if set. The existing `SemaphoreSlim(1,1)` guard already prevents concurrent execution — the flag only needs to handle the case where prompt fires first in the same async window.
 
-**Primary recommendation:** Move the record, add aliases, add static helpers, add the second EventBus subscription with a priority flag — all within existing patterns. No new libraries, no new abstractions.
+**Primary recommendation:** Move the record first (Plan 01), then add the port (Plan 02). The alias approach ensures zero breakage across all consumers.
 
 ## Standard Stack
 
 ### Core
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
-| System.Text.Json | BCL (.NET 8) | JSON serialization for SerializeList/DeserializeList | Already in use across the project; no new dependency |
-| OpenAnima.Contracts | project | Target assembly for ChatMessageInput | The established home for module-facing types |
+| System.Text.Json | BCL (.NET 8) | JSON serialization for SerializeList/DeserializeList | Already used in project (ModuleTestHarness, wiring engine); no new dependency |
+| OpenAnima.Contracts | project ref | Target namespace for ChatMessageInput | The SDK-facing assembly — external modules reference this, not Core |
 
 ### Supporting
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| xunit | 2.9.3 | Test framework | All existing tests use xunit |
+| xunit | 2.9.3 | Test framework | All existing tests use xunit; test project targets net10.0 |
 
 ### Alternatives Considered
 | Instead of | Could Use | Tradeoff |
 |------------|-----------|----------|
-| using alias in Core.LLM | Shim subclass (like ModuleMetadataRecord) | Alias is simpler for a record — no inheritance needed; shim only makes sense when you need a concrete type consumers can instantiate |
-| Static methods on record | Extension methods in a helper class | Static methods on the record are more discoverable and match the decision |
+| using alias in Core.LLM | Shim class wrapping Contracts type | Alias is zero-overhead and transparent; shim adds indirection and a second type in the type system |
+| volatile bool for priority | CancellationTokenSource per-fire | Bool is simpler; CTS adds allocation and complexity for a rare edge case |
+| Static methods on record | Extension methods in a helper class | Static methods on the record are more discoverable and match the locked decision |
 
 **Installation:** No new packages required.
 
 ## Architecture Patterns
 
 ### Recommended Project Structure
+No new folders needed. Changes are in-place:
 ```
 src/OpenAnima.Contracts/
-└── ChatMessageInput.cs          # new file — record + SerializeList/DeserializeList
+└── ChatMessageInput.cs          # NEW — record + SerializeList/DeserializeList
 
 src/OpenAnima.Core/LLM/
-└── ILLMService.cs               # remove ChatMessageInput record; add using alias at top
+├── ILLMService.cs               # MODIFIED — remove record definition, add using alias
+├── LLMService.cs                # MODIFIED — add using alias
+└── TokenCounter.cs              # MODIFIED — add using alias
+
+src/OpenAnima.Core/Services/
+└── ChatContextManager.cs        # MODIFIED — add using alias
 
 src/OpenAnima.Core/Modules/
-└── LLMModule.cs                 # add [InputPort("messages")] attribute + second subscription
+└── LLMModule.cs                 # MODIFIED — add [InputPort("messages")], add subscription
 
 tests/OpenAnima.Tests/Unit/
-└── ChatMessageInputContractsTests.cs   # new — MSG-01 shape + MSG-03 round-trip
+└── ChatMessageInputContractsTests.cs   # NEW — MSG-01 shape + MSG-03 round-trips
+
 tests/OpenAnima.Tests/Integration/
-└── LLMModuleMessagesPortTests.cs       # new — MSG-02 messages port behavior
+└── LLMModuleMessagesPortTests.cs       # NEW — MSG-02 messages port behavior + priority
 ```
 
 ### Pattern 1: using alias for backward compatibility
@@ -111,15 +119,20 @@ tests/OpenAnima.Tests/Integration/
 **When to use:** When a type moves assemblies but all existing consumers are in the same project and can be updated in one pass.
 **Example:**
 ```csharp
-// Source: established in project (ModuleMetadataRecord shim pattern)
-// In OpenAnima.Core.LLM.ILLMService.cs (and other Core files):
+// In OpenAnima.Core.LLM/ILLMService.cs (and other Core files):
 using ChatMessageInput = OpenAnima.Contracts.ChatMessageInput;
 
 namespace OpenAnima.Core.LLM;
 
-// ChatMessageInput record definition removed — now lives in Contracts
+// ChatMessageInput record definition REMOVED — now lives in Contracts
 public record LLMResult(bool Success, string? Content, string? Error);
-// ...
+public record StreamingResult(string Token, int? InputTokens, int? OutputTokens);
+
+public interface ILLMService
+{
+    Task<LLMResult> CompleteAsync(IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default);
+    // ... unchanged
+}
 ```
 
 ### Pattern 2: Static helpers on a record
@@ -127,118 +140,7 @@ public record LLMResult(bool Success, string? Content, string? Error);
 **When to use:** When the helpers are tightly coupled to the type's shape and should be discoverable via the type name.
 **Example:**
 ```csharp
-// Source: project decision + BCL System.Text.Json docs
-namespace OpenAnima.Contracts;
-
-public record ChatMessageInput(string Role, string Content)
-{
-    private static readonly JsonSerializerOptions _options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
-    public static string SerializeList(List<ChatMessageInput>? messages)
-    {
-        if (messages == null || messages.Count == 0) return "[]";
-        return JsonSerializer.Serialize(messages, _options);
-    }
-
-    public static List<ChatMessageInput> DeserializeList(string? json)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return new List<ChatMessageInput>();
-        try
-        {
-            return JsonSerializer.Deserialize<List<ChatMessageInput>>(json, _options)
-                   ?? new List<ChatMessageInput>();
-        }
-        catch
-        {
-            return new List<ChatMessageInput>();
-        }
-    }
-}
-```
-
-### Pattern 3: Second EventBus subscription in InitializeAsync
-**What:** Add a second `_eventBus.Subscribe<string>` call for the messages port, following the exact same pattern as the prompt subscription.
-**When to use:** Every new input port in this codebase follows this pattern.
-**Example:**
-```csharp
-// Source: existing LLMModule.InitializeAsync() pattern
-public Task InitializeAsync(CancellationToken cancellationToken = default)
-{
-    var promptSub = _eventBus.Subscribe<string>(
-        $"{Metadata.Name}.port.prompt",
-        async (evt, ct) =>
-        {
-            // Check if messages port has priority
-            if (_pendingMessages != null) return;
-            await ExecuteWithPromptAsync(evt.Payload, ct);
-        });
-    _subscriptions.Add(promptSub);
-
-    var messagesSub = _eventBus.Subscribe<string>(
-        $"{Metadata.Name}.port.messages",
-        async (evt, ct) =>
-        {
-            var messages = ChatMessageInput.DeserializeList(evt.Payload);
-            await ExecuteWithMessagesAsync(messages, ct);
-        });
-    _subscriptions.Add(messagesSub);
-
-    return Task.CompletedTask;
-}
-```
-
-### Anti-Patterns to Avoid
-- **Removing ChatMessageInput from ILLMService.cs without adding the alias:** All files in Core.LLM that use `ChatMessageInput` unqualified will break. The alias must be added to every file that references the type.
-- **Adding System.Text.Json package reference to Contracts:** It's already in the BCL for .NET 8 — no PackageReference needed.
-- **Putting ChatMessageInput in a sub-namespace like OpenAnima.Contracts.LLM:** The decision locks it to the root namespace `OpenAnima.Contracts`.
-- **Throwing exceptions in DeserializeList:** The decision requires silent empty-list return on any failure.
-
-## Don't Hand-Roll
-
-| Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
-| JSON serialization | Custom serializer | System.Text.Json | BCL, already used in project, handles all edge cases |
-| Port subscription | Custom event system | `_eventBus.Subscribe<string>` | Established pattern; WiringEngine routes to these event names |
-| Concurrent execution guard | Custom mutex | `SemaphoreSlim(1,1)` already in LLMModule | Already present; reuse it |
-
-**Key insight:** Every piece of infrastructure needed for this phase already exists. This is purely additive work within established patterns.
-
-## Common Pitfalls
-
-### Pitfall 1: Missing using alias in test files
-**What goes wrong:** Test files that reference `ChatMessageInput` via `using OpenAnima.Core.LLM` will break after the type moves.
-**Why it happens:** Tests import `OpenAnima.Core.LLM` to get `ChatMessageInput`, `LLMResult`, etc. After the move, `ChatMessageInput` is no longer in that namespace.
-**How to avoid:** Scan all test files for `using OpenAnima.Core.LLM` and add `using OpenAnima.Contracts` (or a using alias) where `ChatMessageInput` is referenced.
-**Warning signs:** Compile error "The type or namespace name 'ChatMessageInput' does not exist in the namespace 'OpenAnima.Core.LLM'".
-
-### Pitfall 2: Priority rule race condition
-**What goes wrong:** Both prompt and messages events arrive in the same async window; prompt handler starts executing before messages handler sets the priority flag.
-**Why it happens:** EventBus subscribers are invoked sequentially per event, but two separate events can interleave.
-**How to avoid:** The `_executionGuard` semaphore already prevents concurrent execution — if messages fires first and acquires the guard, prompt will return immediately on `Wait(0)`. The priority rule only needs to handle the case where prompt fires first. A simple `volatile bool _messagesPortActive` flag set at the top of the messages handler (before acquiring the guard) and checked at the top of the prompt handler is sufficient.
-**Warning signs:** Integration test where both ports fire simultaneously and prompt executes instead of messages.
-
-### Pitfall 3: Contracts project doesn't reference System.Text.Json
-**What goes wrong:** Build error in Contracts project when adding JsonSerializer calls.
-**Why it happens:** Contracts currently has no package references — it's a pure interface library.
-**How to avoid:** System.Text.Json is part of the .NET 8 BCL and does NOT require a PackageReference. It's available automatically. Verify by checking that `OpenAnima.Contracts.csproj` targets `net8.0` — it does.
-**Warning signs:** If somehow the project targets an older TFM, a PackageReference would be needed. Not the case here.
-
-### Pitfall 4: WiringEngine port validation rejects the new port
-**What goes wrong:** The new `messages` port is declared via `[InputPort]` attribute but PortDiscovery/PortRegistry might not pick it up correctly.
-**Why it happens:** PortDiscovery reflects on the class to find `InputPortAttribute` instances. As long as the attribute is applied correctly, it will be discovered.
-**How to avoid:** Follow the exact same attribute syntax as the existing `[InputPort("prompt", PortType.Text)]` on LLMModule. No additional registration needed.
-**Warning signs:** Editor shows LLMModule without a `messages` input port.
-
-## Code Examples
-
-Verified patterns from official sources:
-
-### ChatMessageInput in Contracts (new file)
-```csharp
-// Source: project pattern + System.Text.Json BCL
+// Source: project decision + BCL System.Text.Json
 using System.Text.Json;
 
 namespace OpenAnima.Contracts;
@@ -272,14 +174,125 @@ public record ChatMessageInput(string Role, string Content)
 }
 ```
 
-### using alias in Core.LLM files
+### Pattern 3: Second EventBus subscription in InitializeAsync
+**What:** Add a second `_eventBus.Subscribe<string>` call for the messages port, following the exact same pattern as the prompt subscription.
+**When to use:** Every new input port in this codebase follows this pattern.
+**Example:**
 ```csharp
-// Source: C# language spec — using alias directive
-// Add to: ILLMService.cs, LLMService.cs, TokenCounter.cs, ChatContextManager.cs
-using ChatMessageInput = OpenAnima.Contracts.ChatMessageInput;
+// Source: existing LLMModule.InitializeAsync() pattern
+public Task InitializeAsync(CancellationToken cancellationToken = default)
+{
+    var messagesSub = _eventBus.Subscribe<string>(
+        $"{Metadata.Name}.port.messages",
+        async (evt, ct) =>
+        {
+            _messagesPortFired = true;
+            try { await ExecuteFromMessagesAsync(evt.Payload, ct); }
+            finally { _messagesPortFired = false; }
+        });
+    _subscriptions.Add(messagesSub);
 
-namespace OpenAnima.Core.LLM;
-// ... rest of file unchanged
+    var promptSub = _eventBus.Subscribe<string>(
+        $"{Metadata.Name}.port.prompt",
+        async (evt, ct) =>
+        {
+            if (_messagesPortFired) return; // messages takes priority
+            await ExecuteInternalAsync(evt.Payload, ct);
+        });
+    _subscriptions.Add(promptSub);
+
+    return Task.CompletedTask;
+}
+```
+
+Note: messages subscription registered FIRST so it runs first when both events arrive in the same async window.
+
+### Anti-Patterns to Avoid
+- **Removing ChatMessageInput from ILLMService.cs without adding the alias:** All files in Core.LLM that use `ChatMessageInput` unqualified will break. The alias must be added to every file that references the type.
+- **Putting ChatMessageInput in a sub-namespace:** Locked decision says root `OpenAnima.Contracts` namespace — not `OpenAnima.Contracts.LLM` or similar.
+- **Throwing exceptions in DeserializeList:** Locked decision requires silent empty-list return on any failure.
+- **Adding System.Text.Json PackageReference to Contracts:** It's already in the BCL for .NET 8 — no PackageReference needed.
+
+## Don't Hand-Roll
+
+| Problem | Don't Build | Use Instead | Why |
+|---------|-------------|-------------|-----|
+| JSON serialization | Custom string builder | System.Text.Json | BCL, already used in project, handles escaping/nesting/nulls |
+| Port subscription | Custom event system | `_eventBus.Subscribe<string>` | Established pattern; WiringEngine routes to these event names |
+| Concurrent execution guard | Custom mutex | `SemaphoreSlim(1,1)` already in LLMModule | Already present; reuse it |
+
+**Key insight:** Every piece of infrastructure needed for this phase already exists. This is purely additive work within established patterns.
+
+## Common Pitfalls
+
+### Pitfall 1: Missing using alias in test files
+**What goes wrong:** Test files that reference `ChatMessageInput` via `using OpenAnima.Core.LLM` will fail to compile after the type moves.
+**Why it happens:** Tests import `OpenAnima.Core.LLM` to get `ChatMessageInput`, `LLMResult`, etc. After the move, `ChatMessageInput` is no longer in that namespace.
+**How to avoid:** All 6 affected test files are known (confirmed by grep). Add `using OpenAnima.Contracts;` to each.
+**Warning signs:** CS0246 "The type or namespace name 'ChatMessageInput' does not exist in the namespace 'OpenAnima.Core.LLM'".
+
+Confirmed affected test files:
+- `tests/OpenAnima.Tests/Integration/ModuleRuntimeInitializationTests.cs`
+- `tests/OpenAnima.Tests/Integration/PromptInjectionIntegrationTests.cs`
+- `tests/OpenAnima.Tests/Unit/ConcurrencyGuardTests.cs`
+- `tests/OpenAnima.Tests/Modules/ModuleTests.cs`
+- `tests/OpenAnima.Tests/Integration/ChatPanelModulePipelineTests.cs`
+- `tests/OpenAnima.Tests/Integration/ModulePipelineIntegrationTests.cs`
+
+### Pitfall 2: Priority rule race condition
+**What goes wrong:** Both prompt and messages events arrive in the same async window; prompt handler starts executing before messages handler sets the priority flag.
+**Why it happens:** EventBus subscribers are invoked sequentially per event, but two separate events can interleave.
+**How to avoid:** Register the messages subscription BEFORE the prompt subscription in InitializeAsync. The `_executionGuard` semaphore already prevents concurrent execution — if messages fires first and acquires the guard, prompt returns immediately on `Wait(0)`. The volatile flag handles the edge case where prompt fires first.
+**Warning signs:** Integration test where both ports fire simultaneously and prompt executes instead of messages.
+
+### Pitfall 3: CamelCase options not applied to DeserializeList
+**What goes wrong:** SerializeList produces `{"role":"user","content":"..."}` (camelCase) but DeserializeList uses default options (PascalCase), returning empty/null objects.
+**Why it happens:** System.Text.Json by default uses property names as-is (PascalCase for C# records). CamelCase policy must be applied consistently to both methods.
+**How to avoid:** Use the same static `_jsonOptions` instance for both SerializeList and DeserializeList.
+**Warning signs:** Round-trip test passes serialization but deserialization returns list of records with null Role/Content.
+
+### Pitfall 4: WiringEngine port validation
+**What goes wrong:** The new `messages` port might not appear in the editor if PortDiscovery doesn't pick up the attribute.
+**Why it happens:** PortDiscovery reflects on the class to find `InputPortAttribute` instances. As long as the attribute is applied correctly, it will be discovered.
+**How to avoid:** Follow the exact same attribute syntax as the existing `[InputPort("prompt", PortType.Text)]` on LLMModule. No additional registration needed.
+**Warning signs:** Editor shows LLMModule without a `messages` input port after the change.
+
+## Code Examples
+
+### ChatMessageInput in Contracts (new file)
+```csharp
+// Source: project decision + System.Text.Json BCL (.NET 8)
+using System.Text.Json;
+
+namespace OpenAnima.Contracts;
+
+public record ChatMessageInput(string Role, string Content)
+{
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    public static string SerializeList(List<ChatMessageInput>? messages)
+    {
+        if (messages == null || messages.Count == 0) return "[]";
+        return JsonSerializer.Serialize(messages, _jsonOptions);
+    }
+
+    public static List<ChatMessageInput> DeserializeList(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new List<ChatMessageInput>();
+        try
+        {
+            return JsonSerializer.Deserialize<List<ChatMessageInput>>(json, _jsonOptions)
+                   ?? new List<ChatMessageInput>();
+        }
+        catch
+        {
+            return new List<ChatMessageInput>();
+        }
+    }
+}
 ```
 
 ### LLMModule attribute declaration
@@ -292,37 +305,42 @@ namespace OpenAnima.Core.LLM;
 public class LLMModule : IModuleExecutor
 ```
 
-### Priority flag pattern
+### Shared execution method (recommended extraction)
 ```csharp
-// Source: project pattern — volatile field for cross-subscription signaling
-private volatile bool _messagesPortFired = false;
-
-// In messages subscription handler (fires first = takes priority):
-async (evt, ct) =>
+// Both prompt and messages paths call this after building their message list
+private async Task ExecuteWithMessagesListAsync(
+    List<ChatMessageInput> messages, CancellationToken ct)
 {
-    _messagesPortFired = true;
+    if (!_executionGuard.Wait(0)) return;
     try
     {
-        var messages = ChatMessageInput.DeserializeList(evt.Payload);
-        await ExecuteWithMessagesAsync(messages, ct);
+        _state = ModuleExecutionState.Running;
+        _lastError = null;
+        var animaId = _animaContext.ActiveAnimaId ?? "";
+        var knownServiceNames = BuildKnownServiceNames(animaId);
+        // ... system message injection, CallLlmAsync, FormatDetector, etc.
     }
-    finally
-    {
-        _messagesPortFired = false;
-    }
+    finally { _executionGuard.Release(); }
 }
 
-// In prompt subscription handler:
-async (evt, ct) =>
+// Prompt path:
+private Task ExecuteInternalAsync(string prompt, CancellationToken ct)
 {
-    if (_messagesPortFired) return;  // messages port has priority
-    await ExecuteWithPromptAsync(evt.Payload, ct);
+    var messages = new List<ChatMessageInput> { new("user", prompt) };
+    return ExecuteWithMessagesListAsync(messages, ct);
+}
+
+// Messages path:
+private Task ExecuteFromMessagesAsync(string json, CancellationToken ct)
+{
+    var messages = ChatMessageInput.DeserializeList(json);
+    if (messages.Count == 0) return Task.CompletedTask;
+    return ExecuteWithMessagesListAsync(messages, ct);
 }
 ```
 
 ### Serialization round-trip test pattern
 ```csharp
-// Source: existing ContractsApiTests.cs reflection pattern
 [Fact]
 public void SerializeList_DeserializeList_RoundTrips_Correctly()
 {
@@ -340,6 +358,18 @@ public void SerializeList_DeserializeList_RoundTrips_Correctly()
     Assert.Equal("system", result[0].Role);
     Assert.Equal("You are helpful.", result[0].Content);
 }
+
+[Fact]
+public void DeserializeList_ReturnsEmptyList_OnNullInput()
+    => Assert.Empty(ChatMessageInput.DeserializeList(null));
+
+[Fact]
+public void DeserializeList_ReturnsEmptyList_OnInvalidJson()
+    => Assert.Empty(ChatMessageInput.DeserializeList("not json"));
+
+[Fact]
+public void SerializeList_ReturnsEmptyArray_OnNullInput()
+    => Assert.Equal("[]", ChatMessageInput.SerializeList(null));
 ```
 
 ## State of the Art
@@ -349,20 +379,20 @@ public void SerializeList_DeserializeList_RoundTrips_Correctly()
 | ChatMessageInput in Core.LLM | ChatMessageInput in Contracts | Phase 39 | External modules can reference it without Core dependency |
 | LLMModule single-turn only (prompt port) | LLMModule supports multi-turn (messages port) | Phase 39 | External ContextModule (Phase 41) can send full conversation history |
 
-**Deprecated/outdated:**
-- `ChatMessageInput` in `OpenAnima.Core.LLM` namespace: replaced by `OpenAnima.Contracts.ChatMessageInput`; Core retains alias for backward compatibility
+**Deprecated/outdated after this phase:**
+- `ChatMessageInput` record definition in `OpenAnima.Core.LLM.ILLMService.cs` — replaced by `OpenAnima.Contracts.ChatMessageInput`; Core retains alias for backward compatibility
 
 ## Open Questions
 
 1. **Shared execution logic extraction**
    - What we know: prompt path and messages path both call `CallLlmAsync`, `FormatDetector`, `DispatchRoutesAsync`, `PublishResponseAsync`
-   - What's unclear: whether to extract a shared `ExecuteWithMessagesListAsync(List<ChatMessageInput> messages, CancellationToken ct)` method that both paths call
-   - Recommendation: extract the shared method — it eliminates duplication and makes the priority rule cleaner. The prompt handler builds a single-element list and calls the shared method; the messages handler calls it directly.
+   - What's unclear: whether to extract a shared `ExecuteWithMessagesListAsync` method (Claude's discretion)
+   - Recommendation: extract the shared method — eliminates duplication and makes the priority rule cleaner. The prompt handler builds a single-element list and calls the shared method; the messages handler calls it directly.
 
 2. **System message prepend on messages path**
    - What we know: the decision says "same behavior as prompt path — if AnimaRoute configured, system message is prepended to the messages list"
    - What's unclear: whether to prepend unconditionally or only if no system message already exists in the list
-   - Recommendation: prepend unconditionally (same as prompt path behavior) — the external module is responsible for not including a conflicting system message. This keeps the implementation simple and consistent.
+   - Recommendation: prepend unconditionally (same as prompt path behavior) — the external module is responsible for not including a conflicting system message. Keeps implementation simple and consistent.
 
 ## Validation Architecture
 
@@ -371,17 +401,17 @@ public void SerializeList_DeserializeList_RoundTrips_Correctly()
 |----------|-------|
 | Framework | xunit 2.9.3 |
 | Config file | none (standard xunit discovery) |
-| Quick run command | `dotnet test tests/OpenAnima.Tests/OpenAnima.Tests.csproj --filter "Category=ContractsApi|Category=Integration" --no-build` |
+| Quick run command | `dotnet test tests/OpenAnima.Tests/OpenAnima.Tests.csproj --no-build -x` |
 | Full suite command | `dotnet test tests/OpenAnima.Tests/OpenAnima.Tests.csproj` |
 
 ### Phase Requirements → Test Map
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| MSG-01 | ChatMessageInput exists in OpenAnima.Contracts namespace | unit (reflection) | `dotnet test --filter "FullyQualifiedName~ChatMessageInputContractsTests"` | ❌ Wave 0 |
-| MSG-01 | Core.LLM still resolves ChatMessageInput (alias works) | unit (compile-time) | `dotnet build src/OpenAnima.Core/OpenAnima.Core.csproj` | ❌ Wave 0 |
+| MSG-01 | ChatMessageInput exists in OpenAnima.Contracts namespace | unit | `dotnet test --filter "FullyQualifiedName~ChatMessageInputContractsTests"` | ❌ Wave 0 |
+| MSG-01 | Core.LLM files compile with using alias | build | `dotnet build src/OpenAnima.Core/OpenAnima.Core.csproj` | ✅ (build check) |
 | MSG-02 | messages port fires LLM call with deserialized list | integration | `dotnet test --filter "FullyQualifiedName~LLMModuleMessagesPortTests"` | ❌ Wave 0 |
 | MSG-02 | messages port takes priority over prompt when both fire | integration | `dotnet test --filter "FullyQualifiedName~LLMModuleMessagesPortTests"` | ❌ Wave 0 |
-| MSG-02 | prompt port still works (regression) | integration | `dotnet test --filter "FullyQualifiedName~PromptInjectionIntegrationTests"` | ✅ |
+| MSG-02 | prompt port still works after messages port added (regression) | integration | `dotnet test --filter "FullyQualifiedName~PromptInjectionIntegrationTests"` | ✅ |
 | MSG-03 | SerializeList/DeserializeList round-trip | unit | `dotnet test --filter "FullyQualifiedName~ChatMessageInputContractsTests"` | ❌ Wave 0 |
 | MSG-03 | DeserializeList returns empty list on null/invalid input | unit | `dotnet test --filter "FullyQualifiedName~ChatMessageInputContractsTests"` | ❌ Wave 0 |
 | MSG-03 | SerializeList returns "[]" on null/empty input | unit | `dotnet test --filter "FullyQualifiedName~ChatMessageInputContractsTests"` | ❌ Wave 0 |
@@ -402,12 +432,15 @@ public void SerializeList_DeserializeList_RoundTrips_Correctly()
 ### Primary (HIGH confidence)
 - Direct code inspection: `src/OpenAnima.Core/LLM/ILLMService.cs` — confirmed ChatMessageInput is a 1-line record
 - Direct code inspection: `src/OpenAnima.Core/Modules/LLMModule.cs` — confirmed EventBus subscription pattern, semaphore guard, existing execution flow
-- Direct code inspection: `src/OpenAnima.Contracts/` — confirmed root namespace, no System.Text.Json dependency needed (BCL)
-- Direct code inspection: `src/OpenAnima.Core/Modules/ModuleMetadataRecord.cs` — confirmed using alias / shim precedent
-- Direct code inspection: `tests/OpenAnima.Tests/Unit/ContractsApiTests.cs` — confirmed reflection-based test pattern for Contracts shape verification
+- Direct code inspection: `src/OpenAnima.Core/LLM/LLMService.cs`, `TokenCounter.cs` — confirmed ChatMessageInput usage requiring alias
+- Direct code inspection: `src/OpenAnima.Core/Services/ChatContextManager.cs` — confirmed ChatMessageInput usage requiring alias
+- Direct code inspection: `src/OpenAnima.Contracts/OpenAnima.Contracts.csproj` — confirmed net8.0 target, no STJ PackageReference needed
+- Direct code inspection: `tests/OpenAnima.Tests/` — confirmed 6 test files referencing ChatMessageInput
+- `.planning/phases/39-contracts-type-migration-structured-messages/39-CONTEXT.md` — locked decisions
 
 ### Secondary (MEDIUM confidence)
-- System.Text.Json availability in .NET 8 BCL — confirmed by `OpenAnima.Contracts.csproj` targeting `net8.0` with no explicit STJ package reference needed
+- System.Text.Json availability in .NET 8 BCL — confirmed by Contracts.csproj targeting net8.0 with no explicit STJ package reference needed
+- C# using alias directive — standard C# language feature, file-scoped in C# 10+ (project uses net8.0 / C# 12)
 
 ### Tertiary (LOW confidence)
 - None
@@ -415,9 +448,9 @@ public void SerializeList_DeserializeList_RoundTrips_Correctly()
 ## Metadata
 
 **Confidence breakdown:**
-- Standard stack: HIGH — all libraries are already in use; no new dependencies
-- Architecture: HIGH — all patterns are directly observed in existing code
-- Pitfalls: HIGH — derived from direct code inspection of affected files
+- Standard stack: HIGH — all libraries already in use in the project
+- Architecture: HIGH — all patterns directly observed in existing LLMModule and EventBus code
+- Pitfalls: HIGH — derived from direct inspection of all affected files
 
-**Research date:** 2026-03-17
-**Valid until:** 2026-04-17 (stable codebase, no fast-moving dependencies)
+**Research date:** 2026-03-18
+**Valid until:** 2026-04-18 (stable domain — C# record migration, no fast-moving dependencies)
