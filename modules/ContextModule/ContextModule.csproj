@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Copy module.json to output directory so PluginLoader can find it -->
+    <None Include="module.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\OpenAnima.Contracts\OpenAnima.Contracts.csproj">
       <Private>false</Private>
     </ProjectReference>
