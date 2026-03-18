@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: SDK Runtime Parity
 status: completed
-last_updated: "2026-03-18T14:01:00.206Z"
+last_updated: "2026-03-18T15:02:56.801Z"
 last_activity: "2026-03-18 — Completed Phase 40 Plan 01: IModuleStorage interface and implementation"
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 8
+  completed_plans: 7
   percent: 100
 ---
 
@@ -27,12 +27,12 @@ See: `.planning/PROJECT.md` (updated 2026-03-16)
 
 ## Current Position
 
-Phase: 40-module-storage-path
+Phase: 41-external-context-module
 Plan: 01 (complete)
-Status: Phase 40 Plan 01 Complete — IModuleStorage, ModuleStorageService, DI, PluginLoader, 374 tests passing
-Last activity: 2026-03-18 — Completed Phase 40 Plan 01: IModuleStorage interface and implementation
+Status: Phase 41 Plan 01 Complete — PluginLoader bound IModuleStorage injection, 382 tests passing
+Last activity: 2026-03-18 — Completed Phase 41 Plan 01: bound IModuleStorage per external module
 
-Progress: [██████████] 100%
+Progress: [█████████░] 94%
 
 ## Decisions Made
 
@@ -49,6 +49,8 @@ Progress: [██████████] 100%
 - [Phase 39-contracts-type-migration-structured-messages]: ExecuteWithMessagesListAsync extracted as shared pipeline — both prompt and messages paths use it after building their message list
 - [Phase 40-module-storage-path]: IModuleStorage DI singleton has no boundModuleId — built-in modules use explicit GetDataDirectory(moduleId); external modules receive bound instance via PluginLoader
 - [Phase 40-module-storage-path]: ValidateModuleId rejects null/whitespace, .., /, \ — dots and hyphens allowed for qualified module names
+- [Phase 41-external-context-module]: manifest.Id ?? manifest.Name used as boundModuleId — manifests without explicit id fall back to Name
+- [Phase 41-external-context-module]: IModuleStorage special case placed before generic ContractsTypeMap lookup in ResolveParameter
 
 ## Performance Metrics
 
@@ -73,6 +75,7 @@ Progress: [██████████] 100%
 | Phase 39-contracts-type-migration-structured-messages P01 | 8 | 2 tasks | 6 files |
 | Phase 39-contracts-type-migration-structured-messages P02 | 884 | 2 tasks | 3 files |
 | Phase 40-module-storage-path P01 | 365 | 2 tasks | 6 files |
+| Phase 41-external-context-module P01 | 15 | 1 tasks | 4 files |
 
 ## Accumulated Context
 

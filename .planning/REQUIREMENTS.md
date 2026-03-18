@@ -25,8 +25,8 @@ Requirements for SDK Runtime Parity milestone. Each maps to roadmap phases.
 
 ### SDK Validation
 
-- [ ] **ECTX-01**: External ContextModule built via SDK loads into runtime, maintains per-Anima in-session conversation history, serializes as List<ChatMessageInput> JSON to LLMModule messages port
-- [ ] **ECTX-02**: ContextModule persists conversation history to DataDirectory/history.json; history restored on application restart
+- [x] **ECTX-01**: External ContextModule built via SDK loads into runtime, maintains per-Anima in-session conversation history, serializes as List<ChatMessageInput> JSON to LLMModule messages port
+- [x] **ECTX-02**: ContextModule persists conversation history to DataDirectory/history.json; history restored on application restart
 
 ## Out of Scope
 
@@ -55,8 +55,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MSG-02 | Phase 39 | Complete |
 | MSG-03 | Phase 39 | Complete |
 | STOR-01 | Phase 40 | Complete |
-| ECTX-01 | Phase 41 | Pending |
-| ECTX-02 | Phase 41 | Pending |
+| ECTX-01 | Phase 41 | Complete |
+| ECTX-02 | Phase 41 | Complete |
 
 **Coverage:**
 - v1.8 requirements: 9 total
