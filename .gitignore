@@ -59,5 +59,11 @@ appsettings.json
 ## Build output
 dist/
 
-## Modules output
+## Modules output (build artifacts)
 modules/
+# Track module source code
+!modules/
+!modules/ContextModule/
+!modules/ContextModule/ContextModule.cs
+!modules/ContextModule/ContextModule.csproj
+!modules/ContextModule/module.json

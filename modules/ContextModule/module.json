@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openanima.io/schemas/module.json",
+  "schemaVersion": "1.0",
+  "id": "ContextModule",
+  "name": "ContextModule",
+  "version": "1.0.0",
+  "description": "Manages multi-turn conversation history for LLM context",
+  "author": "",
+  "entryAssembly": "ContextModule.dll",
+  "openanima": { "minVersion": "1.8.0" },
+  "ports": {
+    "inputs": [
+      { "name": "userMessage", "type": "Text" },
+      { "name": "llmResponse", "type": "Text" }
+    ],
+    "outputs": [
+      { "name": "messages", "type": "Text" },
+      { "name": "displayHistory", "type": "Text" }
+    ]
+  }
+}

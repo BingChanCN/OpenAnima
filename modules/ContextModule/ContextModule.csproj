@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>ContextModule</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\OpenAnima.Contracts\OpenAnima.Contracts.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0">
+      <Private>false</Private>
+    </PackageReference>
+  </ItemGroup>
+
+  <Target Name="PackageOamod" AfterTargets="Build">
+    <PropertyGroup>
+      <_StagingDir>$(OutputPath)_oamod_staging\</_StagingDir>
+      <_OamodOutput>$(OutputPath)..\ContextModule.oamod</_OamodOutput>
+      <_CoreModulesDir>$(MSBuildThisFileDirectory)..\..\src\OpenAnima.Core\modules\</_CoreModulesDir>
+    </PropertyGroup>
+
+    <!-- Create staging directory -->
+    <MakeDir Directories="$(_StagingDir)" />
+
+    <!-- Copy only the module DLL and manifest -->
+    <Copy SourceFiles="$(OutputPath)ContextModule.dll" DestinationFolder="$(_StagingDir)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)module.json" DestinationFolder="$(_StagingDir)" />
+
+    <!-- Zip staging directory to .oamod -->
+    <ZipDirectory SourceDirectory="$(_StagingDir)" DestinationFile="$(_OamodOutput)" Overwrite="true" />
+
+    <!-- Copy .oamod to Core modules directory -->
+    <MakeDir Directories="$(_CoreModulesDir)" />
+    <Copy SourceFiles="$(_OamodOutput)" DestinationFolder="$(_CoreModulesDir)" />
+
+    <!-- Clean up staging directory -->
+    <RemoveDir Directories="$(_StagingDir)" />
+  </Target>
+</Project>
