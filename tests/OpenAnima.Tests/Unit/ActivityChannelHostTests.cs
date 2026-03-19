@@ -6,31 +6,12 @@ using OpenAnima.Core.Channels;
 namespace OpenAnima.Tests.Unit;
 
 /// <summary>
-/// Verifies ActivityChannelHost serialization, coalescing, backpressure, lifecycle, and
-/// IsStateless dispatch helper. CONC-05, CONC-08, CONC-09.
+/// Verifies ActivityChannelHost serialization, coalescing, backpressure, and lifecycle.
+/// CONC-05, CONC-09.
 /// </summary>
 [Trait("Category", "Concurrency")]
 public class ActivityChannelHostTests
 {
-    // ---------------------------------------------------------------------------
-    // Helper stubs
-    // ---------------------------------------------------------------------------
-
-    [StatelessModule]
-    private class StatelessTestModule : IModule
-    {
-        public IModuleMetadata Metadata => null!;
-        public Task InitializeAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task ShutdownAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-    }
-
-    private class StatefulTestModule : IModule
-    {
-        public IModuleMetadata Metadata => null!;
-        public Task InitializeAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task ShutdownAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-    }
-
     private static ILogger<ActivityChannelHost> Logger
         => NullLogger<ActivityChannelHost>.Instance;
 
@@ -290,48 +271,5 @@ public class ActivityChannelHostTests
         var method = typeof(ActivityChannelHost).GetMethod("EnqueueTick");
         Assert.NotNull(method);
         Assert.Equal(typeof(void), method!.ReturnType);
-    }
-
-    [Fact]
-    public void IsStateless_ReturnsTrueForStatelessModule()
-    {
-        // Arrange
-        var module = new StatelessTestModule();
-
-        // Act
-        var result = ActivityChannelHost.IsStateless(module);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void IsStateless_ReturnsFalseForStatefulModule()
-    {
-        // Arrange
-        var module = new StatefulTestModule();
-
-        // Act
-        var result = ActivityChannelHost.IsStateless(module);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void IsStateless_CachesResultAcrossCalls()
-    {
-        // Arrange
-        var module1 = new StatelessTestModule();
-        var module2 = new StatelessTestModule();
-
-        // Act — call twice with different instances of same type
-        var result1 = ActivityChannelHost.IsStateless(module1);
-        var result2 = ActivityChannelHost.IsStateless(module2);
-
-        // Assert — both return same result (cache is consistent)
-        Assert.True(result1);
-        Assert.True(result2);
-        Assert.Equal(result1, result2);
     }
 }

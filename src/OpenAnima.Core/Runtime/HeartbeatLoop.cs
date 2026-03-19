@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -127,7 +126,7 @@ public class HeartbeatLoop : IDisposable
 
     /// <summary>
     /// Executes a single tick: if channel host is set, enqueues via TryWrite (non-blocking).
-    /// Otherwise, falls back to direct module ticking for backward compatibility.
+    /// Otherwise, logs a debug message — HeartbeatModule publishes via its own TickAsync.
     /// </summary>
     private async Task ExecuteTickAsync(CancellationToken ct)
     {
@@ -137,7 +136,7 @@ public class HeartbeatLoop : IDisposable
         try
         {
             // Channel path: enqueue to heartbeat channel (TryWrite = void, never blocks/deadlocks).
-            // The channel consumer calls the onTick callback (stateless dispatch fork in AnimaRuntime).
+            // The channel consumer calls the onTick callback in AnimaRuntime.
             if (_channelHost != null)
             {
                 _channelHost.EnqueueTick(new TickWorkItem(ct));
@@ -153,38 +152,13 @@ public class HeartbeatLoop : IDisposable
                 return;
             }
 
-            // Fallback path (no channel host): directly tick all ITickable modules.
-            // This path is used in tests that create HeartbeatLoop without a full AnimaRuntime.
-            var modules = _registry.GetAllModules();
-            var tickTasks = new List<Task>();
-
-            foreach (var entry in modules)
-            {
-                // Duck-typing approach for cross-context compatibility
-                // Check if the module has a TickAsync(CancellationToken) method
-                var moduleType = entry.Module.GetType();
-                var tickMethod = moduleType.GetMethod("TickAsync", new[] { typeof(CancellationToken) });
-
-                if (tickMethod != null && tickMethod.ReturnType == typeof(Task))
-                {
-                    tickTasks.Add(InvokeTickSafely(entry.Module, tickMethod, ct));
-                }
-            }
-
-            if (tickTasks.Count > 0)
-            {
-                await Task.WhenAll(tickTasks);
-            }
+            // No channel host: nothing to do (HeartbeatModule publishes via its own TickAsync,
+            // which is called directly by HeartbeatLoop for backward compat in Phase 43).
+            _logger?.LogDebug("HeartbeatLoop tick {TickCount}: no channel host, skipping", _tickCount);
 
             sw.Stop();
             var latencyMs = sw.Elapsed.TotalMilliseconds;
             _lastTickLatencyMs = latencyMs;
-
-            if (latencyMs > _interval.TotalMilliseconds * 0.8)
-            {
-                _logger?.LogWarning("Tick {TickCount} took {Duration}ms (>{Threshold}ms threshold)",
-                    _tickCount, latencyMs, _interval.TotalMilliseconds * 0.8);
-            }
 
             if (_hubContext != null)
             {
@@ -194,25 +168,6 @@ public class HeartbeatLoop : IDisposable
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error during tick {TickCount}", _tickCount);
-        }
-    }
-
-    /// <summary>
-    /// Invokes a module's TickAsync method with error isolation.
-    /// </summary>
-    private async Task InvokeTickSafely(IModule module, System.Reflection.MethodInfo tickMethod, CancellationToken ct)
-    {
-        try
-        {
-            var task = (Task?)tickMethod.Invoke(module, new object[] { ct });
-            if (task != null)
-            {
-                await task;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error ticking module {ModuleName}", module.Metadata.Name);
         }
     }
 

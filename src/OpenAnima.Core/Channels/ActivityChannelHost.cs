@@ -1,7 +1,5 @@
-using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
-using OpenAnima.Contracts;
 
 namespace OpenAnima.Core.Channels;
 
@@ -9,7 +7,6 @@ namespace OpenAnima.Core.Channels;
 /// Per-Anima channel host that serializes all state-mutating work through three named channels:
 /// heartbeat, chat, and routing. Each channel has its own consumer loop running in parallel.
 /// Within each channel, work items are processed serially in FIFO order.
-/// Stateless modules can bypass channel serialization via <see cref="IsStateless"/>.
 /// </summary>
 internal sealed class ActivityChannelHost : IAsyncDisposable
 {
@@ -41,10 +38,6 @@ internal sealed class ActivityChannelHost : IAsyncDisposable
     /// individually processed. Monotonically increasing.
     /// </summary>
     public long CoalescedTickCount => Interlocked.Read(ref _coalescedTickCount);
-
-    // Stateless module classification cache — shared across all host instances since
-    // module types do not change at runtime.
-    private static readonly ConcurrentDictionary<Type, bool> _statelessCache = new();
 
     public ActivityChannelHost(
         ILogger<ActivityChannelHost> logger,
@@ -123,22 +116,6 @@ internal sealed class ActivityChannelHost : IAsyncDisposable
                 depth,
                 QueueDepthWarningThreshold);
         }
-    }
-
-    // -----------------------------------------------------------------------
-    // Stateless dispatch helper (CONC-08 building block)
-    // -----------------------------------------------------------------------
-
-    /// <summary>
-    /// Returns <c>true</c> if the module type is decorated with <see cref="StatelessModuleAttribute"/>,
-    /// indicating it is safe to execute concurrently without channel serialization.
-    /// Results are cached in a <see cref="ConcurrentDictionary{TKey,TValue}"/> — no per-call reflection.
-    /// </summary>
-    public static bool IsStateless(IModule module)
-    {
-        var type = module.GetType();
-        return _statelessCache.GetOrAdd(type,
-            t => t.GetCustomAttributes(typeof(StatelessModuleAttribute), inherit: false).Length > 0);
     }
 
     // -----------------------------------------------------------------------
