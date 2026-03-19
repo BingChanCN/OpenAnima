@@ -2,8 +2,8 @@
 
 ## Current State
 
-**Latest shipped:** v1.7 Runtime Foundation (2026-03-16)
-**Current milestone:** v1.8 SDK Runtime Parity
+**Latest shipped:** v1.8 SDK Runtime Parity (2026-03-18)
+**Current milestone:** Planning next milestone
 
 ## What This Is
 
@@ -116,23 +116,21 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ Each Anima has isolated WiringEngine instance (ARCH-04) — v1.5
 - ✓ Configuration files stored per Anima in separate directories (ARCH-05) — v1.5
 - ✓ Service disposal prevents memory leaks (ARCH-06) — v1.5
+- ✓ PluginLoader DI-aware constructor resolution for external modules (PLUG-01) — v1.8
+- ✓ PluginLoader typed ILogger via ILoggerFactory for external modules (PLUG-02) — v1.8
+- ✓ Optional/required parameter handling in PluginLoader DI (PLUG-03) — v1.8
+- ✓ ChatMessageInput migrated to Contracts with SerializeList/DeserializeList (MSG-01, MSG-03) — v1.8
+- ✓ LLMModule messages input port with priority rule for multi-turn conversations (MSG-02) — v1.8
+- ✓ IModuleStorage per-Anima per-Module persistent storage paths (STOR-01) — v1.8
+- ✓ External ContextModule with conversation history and persistence (ECTX-01, ECTX-02) — v1.8
 
-## Current Milestone: v1.8 SDK Runtime Parity
+## Next Milestone
 
-**Goal:** Make external SDK modules truly functional — DI injection, storage paths, structured message input — validated by a real external ContextModule.
-
-**Target features:**
-- PluginLoader DI injection for external modules
-- IModuleContext.DataDirectory per-Anima per-Module storage path
-- LLMModule structured message list input
-- External ContextModule (SDK validation)
+To be defined via `/gsd:new-milestone`.
 
 ### Active
 
-- [ ] External modules receive Contracts DI services via PluginLoader (PLUG-01)
-- [ ] IModuleContext exposes DataDirectory for per-Anima per-Module storage (STOR-01)
-- [ ] LLMModule accepts structured message list input, not just single string (MSG-01)
-- [ ] External ContextModule loads via SDK, maintains conversation history, passes structured messages to LLM (ECTX-01)
+(None — define requirements for next milestone)
 
 ### Deferred (not in v1.8)
 
@@ -172,27 +170,25 @@ Agents that proactively think and act on their own, while module connections rem
 
 ## Context
 
-Shipped v1.7 with ~23,734 LOC across all source files (C#, Razor, CSS, JS).
+Shipped v1.8 with ~25,015 LOC across all source files (C#, Razor, CSS, JS).
 Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4, Microsoft.Extensions.Http.Resilience 8.7.0.
 
-v1.7 delivered runtime foundation hardening:
-- Race-free module execution via ConcurrentDictionary + SemaphoreSlim guards
-- ActivityChannelHost with 3 named channels (heartbeat/chat/routing) — serial within, parallel between
-- 9 new contract types in OpenAnima.Contracts (IModuleConfig, IModuleContext, ICrossAnimaRouter, etc.)
-- 12 active built-in modules decoupled to Contracts-first APIs
-- ChatInputModule wired through chat channel for production serial execution
-- Full test suite: 337/337 green, zero regressions
-
-v1.8 focus: External modules currently get zero DI — PluginLoader uses Activator.CreateInstance() with parameterless constructor. Contracts surface is public but unreachable. Chat is single-turn (no history sent to LLM). No per-module storage path convention.
+v1.8 delivered SDK runtime parity:
+- PluginLoader DI-aware constructor resolution — external modules receive all Contracts services via FullName matching
+- ChatMessageInput in Contracts with SerializeList/DeserializeList — multi-turn conversation support
+- LLMModule messages input port with semaphore-based priority rule
+- IModuleStorage per-Anima per-Module persistent storage with bound instance injection
+- External ContextModule — real SDK module validating the full surface end-to-end
+- Full test suite: 389/389 green
 
 Known tech debt:
-- ANIMA-08: Global IEventBus singleton kept for module constructor DI — full module instance isolation deferred
+- ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred
 - MODMGMT-01/02/03/06: Full install/uninstall/search UI deferred
-- ILLMService remains in Core (requires ChatMessageInput move)
-- Nyquist validation partial across phases
+- ILLMService remains in Core (ChatMessageInput moved to Contracts but ILLMService depends on LLMResult + streaming)
+- Schema mismatch between CLI and Runtime (extended manifest fields)
+- TextJoin fixed 3 input ports — static port system limitation
+- Nyquist validation partial across v1.8 phases
 - IModuleConfigSchema has no production consumer yet
-- PluginLoader zero-DI: external modules cannot access any Contracts services
-- LLMModule single-turn: no conversation history in API calls
 
 ## Key Decisions
 
@@ -260,6 +256,16 @@ Known tech debt:
 | ChatInputModule.SetChannelHost is internal | ActivityChannelHost is internal sealed class — InternalsVisibleTo covers test access | ✓ Good — v1.7 |
 | Channel-first dispatch uses explicit if/else | Not null-conditional `?.` — fallback behavior is clear and testable | ✓ Good — v1.7 |
 
+| FullName type matching for DI | Cross-AssemblyLoadContext type resolution uses FullName string comparison (consistent with IModule discovery) | ✓ Good — v1.8 |
+| Greedy constructor selection | Constructor with most parameters wins (ASP.NET Core DI compatible) | ✓ Good — v1.8 |
+| Contracts services optional in DI | IModuleConfig/IModuleContext/IEventBus/ICrossAnimaRouter resolve to null with warning on failure | ✓ Good — v1.8 |
+| ILogger via ILoggerFactory (non-generic) | Avoids cross-context generic type issues; ILoggerFactory.CreateLogger(moduleType.FullName) | ✓ Good — v1.8 |
+| using alias for ChatMessageInput migration | Core files use `using ChatMessageInput = OpenAnima.Contracts.ChatMessageInput` — avoids namespace pollution | ✓ Good — v1.8 |
+| Semaphore priority for messages vs prompt port | messages acquires first, prompt Wait(0) returns false — deterministic priority | ✓ Good — v1.8 |
+| IModuleStorage separate from IModuleContext | Dedicated interface (SRP) rather than extending IModuleContext | ✓ Good — v1.8 |
+| Bound IModuleStorage per external module | PluginLoader creates bound instance with manifest.Id; built-in modules use explicit GetDataDirectory(moduleId) | ✓ Good — v1.8 |
+| manifest.Id ?? manifest.Name for bound moduleId | Manifests without explicit id fall back to Name | ✓ Good — v1.8 |
+
 ## Constraints
 
 - **Platform**: Windows-first — must work on Windows 10/11 without WSL or Docker
@@ -269,4 +275,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-16 after v1.8 SDK Runtime Parity milestone started*
+*Last updated: 2026-03-18 after v1.8 milestone*

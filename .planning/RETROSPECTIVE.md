@@ -2,6 +2,77 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v1.8 — SDK Runtime Parity
+
+**Shipped:** 2026-03-18
+**Phases:** 4 | **Plans:** 8 | **Commits:** 45
+
+### What Was Built
+- PluginLoader DI-aware constructor resolution with ContractsTypeMap FullName matching, greedy constructor selection, ILogger via ILoggerFactory, optional/required parameter handling
+- ChatMessageInput migrated from Core.LLM to Contracts with SerializeList/DeserializeList static helpers using System.Text.Json camelCase options
+- LLMModule messages input port with semaphore-based priority rule — messages port acquires first, prompt Wait(0) returns false
+- IModuleStorage interface in Contracts with ModuleStorageService implementation — per-Anima per-Module paths, auto-created directories, path validation
+- PluginLoader bound IModuleStorage injection — special case before generic ContractsTypeMap lookup, manifest.Id ?? manifest.Name as moduleId
+- External ContextModule — real .oamod module with conversation history accumulation, history.json persistence, restart restore, per-Anima isolation
+
+### What Worked
+- Phase dependency chain (38→39→40→41) built incrementally — each phase added one capability consumed by the next
+- Phase 41 as SDK validation capstone — exercised all prior phases' APIs in a real module, catching integration issues early
+- Bound IModuleStorage pattern — clean separation between built-in (explicit moduleId) and external (auto-bound) usage
+- Re-verification after gap closure (Phase 38) — initial verification caught test build errors, Plan 03 fixed them, re-verification confirmed
+- Integration checker validated all 12 cross-phase wiring points and 4 E2E flows with zero gaps
+
+### What Was Inefficient
+- SUMMARY frontmatter missing requirements_completed for 4 of 9 requirements (MSG-01/02/03, STOR-01) ��� documentation gap caught by audit
+- Nyquist VALIDATION.md created for all 4 phases but never signed off (nyquist_compliant: false) — validation strategy drafted but not executed
+- Phase 38 required 3 plans (gap closure) due to test build errors from CrossAnimaRouter constructor ambiguity and harness property name mismatch
+
+### Patterns Established
+- ContractsTypeMap for cross-context DI: `Dictionary<string, Type>` mapping FullName → host type for PluginLoader parameter resolution
+- Bound service injection: PluginLoader creates per-module bound instances for services that need module identity (IModuleStorage)
+- using alias migration: `using ChatMessageInput = OpenAnima.Contracts.ChatMessageInput` for backward-compatible type moves
+- Semaphore priority: First subscriber acquires SemaphoreSlim(1,1), second subscriber's Wait(0) returns false — deterministic port priority
+
+### Key Lessons
+1. SUMMARY frontmatter requirements_completed should be populated by the executor, not left for audit to discover — 4/9 missing is too many
+2. Nyquist validation strategies should be signed off during phase execution, not left as draft — partial compliance across all phases
+3. Gap closure plans are a healthy pattern — catching test build errors in verification and fixing them in a dedicated plan is better than ignoring them
+4. SDK validation via a real external module is the most effective way to verify API surface — ContextModule caught the IModuleStorage binding gap
+
+### Cost Observations
+- Model mix: ~70% sonnet (executor/verifier), ~25% haiku (research), ~5% opus (planning)
+- Sessions: ~3 sessions across 2 days
+- Notable: 4 phases, 8 plans, 45 commits in 2 days — consistent velocity with v1.6/v1.7
+
+---
+
+## Milestone: v1.7 — Runtime Foundation
+
+**Shipped:** 2026-03-16
+**Phases:** 6 | **Plans:** 13 | **Commits:** ~40
+
+### What Was Built
+- Race-free module execution via ConcurrentDictionary + SemaphoreSlim skip-when-busy guards
+- ActivityChannelHost with 3 named channels (heartbeat/chat/routing) — serial within, parallel between
+- 9 new contract types in OpenAnima.Contracts
+- 12 active built-in modules decoupled to Contracts-first APIs
+- ChatInputModule wired through chat channel for serial execution guarantee
+
+### What Worked
+- [StatelessModule] attribute for concurrent dispatch classification — clean opt-in
+- SemaphoreSlim Wait(0) over WaitAsync() — synchronous non-blocking skip semantics
+- Code review quick tasks (3, 4, 5, 6) caught real issues before milestone completion
+
+### What Was Inefficient
+- Phase 36 required 5 plans (most in any phase) — built-in module decoupling was broader than estimated
+- IModuleConfigSchema added to Contracts but has no production consumer yet
+
+### Key Lessons
+1. Code review as quick tasks between phases catches issues early — worth the investment
+2. Channel-based serialization (ActivityChannelHost) is cleaner than lock-based approaches for module execution ordering
+
+---
+
 ## Milestone: v1.6 — Cross-Anima Routing
 
 **Shipped:** 2026-03-14
@@ -95,6 +166,8 @@
 
 ## Cross-Milestone Trends
 
+| v1.8 | 45 | 4 | PluginLoader DI, ChatMessageInput migration, IModuleStorage, ContextModule |
+| v1.7 | ~40 | 6 | ActivityChannelHost, Contracts expansion, module decoupling |
 | v1.6 | 25 | 4 | Cross-Anima routing, format detection, HTTP module |
 | v1.1 | ~25 | 5 | Blazor Server architecture established |
 | v1.2 | ~20 | 3 | OpenAI SDK integration pattern |
@@ -112,6 +185,8 @@
 | v1.3 | ~11,000 | SVG editor, topological sort | 0 |
 | v1.4 | ~14,500 | CLI framework, .oamod format | 3 |
 | v1.6 | ~13,610 | Routing event chain, SSRF guard, self-correction loop | 5 |
+| v1.7 | ~23,734 | ActivityChannelHost, SemaphoreSlim skip, [StatelessModule] | 5 |
+| v1.8 | ~25,015 | ContractsTypeMap DI, bound service injection, semaphore priority | 7 |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -121,3 +196,5 @@
 4. Wave-based plan execution significantly speeds up milestone delivery when plans are independent
 5. TDD with short timeouts and TCS-based completion produces deterministic async tests — verified in v1.6 routing and HTTP modules
 6. Update tracking tables immediately after plan completion — stale docs create audit noise (v1.6 lesson)
+7. SDK validation via a real external module is the most effective API surface verification — catches binding gaps that unit tests miss (v1.8 lesson)
+8. Gap closure plans are healthy — catching issues in verification and fixing in a dedicated plan is better than ignoring (v1.8 lesson)

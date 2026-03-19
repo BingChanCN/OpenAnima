@@ -1,5 +1,26 @@
 # Milestones
 
+## v1.8 SDK Runtime Parity (Shipped: 2026-03-18)
+
+**Phases:** 38-41 | **Plans:** 8 | **Tasks:** 15 | **LOC:** ~1,280 C# added (+6,776 insertions)
+**Git range:** feat(38-01)..docs(phase-41) | **Timeline:** 2026-03-17 → 2026-03-18 (2 days)
+
+**Delivered:** External module SDK parity — PluginLoader DI injection, per-Anima module storage, structured message input, and a real external ContextModule that validates the full SDK surface end-to-end with multi-turn conversation history.
+
+**Key accomplishments:**
+- PluginLoader DI-aware constructor resolution via FullName matching across AssemblyLoadContext boundaries — external modules receive IModuleConfig, IModuleContext, IEventBus, ICrossAnimaRouter, ILogger, IModuleStorage
+- ChatMessageInput migrated from Core.LLM to Contracts with SerializeList/DeserializeList helpers; Core retains using alias for backward compatibility
+- LLMModule messages input port with semaphore-based priority rule — multi-turn conversation support via structured message list
+- IModuleStorage interface with per-Anima per-Module persistent storage paths, auto-created directories, and bound instance injection for external modules
+- External ContextModule — real .oamod module maintaining conversation history, persisting to DataDirectory/history.json, restoring on restart, with per-Anima isolation
+- Full test suite: 389/389 green, zero regressions across all 4 phases
+
+**Tech debt (accepted):** Nyquist validation partial across all 4 phases (VALIDATION.md exists but nyquist_compliant: false), SUMMARY frontmatter missing requirements_completed for MSG-01/02/03 and STOR-01
+
+**Archive:** [milestones/v1.8-ROADMAP.md](milestones/v1.8-ROADMAP.md) | [milestones/v1.8-REQUIREMENTS.md](milestones/v1.8-REQUIREMENTS.md) | [milestones/v1.8-MILESTONE-AUDIT.md](milestones/v1.8-MILESTONE-AUDIT.md)
+
+---
+
 ## v1.7 Runtime Foundation (Shipped: 2026-03-16)
 
 **Phases:** 32-37 | **Plans:** 13 | **Tasks:** 26 | **LOC:** ~10,100 C# added (+14,079 insertions)
