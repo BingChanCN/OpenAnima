@@ -2,15 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Event-Driven Propagation Engine
-status: roadmap_ready
-last_updated: "2026-03-19T00:00:00.000Z"
-last_activity: "2026-03-19 — v1.9 roadmap created, phases 42-43 defined"
+status: unknown
+last_updated: "2026-03-19T12:22:37.046Z"
 progress:
   total_phases: 2
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 1
 ---
 
 # Project State: OpenAnima
@@ -23,16 +21,12 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-19)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Replace DAG topological sort with event-driven propagation — data arrival triggers execution, output fans out downstream, cycles allowed
+**Current focus:** Phase 42 — propagation-engine
 
 ## Current Position
 
-Phase: 42 — Propagation Engine (not started)
-Plan: —
-Status: Roadmap ready, awaiting plan-phase
-Last activity: 2026-03-19 — v1.9 roadmap created
-
-Progress: [__________] 0%
+Phase: 42 (propagation-engine) — EXECUTING
+Plan: 1 of 3
 
 ## Decisions Made
 
@@ -53,6 +47,8 @@ Progress: [__________] 0%
 - [Phase 41-external-context-module]: IModuleStorage special case placed before generic ContractsTypeMap lookup in ResolveParameter
 - [Phase 41-external-context-module]: module.json CopyToOutputDirectory=PreserveNewest — PluginLoader needs manifest alongside DLL in build output
 - [Phase 41-external-context-module]: ContextModule tests load from build output dir (not .oamod) — avoids build dependency fragility in test suite
+- [Phase 42-propagation-engine]: FixedTextModule.Subscribe<DateTime> for trigger port — matches HeartbeatModule tick output payload type
+- [Phase 42-propagation-engine]: HeartbeatModule.TickAsync retained as public method for Phase 43 standalone timer integration
 
 ## v1.9 Decisions
 
@@ -63,6 +59,7 @@ Progress: [__________] 0%
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 93 (across v1.0–v1.8)
 
 **By Milestone:**
@@ -78,6 +75,7 @@ Progress: [__________] 0%
 | v1.6 Cross-Anima Routing | 4 | 8 | 2026-03-14 |
 | v1.7 Runtime Foundation | 6 | 13 | 2026-03-16 |
 | v1.8 SDK Runtime Parity | 4 | 9 | 2026-03-18 |
+| Phase 42-propagation-engine P02 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
