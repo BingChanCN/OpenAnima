@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Event-Driven Propagation Engine
 status: unknown
-last_updated: "2026-03-19T13:09:52.531Z"
+last_updated: "2026-03-19T13:46:07.368Z"
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
 ---
 
 # Project State: OpenAnima
@@ -21,12 +21,12 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-19)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 42 — propagation-engine
+**Current focus:** Phase 43 — heartbeat-refactor
 
 ## Current Position
 
-Phase: 42 (propagation-engine) — EXECUTING
-Plan: 2 of 3
+Phase: 43 (heartbeat-refactor) — EXECUTING
+Plan: 1 of 2
 
 ## Decisions Made
 
@@ -55,6 +55,8 @@ Plan: 2 of 3
 - [Phase 42-03]: WiringDIIntegrationTests cycle test rewritten to assert acceptance (IsLoaded == true)
 - [Phase 42-03]: AnimaRuntime_OnTick test converted to sync — no ExecuteAsync or HeartbeatModule.execute event
 - [Phase 42-03]: [StatelessModule] added to FixedTextModule and HeartbeatModule (both are stateless signal processors)
+- [Phase 43-heartbeat-refactor]: HeartbeatModule refactored to standalone PeriodicTimer with IModuleConfigSchema and config-driven interval
+- [Phase 43-heartbeat-refactor]: HeartbeatModule added to AutoInitModuleTypes — startup auto-init starts the internal timer
 
 ## v1.9 Decisions
 
@@ -84,6 +86,7 @@ Plan: 2 of 3
 | Phase 42-propagation-engine P02 | 2 | 2 tasks | 2 files |
 | Phase 42 P01 | 17m | 2 tasks | 8 files |
 | Phase 42-propagation-engine P03 | 15 | 2 tasks | 7 files |
+| Phase 43-heartbeat-refactor P01 | 10min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
