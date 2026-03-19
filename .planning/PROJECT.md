@@ -4,7 +4,7 @@
 
 **Latest shipped:** v1.8 SDK Runtime Parity (2026-03-18)
 **Current milestone:** v1.9 Event-Driven Propagation Engine
-**Phase 42 complete:** Propagation Engine — event-driven execution, cycles allowed, topo sort removed (2026-03-19)
+**Phase 44 complete:** Config Schema Sidebar — EditorConfigSidebar renders IModuleConfigSchema fields with defaults (2026-03-19)
 
 ## What This Is
 
@@ -136,7 +136,7 @@ v1.9 Event-Driven Propagation Engine — Transform execution model from DAG topo
 - ✓ Cyclic wiring topologies allowed (PROP-03) — v1.9
 - ✓ Modules can choose not to produce output, naturally terminating propagation (PROP-04) — v1.9
 - [ ] HeartbeatModule becomes standalone timer signal source (BEAT-05)
-- [ ] HeartbeatModule interval is user-configurable (BEAT-06)
+- ✓ HeartbeatModule interval is user-configurable via EditorConfigSidebar schema rendering (BEAT-06) — v1.9
 
 ### Deferred (not in v1.8)
 
@@ -194,7 +194,7 @@ Known tech debt:
 - Schema mismatch between CLI and Runtime (extended manifest fields)
 - TextJoin fixed 3 input ports — static port system limitation
 - Nyquist validation partial across v1.8 phases
-- IModuleConfigSchema has no production consumer yet
+- ~~IModuleConfigSchema has no production consumer yet~~ Resolved: Phase 44 wired GetSchema() to EditorConfigSidebar
 
 ## Key Decisions
 
@@ -286,4 +286,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-19 after Phase 42 Propagation Engine complete*
+*Last updated: 2026-03-19 after Phase 44 Config Schema Sidebar complete*
