@@ -11,7 +11,7 @@
 - ✅ **v1.6 Cross-Anima Routing** — Phases 28-31 (shipped 2026-03-14)
 - ✅ **v1.7 Runtime Foundation** — Phases 32-37 (shipped 2026-03-16)
 - ✅ **v1.8 SDK Runtime Parity** — Phases 38-41 (shipped 2026-03-18)
-- 🚧 **v1.9 Event-Driven Propagation Engine** — Phases 42-43 (in progress)
+- 🚧 **v1.9 Event-Driven Propagation Engine** — Phases 42-44 (in progress)
 
 ## Phases
 
@@ -117,6 +117,7 @@
 
 - [x] **Phase 42: Propagation Engine** - Replace WiringEngine topo sort with event-driven port-to-port dispatch supporting cycles (completed 2026-03-19)
 - [x] **Phase 43: Heartbeat Refactor** - Decouple HeartbeatModule from engine driver role; make it a configurable standalone timer signal source (completed 2026-03-19)
+- [ ] **Phase 44: Config Schema Sidebar Integration** - Wire EditorConfigSidebar to IModuleConfigSchema.GetSchema() so modules with config schemas show default fields without prior persistence (gap closure)
 
 ## Phase Details
 
@@ -147,6 +148,15 @@ Plans:
 Plans:
 - [ ] 43-01-PLAN.md — Standalone timer HeartbeatModule with configurable interval and IModuleConfigSchema
 - [ ] 43-02-PLAN.md — HeartbeatModule tests and full regression verification
+
+### Phase 44: Config Schema Sidebar Integration
+**Goal**: EditorConfigSidebar discovers and renders config fields from IModuleConfigSchema.GetSchema() — modules with config schemas show default fields without prior persistence
+**Depends on**: Phase 43
+**Requirements**: BEAT-06
+**Gap Closure**: Closes BEAT-06 frontend gap, integration gap (GetSchema → Sidebar), and broken flow (user configures HeartbeatModule interval via sidebar)
+**Success Criteria** (what must be TRUE):
+  1. When a module implements IModuleConfigSchema, the EditorConfigSidebar renders its schema fields (including intervalMs for HeartbeatModule) even when no config has been previously saved
+  2. User can set HeartbeatModule trigger interval in the sidebar and the change takes effect on the next tick without restarting the Anima
 
 ## Progress
 
@@ -196,8 +206,9 @@ Plans:
 | 41. External ContextModule | v1.8 | 2/2 | Complete | 2026-03-18 |
 | 42. Propagation Engine | v1.9 | 3/3 | Complete | 2026-03-19 |
 | 43. Heartbeat Refactor | 2/2 | Complete   | 2026-03-19 | - |
+| 44. Config Schema Sidebar | v1.9 | 0/0 | Pending | - |
 
 **Total shipped: 42 phases, 96 plans across 9 milestones**
 
 ---
-*Last updated: 2026-03-19 — Phase 43 planned (2 plans)*
+*Last updated: 2026-03-19 — Phase 44 added (gap closure for BEAT-06)*

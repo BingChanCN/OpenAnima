@@ -10,7 +10,7 @@
 ## Heartbeat Refactor
 
 - [x] **BEAT-05**: HeartbeatModule exists as a standalone timer signal source module, no longer drives the WiringEngine execution loop
-- [x] **BEAT-06**: User can configure HeartbeatModule trigger interval via the module configuration sidebar
+- [ ] **BEAT-06**: User can configure HeartbeatModule trigger interval via the module configuration sidebar
 
 ## Future Requirements (deferred)
 
@@ -35,8 +35,8 @@
 | PROP-03 | Phase 42 | Complete |
 | PROP-04 | Phase 42 | Complete |
 | BEAT-05 | Phase 43 | Complete |
-| BEAT-06 | Phase 43 | Complete |
+| BEAT-06 | Phase 44 | Pending |
 
 ---
 *Created: 2026-03-19 for milestone v1.9*
-*Traceability updated: 2026-03-19 after roadmap creation*
+*Traceability updated: 2026-03-19 — BEAT-06 reassigned to Phase 44 (gap closure)*
