@@ -40,13 +40,14 @@ public class WiringInitializationService : IHostedService
 
     /// <summary>
     /// Module types that are auto-initialized at startup.
-    /// HeartbeatModule excluded — BUILTIN-10 requires it to be optional.
+    /// HeartbeatModule included — Phase 43 made it a standalone timer that self-initializes.
     /// </summary>
     private static readonly Type[] AutoInitModuleTypes =
     {
         typeof(LLMModule),
         typeof(ChatInputModule),
         typeof(ChatOutputModule),
+        typeof(HeartbeatModule),
         typeof(FixedTextModule),
         typeof(TextJoinModule),
         typeof(TextSplitModule),

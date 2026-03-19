@@ -55,17 +55,14 @@ public sealed class AnimaRuntime : IAsyncDisposable
             hubContext: hubContext);
 
         // Create ActivityChannelHost with three named channel callbacks.
-        // onTick: Phase 42 — heartbeat tick is a no-op for the engine.
-        // HeartbeatModule.TickAsync publishes to its tick output port, which propagates
-        // through WiringEngine routing subscriptions. Phase 43 will complete the decoupling.
+        // onTick: HeartbeatModule is a standalone timer (Phase 43) — onTick is a no-op.
+        // The heartbeat channel remains for dashboard telemetry via HeartbeatLoop.
         ActivityChannelHost = new ActivityChannelHost(
             loggerFactory.CreateLogger<ActivityChannelHost>(),
             onTick: async (item) =>
             {
-                // Phase 42: Heartbeat tick is now a no-op for the engine.
-                // HeartbeatModule.TickAsync (called by HeartbeatLoop fallback path) publishes
-                // to its tick output port, which propagates through WiringEngine routing subscriptions.
-                // Phase 43 will complete the HeartbeatModule decoupling.
+                // HeartbeatModule is a standalone timer (Phase 43) — onTick is a no-op.
+                // The heartbeat channel remains for dashboard telemetry via HeartbeatLoop.
                 await Task.CompletedTask;
             },
             onChat: async (item) =>
