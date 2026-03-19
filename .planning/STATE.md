@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Event-Driven Propagation Engine
 status: unknown
-last_updated: "2026-03-19T13:59:54.904Z"
+last_updated: "2026-03-19T15:11:37.979Z"
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_phases: 3
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
 ---
 
 # Project State: OpenAnima
@@ -21,12 +21,12 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-19)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 43 — heartbeat-refactor
+**Current focus:** Phase 44 — config-schema-sidebar
 
 ## Current Position
 
-Phase: 43 (heartbeat-refactor) — EXECUTING
-Plan: 2 of 2 (COMPLETE)
+Phase: 44 (config-schema-sidebar) — EXECUTING
+Plan: 1 of 1
 
 ## Decisions Made
 
@@ -57,6 +57,9 @@ Plan: 2 of 2 (COMPLETE)
 - [Phase 42-03]: [StatelessModule] added to FixedTextModule and HeartbeatModule (both are stateless signal processors)
 - [Phase 43-heartbeat-refactor]: HeartbeatModule refactored to standalone PeriodicTimer with IModuleConfigSchema and config-driven interval
 - [Phase 43-heartbeat-refactor]: HeartbeatModule unit tests prove BEAT-05 (standalone timer tick publish) and BEAT-06 (configurable interval with 50ms clamp) — 394 tests green
+- [Phase 44-config-schema-sidebar]: ModuleSchemaService uses static built-in type map + IServiceProvider.GetService — avoids reflection scanning at runtime
+- [Phase 44-config-schema-sidebar]: Schema defaults merged into _currentConfig in LoadConfig — auto-save not triggered on load, only on user edits
+- [Phase 44-config-schema-sidebar]: Raw kvp fallback preserved in EditorConfigSidebar — non-schema modules continue working unchanged
 
 ## v1.9 Decisions
 
@@ -87,6 +90,7 @@ Plan: 2 of 2 (COMPLETE)
 | Phase 42 P01 | 17m | 2 tasks | 8 files |
 | Phase 42-propagation-engine P03 | 15 | 2 tasks | 7 files |
 | Phase 43-heartbeat-refactor P02 | 7min | 2 tasks | 2 files |
+| Phase 44-config-schema-sidebar P01 | 8min | 2 tasks | 3 files |
 
 ## Accumulated Context
 

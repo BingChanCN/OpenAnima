@@ -117,7 +117,7 @@
 
 - [x] **Phase 42: Propagation Engine** - Replace WiringEngine topo sort with event-driven port-to-port dispatch supporting cycles (completed 2026-03-19)
 - [x] **Phase 43: Heartbeat Refactor** - Decouple HeartbeatModule from engine driver role; make it a configurable standalone timer signal source (completed 2026-03-19)
-- [ ] **Phase 44: Config Schema Sidebar Integration** - Wire EditorConfigSidebar to IModuleConfigSchema.GetSchema() so modules with config schemas show default fields without prior persistence (gap closure)
+- [x] **Phase 44: Config Schema Sidebar Integration** - Wire EditorConfigSidebar to IModuleConfigSchema.GetSchema() so modules with config schemas show default fields without prior persistence (gap closure) (completed 2026-03-19)
 
 ## Phase Details
 
@@ -157,7 +157,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. When a module implements IModuleConfigSchema, the EditorConfigSidebar renders its schema fields (including intervalMs for HeartbeatModule) even when no config has been previously saved
   2. User can set HeartbeatModule trigger interval in the sidebar and the change takes effect on the next tick without restarting the Anima
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
 - [ ] 44-01-PLAN.md — ModuleSchemaService + EditorConfigSidebar schema-aware rendering
 
@@ -209,7 +209,7 @@ Plans:
 | 41. External ContextModule | v1.8 | 2/2 | Complete | 2026-03-18 |
 | 42. Propagation Engine | v1.9 | 3/3 | Complete | 2026-03-19 |
 | 43. Heartbeat Refactor | 2/2 | Complete   | 2026-03-19 | - |
-| 44. Config Schema Sidebar | v1.9 | 0/1 | Planning | - |
+| 44. Config Schema Sidebar | 1/1 | Complete   | 2026-03-19 | - |
 
 **Total shipped: 42 phases, 96 plans across 9 milestones**
 
