@@ -6,10 +6,10 @@ namespace OpenAnima.Core.Modules;
 
 /// <summary>
 /// Fixed text module that outputs configurable text with {{variable}} template interpolation.
-/// Variables are sourced from module config key-value pairs. Triggered by execute event or
-/// input port data (future enhancement for dynamic variables).
+/// Variables are sourced from module config key-value pairs. Executes when data arrives on
+/// the trigger input port.
 /// </summary>
-[StatelessModule]
+[InputPort("trigger", PortType.Trigger)]
 [OutputPort("output", PortType.Text)]
 public class FixedTextModule : IModuleExecutor
 {
@@ -39,8 +39,8 @@ public class FixedTextModule : IModuleExecutor
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        var sub = _eventBus.Subscribe<string>(
-            $"{Metadata.Name}.execute",
+        var sub = _eventBus.Subscribe<DateTime>(
+            $"{Metadata.Name}.port.trigger",
             async (evt, ct) => await ExecuteAsync(ct));
         _subscriptions.Add(sub);
         return Task.CompletedTask;
