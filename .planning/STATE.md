@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Event-Driven Propagation Engine
 status: unknown
-last_updated: "2026-03-19T13:46:07.368Z"
+last_updated: "2026-03-19T13:59:54.904Z"
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State: OpenAnima
@@ -26,7 +26,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-19)
 ## Current Position
 
 Phase: 43 (heartbeat-refactor) — EXECUTING
-Plan: 1 of 2
+Plan: 2 of 2 (COMPLETE)
 
 ## Decisions Made
 
@@ -56,7 +56,7 @@ Plan: 1 of 2
 - [Phase 42-03]: AnimaRuntime_OnTick test converted to sync — no ExecuteAsync or HeartbeatModule.execute event
 - [Phase 42-03]: [StatelessModule] added to FixedTextModule and HeartbeatModule (both are stateless signal processors)
 - [Phase 43-heartbeat-refactor]: HeartbeatModule refactored to standalone PeriodicTimer with IModuleConfigSchema and config-driven interval
-- [Phase 43-heartbeat-refactor]: HeartbeatModule added to AutoInitModuleTypes — startup auto-init starts the internal timer
+- [Phase 43-heartbeat-refactor]: HeartbeatModule unit tests prove BEAT-05 (standalone timer tick publish) and BEAT-06 (configurable interval with 50ms clamp) — 394 tests green
 
 ## v1.9 Decisions
 
@@ -86,7 +86,7 @@ Plan: 1 of 2
 | Phase 42-propagation-engine P02 | 2 | 2 tasks | 2 files |
 | Phase 42 P01 | 17m | 2 tasks | 8 files |
 | Phase 42-propagation-engine P03 | 15 | 2 tasks | 7 files |
-| Phase 43-heartbeat-refactor P01 | 10min | 2 tasks | 3 files |
+| Phase 43-heartbeat-refactor P02 | 7min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -110,4 +110,4 @@ Plan: 1 of 2
 ---
 
 *State updated: 2026-03-19*
-*Stopped at: Completed 42-01-PLAN.md — Phase 42 Plan 2 ready*
+*Stopped at: Completed 43-02-PLAN.md — Phase 43 complete*

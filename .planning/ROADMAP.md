@@ -116,7 +116,7 @@
 **Milestone Goal:** Replace DAG topological sort execution with event-driven propagation — modules execute on data arrival, output fans out downstream, and cyclic topologies are supported.
 
 - [x] **Phase 42: Propagation Engine** - Replace WiringEngine topo sort with event-driven port-to-port dispatch supporting cycles (completed 2026-03-19)
-- [ ] **Phase 43: Heartbeat Refactor** - Decouple HeartbeatModule from engine driver role; make it a configurable standalone timer signal source
+- [x] **Phase 43: Heartbeat Refactor** - Decouple HeartbeatModule from engine driver role; make it a configurable standalone timer signal source (completed 2026-03-19)
 
 ## Phase Details
 
@@ -143,7 +143,7 @@ Plans:
   1. HeartbeatModule emits a trigger signal on its output port at a regular interval, which propagates downstream through the network like any other module output
   2. The WiringEngine no longer has a heartbeat-driven execution loop — execution is purely data-driven
   3. User can set the HeartbeatModule trigger interval in the module configuration sidebar and the change takes effect without restarting the Anima
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 43-01-PLAN.md — Standalone timer HeartbeatModule with configurable interval and IModuleConfigSchema
 - [ ] 43-02-PLAN.md — HeartbeatModule tests and full regression verification
@@ -195,7 +195,7 @@ Plans:
 | 40. Module Storage Path | v1.8 | 1/1 | Complete | 2026-03-18 |
 | 41. External ContextModule | v1.8 | 2/2 | Complete | 2026-03-18 |
 | 42. Propagation Engine | v1.9 | 3/3 | Complete | 2026-03-19 |
-| 43. Heartbeat Refactor | 1/2 | In Progress|  | - |
+| 43. Heartbeat Refactor | 2/2 | Complete   | 2026-03-19 | - |
 
 **Total shipped: 42 phases, 96 plans across 9 milestones**
 
