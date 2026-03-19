@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Event-Driven Propagation Engine
 status: unknown
-last_updated: "2026-03-19T12:22:37.046Z"
+last_updated: "2026-03-19T12:37:53.207Z"
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State: OpenAnima
@@ -26,7 +26,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-19)
 ## Current Position
 
 Phase: 42 (propagation-engine) — EXECUTING
-Plan: 1 of 3
+Plan: 2 of 3
 
 ## Decisions Made
 
@@ -49,6 +49,9 @@ Plan: 1 of 3
 - [Phase 41-external-context-module]: ContextModule tests load from build output dir (not .oamod) — avoids build dependency fragility in test suite
 - [Phase 42-propagation-engine]: FixedTextModule.Subscribe<DateTime> for trigger port — matches HeartbeatModule tick output payload type
 - [Phase 42-propagation-engine]: HeartbeatModule.TickAsync retained as public method for Phase 43 standalone timer integration
+- [Phase 42-01]: ConnectionGraph accepts cyclic graphs — HasCycle is informational only (DFS), no topo sort
+- [Phase 42-01]: Per-module SemaphoreSlim keyed by targetModuleRuntimeName — one semaphore per target module for wave isolation
+- [Phase 42-01]: ITickable removed from Contracts — HeartbeatModule no longer implements it; HeartbeatLoop fallback path removed
 
 ## v1.9 Decisions
 
@@ -76,6 +79,7 @@ Plan: 1 of 3
 | v1.7 Runtime Foundation | 6 | 13 | 2026-03-16 |
 | v1.8 SDK Runtime Parity | 4 | 9 | 2026-03-18 |
 | Phase 42-propagation-engine P02 | 2 | 2 tasks | 2 files |
+| Phase 42 P01 | 17m | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -99,4 +103,4 @@ Plan: 1 of 3
 ---
 
 *State updated: 2026-03-19*
-*Stopped at: v1.9 roadmap created — Phase 42 ready for planning*
+*Stopped at: Completed 42-01-PLAN.md — Phase 42 Plan 2 ready*

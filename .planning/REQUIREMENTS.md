@@ -3,8 +3,8 @@
 ## Propagation Engine
 
 - [x] **PROP-01**: Module executes immediately when any input port receives data, without waiting for heartbeat-driven topological sort
-- [ ] **PROP-02**: Module output automatically fans out to all connected downstream ports, propagating like a wave through the network
-- [ ] **PROP-03**: Wiring topology allows cycles — connections that form loops are accepted and executed
+- [x] **PROP-02**: Module output automatically fans out to all connected downstream ports, propagating like a wave through the network
+- [x] **PROP-03**: Wiring topology allows cycles — connections that form loops are accepted and executed
 - [x] **PROP-04**: Module can choose not to produce output on any execution, naturally terminating propagation at that point
 
 ## Heartbeat Refactor
@@ -31,8 +31,8 @@
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
 | PROP-01 | Phase 42 | Complete |
-| PROP-02 | Phase 42 | Pending |
-| PROP-03 | Phase 42 | Pending |
+| PROP-02 | Phase 42 | Complete |
+| PROP-03 | Phase 42 | Complete |
 | PROP-04 | Phase 42 | Complete |
 | BEAT-05 | Phase 43 | Pending |
 | BEAT-06 | Phase 43 | Pending |
