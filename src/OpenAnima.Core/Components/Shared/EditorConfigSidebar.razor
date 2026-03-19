@@ -3,6 +3,7 @@
 @using OpenAnima.Core.Ports
 @using OpenAnima.Core.Wiring
 @using OpenAnima.Core.Routing
+@using OpenAnima.Contracts
 @using OpenAnima.Contracts.Ports
 @implements IDisposable
 @inject EditorStateService _editorState
@@ -13,13 +14,27 @@
 @inject IAnimaRuntimeManager _runtimeManager
 @inject LanguageService LangSvc
 @inject IStringLocalizer<SharedResources> L
+@inject ModuleSchemaService _schemaService
 
 <div class="editor-config-sidebar @(_editorState.SelectedNodeId != null ? "visible" : "")">
     @if (_selectedNode != null)
     {
         <div class="sidebar-header">
             <h3>@_selectedNode.ModuleName</h3>
-            <button class="close-btn" @onclick="HandleClose">×</button>
+            <div class="header-actions">
+                <button class="action-btn text-error" @onclick="HandleDelete" title="@L["Editor.Config.Delete"]" aria-label="Delete Module">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
+                <button class="action-btn" @onclick="HandleClose" title="Close" aria-label="Close Sidebar">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
         </div>
         <div class="sidebar-content">
             <!-- Metadata Section -->
@@ -114,8 +129,72 @@
                 {
                     <p class="text-muted">@L["Editor.Config.NoConfigFields"]</p>
                 }
+                else if (_currentSchema != null)
+                {
+                    <div class="config-form">
+                        @foreach (var field in _currentSchema.OrderBy(f => f.Order))
+                        {
+                            var fieldValue = _currentConfig.TryGetValue(field.Key, out var v) ? v : (field.DefaultValue ?? "");
+                            <div class="config-field">
+                                <label title="@field.Description">@field.DisplayName</label>
+                                @switch (field.Type)
+                                {
+                                    case ConfigFieldType.Int:
+                                    case ConfigFieldType.Number:
+                                        <input type="number"
+                                               value="@fieldValue"
+                                               @oninput="@(e => HandleConfigChanged(field.Key, e.Value?.ToString() ?? string.Empty))" />
+                                        break;
+                                    case ConfigFieldType.Bool:
+                                        <select value="@fieldValue"
+                                                @onchange="@(e => HandleConfigChanged(field.Key, e.Value?.ToString() ?? "false"))">
+                                            <option value="true" selected="@(fieldValue == "true")">True</option>
+                                            <option value="false" selected="@(fieldValue != "true")">False</option>
+                                        </select>
+                                        break;
+                                    case ConfigFieldType.Secret:
+                                        <input type="password"
+                                               value="@fieldValue"
+                                               @oninput="@(e => HandleConfigChanged(field.Key, e.Value?.ToString() ?? string.Empty))" />
+                                        break;
+                                    case ConfigFieldType.MultilineText:
+                                        <textarea rows="6"
+                                                  @oninput="@(e => HandleConfigChanged(field.Key, e.Value?.ToString() ?? string.Empty))">@fieldValue</textarea>
+                                        break;
+                                    case ConfigFieldType.Enum:
+                                    case ConfigFieldType.Dropdown:
+                                        <select value="@fieldValue"
+                                                @onchange="@(e => HandleConfigChanged(field.Key, e.Value?.ToString() ?? string.Empty))">
+                                            @if (field.EnumValues != null)
+                                            {
+                                                @foreach (var opt in field.EnumValues)
+                                                {
+                                                    <option value="@opt" selected="@(opt == fieldValue)">@opt</option>
+                                                }
+                                            }
+                                        </select>
+                                        break;
+                                    default:
+                                        <input type="text"
+                                               value="@fieldValue"
+                                               @oninput="@(e => HandleConfigChanged(field.Key, e.Value?.ToString() ?? string.Empty))" />
+                                        break;
+                                }
+                                @if (field.Description != null)
+                                {
+                                    <span class="field-hint">@field.Description</span>
+                                }
+                                @if (_validationErrors.ContainsKey(field.Key))
+                                {
+                                    <span class="field-error">@L["Editor.Config.ValidationError"]</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
                 else
                 {
+                    <!-- Fallback: render raw key-value pairs for modules without schema (existing behavior) -->
                     <div class="config-form">
                         @foreach (var kvp in _currentConfig)
                         {
@@ -213,6 +292,7 @@
 @code {
     private ModuleNode? _selectedNode;
     private Dictionary<string, string> _currentConfig = new();
+    private IReadOnlyList<ConfigFieldDescriptor>? _currentSchema;
     private Dictionary<string, string> _validationErrors = new();
     private string? _lastSelectedNodeId;
     private string? _lastAnimaId;
@@ -259,6 +339,7 @@
         {
             _selectedNode = null;
             _currentConfig = new Dictionary<string, string>();
+            _currentSchema = null;
             _validationErrors.Clear();
             return;
         }
@@ -274,12 +355,27 @@
         if (_selectedNode == null || _animaContext.ActiveAnimaId == null)
         {
             _currentConfig = new Dictionary<string, string>();
+            _currentSchema = null;
             return;
         }
 
         _currentConfig = _configService.GetConfig(
             _animaContext.ActiveAnimaId,
             _selectedNode.ModuleName);
+
+        // Discover schema fields and merge defaults for keys not yet persisted
+        _currentSchema = _schemaService.GetSchema(_selectedNode.ModuleName);
+        if (_currentSchema != null)
+        {
+            foreach (var field in _currentSchema)
+            {
+                if (!_currentConfig.ContainsKey(field.Key) && field.DefaultValue != null)
+                {
+                    _currentConfig[field.Key] = field.DefaultValue;
+                }
+            }
+        }
+
         _validationErrors.Clear();
         _lastAnimaId = _animaContext.ActiveAnimaId;
     }
@@ -335,6 +431,12 @@
         {
             // Debounce cancelled, ignore
         }
+    }
+
+    private void HandleDelete()
+    {
+        _editorState.DeleteSelected();
+        // The state change will trigger re-render and auto-close the sidebar
     }
 
     private void HandleClose()
