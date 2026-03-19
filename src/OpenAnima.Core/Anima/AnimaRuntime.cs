@@ -55,50 +55,18 @@ public sealed class AnimaRuntime : IAsyncDisposable
             hubContext: hubContext);
 
         // Create ActivityChannelHost with three named channel callbacks.
-        // onTick: implements the stateless dispatch fork (CONC-07/CONC-08).
-        //   - Stateless modules (marked [StatelessModule]) execute concurrently via Task.WhenAll,
-        //     bypassing channel serialization.
-        //   - Stateful modules execute through WiringEngine.ExecuteAsync (serialized/level-ordered),
-        //     with stateless modules excluded via skipModuleIds to avoid double-dispatch.
+        // onTick: Phase 42 — heartbeat tick is a no-op for the engine.
+        // HeartbeatModule.TickAsync publishes to its tick output port, which propagates
+        // through WiringEngine routing subscriptions. Phase 43 will complete the decoupling.
         ActivityChannelHost = new ActivityChannelHost(
             loggerFactory.CreateLogger<ActivityChannelHost>(),
             onTick: async (item) =>
             {
-                var config = WiringEngine.GetCurrentConfiguration();
-                if (config == null) return;
-
-                // Partition modules into stateless and stateful groups.
-                var statelessIds = new HashSet<string>();
-                var statelessModuleNames = new List<string>();
-
-                foreach (var node in config.Nodes)
-                {
-                    // Look up the IModule instance from PluginRegistry by module name.
-                    var module = PluginRegistry.GetModule(node.ModuleName);
-                    if (module != null && ActivityChannelHost.IsStateless(module))
-                    {
-                        statelessIds.Add(node.ModuleId);
-                        statelessModuleNames.Add(node.ModuleName);
-                    }
-                }
-
-                // Run stateless modules concurrently via direct EventBus publish (bypass channel serialization).
-                Task statelessTask = statelessModuleNames.Count > 0
-                    ? Task.WhenAll(statelessModuleNames.Select(moduleName =>
-                        EventBus.PublishAsync(new ModuleEvent<object>
-                        {
-                            EventName = $"{moduleName}.execute",
-                            SourceModuleId = "WiringEngine",
-                            Payload = new { }
-                        }, item.Ct)))
-                    : Task.CompletedTask;
-
-                // Run stateful modules serialized through WiringEngine, skipping stateless ones.
-                Task statefulTask = WiringEngine.ExecuteAsync(item.Ct,
-                    skipModuleIds: statelessIds.Count > 0 ? statelessIds : null);
-
-                // Both groups run in parallel with each other.
-                await Task.WhenAll(statelessTask, statefulTask);
+                // Phase 42: Heartbeat tick is now a no-op for the engine.
+                // HeartbeatModule.TickAsync (called by HeartbeatLoop fallback path) publishes
+                // to its tick output port, which propagates through WiringEngine routing subscriptions.
+                // Phase 43 will complete the HeartbeatModule decoupling.
+                await Task.CompletedTask;
             },
             onChat: async (item) =>
             {

@@ -1,13 +1,12 @@
 namespace OpenAnima.Core.Wiring;
 
 /// <summary>
-/// Directed graph for managing module connections and computing execution order.
-/// Uses Kahn's algorithm for level-parallel topological sort with cycle detection.
+/// Directed graph for managing module connections.
+/// Supports cyclic graphs — cycles are allowed and detected via DFS for informational purposes only.
 /// </summary>
 public class ConnectionGraph
 {
     private readonly Dictionary<string, HashSet<string>> _adjacencyList = new();
-    private readonly Dictionary<string, int> _inDegree = new();
 
     /// <summary>
     /// Registers a node in the graph without connections (idempotent).
@@ -17,7 +16,6 @@ public class ConnectionGraph
         if (!_adjacencyList.ContainsKey(nodeId))
         {
             _adjacencyList[nodeId] = new HashSet<string>();
-            _inDegree[nodeId] = 0;
         }
     }
 
@@ -28,11 +26,7 @@ public class ConnectionGraph
     {
         AddNode(sourceId);
         AddNode(targetId);
-
-        if (_adjacencyList[sourceId].Add(targetId))
-        {
-            _inDegree[targetId]++;
-        }
+        _adjacencyList[sourceId].Add(targetId);
     }
 
     /// <summary>
@@ -43,94 +37,65 @@ public class ConnectionGraph
         if (!_adjacencyList.ContainsKey(nodeId))
             return;
 
-        // Remove outgoing edges
-        foreach (var target in _adjacencyList[nodeId])
+        // Remove incoming edges from other nodes
+        foreach (var (_, targets) in _adjacencyList)
         {
-            _inDegree[target]--;
-        }
-
-        // Remove incoming edges
-        foreach (var (source, targets) in _adjacencyList)
-        {
-            if (targets.Remove(nodeId))
-            {
-                _inDegree[nodeId]--;
-            }
+            targets.Remove(nodeId);
         }
 
         _adjacencyList.Remove(nodeId);
-        _inDegree.Remove(nodeId);
     }
 
     /// <summary>
-    /// Computes level-parallel execution order using Kahn's algorithm.
-    /// Throws InvalidOperationException if a cycle is detected.
-    /// </summary>
-    public List<List<string>> GetExecutionLevels()
-    {
-        if (_adjacencyList.Count == 0)
-            return new List<List<string>>();
-
-        var levels = new List<List<string>>();
-        var inDegreeCopy = new Dictionary<string, int>(_inDegree);
-        var queue = new Queue<string>();
-
-        // Enqueue all nodes with in-degree 0
-        foreach (var (node, degree) in inDegreeCopy)
-        {
-            if (degree == 0)
-                queue.Enqueue(node);
-        }
-
-        int processedCount = 0;
-
-        while (queue.Count > 0)
-        {
-            var levelSize = queue.Count;
-            var currentLevel = new List<string>();
-
-            for (int i = 0; i < levelSize; i++)
-            {
-                var node = queue.Dequeue();
-                currentLevel.Add(node);
-                processedCount++;
-
-                // Decrement in-degree for neighbors
-                foreach (var neighbor in _adjacencyList[node])
-                {
-                    inDegreeCopy[neighbor]--;
-                    if (inDegreeCopy[neighbor] == 0)
-                        queue.Enqueue(neighbor);
-                }
-            }
-
-            levels.Add(currentLevel);
-        }
-
-        // Cycle detection: if not all nodes processed, there's a cycle
-        if (processedCount != _adjacencyList.Count)
-        {
-            throw new InvalidOperationException(
-                $"Circular dependency detected: {processedCount}/{_adjacencyList.Count} modules could be ordered. Check for cycles in module connections.");
-        }
-
-        return levels;
-    }
-
-    /// <summary>
-    /// Returns true if the graph contains a cycle (non-throwing).
+    /// Returns true if the graph contains a cycle (DFS-based, non-throwing).
+    /// Cycles are allowed — this is informational only.
     /// </summary>
     public bool HasCycle()
     {
-        try
+        var visited = new HashSet<string>();
+        var recursionStack = new HashSet<string>();
+        foreach (var node in _adjacencyList.Keys)
         {
-            GetExecutionLevels();
-            return false;
+            if (HasCycleDfs(node, visited, recursionStack))
+                return true;
         }
-        catch (InvalidOperationException)
+        return false;
+    }
+
+    private bool HasCycleDfs(string node, HashSet<string> visited, HashSet<string> recursionStack)
+    {
+        if (recursionStack.Contains(node)) return true;
+        if (visited.Contains(node)) return false;
+        visited.Add(node);
+        recursionStack.Add(node);
+        if (_adjacencyList.TryGetValue(node, out var neighbors))
         {
-            return true;
+            foreach (var neighbor in neighbors)
+            {
+                if (HasCycleDfs(neighbor, visited, recursionStack))
+                    return true;
+            }
         }
+        recursionStack.Remove(node);
+        return false;
+    }
+
+    /// <summary>
+    /// Returns all node IDs in the graph.
+    /// </summary>
+    public IReadOnlyCollection<string> GetConnectedNodes()
+    {
+        return _adjacencyList.Keys.ToList().AsReadOnly();
+    }
+
+    /// <summary>
+    /// Returns direct downstream neighbors of a node. Used for debugging/logging.
+    /// </summary>
+    public IReadOnlyCollection<string> GetDownstream(string nodeId)
+    {
+        if (_adjacencyList.TryGetValue(nodeId, out var neighbors))
+            return neighbors.ToList().AsReadOnly();
+        return Array.Empty<string>();
     }
 
     /// <summary>

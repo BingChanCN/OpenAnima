@@ -1,7 +1,7 @@
 namespace OpenAnima.Core.Wiring;
 
 /// <summary>
-/// Interface for the central orchestrator for level-parallel module execution with EventBus-based data routing.
+/// Interface for the event-driven module routing engine.
 /// </summary>
 public interface IWiringEngine
 {
@@ -16,16 +16,10 @@ public interface IWiringEngine
     WiringConfiguration? GetCurrentConfiguration();
 
     /// <summary>
-    /// Loads a wiring configuration: builds graph, validates cycles, sets up data routing.
+    /// Loads a wiring configuration: builds graph, sets up data routing subscriptions.
+    /// Cyclic graphs are accepted — no cycle rejection.
     /// </summary>
     void LoadConfiguration(WiringConfiguration config);
-
-    /// <summary>
-    /// Executes all modules in topological order with level-parallel execution.
-    /// When <paramref name="skipModuleIds"/> is provided, modules whose IDs are in the set are skipped
-    /// (used by the stateless dispatch fork to avoid double-executing stateless modules).
-    /// </summary>
-    Task ExecuteAsync(CancellationToken ct = default, ISet<string>? skipModuleIds = null);
 
     /// <summary>
     /// Unloads the current configuration and disposes all subscriptions.

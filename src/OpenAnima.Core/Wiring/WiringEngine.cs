@@ -9,9 +9,9 @@ using OpenAnima.Core.Ports;
 namespace OpenAnima.Core.Wiring;
 
 /// <summary>
-/// Central orchestrator for level-parallel module execution with EventBus-based data routing.
-/// Manages configuration loading, cycle detection, subscription setup, and execution order.
-/// Pushes module status via SignalR when IHubContext is available.
+/// Event-driven routing engine. Manages configuration loading and EventBus subscription setup.
+/// Data propagates port-to-port via subscriptions; per-module SemaphoreSlim ensures a module
+/// processes one incoming event at a time (concurrent wave isolation).
 /// </summary>
 public class WiringEngine : IWiringEngine
 {
@@ -24,7 +24,7 @@ public class WiringEngine : IWiringEngine
     private ConnectionGraph? _graph;
     private WiringConfiguration? _currentConfig;
     private readonly List<IDisposable> _subscriptions = new();
-    private readonly ConcurrentDictionary<string, byte> _failedModules = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _moduleSemaphores = new();
 
     public WiringEngine(
         IEventBus eventBus,
@@ -51,7 +51,8 @@ public class WiringEngine : IWiringEngine
     public WiringConfiguration? GetCurrentConfiguration() => _currentConfig;
 
     /// <summary>
-    /// Loads a wiring configuration: builds graph, validates cycles, sets up data routing.
+    /// Loads a wiring configuration: builds adjacency graph, sets up EventBus routing subscriptions.
+    /// Cyclic graphs are accepted — no cycle rejection.
     /// </summary>
     public void LoadConfiguration(WiringConfiguration config)
     {
@@ -60,25 +61,21 @@ public class WiringEngine : IWiringEngine
 
         _logger.LogInformation("Loading wiring configuration: {ConfigName}", config.Name);
 
-        // Build connection graph from config
+        // Build connection graph from config (adjacency tracking only — no topo sort)
         _graph = new ConnectionGraph();
 
-        // Add all nodes first
         foreach (var node in config.Nodes)
         {
             _graph.AddNode(node.ModuleId);
         }
 
-        // Add all connections
         foreach (var connection in config.Connections)
         {
             _graph.AddConnection(connection.SourceModuleId, connection.TargetModuleId);
         }
 
-        // Validate no cycles (throws if cycle detected - WIRE-02)
-        var levels = _graph.GetExecutionLevels();
-        _logger.LogInformation("Configuration validated: {LevelCount} execution levels, {NodeCount} modules",
-            levels.Count, _graph.GetNodeCount());
+        _logger.LogInformation("Configuration loaded: {NodeCount} modules, {ConnectionCount} connections",
+            config.Nodes.Count, config.Connections.Count);
 
         // Set up EventBus subscriptions for data routing
         var nodeById = config.Nodes.ToDictionary(node => node.ModuleId);
@@ -101,6 +98,7 @@ public class WiringEngine : IWiringEngine
                 sourceEventName,
                 targetEventName,
                 sourceModuleRuntimeName,
+                targetModuleRuntimeName,
                 sourcePort?.Type);
 
             _subscriptions.Add(subscription);
@@ -112,146 +110,82 @@ public class WiringEngine : IWiringEngine
     }
 
     /// <summary>
-    /// Executes all modules in topological order with level-parallel execution.
-    /// Implements isolated failure: errored modules skip downstream, unaffected branches continue.
-    /// When <paramref name="skipModuleIds"/> is provided, modules in the set are skipped (used by
-    /// the stateless dispatch fork to avoid double-executing stateless modules).
-    /// </summary>
-    public async Task ExecuteAsync(CancellationToken ct = default, ISet<string>? skipModuleIds = null)
-    {
-        if (_currentConfig == null || _graph == null)
-        {
-            throw new InvalidOperationException("No configuration loaded. Call LoadConfiguration first.");
-        }
-
-        _logger.LogInformation("Starting execution for configuration: {ConfigName}", _currentConfig.Name);
-
-        // Get execution levels (topological order)
-        var levels = _graph.GetExecutionLevels();
-        _failedModules.Clear();
-
-        // Execute each level sequentially, modules within level in parallel
-        for (int levelIndex = 0; levelIndex < levels.Count; levelIndex++)
-        {
-            var level = levels[levelIndex];
-            _logger.LogDebug("Executing level {LevelIndex} with {ModuleCount} modules", levelIndex, level.Count);
-
-            // Filter out modules whose upstream dependencies failed, and any explicitly skipped modules
-            var executableModules = level.Where(moduleId =>
-                !HasFailedUpstream(moduleId) &&
-                (skipModuleIds == null || !skipModuleIds.Contains(moduleId))).ToList();
-
-            if (executableModules.Count < level.Count)
-            {
-                var skippedCount = level.Count - executableModules.Count;
-                _logger.LogWarning("Skipping {SkippedCount} modules in level {LevelIndex} due to upstream failures",
-                    skippedCount, levelIndex);
-            }
-
-            // Execute modules in parallel within this level
-            var tasks = executableModules.Select(moduleId => ExecuteModuleAsync(moduleId, ct)).ToArray();
-            await Task.WhenAll(tasks);
-        }
-
-        _logger.LogInformation("Execution completed. Failed modules: {FailedCount}", _failedModules.Count);
-    }
-
-    /// <summary>
     /// Unloads the current configuration and disposes all subscriptions.
     /// </summary>
     public void UnloadConfiguration()
     {
-        // Dispose all subscriptions
         foreach (var subscription in _subscriptions)
         {
             subscription.Dispose();
         }
         _subscriptions.Clear();
 
+        // Dispose and clear per-module semaphores
+        foreach (var semaphore in _moduleSemaphores.Values)
+        {
+            semaphore.Dispose();
+        }
+        _moduleSemaphores.Clear();
+
         _graph = null;
         _currentConfig = null;
-        _failedModules.Clear();
 
         _logger.LogInformation("Configuration unloaded");
-    }
-
-    private async Task ExecuteModuleAsync(string moduleId, CancellationToken ct)
-    {
-        try
-        {
-            _logger.LogDebug("Executing module: {ModuleId}", moduleId);
-            var runtimeModuleName = ResolveRuntimeModuleName(moduleId);
-
-            // Push Running status via SignalR
-            if (_hubContext != null)
-                await _hubContext.Clients.All.ReceiveModuleStateChanged(_animaId, moduleId, "Running");
-
-            // Publish execute event for this module
-            await _eventBus.PublishAsync(new ModuleEvent<object>
-            {
-                EventName = $"{runtimeModuleName}.execute",
-                SourceModuleId = "WiringEngine",
-                Payload = new { }
-            }, ct);
-
-            // Push Completed status via SignalR
-            if (_hubContext != null)
-                await _hubContext.Clients.All.ReceiveModuleStateChanged(_animaId, moduleId, "Completed");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Module execution failed: {ModuleId}", moduleId);
-            _failedModules.TryAdd(moduleId, 0);
-
-            // Push error details and Error status via SignalR
-            if (_hubContext != null)
-            {
-                await _hubContext.Clients.All.ReceiveModuleError(_animaId, moduleId, ex.Message, ex.StackTrace);
-                await _hubContext.Clients.All.ReceiveModuleStateChanged(_animaId, moduleId, "Error");
-            }
-        }
-    }
-
-    private bool HasFailedUpstream(string moduleId)
-    {
-        if (_currentConfig == null)
-            return false;
-
-        // Check if any upstream module (source of connections targeting this module) has failed
-        var upstreamModules = _currentConfig.Connections
-            .Where(c => c.TargetModuleId == moduleId)
-            .Select(c => c.SourceModuleId)
-            .Distinct();
-
-        return upstreamModules.Any(upstream => _failedModules.ContainsKey(upstream));
-    }
-
-    private string ResolveRuntimeModuleName(string moduleId)
-    {
-        if (_currentConfig == null)
-            return moduleId;
-
-        var matchingNode = _currentConfig.Nodes.FirstOrDefault(node => node.ModuleId == moduleId);
-        return matchingNode?.ModuleName ?? moduleId;
     }
 
     private IDisposable CreateRoutingSubscription(
         string sourceEventName,
         string targetEventName,
         string sourceModuleRuntimeName,
+        string targetModuleRuntimeName,
         PortType? sourcePortType)
     {
+        var semaphore = _moduleSemaphores.GetOrAdd(targetModuleRuntimeName, _ => new SemaphoreSlim(1, 1));
+
         return sourcePortType switch
         {
             PortType.Text => _eventBus.Subscribe<string>(
                 sourceEventName,
-                (evt, ct) => ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct)),
+                async (evt, ct) =>
+                {
+                    await semaphore.WaitAsync(ct);
+                    try
+                    {
+                        await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }),
             PortType.Trigger => _eventBus.Subscribe<DateTime>(
                 sourceEventName,
-                (evt, ct) => ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct)),
+                async (evt, ct) =>
+                {
+                    await semaphore.WaitAsync(ct);
+                    try
+                    {
+                        await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }),
             _ => _eventBus.Subscribe<object>(
                 sourceEventName,
-                (evt, ct) => ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct))
+                async (evt, ct) =>
+                {
+                    await semaphore.WaitAsync(ct);
+                    try
+                    {
+                        await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                })
         };
     }
 
@@ -264,7 +198,6 @@ public class WiringEngine : IWiringEngine
         // Deep copy payload for fan-out isolation (WIRE-03)
         var copiedPayload = DataCopyHelper.DeepCopy(evt.Payload);
 
-        // Publish to target port with original payload type so typed subscribers can receive it.
         await _eventBus.PublishAsync(new ModuleEvent<TPayload>
         {
             EventName = targetEventName,

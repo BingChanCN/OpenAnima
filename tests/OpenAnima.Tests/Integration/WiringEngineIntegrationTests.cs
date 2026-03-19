@@ -8,8 +8,8 @@ using OpenAnima.Core.Wiring;
 namespace OpenAnima.Tests.Integration;
 
 /// <summary>
-/// Integration tests for WiringEngine end-to-end execution orchestration.
-/// Verifies topological execution, cycle detection, data routing, and isolated failure.
+/// Integration tests for WiringEngine event-driven routing.
+/// Verifies configuration loading (including cyclic graphs), data routing, and subscription lifecycle.
 /// </summary>
 [Trait("Category", "Integration")]
 public class WiringEngineIntegrationTests
@@ -28,20 +28,18 @@ public class WiringEngineIntegrationTests
     private class ModuleC { }
 
     [Fact]
-    public void LoadConfiguration_ValidDAG_BuildsExecutionLevels()
+    public void LoadConfiguration_ValidDAG_LoadsSuccessfully()
     {
         // Arrange
         var eventBus = new EventBus(NullLogger<EventBus>.Instance);
         var portRegistry = new PortRegistry();
         var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
 
-        // Register test modules
         var discovery = new PortDiscovery();
         portRegistry.RegisterPorts("ModuleA", discovery.DiscoverPorts(typeof(ModuleA)));
         portRegistry.RegisterPorts("ModuleB", discovery.DiscoverPorts(typeof(ModuleB)));
         portRegistry.RegisterPorts("ModuleC", discovery.DiscoverPorts(typeof(ModuleC)));
 
-        // Create A→B→C chain configuration
         var config = new WiringConfiguration
         {
             Name = "LinearChain",
@@ -68,20 +66,18 @@ public class WiringEngineIntegrationTests
     }
 
     [Fact]
-    public void LoadConfiguration_CyclicGraph_ThrowsWithMessage()
+    public void LoadConfiguration_CyclicGraph_DoesNotThrow()
     {
-        // Arrange
+        // Arrange — cyclic graphs are now accepted
         var eventBus = new EventBus(NullLogger<EventBus>.Instance);
         var portRegistry = new PortRegistry();
         var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
 
-        // Register test modules
         var discovery = new PortDiscovery();
         portRegistry.RegisterPorts("ModuleA", discovery.DiscoverPorts(typeof(ModuleA)));
         portRegistry.RegisterPorts("ModuleB", discovery.DiscoverPorts(typeof(ModuleB)));
         portRegistry.RegisterPorts("ModuleC", discovery.DiscoverPorts(typeof(ModuleC)));
 
-        // Create A→B→C→A cycle configuration
         var config = new WiringConfiguration
         {
             Name = "CyclicGraph",
@@ -99,146 +95,9 @@ public class WiringEngineIntegrationTests
             }
         };
 
-        // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => wiringEngine.LoadConfiguration(config));
-        Assert.Contains("Circular dependency", exception.Message);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_LinearChain_ExecutesInOrder()
-    {
-        // Arrange
-        var eventBus = new EventBus(NullLogger<EventBus>.Instance);
-        var portRegistry = new PortRegistry();
-        var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
-
-        // Register test modules
-        var discovery = new PortDiscovery();
-        portRegistry.RegisterPorts("ModuleA", discovery.DiscoverPorts(typeof(ModuleA)));
-        portRegistry.RegisterPorts("ModuleB", discovery.DiscoverPorts(typeof(ModuleB)));
-        portRegistry.RegisterPorts("ModuleC", discovery.DiscoverPorts(typeof(ModuleC)));
-
-        // Track execution order
-        var executionOrder = new List<string>();
-        var tcs = new TaskCompletionSource<bool>();
-
-        eventBus.Subscribe<object>("ModuleA.execute", async (evt, ct) =>
-        {
-            executionOrder.Add("ModuleA");
-            await Task.CompletedTask;
-        });
-
-        eventBus.Subscribe<object>("ModuleB.execute", async (evt, ct) =>
-        {
-            executionOrder.Add("ModuleB");
-            await Task.CompletedTask;
-        });
-
-        eventBus.Subscribe<object>("ModuleC.execute", async (evt, ct) =>
-        {
-            executionOrder.Add("ModuleC");
-            tcs.TrySetResult(true);
-            await Task.CompletedTask;
-        });
-
-        // Create A→B→C chain
-        var config = new WiringConfiguration
-        {
-            Name = "LinearChain",
-            Nodes = new List<ModuleNode>
-            {
-                new() { ModuleId = "ModuleA", ModuleName = "ModuleA" },
-                new() { ModuleId = "ModuleB", ModuleName = "ModuleB" },
-                new() { ModuleId = "ModuleC", ModuleName = "ModuleC" }
-            },
-            Connections = new List<PortConnection>
-            {
-                new() { SourceModuleId = "ModuleA", SourcePortName = "text_out", TargetModuleId = "ModuleB", TargetPortName = "text_in" },
-                new() { SourceModuleId = "ModuleB", SourcePortName = "text_out", TargetModuleId = "ModuleC", TargetPortName = "text_in" }
-            }
-        };
-
+        // Act & Assert — no exception
         wiringEngine.LoadConfiguration(config);
-
-        // Act
-        await wiringEngine.ExecuteAsync();
-        await Task.WhenAny(tcs.Task, Task.Delay(5000));
-
-        // Assert
-        Assert.Equal(3, executionOrder.Count);
-        Assert.Equal("ModuleA", executionOrder[0]);
-        Assert.Equal("ModuleB", executionOrder[1]);
-        Assert.Equal("ModuleC", executionOrder[2]);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_ParallelLevel_ExecutesConcurrently()
-    {
-        // Arrange
-        var eventBus = new EventBus(NullLogger<EventBus>.Instance);
-        var portRegistry = new PortRegistry();
-        var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
-
-        // Register test modules
-        var discovery = new PortDiscovery();
-        portRegistry.RegisterPorts("ModuleA", discovery.DiscoverPorts(typeof(ModuleA)));
-        portRegistry.RegisterPorts("ModuleB", discovery.DiscoverPorts(typeof(ModuleB)));
-        portRegistry.RegisterPorts("ModuleC", discovery.DiscoverPorts(typeof(ModuleC)));
-
-        // Track execution
-        var executionOrder = new List<string>();
-        var tcs = new TaskCompletionSource<bool>();
-        var executedCount = 0;
-
-        eventBus.Subscribe<object>("ModuleA.execute", async (evt, ct) =>
-        {
-            lock (executionOrder) executionOrder.Add("ModuleA");
-            await Task.CompletedTask;
-        });
-
-        eventBus.Subscribe<object>("ModuleB.execute", async (evt, ct) =>
-        {
-            lock (executionOrder) executionOrder.Add("ModuleB");
-            if (Interlocked.Increment(ref executedCount) == 2) tcs.TrySetResult(true);
-            await Task.CompletedTask;
-        });
-
-        eventBus.Subscribe<object>("ModuleC.execute", async (evt, ct) =>
-        {
-            lock (executionOrder) executionOrder.Add("ModuleC");
-            if (Interlocked.Increment(ref executedCount) == 2) tcs.TrySetResult(true);
-            await Task.CompletedTask;
-        });
-
-        // Create A→B, A→C (B and C at same level)
-        var config = new WiringConfiguration
-        {
-            Name = "ParallelLevel",
-            Nodes = new List<ModuleNode>
-            {
-                new() { ModuleId = "ModuleA", ModuleName = "ModuleA" },
-                new() { ModuleId = "ModuleB", ModuleName = "ModuleB" },
-                new() { ModuleId = "ModuleC", ModuleName = "ModuleC" }
-            },
-            Connections = new List<PortConnection>
-            {
-                new() { SourceModuleId = "ModuleA", SourcePortName = "text_out", TargetModuleId = "ModuleB", TargetPortName = "text_in" },
-                new() { SourceModuleId = "ModuleA", SourcePortName = "text_out", TargetModuleId = "ModuleC", TargetPortName = "text_in" }
-            }
-        };
-
-        wiringEngine.LoadConfiguration(config);
-
-        // Act
-        await wiringEngine.ExecuteAsync();
-        await Task.WhenAny(tcs.Task, Task.Delay(5000));
-
-        // Assert
-        Assert.Equal(3, executionOrder.Count);
-        Assert.Equal("ModuleA", executionOrder[0]); // A executes first
-        // B and C execute in parallel (order doesn't matter)
-        Assert.Contains("ModuleB", executionOrder);
-        Assert.Contains("ModuleC", executionOrder);
+        Assert.True(wiringEngine.IsLoaded);
     }
 
     [Fact]
@@ -249,13 +108,11 @@ public class WiringEngineIntegrationTests
         var portRegistry = new PortRegistry();
         var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
 
-        // Register test modules
         var discovery = new PortDiscovery();
         portRegistry.RegisterPorts("ModuleA", discovery.DiscoverPorts(typeof(ModuleA)));
         portRegistry.RegisterPorts("ModuleB", discovery.DiscoverPorts(typeof(ModuleB)));
         portRegistry.RegisterPorts("ModuleC", discovery.DiscoverPorts(typeof(ModuleC)));
 
-        // Track received data
         var receivedByB = new TaskCompletionSource<bool>();
         var receivedByC = new TaskCompletionSource<bool>();
         string? payloadB = null;
@@ -275,7 +132,6 @@ public class WiringEngineIntegrationTests
             await Task.CompletedTask;
         });
 
-        // Create A→B, A→C fan-out
         var config = new WiringConfiguration
         {
             Name = "FanOut",
@@ -294,74 +150,61 @@ public class WiringEngineIntegrationTests
 
         wiringEngine.LoadConfiguration(config);
 
-        // Act - Publish data on A's output port
-        var originalData = "test message";
+        // Act — publish data on A's output port
         await eventBus.PublishAsync(new ModuleEvent<string>
         {
             EventName = "ModuleA.port.text_out",
             SourceModuleId = "ModuleA",
-            Payload = originalData
+            Payload = "test message"
         });
 
-        // Wait for both receivers
         await Task.WhenAll(
             Task.WhenAny(receivedByB.Task, Task.Delay(5000)),
             Task.WhenAny(receivedByC.Task, Task.Delay(5000))
         );
 
-        // Assert - Both received data
+        // Assert
         Assert.True(receivedByB.Task.IsCompleted);
         Assert.True(receivedByC.Task.IsCompleted);
-        Assert.NotNull(payloadB);
-        Assert.NotNull(payloadC);
-
-        // Verify data was routed correctly (deep copy preserves string values)
         Assert.Equal("test message", payloadB);
         Assert.Equal("test message", payloadC);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ModuleError_SkipsDownstream()
+    public async Task DataRouting_LinearChain_PropagatesPortToPort()
     {
         // Arrange
         var eventBus = new EventBus(NullLogger<EventBus>.Instance);
         var portRegistry = new PortRegistry();
         var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
 
-        // Register test modules
         var discovery = new PortDiscovery();
         portRegistry.RegisterPorts("ModuleA", discovery.DiscoverPorts(typeof(ModuleA)));
         portRegistry.RegisterPorts("ModuleB", discovery.DiscoverPorts(typeof(ModuleB)));
         portRegistry.RegisterPorts("ModuleC", discovery.DiscoverPorts(typeof(ModuleC)));
 
-        // Track execution
-        var executionOrder = new List<string>();
+        var receivedByC = new TaskCompletionSource<string>();
 
-        eventBus.Subscribe<object>("ModuleA.execute", async (evt, ct) =>
+        // B re-publishes on its output port when it receives on input
+        eventBus.Subscribe<string>("ModuleB.port.text_in", async (evt, ct) =>
         {
-            executionOrder.Add("ModuleA");
+            await eventBus.PublishAsync(new ModuleEvent<string>
+            {
+                EventName = "ModuleB.port.text_out",
+                SourceModuleId = "ModuleB",
+                Payload = evt.Payload + "_B"
+            }, ct);
+        });
+
+        eventBus.Subscribe<string>("ModuleC.port.text_in", async (evt, ct) =>
+        {
+            receivedByC.TrySetResult(evt.Payload);
             await Task.CompletedTask;
         });
 
-        // ModuleB will fail by throwing in its handler
-        // Note: EventBus catches handler exceptions, so this won't propagate to WiringEngine
-        // This test verifies that handler failures don't crash the system
-        eventBus.Subscribe<object>("ModuleB.execute", async (evt, ct) =>
-        {
-            executionOrder.Add("ModuleB");
-            throw new InvalidOperationException("Module B failed");
-        });
-
-        eventBus.Subscribe<object>("ModuleC.execute", async (evt, ct) =>
-        {
-            executionOrder.Add("ModuleC");
-            await Task.CompletedTask;
-        });
-
-        // Create A→B→C chain
         var config = new WiringConfiguration
         {
-            Name = "ErrorChain",
+            Name = "LinearChain",
             Nodes = new List<ModuleNode>
             {
                 new() { ModuleId = "ModuleA", ModuleName = "ModuleA" },
@@ -377,16 +220,19 @@ public class WiringEngineIntegrationTests
 
         wiringEngine.LoadConfiguration(config);
 
-        // Act - Should not throw despite B's handler failing
-        await wiringEngine.ExecuteAsync();
-        await Task.Delay(500); // Give time for all handlers to complete
+        // Act
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "ModuleA.port.text_out",
+            SourceModuleId = "ModuleA",
+            Payload = "hello"
+        });
 
-        // Assert - All modules execute (EventBus catches handler exceptions)
-        // This verifies that handler failures don't crash the execution pipeline
-        Assert.Equal(3, executionOrder.Count);
-        Assert.Equal("ModuleA", executionOrder[0]);
-        Assert.Equal("ModuleB", executionOrder[1]);
-        Assert.Equal("ModuleC", executionOrder[2]);
+        var result = await Task.WhenAny(receivedByC.Task, Task.Delay(5000));
+
+        // Assert
+        Assert.True(receivedByC.Task.IsCompleted);
+        Assert.Equal("hello_B", receivedByC.Task.Result);
     }
 
     [Fact]
@@ -397,12 +243,10 @@ public class WiringEngineIntegrationTests
         var portRegistry = new PortRegistry();
         var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
 
-        // Register test modules
         var discovery = new PortDiscovery();
         portRegistry.RegisterPorts("ModuleA", discovery.DiscoverPorts(typeof(ModuleA)));
         portRegistry.RegisterPorts("ModuleB", discovery.DiscoverPorts(typeof(ModuleB)));
 
-        // Create simple A→B configuration
         var config = new WiringConfiguration
         {
             Name = "SimpleChain",
@@ -426,12 +270,5 @@ public class WiringEngineIntegrationTests
         // Assert
         Assert.False(wiringEngine.IsLoaded);
         Assert.Null(wiringEngine.GetCurrentConfiguration());
-    }
-
-    // Test data class for deep copy verification
-    private class TestData
-    {
-        public string Value { get; set; } = string.Empty;
-        public int Counter { get; set; }
     }
 }
