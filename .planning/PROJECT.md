@@ -3,7 +3,7 @@
 ## Current State
 
 **Latest shipped:** v1.8 SDK Runtime Parity (2026-03-18)
-**Current milestone:** Planning next milestone
+**Current milestone:** v1.9 Event-Driven Propagation Engine
 
 ## What This Is
 
@@ -126,11 +126,16 @@ Agents that proactively think and act on their own, while module connections rem
 
 ## Next Milestone
 
-To be defined via `/gsd:new-milestone`.
+v1.9 Event-Driven Propagation Engine — Transform execution model from DAG topological sort to event-driven propagation network with cyclic topology support.
 
 ### Active
 
-(None — define requirements for next milestone)
+- [ ] Module executes immediately on input arrival, not heartbeat-driven (PROP-01)
+- [ ] Module output fans out to all connected downstream ports (PROP-02)
+- [ ] Cyclic wiring topologies allowed (PROP-03)
+- [ ] Modules can choose not to produce output, naturally terminating propagation (PROP-04)
+- [ ] HeartbeatModule becomes standalone timer signal source (BEAT-05)
+- [ ] HeartbeatModule interval is user-configurable (BEAT-06)
 
 ### Deferred (not in v1.8)
 
@@ -275,4 +280,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-18 after v1.8 milestone*
+*Last updated: 2026-03-19 after v1.9 milestone started*

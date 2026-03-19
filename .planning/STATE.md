@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.8
-milestone_name: SDK Runtime Parity
-status: shipped
-last_updated: "2026-03-18T17:00:00.000Z"
-last_activity: "2026-03-18 — v1.8 SDK Runtime Parity milestone shipped"
+milestone: v1.9
+milestone_name: Event-Driven Propagation Engine
+status: defining_requirements
+last_updated: "2026-03-19T00:00:00.000Z"
+last_activity: "2026-03-19 — Milestone v1.9 started"
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State: OpenAnima
 
-**Last updated:** 2026-03-18
-**Current milestone:** v1.8 SDK Runtime Parity — SHIPPED
+**Last updated:** 2026-03-19
+**Current milestone:** v1.9 Event-Driven Propagation Engine
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-18)
+See: `.planning/PROJECT.md` (updated 2026-03-19)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Planning next milestone
+**Current focus:** Event-driven propagation engine — replace DAG topological sort with data-driven execution supporting cyclic topologies
 
 ## Current Position
 
-Phase: 41-external-context-module
-Plan: 02 (complete)
-Status: Phase 41 Plan 02 Complete — ContextModule capstone, 389 tests passing, ECTX-01 ECTX-02 validated
-Last activity: 2026-03-18 — Completed Phase 41 Plan 02: ContextModule external module, v1.8 SDK Runtime Parity milestone complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-19 — Milestone v1.9 started
 
 Progress: [██████████] 100%
 
