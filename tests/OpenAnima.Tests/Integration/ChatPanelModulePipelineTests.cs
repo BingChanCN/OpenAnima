@@ -1,10 +1,12 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Contracts;
+using OpenAnima.Core.Anima;
 using OpenAnima.Core.Events;
 using OpenAnima.Core.LLM;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Services;
 using OpenAnima.Core.Wiring;
+using OpenAnima.Tests.TestHelpers;
 
 namespace OpenAnima.Tests.Integration;
 
@@ -84,7 +86,8 @@ public class ChatPanelModulePipelineTests
         var eventBus = new EventBus(NullLogger<EventBus>.Instance);
         var fakeLlm = new CountingFakeLlmService("unused");
         var chatInput = new ChatInputModule(eventBus, NullLogger<ChatInputModule>.Instance);
-        var llmModule = new LLMModule(fakeLlm, eventBus, NullLogger<LLMModule>.Instance);
+        var llmModule = new LLMModule(fakeLlm, eventBus, NullLogger<LLMModule>.Instance,
+            NullAnimaModuleConfigService.Instance, new AnimaContext());
         var chatOutput = new ChatOutputModule(eventBus, NullLogger<ChatOutputModule>.Instance);
 
         await chatInput.InitializeAsync();
