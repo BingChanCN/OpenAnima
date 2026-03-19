@@ -115,7 +115,7 @@
 
 **Milestone Goal:** Replace DAG topological sort execution with event-driven propagation — modules execute on data arrival, output fans out downstream, and cyclic topologies are supported.
 
-- [ ] **Phase 42: Propagation Engine** - Replace WiringEngine topo sort with event-driven port-to-port dispatch supporting cycles
+- [x] **Phase 42: Propagation Engine** - Replace WiringEngine topo sort with event-driven port-to-port dispatch supporting cycles (completed 2026-03-19)
 - [ ] **Phase 43: Heartbeat Refactor** - Decouple HeartbeatModule from engine driver role; make it a configurable standalone timer signal source
 
 ## Phase Details
@@ -129,7 +129,7 @@
   2. When a module produces output, every downstream port connected to that output receives the data in the same propagation wave
   3. A wiring graph with a cycle (A → B → A) can be saved and executed without the engine rejecting or erroring on the cycle
   4. A module that produces no output on a given execution causes propagation to stop at that module — no downstream modules fire
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 42-01-PLAN.md — Core engine: remove topo sort, add per-module SemaphoreSlim routing, remove ITickable
 - [ ] 42-02-PLAN.md — Module migration: FixedTextModule trigger port, HeartbeatModule ITickable removal
@@ -191,7 +191,7 @@ Plans:
 | 39. Contracts Type Migration & Structured Messages | v1.8 | 2/2 | Complete | 2026-03-18 |
 | 40. Module Storage Path | v1.8 | 1/1 | Complete | 2026-03-18 |
 | 41. External ContextModule | v1.8 | 2/2 | Complete | 2026-03-18 |
-| 42. Propagation Engine | 2/3 | In Progress|  | - |
+| 42. Propagation Engine | 3/3 | Complete   | 2026-03-19 | - |
 | 43. Heartbeat Refactor | v1.9 | 0/? | Not started | - |
 
 **Total shipped: 41 phases, 93 plans across 9 milestones**
