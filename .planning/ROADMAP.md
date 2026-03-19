@@ -157,6 +157,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. When a module implements IModuleConfigSchema, the EditorConfigSidebar renders its schema fields (including intervalMs for HeartbeatModule) even when no config has been previously saved
   2. User can set HeartbeatModule trigger interval in the sidebar and the change takes effect on the next tick without restarting the Anima
+**Plans:** 1 plan
+Plans:
+- [ ] 44-01-PLAN.md — ModuleSchemaService + EditorConfigSidebar schema-aware rendering
 
 ## Progress
 
@@ -206,7 +209,7 @@ Plans:
 | 41. External ContextModule | v1.8 | 2/2 | Complete | 2026-03-18 |
 | 42. Propagation Engine | v1.9 | 3/3 | Complete | 2026-03-19 |
 | 43. Heartbeat Refactor | 2/2 | Complete   | 2026-03-19 | - |
-| 44. Config Schema Sidebar | v1.9 | 0/0 | Pending | - |
+| 44. Config Schema Sidebar | v1.9 | 0/1 | Planning | - |
 
 **Total shipped: 42 phases, 96 plans across 9 milestones**
 
