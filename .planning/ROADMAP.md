@@ -129,7 +129,11 @@
   2. When a module produces output, every downstream port connected to that output receives the data in the same propagation wave
   3. A wiring graph with a cycle (A → B → A) can be saved and executed without the engine rejecting or erroring on the cycle
   4. A module that produces no output on a given execution causes propagation to stop at that module — no downstream modules fire
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 42-01-PLAN.md — Core engine: remove topo sort, add per-module SemaphoreSlim routing, remove ITickable
+- [ ] 42-02-PLAN.md — Module migration: FixedTextModule trigger port, HeartbeatModule ITickable removal
+- [ ] 42-03-PLAN.md — Tests: fix existing tests, add PropagationEngineTests for PROP-01–04
 
 ### Phase 43: Heartbeat Refactor
 **Goal**: HeartbeatModule is a standalone timer that emits trigger signals into the propagation network — it no longer drives the WiringEngine execution loop
@@ -187,10 +191,10 @@
 | 39. Contracts Type Migration & Structured Messages | v1.8 | 2/2 | Complete | 2026-03-18 |
 | 40. Module Storage Path | v1.8 | 1/1 | Complete | 2026-03-18 |
 | 41. External ContextModule | v1.8 | 2/2 | Complete | 2026-03-18 |
-| 42. Propagation Engine | v1.9 | 0/? | Not started | - |
+| 42. Propagation Engine | v1.9 | 0/3 | In progress | - |
 | 43. Heartbeat Refactor | v1.9 | 0/? | Not started | - |
 
 **Total shipped: 41 phases, 93 plans across 9 milestones**
 
 ---
-*Last updated: 2026-03-19 — v1.9 roadmap created*
+*Last updated: 2026-03-19 — Phase 42 planned (3 plans)*
