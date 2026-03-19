@@ -4,6 +4,7 @@
 
 **Latest shipped:** v1.8 SDK Runtime Parity (2026-03-18)
 **Current milestone:** v1.9 Event-Driven Propagation Engine
+**Phase 42 complete:** Propagation Engine — event-driven execution, cycles allowed, topo sort removed (2026-03-19)
 
 ## What This Is
 
@@ -130,10 +131,10 @@ v1.9 Event-Driven Propagation Engine — Transform execution model from DAG topo
 
 ### Active
 
-- [ ] Module executes immediately on input arrival, not heartbeat-driven (PROP-01)
-- [ ] Module output fans out to all connected downstream ports (PROP-02)
-- [ ] Cyclic wiring topologies allowed (PROP-03)
-- [ ] Modules can choose not to produce output, naturally terminating propagation (PROP-04)
+- ✓ Module executes immediately on input arrival, not heartbeat-driven (PROP-01) — v1.9
+- ✓ Module output fans out to all connected downstream ports (PROP-02) — v1.9
+- ✓ Cyclic wiring topologies allowed (PROP-03) — v1.9
+- ✓ Modules can choose not to produce output, naturally terminating propagation (PROP-04) — v1.9
 - [ ] HeartbeatModule becomes standalone timer signal source (BEAT-05)
 - [ ] HeartbeatModule interval is user-configurable (BEAT-06)
 
@@ -271,6 +272,11 @@ Known tech debt:
 | Bound IModuleStorage per external module | PluginLoader creates bound instance with manifest.Id; built-in modules use explicit GetDataDirectory(moduleId) | ✓ Good — v1.8 |
 | manifest.Id ?? manifest.Name for bound moduleId | Manifests without explicit id fall back to Name | ✓ Good — v1.8 |
 
+| Per-module SemaphoreSlim(1,1) in WiringEngine | Serializes concurrent incoming events per module — wave isolation without module awareness | ✓ Good — v1.9 |
+| No convergence control for cycles | Modules terminate cycles by not producing output; TTL/energy decay deferred until real-world need | ✓ Good — v1.9 |
+| FixedTextModule trigger input port | Replaces `.execute` subscription with explicit port-driven trigger path | ✓ Good — v1.9 |
+| ITickable removed from Contracts | No remaining implementors after propagation engine; duck-typing decision superseded | ✓ Good — v1.9 |
+
 ## Constraints
 
 - **Platform**: Windows-first — must work on Windows 10/11 without WSL or Docker
@@ -280,4 +286,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-19 after v1.9 milestone started*
+*Last updated: 2026-03-19 after Phase 42 Propagation Engine complete*
