@@ -111,7 +111,7 @@
 
 </details>
 
-### 🚧 v1.9 Event-Driven Propagation Engine (In Progress)
+### v1.9 Event-Driven Propagation Engine (In Progress)
 
 **Milestone Goal:** Replace DAG topological sort execution with event-driven propagation — modules execute on data arrival, output fans out downstream, and cyclic topologies are supported.
 
@@ -131,9 +131,9 @@
   4. A module that produces no output on a given execution causes propagation to stop at that module — no downstream modules fire
 **Plans:** 3/3 plans complete
 Plans:
-- [ ] 42-01-PLAN.md — Core engine: remove topo sort, add per-module SemaphoreSlim routing, remove ITickable
-- [ ] 42-02-PLAN.md — Module migration: FixedTextModule trigger port, HeartbeatModule ITickable removal
-- [ ] 42-03-PLAN.md — Tests: fix existing tests, add PropagationEngineTests for PROP-01–04
+- [x] 42-01-PLAN.md — Core engine: remove topo sort, add per-module SemaphoreSlim routing, remove ITickable
+- [x] 42-02-PLAN.md — Module migration: FixedTextModule trigger port, HeartbeatModule ITickable removal
+- [x] 42-03-PLAN.md — Tests: fix existing tests, add PropagationEngineTests for PROP-01-04
 
 ### Phase 43: Heartbeat Refactor
 **Goal**: HeartbeatModule is a standalone timer that emits trigger signals into the propagation network — it no longer drives the WiringEngine execution loop
@@ -143,7 +143,10 @@ Plans:
   1. HeartbeatModule emits a trigger signal on its output port at a regular interval, which propagates downstream through the network like any other module output
   2. The WiringEngine no longer has a heartbeat-driven execution loop — execution is purely data-driven
   3. User can set the HeartbeatModule trigger interval in the module configuration sidebar and the change takes effect without restarting the Anima
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 43-01-PLAN.md — Standalone timer HeartbeatModule with configurable interval and IModuleConfigSchema
+- [ ] 43-02-PLAN.md — HeartbeatModule tests and full regression verification
 
 ## Progress
 
@@ -191,10 +194,10 @@ Plans:
 | 39. Contracts Type Migration & Structured Messages | v1.8 | 2/2 | Complete | 2026-03-18 |
 | 40. Module Storage Path | v1.8 | 1/1 | Complete | 2026-03-18 |
 | 41. External ContextModule | v1.8 | 2/2 | Complete | 2026-03-18 |
-| 42. Propagation Engine | 3/3 | Complete    | 2026-03-19 | - |
-| 43. Heartbeat Refactor | v1.9 | 0/? | Not started | - |
+| 42. Propagation Engine | v1.9 | 3/3 | Complete | 2026-03-19 |
+| 43. Heartbeat Refactor | v1.9 | 0/2 | Not started | - |
 
-**Total shipped: 41 phases, 93 plans across 9 milestones**
+**Total shipped: 42 phases, 96 plans across 9 milestones**
 
 ---
-*Last updated: 2026-03-19 — Phase 42 planned (3 plans)*
+*Last updated: 2026-03-19 — Phase 43 planned (2 plans)*
