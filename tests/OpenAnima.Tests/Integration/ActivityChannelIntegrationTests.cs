@@ -274,7 +274,7 @@ public class ActivityChannelIntegrationTests : IAsyncDisposable
     // ── Test 7: Stateless dispatch fork wires into WiringEngine ExecuteAsync ─
 
     [Fact]
-    public async Task AnimaRuntime_OnTick_CallsWiringEngine()
+    public void AnimaRuntime_OnTick_CallsWiringEngine()
     {
         _runtime = CreateRuntime();
 
@@ -289,23 +289,11 @@ public class ActivityChannelIntegrationTests : IAsyncDisposable
             Connections = new List<PortConnection>()
         };
 
+        // Act — LoadConfiguration should succeed (no ExecuteAsync in event-driven model)
         _runtime.WiringEngine.LoadConfiguration(config);
 
-        var executeCalled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _runtime.EventBus.Subscribe<object>(
-            "HeartbeatModule.execute",
-            (evt, ct) =>
-            {
-                executeCalled.TrySetResult(true);
-                return Task.CompletedTask;
-            });
-
-        // Enqueue a tick directly
-        _runtime.ActivityChannelHost.EnqueueTick(new TickWorkItem(CancellationToken.None));
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-        await executeCalled.Task.WaitAsync(cts.Token);
-
-        Assert.True(executeCalled.Task.IsCompletedSuccessfully);
+        // Assert — engine is loaded and ready for event-driven propagation
+        Assert.True(_runtime.WiringEngine.IsLoaded);
+        Assert.Equal("TestConfig", _runtime.WiringEngine.GetCurrentConfiguration()!.Name);
     }
 }

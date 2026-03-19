@@ -9,6 +9,7 @@ namespace OpenAnima.Core.Modules;
 /// Variables are sourced from module config key-value pairs. Executes when data arrives on
 /// the trigger input port.
 /// </summary>
+[StatelessModule]
 [InputPort("trigger", PortType.Trigger)]
 [OutputPort("output", PortType.Text)]
 public class FixedTextModule : IModuleExecutor

@@ -290,9 +290,9 @@ public class WiringDIIntegrationTests : IDisposable
             }
         };
 
-        // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() => engine.LoadConfiguration(config));
-        Assert.Contains("cycle", ex.Message.ToLower());
+        // Act & Assert — cycles are now accepted (no exception)
+        engine.LoadConfiguration(config);
+        Assert.True(engine.IsLoaded);
     }
 
     [Fact]
