@@ -150,7 +150,8 @@ public class ModuleTests
     {
         // Arrange
         var eventBus = CreateEventBus();
-        var module = new HeartbeatModule(eventBus, NullLogger<HeartbeatModule>.Instance);
+        var module = new HeartbeatModule(eventBus, NullAnimaModuleConfigService.Instance,
+            new AnimaContext(), NullLogger<HeartbeatModule>.Instance);
         await module.InitializeAsync();
 
         var tickTcs = new TaskCompletionSource<DateTime>();
