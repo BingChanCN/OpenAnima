@@ -61,6 +61,8 @@ public static class WiringServiceExtensions
         services.AddSingleton<AnimaRouteModule>();
         services.AddSingleton<HttpRequestModule>();
 
+        services.AddSingleton<ModuleSchemaService>();
+
         return services;
     }
 }
