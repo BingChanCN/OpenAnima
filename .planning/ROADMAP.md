@@ -191,7 +191,7 @@ Plans:
 | 39. Contracts Type Migration & Structured Messages | v1.8 | 2/2 | Complete | 2026-03-18 |
 | 40. Module Storage Path | v1.8 | 1/1 | Complete | 2026-03-18 |
 | 41. External ContextModule | v1.8 | 2/2 | Complete | 2026-03-18 |
-| 42. Propagation Engine | 3/3 | Complete   | 2026-03-19 | - |
+| 42. Propagation Engine | 3/3 | Complete    | 2026-03-19 | - |
 | 43. Heartbeat Refactor | v1.9 | 0/? | Not started | - |
 
 **Total shipped: 41 phases, 93 plans across 9 milestones**
