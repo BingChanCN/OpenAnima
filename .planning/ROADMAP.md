@@ -11,6 +11,7 @@
 - ✅ **v1.6 Cross-Anima Routing** — Phases 28-31 (shipped 2026-03-14)
 - ✅ **v1.7 Runtime Foundation** — Phases 32-37 (shipped 2026-03-16)
 - ✅ **v1.8 SDK Runtime Parity** — Phases 38-41 (shipped 2026-03-18)
+- 🚧 **v1.9 Event-Driven Propagation Engine** — Phases 42-43 (in progress)
 
 ## Phases
 
@@ -110,6 +111,36 @@
 
 </details>
 
+### 🚧 v1.9 Event-Driven Propagation Engine (In Progress)
+
+**Milestone Goal:** Replace DAG topological sort execution with event-driven propagation — modules execute on data arrival, output fans out downstream, and cyclic topologies are supported.
+
+- [ ] **Phase 42: Propagation Engine** - Replace WiringEngine topo sort with event-driven port-to-port dispatch supporting cycles
+- [ ] **Phase 43: Heartbeat Refactor** - Decouple HeartbeatModule from engine driver role; make it a configurable standalone timer signal source
+
+## Phase Details
+
+### Phase 42: Propagation Engine
+**Goal**: Modules execute the moment data arrives at an input port, propagating output downstream like a wave — cycles allowed, no topo sort
+**Depends on**: Phase 41 (v1.8 complete)
+**Requirements**: PROP-01, PROP-02, PROP-03, PROP-04
+**Success Criteria** (what must be TRUE):
+  1. A module wired to receive data executes immediately when that data arrives, without waiting for a heartbeat tick
+  2. When a module produces output, every downstream port connected to that output receives the data in the same propagation wave
+  3. A wiring graph with a cycle (A → B → A) can be saved and executed without the engine rejecting or erroring on the cycle
+  4. A module that produces no output on a given execution causes propagation to stop at that module — no downstream modules fire
+**Plans**: TBD
+
+### Phase 43: Heartbeat Refactor
+**Goal**: HeartbeatModule is a standalone timer that emits trigger signals into the propagation network — it no longer drives the WiringEngine execution loop
+**Depends on**: Phase 42
+**Requirements**: BEAT-05, BEAT-06
+**Success Criteria** (what must be TRUE):
+  1. HeartbeatModule emits a trigger signal on its output port at a regular interval, which propagates downstream through the network like any other module output
+  2. The WiringEngine no longer has a heartbeat-driven execution loop — execution is purely data-driven
+  3. User can set the HeartbeatModule trigger interval in the module configuration sidebar and the change takes effect without restarting the Anima
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -156,8 +187,10 @@
 | 39. Contracts Type Migration & Structured Messages | v1.8 | 2/2 | Complete | 2026-03-18 |
 | 40. Module Storage Path | v1.8 | 1/1 | Complete | 2026-03-18 |
 | 41. External ContextModule | v1.8 | 2/2 | Complete | 2026-03-18 |
+| 42. Propagation Engine | v1.9 | 0/? | Not started | - |
+| 43. Heartbeat Refactor | v1.9 | 0/? | Not started | - |
 
 **Total shipped: 41 phases, 93 plans across 9 milestones**
 
 ---
-*Last updated: 2026-03-18 after v1.8 SDK Runtime Parity shipped*
+*Last updated: 2026-03-19 — v1.9 roadmap created*

@@ -30,12 +30,13 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| PROP-01 | — | Pending |
-| PROP-02 | — | Pending |
-| PROP-03 | — | Pending |
-| PROP-04 | — | Pending |
-| BEAT-05 | — | Pending |
-| BEAT-06 | — | Pending |
+| PROP-01 | Phase 42 | Pending |
+| PROP-02 | Phase 42 | Pending |
+| PROP-03 | Phase 42 | Pending |
+| PROP-04 | Phase 42 | Pending |
+| BEAT-05 | Phase 43 | Pending |
+| BEAT-06 | Phase 43 | Pending |
 
 ---
 *Created: 2026-03-19 for milestone v1.9*
+*Traceability updated: 2026-03-19 after roadmap creation*

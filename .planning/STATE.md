@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Event-Driven Propagation Engine
-status: defining_requirements
+status: roadmap_ready
 last_updated: "2026-03-19T00:00:00.000Z"
-last_activity: "2026-03-19 — Milestone v1.9 started"
+last_activity: "2026-03-19 — v1.9 roadmap created, phases 42-43 defined"
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -23,16 +23,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-19)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Event-driven propagation engine — replace DAG topological sort with data-driven execution supporting cyclic topologies
+**Current focus:** Replace DAG topological sort with event-driven propagation — data arrival triggers execution, output fans out downstream, cycles allowed
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 42 — Propagation Engine (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-19 — Milestone v1.9 started
+Status: Roadmap ready, awaiting plan-phase
+Last activity: 2026-03-19 — v1.9 roadmap created
 
-Progress: [██████████] 100%
+Progress: [__________] 0%
 
 ## Decisions Made
 
@@ -54,10 +54,16 @@ Progress: [██████████] 100%
 - [Phase 41-external-context-module]: module.json CopyToOutputDirectory=PreserveNewest — PluginLoader needs manifest alongside DLL in build output
 - [Phase 41-external-context-module]: ContextModule tests load from build output dir (not .oamod) — avoids build dependency fragility in test suite
 
+## v1.9 Decisions
+
+- **No convergence control**: Cycle dampening (TTL, energy decay) explicitly deferred — wait for real-world usage to reveal need
+- **Modules can stop propagation**: A module that produces no output naturally terminates the wave — no explicit stop mechanism needed
+- **HeartbeatModule becomes signal source**: Emits trigger on output port; WiringEngine no longer has a heartbeat-driven loop
+
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 85 (across v1.0–v1.7)
+- Total plans completed: 93 (across v1.0–v1.8)
 
 **By Milestone:**
 
@@ -71,22 +77,15 @@ Progress: [██████████] 100%
 | v1.5 Multi-Anima | 5 | 13 | 2026-03-09 |
 | v1.6 Cross-Anima Routing | 4 | 8 | 2026-03-14 |
 | v1.7 Runtime Foundation | 6 | 13 | 2026-03-16 |
-| Phase 38-pluginloader-di-injection P01 | 621 | 2 tasks | 2 files |
-| Phase 38-pluginloader-di-injection P02 | 260 | 2 tasks | 2 files |
-| Phase 38-pluginloader-di-injection P03 | 45 | 2 tasks | 7 files |
-| Phase 39-contracts-type-migration-structured-messages P01 | 8 | 2 tasks | 6 files |
-| Phase 39-contracts-type-migration-structured-messages P02 | 884 | 2 tasks | 3 files |
-| Phase 40-module-storage-path P01 | 365 | 2 tasks | 6 files |
-| Phase 41-external-context-module P01 | 15 | 1 tasks | 4 files |
-| Phase 41-external-context-module P02 | 16 | 2 tasks | 5 files |
+| v1.8 SDK Runtime Parity | 4 | 9 | 2026-03-18 |
 
 ## Accumulated Context
 
-### Technical Debt (carried forward to next milestone)
+### Technical Debt (carried forward to v1.9)
 
 - MODMGMT-01/02/03/06: Full install/uninstall/search UI deferred
 - ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred to v2+
-- ILLMService remains in Core (ChatMessageInput now moved to Contracts — resolved)
+- ILLMService remains in Core (ChatMessageInput now moved to Contracts)
 - Schema mismatch between CLI and Runtime (extended manifest fields)
 - TextJoin fixed 3 input ports — static port system limitation
 
@@ -101,5 +100,5 @@ Progress: [██████████] 100%
 
 ---
 
-*State updated: 2026-03-18*
-*Stopped at: Phase 40 Plan 01 complete — IModuleStorage, 374 tests passing, STOR-01 validated*
+*State updated: 2026-03-19*
+*Stopped at: v1.9 roadmap created — Phase 42 ready for planning*
