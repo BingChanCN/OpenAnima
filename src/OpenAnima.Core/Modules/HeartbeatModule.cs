@@ -5,12 +5,11 @@ using OpenAnima.Contracts.Ports;
 namespace OpenAnima.Core.Modules;
 
 /// <summary>
-/// Heartbeat module that fires trigger events at configured interval via output port.
-/// Implements ITickable — TickAsync is called by the heartbeat loop on each cycle.
+/// Heartbeat module that fires trigger events via output port.
+/// TickAsync publishes a trigger signal — called by HeartbeatLoop (Phase 43 will make this standalone).
 /// </summary>
-[StatelessModule]
 [OutputPort("tick", PortType.Trigger)]
-public class HeartbeatModule : IModuleExecutor, ITickable
+public class HeartbeatModule : IModuleExecutor
 {
     private readonly IEventBus _eventBus;
     private readonly ILogger<HeartbeatModule> _logger;
@@ -35,7 +34,7 @@ public class HeartbeatModule : IModuleExecutor, ITickable
         => Task.CompletedTask;
 
     /// <summary>
-    /// Called on every heartbeat cycle. Publishes trigger event to tick output port.
+    /// Publishes trigger event to tick output port. Retained for Phase 43 standalone timer integration.
     /// </summary>
     public async Task TickAsync(CancellationToken ct = default)
     {
