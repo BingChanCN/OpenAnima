@@ -209,7 +209,7 @@ Plans:
 | 41. External ContextModule | v1.8 | 2/2 | Complete | 2026-03-18 |
 | 42. Propagation Engine | v1.9 | 3/3 | Complete | 2026-03-19 |
 | 43. Heartbeat Refactor | 2/2 | Complete   | 2026-03-19 | - |
-| 44. Config Schema Sidebar | 1/1 | Complete   | 2026-03-19 | - |
+| 44. Config Schema Sidebar | 1/1 | Complete    | 2026-03-19 | - |
 
 **Total shipped: 42 phases, 96 plans across 9 milestones**
 
