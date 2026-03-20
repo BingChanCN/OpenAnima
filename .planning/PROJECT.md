@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Latest shipped:** Phase 45 durable-task-runtime-foundation (2026-03-20)
+**Latest shipped:** Phase 46 workspace-tool-surface (2026-03-21)
 **Milestones complete:** v1.0–v1.9 (10 milestones, 44 phases, 99 plans)
-**Next milestone:** v2.0 Structured Cognition Foundation (Phase 45 complete, Phase 46 next)
+**Next milestone:** v2.0 Structured Cognition Foundation (Phase 46 complete, Phase 47 next)
 
 ## What This Is
 
@@ -134,7 +134,7 @@ Agents that proactively think and act on their own, while module connections rem
 ### Active
 
 - [x] Durable task runtime with stable run identity, persistence, resume/cancel, and convergence bounds — Validated in Phase 45: durable-task-runtime-foundation
-- [ ] Workspace-aware developer tool surface for file search, git inspection, and bounded command execution
+- [x] Workspace-aware developer tool surface for file search, git inspection, and bounded command execution — Validated in Phase 46: workspace-tool-surface
 - [ ] Run inspector with per-step timeline, inputs/outputs, errors, and graph trigger visibility
 - [ ] Artifact and provenance-backed memory foundation linked to runs and steps
 - [ ] Structured cognition workflow that analyzes a bound codebase and produces grounded report artifacts
@@ -210,6 +210,14 @@ v2.0 Phase 45 delivered durable task runtime foundation:
 - RunRecoveryService for startup recovery of interrupted runs
 - /runs UI page with 5 shared Blazor components and real-time SignalR updates
 - 35 new unit tests (429 total)
+
+v2.0 Phase 46 delivered workspace tool surface:
+- 12 workspace tools: file_read, file_write, directory_list, file_search, grep_search, git_status, git_diff, git_log, git_show, git_commit, git_checkout, shell_exec
+- IWorkspaceTool interface with ToolDescriptor self-description and ToolResult structured envelopes
+- CommandBlacklistGuard for shell_exec safety (blocks rm -rf, format, shutdown, etc.)
+- WorkspaceToolModule orchestrator with DI wiring and port registration
+- Git tools return parsed structured JSON (not raw git output)
+- All tools validate paths within workspace root
 
 Known tech debt:
 - ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred
@@ -315,4 +323,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-20 after completing Phase 45 durable-task-runtime-foundation*
+*Last updated: 2026-03-21 after completing Phase 46 workspace-tool-surface*
