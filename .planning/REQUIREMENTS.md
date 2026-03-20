@@ -9,16 +9,16 @@ Requirements for the v2.0 milestone. Each requirement maps to a single roadmap p
 
 ### Durable Task Runtime
 
-- [ ] **RUN-01**: User can start a durable task run with a stable run ID, explicit objective, and bound workspace root
-- [ ] **RUN-02**: User can view run history and current run state after UI refresh or application restart
-- [ ] **RUN-03**: User can resume an interrupted or paused run without losing completed step history
-- [ ] **RUN-04**: User can cancel an active run and the system persists the terminal state
-- [ ] **RUN-05**: Each run persists append-only step records with timestamps, status transitions, and owning module/tool identity
+- [x] **RUN-01**: User can start a durable task run with a stable run ID, explicit objective, and bound workspace root
+- [x] **RUN-02**: User can view run history and current run state after UI refresh or application restart
+- [x] **RUN-03**: User can resume an interrupted or paused run without losing completed step history
+- [x] **RUN-04**: User can cancel an active run and the system persists the terminal state
+- [x] **RUN-05**: Each run persists append-only step records with timestamps, status transitions, and owning module/tool identity
 
 ### Convergence Control
 
-- [ ] **CTRL-01**: Each long-running or cyclic run enforces explicit execution budgets so it cannot continue indefinitely without bounds
-- [ ] **CTRL-02**: System detects non-productive repeated execution patterns or idle stalls and halts with a recorded stop reason
+- [x] **CTRL-01**: Each long-running or cyclic run enforces explicit execution budgets so it cannot continue indefinitely without bounds
+- [x] **CTRL-02**: System detects non-productive repeated execution patterns or idle stalls and halts with a recorded stop reason
 
 ### Workspace Tool Surface
 
@@ -88,13 +88,13 @@ Explicitly excluded from v2.0 to prevent scope creep.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RUN-01 | Phase 45 | Pending |
-| RUN-02 | Phase 45 | Pending |
-| RUN-03 | Phase 45 | Pending |
-| RUN-04 | Phase 45 | Pending |
-| RUN-05 | Phase 45 | Pending |
-| CTRL-01 | Phase 45 | Pending |
-| CTRL-02 | Phase 45 | Pending |
+| RUN-01 | Phase 45 | Complete |
+| RUN-02 | Phase 45 | Complete |
+| RUN-03 | Phase 45 | Complete |
+| RUN-04 | Phase 45 | Complete |
+| RUN-05 | Phase 45 | Complete |
+| CTRL-01 | Phase 45 | Complete |
+| CTRL-02 | Phase 45 | Complete |
 | WORK-01 | Phase 46 | Pending |
 | WORK-02 | Phase 46 | Pending |
 | WORK-03 | Phase 46 | Pending |

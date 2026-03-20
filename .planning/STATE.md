@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Structured Cognition Foundation
 status: unknown
-stopped_at: Completed 45-01-PLAN.md
-last_updated: "2026-03-20T14:18:34.709Z"
+stopped_at: Completed 45-02-PLAN.md
+last_updated: "2026-03-20T14:39:56.813Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State: OpenAnima
@@ -51,6 +51,7 @@ Plan: 1 of 3
 | v1.9 Event-Driven Propagation Engine | 3 | 6 | 2026-03-20 |
 | v2.0 Structured Cognition Foundation | 5 | 0 | In planning |
 | Phase 45-durable-task-runtime-foundation P01 | 8 | 2 tasks | 14 files |
+| Phase 45-durable-task-runtime-foundation P02 | 15min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,8 @@ Recent decisions affecting current work:
 - Memory scope for v2.0 is provenance-backed retrieval over artifacts, not vector-first recall
 - [Phase 45-01]: RunRepository uses per-operation SqliteConnection (WAL mode handles concurrency); current RunState derived from MAX(id) in run_state_events, never stored as mutable column
 - [Phase 45-01]: RunRow private DTO pattern for Dapper join mapping: aliases columns to RunRow, then MapToDescriptor with Enum.Parse<RunState>; avoids custom Dapper type handlers
+- [Phase 45-02]: StepRecorder tracks (stepId -> animaId) in _stepAnimaIds ConcurrentDictionary to enable RecordStepCompleteAsync to look up RunContext without requiring animaId as interface parameter
+- [Phase 45-02]: WiringEngine IStepRecorder intercept is null-safe — zero behavior change when no recorder injected, preserving backward compatibility
 
 ### Pending Todos
 
@@ -76,6 +79,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T14:18:34.707Z
-Stopped at: Completed 45-01-PLAN.md
+Last session: 2026-03-20T14:39:56.811Z
+Stopped at: Completed 45-02-PLAN.md
 Resume file: None
