@@ -145,7 +145,11 @@
   3. User can resume a paused or interrupted run without losing previously completed steps.
   4. User can cancel an active run and later inspect its persisted terminal state.
   5. Long-running or cyclic runs stop when budgets are exhausted or repeated or idle patterns are detected, and the recorded stop reason is inspectable.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 45-01-PLAN.md — Domain types and SQLite persistence layer
+- [ ] 45-02-PLAN.md — Run lifecycle engine, step recording, convergence control, DI wiring
+- [ ] 45-03-PLAN.md — Runs UI page with shared components and SignalR real-time updates
 
 ### Phase 46: Workspace Tool Surface
 **Goal**: Runs can safely inspect and execute repo-grounded actions against an explicit workspace.
@@ -245,7 +249,7 @@
 | 42. Propagation Engine | v1.9 | 3/3 | Complete | 2026-03-19 |
 | 43. Heartbeat Refactor | v1.9 | 2/2 | Complete | 2026-03-19 |
 | 44. Config Schema Sidebar Integration | v1.9 | 1/1 | Complete | 2026-03-19 |
-| 45. Durable Task Runtime Foundation | v2.0 | 0/TBD | Not started | - |
+| 45. Durable Task Runtime Foundation | v2.0 | 0/3 | In progress | - |
 | 46. Workspace Tool Surface | v2.0 | 0/TBD | Not started | - |
 | 47. Run Inspection & Observability | v2.0 | 0/TBD | Not started | - |
 | 48. Artifact & Memory Foundation | v2.0 | 0/TBD | Not started | - |
