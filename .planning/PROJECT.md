@@ -4,7 +4,7 @@
 
 **Latest shipped:** v1.9 Event-Driven Propagation Engine (2026-03-20)
 **Milestones complete:** v1.0–v1.9 (10 milestones, 44 phases, 99 plans)
-**Next milestone:** TBD — use `/gsd:new-milestone` to define
+**Next milestone:** v2.0 Structured Cognition Foundation (roadmap in progress)
 
 ## What This Is
 
@@ -131,9 +131,24 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ HeartbeatModule interval configurable via EditorConfigSidebar schema rendering (BEAT-06) — v1.9
 - ✓ ITickable interface removed — pure data-driven execution model — v1.9
 
-## Next Milestone
+### Active
 
-TBD — use `/gsd:new-milestone` to define next milestone.
+- [ ] Durable task runtime with stable run identity, persistence, resume/cancel, and convergence bounds
+- [ ] Workspace-aware developer tool surface for file search, git inspection, and bounded command execution
+- [ ] Run inspector with per-step timeline, inputs/outputs, errors, and graph trigger visibility
+- [ ] Artifact and provenance-backed memory foundation linked to runs and steps
+- [ ] Structured cognition workflow that analyzes a bound codebase and produces grounded report artifacts
+
+## Current Milestone: v2.0 Structured Cognition Foundation
+
+**Goal:** Turn the existing event-driven graph runtime into a usable long-running developer-agent foundation with durable runs, repo-grounded tooling, inspectable execution, and provenance-backed memory.
+
+**Target features:**
+- Durable task runtime and convergence control
+- Workspace-aware tool modules for repo inspection and bounded command execution
+- Run inspection and observability UI
+- Artifact store and provenance-backed memory retrieval
+- End-to-end structured cognition codebase analysis workflow
 
 ### Deferred
 
@@ -287,4 +302,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-20 after v1.9 milestone*
+*Last updated: 2026-03-20 after starting v2.0 milestone*

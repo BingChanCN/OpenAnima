@@ -1,32 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.9
-milestone_name: Event-Driven Propagation Engine
-status: shipped
-last_updated: "2026-03-20T06:50:00.000Z"
+milestone: v2.0
+milestone_name: Structured Cognition Foundation
+status: planning
+last_updated: "2026-03-20T00:00:00.000Z"
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State: OpenAnima
 
 **Last updated:** 2026-03-20
-**Current milestone:** v1.9 Event-Driven Propagation Engine (SHIPPED)
+**Current milestone:** v2.0 Structured Cognition Foundation (PLANNING)
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-20)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Planning next milestone
+**Current focus:** Phase 45 roadmap approval
 
 ## Current Position
 
-All phases complete. v1.9 shipped 2026-03-20.
-Next: `/gsd:new-milestone` to define v2.0+ direction.
+Phase: Not started (defining roadmap)
+Plan: —
+Status: Creating roadmap
+Last activity: 2026-03-20 — Milestone v2.0 started
 
 ## Performance Metrics
 
@@ -73,10 +75,10 @@ Next: `/gsd:new-milestone` to define v2.0+ direction.
 ## Session Continuity
 
 Last session: 2026-03-20
-Stopped at: Session resumed, completing v1.9 milestone archival commit and local tag
-Resume file: cleared after successful resume
+Stopped at: Ready to generate v2.0 roadmap from existing research and requirements
+Resume file: none
 
 ---
 
 *State updated: 2026-03-20*
-*Stopped at: v1.9 milestone archival commit/tag in progress*
+*Stopped at: Awaiting v2.0 roadmap approval*
