@@ -23,7 +23,7 @@ Requirements for the v2.0 milestone. Each requirement maps to a single roadmap p
 ### Workspace Tool Surface
 
 - [x] **WORK-01**: Every tool step executes against an explicit workspace root rather than ambient process state
-- [ ] **WORK-02**: Agent can inspect workspace files and search code/content through repo-grounded read/search tools
+- [x] **WORK-02**: Agent can inspect workspace files and search code/content through repo-grounded read/search tools
 - [ ] **WORK-03**: Agent can inspect repository state through structured `git` status, diff, and log operations
 - [ ] **WORK-04**: Agent can execute bounded workspace commands with timeout, exit code, stdout, and stderr capture
 - [x] **WORK-05**: Every tool result records workspace root and enough metadata for replay and audit
@@ -96,7 +96,7 @@ Explicitly excluded from v2.0 to prevent scope creep.
 | CTRL-01 | Phase 45 | Complete |
 | CTRL-02 | Phase 45 | Complete |
 | WORK-01 | Phase 46 | Complete |
-| WORK-02 | Phase 46 | Pending |
+| WORK-02 | Phase 46 | Complete |
 | WORK-03 | Phase 46 | Pending |
 | WORK-04 | Phase 46 | Pending |
 | WORK-05 | Phase 46 | Complete |
