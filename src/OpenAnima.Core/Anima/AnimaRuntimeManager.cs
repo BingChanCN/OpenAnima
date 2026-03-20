@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using OpenAnima.Core.Hubs;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Routing;
+using OpenAnima.Core.Runs;
 
 namespace OpenAnima.Core.Anima;
 
@@ -25,6 +26,7 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
     private readonly IHubContext<RuntimeHub, IRuntimeClient>? _hubContext;
     private readonly ICrossAnimaRouter? _router;
     private readonly ChatInputModule? _chatInputModule;
+    private readonly IStepRecorder? _stepRecorder;
     private readonly Dictionary<string, AnimaDescriptor> _animas = new();
     private readonly Dictionary<string, AnimaRuntime> _runtimes = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -38,7 +40,8 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
         IAnimaContext animaContext,
         IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null,
         ICrossAnimaRouter? router = null,
-        ChatInputModule? chatInputModule = null)
+        ChatInputModule? chatInputModule = null,
+        IStepRecorder? stepRecorder = null)
     {
         _animasRoot = animasRoot;
         _logger = logger;
@@ -47,6 +50,7 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
         _hubContext = hubContext;
         _router = router;
         _chatInputModule = chatInputModule;
+        _stepRecorder = stepRecorder;
         Directory.CreateDirectory(_animasRoot);
     }
 
@@ -217,7 +221,7 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
         if (_runtimes.TryGetValue(animaId, out var existing))
             return existing;
 
-        var runtime = new AnimaRuntime(animaId, _loggerFactory, _hubContext);
+        var runtime = new AnimaRuntime(animaId, _loggerFactory, _hubContext, _stepRecorder);
         _runtimes[animaId] = runtime;
 
         // Wire ChatInputModule to route through this runtime's chat channel

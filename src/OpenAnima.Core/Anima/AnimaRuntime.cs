@@ -7,6 +7,7 @@ using OpenAnima.Core.Hubs;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Plugins;
 using OpenAnima.Core.Ports;
+using OpenAnima.Core.Runs;
 using OpenAnima.Core.Runtime;
 using OpenAnima.Core.Wiring;
 
@@ -32,7 +33,8 @@ public sealed class AnimaRuntime : IAsyncDisposable
     public AnimaRuntime(
         string animaId,
         ILoggerFactory loggerFactory,
-        IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null)
+        IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null,
+        IStepRecorder? stepRecorder = null)
     {
         AnimaId = animaId;
 
@@ -52,7 +54,8 @@ public sealed class AnimaRuntime : IAsyncDisposable
             new PortRegistry(),
             animaId: animaId,
             logger: loggerFactory.CreateLogger<WiringEngine>(),
-            hubContext: hubContext);
+            hubContext: hubContext,
+            stepRecorder: stepRecorder);
 
         // Create ActivityChannelHost with three named channel callbacks.
         // onTick: HeartbeatModule is a standalone timer (Phase 43) — onTick is a no-op.

@@ -4,6 +4,7 @@ using OpenAnima.Core.Anima;
 using OpenAnima.Core.Hubs;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Routing;
+using OpenAnima.Core.Runs;
 using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.DependencyInjection;
@@ -40,7 +41,8 @@ public static class AnimaServiceExtensions
                 sp.GetRequiredService<IAnimaContext>(),
                 sp.GetService<IHubContext<RuntimeHub, IRuntimeClient>>(),
                 router: null,  // Injected after construction to break circular dependency
-                sp.GetRequiredService<ChatInputModule>()));
+                sp.GetRequiredService<ChatInputModule>(),
+                sp.GetService<IStepRecorder>()));
 
         // Register router — uses Lazy to break circular singleton dependency with IAnimaRuntimeManager.
         services.AddSingleton<ICrossAnimaRouter>(sp =>

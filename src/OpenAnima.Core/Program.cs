@@ -69,6 +69,9 @@ builder.Services.AddAnimaServices();
 // --- Register wiring services ---
 builder.Services.AddWiringServices();
 
+// --- Register run services ---
+builder.Services.AddRunServices();
+
 // --- Register named HTTP client with resilience pipeline ---
 builder.Services.AddHttpClient("HttpRequest")
     .AddStandardResilienceHandler();
@@ -117,6 +120,10 @@ app.MapRazorComponents<OpenAnima.Core.Components.App>()
     .AddInteractiveServerRenderMode();
 
 app.MapHub<RuntimeHub>("/hubs/runtime");
+
+// --- Ensure Kestrel has a URL to bind ---
+if (!app.Urls.Any())
+    app.Urls.Add("http://localhost:5000");
 
 // --- Browser auto-launch ---
 var noBrowser = args.Contains("--no-browser");

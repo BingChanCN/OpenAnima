@@ -5,6 +5,7 @@ using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
 using OpenAnima.Core.Hubs;
 using OpenAnima.Core.Ports;
+using OpenAnima.Core.Runs;
 
 namespace OpenAnima.Core.Wiring;
 
@@ -20,6 +21,7 @@ public class WiringEngine : IWiringEngine
     private readonly string _animaId;
     private readonly ILogger<WiringEngine> _logger;
     private readonly IHubContext<RuntimeHub, IRuntimeClient>? _hubContext;
+    private readonly IStepRecorder? _stepRecorder;
 
     private ConnectionGraph? _graph;
     private WiringConfiguration? _currentConfig;
@@ -31,13 +33,15 @@ public class WiringEngine : IWiringEngine
         IPortRegistry portRegistry,
         string animaId = "",
         ILogger<WiringEngine>? logger = null,
-        IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null)
+        IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null,
+        IStepRecorder? stepRecorder = null)
     {
         _eventBus = eventBus;
         _portRegistry = portRegistry;
         _animaId = animaId;
         _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<WiringEngine>.Instance;
         _hubContext = hubContext;
+        _stepRecorder = stepRecorder;
     }
 
     /// <summary>
@@ -151,7 +155,22 @@ public class WiringEngine : IWiringEngine
                     await semaphore.WaitAsync(ct);
                     try
                     {
-                        await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
+                        var inputSummary = evt.Payload?.ToString();
+                        var stepId = _stepRecorder != null
+                            ? await _stepRecorder.RecordStepStartAsync(_animaId, targetModuleRuntimeName, inputSummary, propagationId: null, ct)
+                            : null;
+                        try
+                        {
+                            await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
+                            if (_stepRecorder != null && stepId != null)
+                                await _stepRecorder.RecordStepCompleteAsync(stepId, targetModuleRuntimeName, evt.Payload?.ToString(), ct);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (_stepRecorder != null && stepId != null)
+                                await _stepRecorder.RecordStepFailedAsync(stepId, targetModuleRuntimeName, ex, ct);
+                            throw;
+                        }
                     }
                     finally
                     {
@@ -165,7 +184,23 @@ public class WiringEngine : IWiringEngine
                     await semaphore.WaitAsync(ct);
                     try
                     {
-                        await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
+                        var inputSummary = evt.Payload.ToString();
+                        var stepId = _stepRecorder != null
+                            ? await _stepRecorder.RecordStepStartAsync(_animaId, targetModuleRuntimeName, inputSummary, propagationId: null, ct)
+                            : null;
+                        try
+                        {
+                            await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
+                            // Trigger ports have no meaningful text output — pass null to skip non-productive detection
+                            if (_stepRecorder != null && stepId != null)
+                                await _stepRecorder.RecordStepCompleteAsync(stepId, targetModuleRuntimeName, outputSummary: null, ct);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (_stepRecorder != null && stepId != null)
+                                await _stepRecorder.RecordStepFailedAsync(stepId, targetModuleRuntimeName, ex, ct);
+                            throw;
+                        }
                     }
                     finally
                     {
@@ -179,7 +214,22 @@ public class WiringEngine : IWiringEngine
                     await semaphore.WaitAsync(ct);
                     try
                     {
-                        await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
+                        var inputSummary = evt.Payload?.ToString();
+                        var stepId = _stepRecorder != null
+                            ? await _stepRecorder.RecordStepStartAsync(_animaId, targetModuleRuntimeName, inputSummary, propagationId: null, ct)
+                            : null;
+                        try
+                        {
+                            await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
+                            if (_stepRecorder != null && stepId != null)
+                                await _stepRecorder.RecordStepCompleteAsync(stepId, targetModuleRuntimeName, evt.Payload?.ToString(), ct);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (_stepRecorder != null && stepId != null)
+                                await _stepRecorder.RecordStepFailedAsync(stepId, targetModuleRuntimeName, ex, ct);
+                            throw;
+                        }
                     }
                     finally
                     {
