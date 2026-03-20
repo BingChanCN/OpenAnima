@@ -127,7 +127,7 @@
 
 **Coverage:** 25/25 v2.0 requirements mapped
 
-- [ ] **Phase 45: Durable Task Runtime Foundation** - Durable runs have stable identity, persisted state, resume/cancel lifecycle, and bounded execution.
+- [x] **Phase 45: Durable Task Runtime Foundation** - Durable runs have stable identity, persisted state, resume/cancel lifecycle, and bounded execution. (completed 2026-03-20)
 - [ ] **Phase 46: Workspace Tool Surface** - Runs can inspect and act on a bound repository through explicit workspace tools.
 - [ ] **Phase 47: Run Inspection & Observability** - Users can inspect timelines, step details, graph triggers, and correlated diagnostics for each run.
 - [ ] **Phase 48: Artifact & Memory Foundation** - Runs persist artifacts and provenance-backed retrieval records that stay inspectable.
@@ -249,7 +249,7 @@ Plans:
 | 42. Propagation Engine | v1.9 | 3/3 | Complete | 2026-03-19 |
 | 43. Heartbeat Refactor | v1.9 | 2/2 | Complete | 2026-03-19 |
 | 44. Config Schema Sidebar Integration | v1.9 | 1/1 | Complete | 2026-03-19 |
-| 45. Durable Task Runtime Foundation | 2/3 | In Progress|  | - |
+| 45. Durable Task Runtime Foundation | 3/3 | Complete   | 2026-03-20 | - |
 | 46. Workspace Tool Surface | v2.0 | 0/TBD | Not started | - |
 | 47. Run Inspection & Observability | v2.0 | 0/TBD | Not started | - |
 | 48. Artifact & Memory Foundation | v2.0 | 0/TBD | Not started | - |
