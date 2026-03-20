@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Structured Cognition Foundation
 status: executing
-stopped_at: "Completed 46-03-PLAN.md"
-last_updated: "2026-03-21T18:23:00Z"
+stopped_at: "Completed 46-04-PLAN.md"
+last_updated: "2026-03-21T18:30:08Z"
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State: OpenAnima
@@ -26,7 +26,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-20)
 
 ## Current Position
 
-Phase: 46 (workspace-tool-surface) — EXECUTING
+Phase: 46 (workspace-tool-surface) — COMPLETE
 Plan: 4 of 4
 
 ## Performance Metrics
@@ -56,6 +56,7 @@ Plan: 4 of 4
 | Phase 46-workspace-tool-surface P01 | 12min | 4 tasks | 5 files |
 | Phase 46-workspace-tool-surface P02 | 13min | 2 tasks | 5 files |
 | Phase 46-workspace-tool-surface P03 | 13min | 2 tasks | 7 files |
+| Phase 46-workspace-tool-surface P04 | 20min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,9 @@ Recent decisions affecting current work:
 - [Phase 46-03]: GitCheckoutTool returns stderr as output on success — git checkout writes 'Switched to branch' to stderr, not stdout
 - [Phase 46-03]: GitLogTool skips blank separator lines between commits when parsing 5-line format blocks
 - [Phase 46-03]: ShellExecTool uses ReadToEndAsync() without CancellationToken on stream reads — WaitForExitAsync carries the linked token
+- [Phase 46-04]: WorkspaceToolModule accepts IEnumerable<IWorkspaceTool> — .NET DI resolves all AddSingleton<IWorkspaceTool, T> registrations automatically
+- [Phase 46-04]: WorkspaceToolModule uses SemaphoreSlim(3,3) with WaitAsync — waits for slot rather than skipping concurrent calls
+- [Phase 46-04]: ToolInvocation is a private record inside WorkspaceToolModule — no public DTO leakage
 
 ### Pending Todos
 
@@ -94,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T18:23:00Z
-Stopped at: Completed 46-03-PLAN.md
-Resume file: .planning/phases/46-workspace-tool-surface/46-04-PLAN.md
+Last session: 2026-03-21T18:30:08Z
+Stopped at: Completed 46-04-PLAN.md
+Resume file: .planning/phases/47-PLAN.md

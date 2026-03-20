@@ -128,7 +128,7 @@
 **Coverage:** 25/25 v2.0 requirements mapped
 
 - [x] **Phase 45: Durable Task Runtime Foundation** - Durable runs have stable identity, persisted state, resume/cancel lifecycle, and bounded execution. (completed 2026-03-20)
-- [ ] **Phase 46: Workspace Tool Surface** - Runs can inspect and act on a bound repository through explicit workspace tools.
+- [x] **Phase 46: Workspace Tool Surface** - Runs can inspect and act on a bound repository through explicit workspace tools. (completed 2026-03-20)
 - [ ] **Phase 47: Run Inspection & Observability** - Users can inspect timelines, step details, graph triggers, and correlated diagnostics for each run.
 - [ ] **Phase 48: Artifact & Memory Foundation** - Runs persist artifacts and provenance-backed retrieval records that stay inspectable.
 - [ ] **Phase 49: Structured Cognition Workflows** - Graph-native workflows use tools, memory, and multi-node routing to deliver grounded codebase analysis.
@@ -255,7 +255,7 @@ Plans:
 | 43. Heartbeat Refactor | v1.9 | 2/2 | Complete | 2026-03-19 |
 | 44. Config Schema Sidebar Integration | v1.9 | 1/1 | Complete | 2026-03-19 |
 | 45. Durable Task Runtime Foundation | 3/3 | Complete    | 2026-03-20 | - |
-| 46. Workspace Tool Surface | 3/4 | In Progress|  | - |
+| 46. Workspace Tool Surface | 4/4 | Complete   | 2026-03-20 | - |
 | 47. Run Inspection & Observability | v2.0 | 0/TBD | Not started | - |
 | 48. Artifact & Memory Foundation | v2.0 | 0/TBD | Not started | - |
 | 49. Structured Cognition Workflows | v2.0 | 0/TBD | Not started | - |
