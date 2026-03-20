@@ -1,0 +1,36 @@
+@if (Max.HasValue && Max.Value > 0)
+{
+    <div class="budget-indicator">
+        <div class="budget-bar-track"
+             role="progressbar"
+             aria-valuenow="@Current"
+             aria-valuemin="0"
+             aria-valuemax="@Max">
+            <div class="budget-bar-fill @(Percentage >= 80 ? "budget-warning" : "")" style="width: @(Percentage)%"></div>
+        </div>
+        <span class="budget-label">@Current / @Max @Label</span>
+    </div>
+}
+
+<style>
+    .budget-indicator { margin-top: 4px; }
+    .budget-bar-track { height: 4px; background: var(--border-color); border-radius: 2px; overflow: hidden; }
+    .budget-bar-fill { height: 100%; background: var(--success-color); transition: width 0.3s; border-radius: 2px; }
+    .budget-bar-fill.budget-warning { background: var(--warning-color); }
+    .budget-label { font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono); margin-top: 2px; display: block; }
+</style>
+
+@code {
+    [Parameter]
+    public int Current { get; set; }
+
+    [Parameter]
+    public int? Max { get; set; }
+
+    [Parameter]
+    public string Label { get; set; } = "Steps";
+
+    private int Percentage => Max.HasValue && Max.Value > 0
+        ? Math.Min(100, (int)(Current / (double)Max.Value * 100))
+        : 0;
+}

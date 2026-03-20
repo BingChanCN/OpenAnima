@@ -1,0 +1,197 @@
+<div class="launch-panel">
+    <fieldset>
+        <legend>New Run</legend>
+
+        <div class="form-field">
+            <label for="launch-objective">Objective</label>
+            <input id="launch-objective"
+                   type="text"
+                   placeholder="Describe what this run should accomplish"
+                   @bind="_objective"
+                   @bind:event="oninput" />
+            @if (_objectiveError != null)
+            {
+                <span class="error-inline">@_objectiveError</span>
+            }
+        </div>
+
+        <div class="form-field">
+            <label for="launch-workspace">Workspace Root</label>
+            <input id="launch-workspace"
+                   type="text"
+                   placeholder="/path/to/repository"
+                   @bind="_workspaceRoot"
+                   @bind:event="oninput" />
+            @if (_workspaceError != null)
+            {
+                <span class="error-inline">@_workspaceError</span>
+            }
+        </div>
+
+        <div class="form-row">
+            <div class="form-field">
+                <label for="launch-maxsteps">Max Steps (optional)</label>
+                <input id="launch-maxsteps"
+                       type="number"
+                       min="1"
+                       @bind="_maxStepsStr"
+                       @bind:event="oninput" />
+                @if (_maxStepsError != null)
+                {
+                    <span class="error-inline">@_maxStepsError</span>
+                }
+            </div>
+            <div class="form-field">
+                <label for="launch-maxwall">Max Wall Time (s) (optional)</label>
+                <input id="launch-maxwall"
+                       type="number"
+                       min="1"
+                       @bind="_maxWallTimeStr"
+                       @bind:event="oninput" />
+                @if (_maxWallTimeError != null)
+                {
+                    <span class="error-inline">@_maxWallTimeError</span>
+                }
+            </div>
+        </div>
+
+        <button class="btn btn-primary @(_isSubmitting ? "loading" : "")"
+                disabled="@(!IsFormValid || _isSubmitting)"
+                @onclick="HandleSubmit">
+            @if (_isSubmitting)
+            {
+                <span class="spinner"></span>
+            }
+            Start Run
+        </button>
+
+        @if (_submitError != null)
+        {
+            <span class="error-inline">@_submitError</span>
+        }
+    </fieldset>
+</div>
+
+<style>
+    .launch-panel {
+        background: var(--surface-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 24px;
+    }
+    .launch-panel fieldset { border: none; padding: 0; margin: 0; }
+    .launch-panel legend { font-size: 20px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px; }
+    .form-field { margin-bottom: 16px; }
+    .form-field label { display: block; font-size: 14px; color: var(--text-primary); margin-bottom: 4px; }
+    .form-field input {
+        width: 100%;
+        padding: 8px 16px;
+        background: var(--surface-dark);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-size: 14px;
+        font-family: var(--font-family);
+    }
+    .form-field input:focus { outline: none; border-color: var(--accent-color); }
+    .form-field input::placeholder { color: var(--text-secondary); }
+    .error-inline { display: block; font-size: 12px; color: var(--error-color); margin-top: 4px; }
+    .form-row { display: flex; gap: 16px; }
+    .form-row .form-field { flex: 1; }
+</style>
+
+@code {
+    [Parameter]
+    public EventCallback<(string objective, string workspace, int? maxSteps, int? maxWallSeconds)> OnStartRun { get; set; }
+
+    private string _objective = string.Empty;
+    private string _workspaceRoot = string.Empty;
+    private string _maxStepsStr = string.Empty;
+    private string _maxWallTimeStr = string.Empty;
+
+    private string? _objectiveError;
+    private string? _workspaceError;
+    private string? _maxStepsError;
+    private string? _maxWallTimeError;
+    private string? _submitError;
+
+    private bool _isSubmitting;
+
+    private bool IsFormValid
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_objective)) return false;
+            if (string.IsNullOrWhiteSpace(_workspaceRoot)) return false;
+            if (!string.IsNullOrWhiteSpace(_maxStepsStr) && (!int.TryParse(_maxStepsStr, out var s) || s <= 0)) return false;
+            if (!string.IsNullOrWhiteSpace(_maxWallTimeStr) && (!int.TryParse(_maxWallTimeStr, out var w) || w <= 0)) return false;
+            return true;
+        }
+    }
+
+    private bool Validate()
+    {
+        _objectiveError = null;
+        _workspaceError = null;
+        _maxStepsError = null;
+        _maxWallTimeError = null;
+
+        var valid = true;
+
+        if (string.IsNullOrWhiteSpace(_objective))
+        {
+            _objectiveError = "Objective is required";
+            valid = false;
+        }
+
+        if (string.IsNullOrWhiteSpace(_workspaceRoot))
+        {
+            _workspaceError = "Workspace root is required";
+            valid = false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_maxStepsStr) && (!int.TryParse(_maxStepsStr, out var steps) || steps <= 0))
+        {
+            _maxStepsError = "Max steps must be a positive number";
+            valid = false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_maxWallTimeStr) && (!int.TryParse(_maxWallTimeStr, out var wallTime) || wallTime <= 0))
+        {
+            _maxWallTimeError = "Max wall time must be a positive number";
+            valid = false;
+        }
+
+        return valid;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (!Validate()) return;
+
+        _submitError = null;
+        _isSubmitting = true;
+
+        int? maxSteps = string.IsNullOrWhiteSpace(_maxStepsStr) ? null : int.Parse(_maxStepsStr);
+        int? maxWallSeconds = string.IsNullOrWhiteSpace(_maxWallTimeStr) ? null : int.Parse(_maxWallTimeStr);
+
+        try
+        {
+            await OnStartRun.InvokeAsync((_objective.Trim(), _workspaceRoot.Trim(), maxSteps, maxWallSeconds));
+            // Clear form on success
+            _objective = string.Empty;
+            _workspaceRoot = string.Empty;
+            _maxStepsStr = string.Empty;
+            _maxWallTimeStr = string.Empty;
+        }
+        catch
+        {
+            _submitError = "Failed to start run. Check the workspace path and try again.";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}

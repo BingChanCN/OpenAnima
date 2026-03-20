@@ -1,0 +1,97 @@
+@using OpenAnima.Core.Runs
+
+<div class="run-card">
+    <div class="run-card-header">
+        <span class="run-card-id">@Run.RunId</span>
+        <span class="run-card-objective">@Run.Objective</span>
+        <RunStateBadge State="@Run.CurrentState" />
+    </div>
+    <div class="run-card-meta">
+        <span class="run-card-timestamp">@Run.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss") UTC</span>
+        <span class="run-card-steps">@StepCount steps</span>
+        <div class="run-card-actions">
+            @if (Run.CurrentState == RunState.Running)
+            {
+                <button class="btn btn-secondary btn-sm"
+                        aria-label="Pause run @Run.RunId"
+                        @onclick="() => OnPause.InvokeAsync(Run.RunId)">
+                    Pause Run
+                </button>
+                <button class="btn btn-danger btn-sm"
+                        aria-label="Cancel run @Run.RunId"
+                        @onclick="() => OnCancel.InvokeAsync(Run.RunId)">
+                    Cancel Run
+                </button>
+            }
+            else if (Run.CurrentState == RunState.Paused || Run.CurrentState == RunState.Interrupted)
+            {
+                <button class="btn btn-primary btn-sm"
+                        aria-label="Resume run @Run.RunId"
+                        @onclick="() => OnResume.InvokeAsync(Run.RunId)">
+                    Resume Run
+                </button>
+                <button class="btn btn-danger btn-sm"
+                        aria-label="Cancel run @Run.RunId"
+                        @onclick="() => OnCancel.InvokeAsync(Run.RunId)">
+                    Cancel Run
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(StopReason))
+    {
+        <StopReasonBanner Reason="@StopReason" />
+    }
+
+    @if (Run.MaxSteps.HasValue)
+    {
+        <BudgetIndicator Current="@StepCount" Max="@Run.MaxSteps" Label="steps" />
+    }
+</div>
+
+<style>
+    .run-card {
+        background: var(--surface-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 8px;
+    }
+    .run-card-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .run-card-id { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+    .run-card-objective { font-size: 14px; color: var(--text-primary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .run-card-meta { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+    .run-card-timestamp { font-size: 12px; color: var(--text-secondary); }
+    .run-card-steps { font-family: var(--font-mono); font-size: 14px; color: var(--text-primary); }
+    .run-card-actions { display: flex; gap: 8px; margin-left: auto; }
+    .btn-sm { padding: 4px 12px; font-size: 12px; }
+    .btn-secondary {
+        background: var(--surface-dark);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+    .btn-secondary:hover:not(:disabled) {
+        background: var(--hover-bg);
+    }
+</style>
+
+@code {
+    [Parameter]
+    public RunDescriptor Run { get; set; } = default!;
+
+    [Parameter]
+    public string? StopReason { get; set; }
+
+    [Parameter]
+    public int StepCount { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnPause { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnResume { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnCancel { get; set; }
+}

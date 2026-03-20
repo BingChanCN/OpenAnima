@@ -1,0 +1,70 @@
+@using OpenAnima.Core.Runs
+
+<span class="run-state-badge @_modifierClass" aria-label="Run state: @_label">@_label</span>
+
+<style>
+    .run-state-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.5;
+    }
+
+    .run-state-badge.badge-running,
+    .run-state-badge.badge-completed {
+        background: rgba(74, 222, 128, 0.15);
+        color: var(--success-color);
+    }
+
+    .run-state-badge.badge-paused,
+    .run-state-badge.badge-interrupted {
+        background: rgba(251, 191, 36, 0.15);
+        color: var(--warning-color);
+    }
+
+    .run-state-badge.badge-cancelled {
+        background: rgba(92, 95, 115, 0.15);
+        color: var(--text-muted);
+    }
+
+    .run-state-badge.badge-failed {
+        background: rgba(248, 113, 113, 0.15);
+        color: var(--error-color);
+    }
+
+    .run-state-badge.badge-created {
+        background: rgba(139, 143, 163, 0.15);
+        color: var(--text-secondary);
+    }
+</style>
+
+@code {
+    [Parameter]
+    public RunState State { get; set; }
+
+    private string _label => State switch
+    {
+        RunState.Created => "Starting",
+        RunState.Running => "Running",
+        RunState.Paused => "Paused",
+        RunState.Completed => "Completed",
+        RunState.Cancelled => "Cancelled",
+        RunState.Failed => "Failed",
+        RunState.Interrupted => "Interrupted",
+        _ => State.ToString()
+    };
+
+    private string _modifierClass => State switch
+    {
+        RunState.Created => "badge-created",
+        RunState.Running => "badge-running",
+        RunState.Paused => "badge-paused",
+        RunState.Completed => "badge-completed",
+        RunState.Cancelled => "badge-cancelled",
+        RunState.Failed => "badge-failed",
+        RunState.Interrupted => "badge-interrupted",
+        _ => "badge-created"
+    };
+}

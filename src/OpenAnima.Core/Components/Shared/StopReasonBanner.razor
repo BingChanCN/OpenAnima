@@ -1,0 +1,23 @@
+@if (!string.IsNullOrEmpty(Reason))
+{
+    <div class="stop-reason-banner" role="alert">
+        <span class="stop-reason-text">Run paused: @Reason</span>
+    </div>
+}
+
+<style>
+    .stop-reason-banner {
+        padding: 8px 16px;
+        border-left: 3px solid var(--error-color);
+        background: rgba(248, 113, 113, 0.08);
+        border-radius: 4px;
+        font-size: 14px;
+        color: var(--text-primary);
+        margin-top: 8px;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string? Reason { get; set; }
+}
