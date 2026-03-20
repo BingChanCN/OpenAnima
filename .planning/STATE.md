@@ -55,6 +55,7 @@ Plan: 4 of 4
 | Phase 45-durable-task-runtime-foundation P03 | 4min | 2 tasks | 10 files |
 | Phase 46-workspace-tool-surface P01 | 12min | 4 tasks | 5 files |
 | Phase 46-workspace-tool-surface P02 | 13min | 2 tasks | 5 files |
+| Phase 46-workspace-tool-surface P03 | 13min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,9 @@ Recent decisions affecting current work:
 - [Phase 46-02]: GrepSearchTool uses Regex with 5-second timeout to prevent ReDoS on adversarial patterns
 - [Phase 46-02]: GrepSearchTool defaults to curated 16-extension list rather than scanning all binary files
 - [Phase 46-02]: FileReadTool applies offset/limit after optional 1MB truncation to avoid double-read
+- [Phase 46-03]: GitCheckoutTool returns stderr as output on success — git checkout writes 'Switched to branch' to stderr, not stdout
+- [Phase 46-03]: GitLogTool skips blank separator lines between commits when parsing 5-line format blocks
+- [Phase 46-03]: ShellExecTool uses ReadToEndAsync() without CancellationToken on stream reads — WaitForExitAsync carries the linked token
 
 ### Pending Todos
 
@@ -90,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T18:09:20Z
-Stopped at: Completed 46-02-PLAN.md
-Resume file: .planning/phases/46-workspace-tool-surface/46-03-PLAN.md
+Last session: 2026-03-21T18:23:00Z
+Stopped at: Completed 46-03-PLAN.md
+Resume file: .planning/phases/46-workspace-tool-surface/46-04-PLAN.md
