@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Latest shipped:** v1.9 Event-Driven Propagation Engine (2026-03-20)
+**Latest shipped:** Phase 45 durable-task-runtime-foundation (2026-03-20)
 **Milestones complete:** v1.0–v1.9 (10 milestones, 44 phases, 99 plans)
-**Next milestone:** v2.0 Structured Cognition Foundation (roadmap in progress)
+**Next milestone:** v2.0 Structured Cognition Foundation (Phase 45 complete, Phase 46 next)
 
 ## What This Is
 
@@ -133,7 +133,7 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Active
 
-- [ ] Durable task runtime with stable run identity, persistence, resume/cancel, and convergence bounds
+- [x] Durable task runtime with stable run identity, persistence, resume/cancel, and convergence bounds — Validated in Phase 45: durable-task-runtime-foundation
 - [ ] Workspace-aware developer tool surface for file search, git inspection, and bounded command execution
 - [ ] Run inspector with per-step timeline, inputs/outputs, errors, and graph trigger visibility
 - [ ] Artifact and provenance-backed memory foundation linked to runs and steps
@@ -191,7 +191,7 @@ Agents that proactively think and act on their own, while module connections rem
 ## Context
 
 Shipped v1.9 with ~27,500 LOC across all source files (C#, Razor, CSS, JS).
-Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4, Microsoft.Extensions.Http.Resilience 8.7.0.
+Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4, Microsoft.Extensions.Http.Resilience 8.7.0, Microsoft.Data.Sqlite 8.0.12, Dapper 2.1.72.
 
 v1.9 delivered event-driven propagation engine:
 - WiringEngine replaced DAG topological sort with per-module SemaphoreSlim event-driven routing
@@ -199,7 +199,17 @@ v1.9 delivered event-driven propagation engine:
 - HeartbeatModule refactored to standalone PeriodicTimer with config-driven interval
 - ITickable interface removed from Contracts — pure data-driven execution
 - ModuleSchemaService + EditorConfigSidebar schema-aware rendering for IModuleConfigSchema modules
-- Full test suite: 394/394 green
+- Full test suite: 429/429 green
+
+v2.0 Phase 45 delivered durable task runtime foundation:
+- Domain types: RunState, StepStatus, RunDescriptor, StepRecord, RunResult, ConvergenceCheckResult, RunStateEvent
+- SQLite persistence via IRunRepository with Dapper
+- RunService lifecycle engine (create/start/complete/fail/resume)
+- ConvergenceGuard with configurable step budgets and restore-on-resume
+- StepRecorder with hash-based dedup and SignalR push
+- RunRecoveryService for startup recovery of interrupted runs
+- /runs UI page with 5 shared Blazor components and real-time SignalR updates
+- 35 new unit tests (429 total)
 
 Known tech debt:
 - ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred
@@ -287,6 +297,9 @@ Known tech debt:
 
 | Per-module SemaphoreSlim(1,1) in WiringEngine | Serializes concurrent incoming events per module — wave isolation without module awareness | ✓ Good — v1.9 |
 | No convergence control for cycles | Modules terminate cycles by not producing output; TTL/energy decay deferred until real-world need | ✓ Good — v1.9 |
+| SQLite + Dapper for run persistence | Lightweight embedded DB, no external dependency; Dapper for clean SQL mapping | ✓ Good — v2.0/Phase 45 |
+| ConvergenceGuard per-run step budgets | Configurable max steps with restore-on-resume; prevents infinite loops | ✓ Good — v2.0/Phase 45 |
+| IHubContext optional injection | SignalR push nullable in RunService/StepRecorder — testable without hub | ✓ Good — v2.0/Phase 45 |
 | FixedTextModule trigger input port | Replaces `.execute` subscription with explicit port-driven trigger path | ✓ Good — v1.9 |
 | ITickable removed from Contracts | No remaining implementors after propagation engine; duck-typing decision superseded | ✓ Good — v1.9 |
 | ModuleSchemaService static type map + IServiceProvider | Avoids reflection scanning; DI-based resolution for built-in + external modules | ✓ Good — v1.9 |
@@ -302,4 +315,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-20 after starting v2.0 milestone*
+*Last updated: 2026-03-20 after completing Phase 45 durable-task-runtime-foundation*
