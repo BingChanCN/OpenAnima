@@ -31,4 +31,14 @@ public interface IRuntimeClient
     /// Pushes module error details to clients for diagnostics display.
     /// </summary>
     Task ReceiveModuleError(string animaId, string moduleId, string errorMessage, string? stackTrace);
+
+    /// <summary>
+    /// Pushes run state change to clients for real-time run list updates.
+    /// </summary>
+    Task ReceiveRunStateChanged(string animaId, string runId, string state, string? reason);
+
+    /// <summary>
+    /// Pushes step completion to clients for real-time step count updates.
+    /// </summary>
+    Task ReceiveStepCompleted(string animaId, string runId, string stepId, string moduleName, string status, int? durationMs);
 }
