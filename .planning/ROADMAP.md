@@ -161,7 +161,12 @@ Plans:
   3. User can inspect repository state through structured git status, diff, and log results inside the run.
   4. User can execute bounded workspace commands and inspect timeout status, exit code, stdout, and stderr for each command.
   5. Tool results keep enough workspace and execution metadata for later replay and audit.
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 46-01-PLAN.md — Tool result types, blacklist guard, and tool descriptors
+- [ ] 46-02-PLAN.md — File tools (file_read, file_write, directory_list, file_search, grep_search)
+- [ ] 46-03-PLAN.md — Git tools (git_status, git_diff, git_log, git_show, git_commit, git_checkout) and shell_exec
+- [ ] 46-04-PLAN.md — WorkspaceToolModule orchestrator, DI wiring, and startup integration
 
 ### Phase 47: Run Inspection & Observability
 **Goal**: Users and developers can explain what happened in a run from timeline to step-level causality.
@@ -250,7 +255,7 @@ Plans:
 | 43. Heartbeat Refactor | v1.9 | 2/2 | Complete | 2026-03-19 |
 | 44. Config Schema Sidebar Integration | v1.9 | 1/1 | Complete | 2026-03-19 |
 | 45. Durable Task Runtime Foundation | 3/3 | Complete    | 2026-03-20 | - |
-| 46. Workspace Tool Surface | v2.0 | 0/TBD | Not started | - |
+| 46. Workspace Tool Surface | v2.0 | 0/4 | Not started | - |
 | 47. Run Inspection & Observability | v2.0 | 0/TBD | Not started | - |
 | 48. Artifact & Memory Foundation | v2.0 | 0/TBD | Not started | - |
 | 49. Structured Cognition Workflows | v2.0 | 0/TBD | Not started | - |
@@ -258,4 +263,4 @@ Plans:
 **Total shipped: 44 phases, 99 plans across 10 milestones**
 
 ---
-*Last updated: 2026-03-20 — v2.0 roadmap created*
+*Last updated: 2026-03-21 — Phase 46 plans created*
