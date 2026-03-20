@@ -44,9 +44,9 @@ Declared values (multiples of 4):
 | 3xl | 64px | Not used in this phase |
 
 Exceptions:
-- Run status badge horizontal padding: 6px (intentional exception — tight badge pill, matches existing `error-inline` pattern)
-- Stop-reason banner: 6px vertical / 10px horizontal (matches existing `error-inline` in `app.css`)
-- Budget progress indicator height: 4px track, 4px thumb (xs token)
+- Run status badge horizontal padding: 8px (xs token — tight badge pill using standard grid value)
+- Stop-reason banner padding: inherits from `.error-inline` CSS class in `app.css` — no new spacing declaration; executor must not override this class
+- Budget progress indicator height: 4px track (xs token)
 
 ---
 
@@ -55,11 +55,11 @@ Exceptions:
 | Role | Size | Weight | Line Height | Font | Usage |
 |------|------|--------|-------------|------|-------|
 | Body | 14px | 400 | 1.5 | sans | Run list rows, form labels, step count, stop reason text |
-| Label | 13px | 400 | 1.5 | sans | Secondary metadata (run ID, timestamps, module name in stop reason) |
+| Label | 12px | 400 | 1.5 | sans | Secondary metadata (run ID, timestamps, module name in stop reason) |
 | Heading | 20px | 600 | 1.2 | sans | Page title "Runs", run detail heading |
 | Mono | 14px | 400 | 1.5 | mono | Run ID (8-char hex), step counts, duration values (e.g. "1 234 ms") |
 
-Source: `html, body` at 14px/1.5 in `app.css`. Heading 20px matches `.page-title` pattern from Monitor/Dashboard pages. Mono class for IDs and metrics matches `.mono` utility.
+Source: `html, body` at 14px/1.5 in `app.css`. Heading 20px matches `.page-title` pattern from Monitor/Dashboard pages. Mono class for IDs and metrics matches `.mono` utility. Label at 12px provides a 2px step below body (14px) for meaningful visual hierarchy; color `--text-secondary` additionally differentiates secondary metadata from primary content.
 
 ---
 
@@ -71,15 +71,17 @@ All values from `app.css` `:root` tokens. No new colors introduced.
 |------|-------|-----|-------|
 | Dominant (60%) | `--bg-primary` | `#0f1117` | Page background, run list background |
 | Secondary (30%) | `--surface-card` / `--surface-dark` | `#1c1e2e` / `#161822` | Run cards, launch dialog, run detail panel |
-| Accent (10%) | `--accent-color` | `#6c8cff` | Primary CTA only: "Start Run" button, "Resume" button, active run ID link |
+| Accent (10%) | `--accent-color` | `#6c8cff` | Primary CTA only: "Start Run" button, "Resume Run" button, active run ID link |
 | Success | `--success-color` | `#4ade80` | Running state badge, completed state badge |
 | Warning | `--warning-color` | `#fbbf24` | Paused state badge, Interrupted state badge, budget-warning indicator |
 | Destructive | `--error-color` | `#f87171` | Cancel run button, Failed state badge, stop-reason banner border |
 | Text primary | `--text-primary` | `#e4e6f0` | All primary content text |
-| Text secondary | `--text-secondary` | `#8b8fa3` | Run ID, timestamps, secondary metadata |
+| Text secondary | `--text-secondary` | `#8b8fa3` | Run ID, timestamps, secondary metadata (Label role) |
 | Border | `--border-color` | `#2a2d3e` | Card borders, form field borders, dividers |
 
-**Accent reserved for:** "Start Run" button (primary CTA), "Resume" button, run ID in active state (clickable link). Never used for status badges, metadata, or secondary actions.
+**Accent reserved for:** "Start Run" button (primary CTA), "Resume Run" button, run ID in active state (clickable link). Never used for status badges, metadata, or secondary actions.
+
+**Primary focal point:** The RunLaunchPanel "Start Run" button — the only element on the page using the accent color (`--accent-color` / `#6c8cff`). All other interactive elements use neutral or semantic colors. This anchors the user's attention to the primary action before browsing run history.
 
 **State badge color map (exhaustive):**
 
@@ -132,7 +134,7 @@ Phase 45 adds a `/runs` page following the existing page layout pattern.
 │ Run History                                          │
 │ ┌──────────────────────────────────────────────────┐ │
 │ │ RunCard: [8-char ID]  [Objective text]  [Badge]  │ │
-│ │          [timestamp]  [step count]  [Pause|Cancel]│ │
+│ │          [timestamp]  [step count]  [Pause Run|Cancel Run]│ │
 │ └──────────────────────────────────────────────────┘ │
 │ ┌──────────────────────────────────────────────────┐ │
 │ │ RunCard: ...                                     │ │
@@ -197,8 +199,8 @@ Start Run button: disabled while form is invalid or while a submit is in-flight 
 | Empty state heading | "No runs yet" | |
 | Empty state body | "Start a run to begin tracking long-running graph execution." | Explains purpose + points to action |
 | Run list section heading | "Run History" | |
-| Pause action | "Pause" | Button label on RunCard for Running runs |
-| Resume action | "Resume" | Button label on RunCard for Paused/Interrupted runs |
+| Pause action | "Pause Run" | Verb + noun. Button label on RunCard for Running runs |
+| Resume action | "Resume Run" | Verb + noun. Button label on RunCard for Paused/Interrupted runs |
 | Cancel action | "Cancel Run" | Button label — uses `btn-danger` class |
 | Cancel confirmation title | "Cancel Run?" | `ConfirmDialog.Title` |
 | Cancel confirmation body | "This will stop the run permanently. Completed steps are preserved, but the run cannot be resumed after cancellation." | `ConfirmDialog.Message` — warns of terminal state |
@@ -277,3 +279,4 @@ No third-party UI registries. All components are hand-authored Blazor Razor comp
 | `45-RESEARCH.md` | SignalR push contract (ReceiveRunStateChanged, ReceiveStepCompleted), step model fields |
 | `REQUIREMENTS.md` | RUN-01 through RUN-05, CTRL-01, CTRL-02 — empty state, error state, interaction requirements |
 | User input | 0 — all fields pre-populated from upstream artifacts and codebase |
+| UI checker revision | 4 issues fixed: spacing exceptions grid-aligned, focal point added, label 13px→12px, Pause/Resume→Pause Run/Resume Run |
