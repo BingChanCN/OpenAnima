@@ -1,0 +1,159 @@
+@page "/runs"
+@using OpenAnima.Core.Runs
+@using OpenAnima.Core.Anima
+@inject IRunService RunService
+@inject IAnimaContext AnimaContext
+@inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResources> L
+@implements IAsyncDisposable
+
+<h1 class="page-title">Runs</h1>
+
+<RunLaunchPanel OnStartRun="HandleStartRun" />
+
+@if (_startError != null)
+{
+    <span class="error-inline">@_startError</span>
+}
+
+<h2 class="section-title">Run History</h2>
+
+@if (_runs.Count == 0)
+{
+    <div class="empty-state">
+        <h3>No runs yet</h3>
+        <p>Start a run to begin tracking long-running graph execution.</p>
+    </div>
+}
+else
+{
+    @foreach (var run in _runs)
+    {
+        <RunCard Run="@run"
+                 StopReason="@(_stopReasons.GetValueOrDefault(run.RunId))"
+                 StepCount="@(_stepCounts.GetValueOrDefault(run.RunId))"
+                 OnPause="HandlePauseRun"
+                 OnResume="HandleResumeRun"
+                 OnCancel="HandleCancelRequest" />
+    }
+}
+
+<ConfirmDialog IsVisible="@_showCancelConfirm"
+               Title="Cancel Run?"
+               Message="This will stop the run permanently. Completed steps are preserved, but the run cannot be resumed after cancellation."
+               ConfirmText="Cancel Run"
+               ConfirmButtonClass="btn-danger"
+               OnConfirm="HandleCancelConfirm"
+               OnCancel="HandleCancelDismiss" />
+
+@code {
+    private List<RunDescriptor> _runs = new();
+    private Dictionary<string, string?> _stopReasons = new();
+    private Dictionary<string, int> _stepCounts = new();
+    private HubConnection? _hubConnection;
+    private bool _showCancelConfirm;
+    private string? _cancelTargetRunId;
+    private string? _startError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _runs = (await RunService.GetAllRunsAsync()).ToList();
+
+        foreach (var run in _runs)
+        {
+            _stepCounts[run.RunId] = 0;
+        }
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/hubs/runtime"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<string, string, string, string?>("ReceiveRunStateChanged",
+            async (animaId, runId, state, reason) =>
+            {
+                var idx = _runs.FindIndex(r => r.RunId == runId);
+                if (idx >= 0)
+                {
+                    var parsed = Enum.Parse<RunState>(state);
+                    _runs[idx] = _runs[idx] with { CurrentState = parsed };
+                    if (reason != null)
+                        _stopReasons[runId] = reason;
+                }
+                else
+                {
+                    var updated = await RunService.GetAllRunsAsync();
+                    _runs = updated.ToList();
+                }
+                await InvokeAsync(StateHasChanged);
+            });
+
+        _hubConnection.On<string, string, string, string, string, int?>("ReceiveStepCompleted",
+            async (animaId, runId, stepId, moduleName, status, durationMs) =>
+            {
+                _stepCounts[runId] = _stepCounts.GetValueOrDefault(runId) + 1;
+                await InvokeAsync(StateHasChanged);
+            });
+
+        await _hubConnection.StartAsync();
+    }
+
+    private async Task HandleStartRun((string objective, string workspace, int? maxSteps, int? maxWallSeconds) args)
+    {
+        _startError = null;
+        var animaId = AnimaContext.ActiveAnimaId;
+        var result = await RunService.StartRunAsync(animaId, args.objective, args.workspace, args.maxSteps, args.maxWallSeconds);
+        if (result.IsSuccess)
+        {
+            _runs = (await RunService.GetAllRunsAsync()).ToList();
+        }
+        else
+        {
+            _startError = result.Message ?? "Failed to start run.";
+            throw new InvalidOperationException(_startError);
+        }
+    }
+
+    private async Task HandlePauseRun(string runId)
+    {
+        await RunService.PauseRunAsync(runId, "User paused");
+        _runs = (await RunService.GetAllRunsAsync()).ToList();
+    }
+
+    private async Task HandleResumeRun(string runId)
+    {
+        await RunService.ResumeRunAsync(runId);
+        _runs = (await RunService.GetAllRunsAsync()).ToList();
+    }
+
+    private void HandleCancelRequest(string runId)
+    {
+        _cancelTargetRunId = runId;
+        _showCancelConfirm = true;
+    }
+
+    private async Task HandleCancelConfirm()
+    {
+        if (_cancelTargetRunId != null)
+        {
+            await RunService.CancelRunAsync(_cancelTargetRunId);
+        }
+        _showCancelConfirm = false;
+        _cancelTargetRunId = null;
+        _runs = (await RunService.GetAllRunsAsync()).ToList();
+    }
+
+    private void HandleCancelDismiss()
+    {
+        _showCancelConfirm = false;
+        _cancelTargetRunId = null;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection != null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+}

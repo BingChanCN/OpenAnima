@@ -53,6 +53,9 @@
   <data name="Nav.Editor" xml:space="preserve">
     <value>编辑器</value>
   </data>
+  <data name="Nav.Runs" xml:space="preserve">
+    <value>运行</value>
+  </data>
   <data name="Nav.Settings" xml:space="preserve">
     <value>设置</value>
   </data>
