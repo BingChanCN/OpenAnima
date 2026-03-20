@@ -2,16 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Structured Cognition Foundation
-status: planning
-stopped_at: Phase 45 context gathered
-last_updated: "2026-03-20T12:31:40.741Z"
-last_activity: 2026-03-20 — v2.0 roadmap created and traceability validated
+status: unknown
+stopped_at: Completed 45-01-PLAN.md
+last_updated: "2026-03-20T14:18:34.709Z"
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 1
 ---
 
 # Project State: OpenAnima
@@ -24,15 +22,12 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-20)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 45 planning — Durable Task Runtime Foundation
+**Current focus:** Phase 45 — durable-task-runtime-foundation
 
 ## Current Position
 
-Phase: 45 of 49 (Durable Task Runtime Foundation)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-03-20 — v2.0 roadmap created and traceability validated
-Progress: [░░░░░░░░░░] 0%
+Phase: 45 (durable-task-runtime-foundation) — EXECUTING
+Plan: 1 of 3
 
 ## Performance Metrics
 
@@ -55,6 +50,7 @@ Progress: [░░░░░░░░░░] 0%
 | v1.8 SDK Runtime Parity | 4 | 9 | 2026-03-18 |
 | v1.9 Event-Driven Propagation Engine | 3 | 6 | 2026-03-20 |
 | v2.0 Structured Cognition Foundation | 5 | 0 | In planning |
+| Phase 45-durable-task-runtime-foundation P01 | 8 | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -66,6 +62,8 @@ Recent decisions affecting current work:
 - v2.0 roadmap uses 5 phases (45-49) derived directly from the milestone requirement groups
 - Convergence control is part of Phase 45 runtime foundation rather than a late polish phase
 - Memory scope for v2.0 is provenance-backed retrieval over artifacts, not vector-first recall
+- [Phase 45-01]: RunRepository uses per-operation SqliteConnection (WAL mode handles concurrency); current RunState derived from MAX(id) in run_state_events, never stored as mutable column
+- [Phase 45-01]: RunRow private DTO pattern for Dapper join mapping: aliases columns to RunRow, then MapToDescriptor with Enum.Parse<RunState>; avoids custom Dapper type handlers
 
 ### Pending Todos
 
@@ -78,6 +76,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T12:31:40.739Z
-Stopped at: Phase 45 context gathered
-Resume file: .planning/phases/45-durable-task-runtime-foundation/45-CONTEXT.md
+Last session: 2026-03-20T14:18:34.707Z
+Stopped at: Completed 45-01-PLAN.md
+Resume file: None

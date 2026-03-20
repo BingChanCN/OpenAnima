@@ -249,7 +249,7 @@ Plans:
 | 42. Propagation Engine | v1.9 | 3/3 | Complete | 2026-03-19 |
 | 43. Heartbeat Refactor | v1.9 | 2/2 | Complete | 2026-03-19 |
 | 44. Config Schema Sidebar Integration | v1.9 | 1/1 | Complete | 2026-03-19 |
-| 45. Durable Task Runtime Foundation | v2.0 | 0/3 | In progress | - |
+| 45. Durable Task Runtime Foundation | 1/3 | In Progress|  | - |
 | 46. Workspace Tool Surface | v2.0 | 0/TBD | Not started | - |
 | 47. Run Inspection & Observability | v2.0 | 0/TBD | Not started | - |
 | 48. Artifact & Memory Foundation | v2.0 | 0/TBD | Not started | - |
