@@ -1,5 +1,26 @@
 # Milestones
 
+## v1.9 Event-Driven Propagation Engine (Shipped: 2026-03-20)
+
+**Phases:** 42-44 | **Plans:** 6 | **Tasks:** 12 | **LOC:** ~2,457 C# added (+3,270 insertions)
+**Git range:** feat(42-02)..docs(v1.9) | **Timeline:** 2026-03-19 → 2026-03-20 (2 days)
+
+**Delivered:** Event-driven propagation engine — modules execute on data arrival with output fan-out, cyclic topologies supported, HeartbeatModule refactored to standalone timer with config-schema-driven sidebar rendering.
+
+**Key accomplishments:**
+- Replaced DAG topological sort with event-driven per-module SemaphoreSlim routing — modules execute immediately on data arrival, output fans out to all connected downstream ports
+- Cyclic wiring topologies accepted — ConnectionGraph no longer rejects cycles, enabling feedback loops in module networks
+- HeartbeatModule refactored to standalone PeriodicTimer with config-driven interval (50ms floor) — no longer drives WiringEngine execution loop
+- ITickable interface removed from Contracts — pure data-driven execution model, all modules execute via port events
+- ModuleSchemaService + EditorConfigSidebar schema-aware rendering — IModuleConfigSchema modules show default fields without prior persistence
+- Full test suite: 394/394 green, zero regressions across all 3 phases
+
+**Known gaps (accepted):** BEAT-05 missing formal VERIFICATION.md (procedural gap — 5 unit tests, UAT 4/4 passed, VALIDATION.md Nyquist-compliant)
+
+**Archive:** [milestones/v1.9-ROADMAP.md](milestones/v1.9-ROADMAP.md) | [milestones/v1.9-REQUIREMENTS.md](milestones/v1.9-REQUIREMENTS.md) | [milestones/v1.9-MILESTONE-AUDIT.md](milestones/v1.9-MILESTONE-AUDIT.md)
+
+---
+
 ## v1.8 SDK Runtime Parity (Shipped: 2026-03-18)
 
 **Phases:** 38-41 | **Plans:** 8 | **Tasks:** 15 | **LOC:** ~1,280 C# added (+6,776 insertions)
@@ -8,6 +29,7 @@
 **Delivered:** External module SDK parity — PluginLoader DI injection, per-Anima module storage, structured message input, and a real external ContextModule that validates the full SDK surface end-to-end with multi-turn conversation history.
 
 **Key accomplishments:**
+
 - PluginLoader DI-aware constructor resolution via FullName matching across AssemblyLoadContext boundaries — external modules receive IModuleConfig, IModuleContext, IEventBus, ICrossAnimaRouter, ILogger, IModuleStorage
 - ChatMessageInput migrated from Core.LLM to Contracts with SerializeList/DeserializeList helpers; Core retains using alias for backward compatibility
 - LLMModule messages input port with semaphore-based priority rule — multi-turn conversation support via structured message list
@@ -29,6 +51,7 @@
 **Delivered:** Hardened runtime foundation — race-free module execution, per-Anima Activity Channel serialization model, Contracts-first module API surface, and full built-in module decoupling — completing the architectural prerequisites for external module parity.
 
 **Key accomplishments:**
+
 - Race-free module execution via ConcurrentDictionary, local variable capture, and SemaphoreSlim(1,1) skip-when-busy guards across WiringEngine and 5 modules
 - ActivityChannelHost with 3 unbounded named channels (heartbeat/chat/routing) — serial within each channel, parallel between channels, with [StatelessModule] attribute for concurrent dispatch classification
 - 9 new contract types in OpenAnima.Contracts (IModuleConfig, IModuleContext, IModuleConfigSchema, ICrossAnimaRouter + routing companions) — external modules achieve feature parity via Contracts-only dependency
@@ -50,6 +73,7 @@
 **Delivered:** Cross-Anima request-response routing with LLM-driven service discovery, automatic prompt injection, XML format detection with self-correction, and an HTTP request tool module with SSRF protection — enabling multi-agent collaboration through deterministic wiring.
 
 **Key accomplishments:**
+
 - CrossAnimaRouter singleton with compound-key port registry, Guid correlation IDs, configurable timeout, periodic cleanup, and Anima deletion lifecycle hooks
 - Three routing modules (AnimaInputPort, AnimaOutputPort, AnimaRoute) with end-to-end request-response across separate Anima EventBuses, cascading dropdown config UI
 - LLMModule auto-injects service descriptions and routing format instructions; FormatDetector parses XML markers with self-correction retry loop (up to 2 retries)
@@ -71,6 +95,7 @@
 **Delivered:** Multi-instance Anima architecture with independent runtimes, full Chinese/English i18n, module management UI, per-module configuration, and rich built-in modules — transforming from a single-runtime dashboard to a multi-agent platform.
 
 **Key accomplishments:**
+
 - Multi-Anima architecture: Create, list, switch, delete, rename, clone independent Anima instances with isolated state
 - Per-Anima runtime isolation: Each Anima runs independent HeartbeatLoop, WiringEngine, and EventBus
 - Full i18n: Chinese/English UI with LanguageService, .resx resources, persistent preferences, all components localized
@@ -92,6 +117,7 @@
 **Delivered:** Complete module SDK with CLI tool, project templates, packaging system, and comprehensive documentation — developers can create, validate, and pack custom modules in under 5 minutes.
 
 **Key accomplishments:**
+
 - Installable .NET global tool (oani) with System.CommandLine, exit codes, and verbosity control
 - Module validation with manifest JSON checking and IModule implementation verification via isolated assembly reflection
 - Pack command creates .oamod ZIP archives with MD5 checksums and target framework metadata
@@ -112,6 +138,7 @@
 **Delivered:** Modular plugin runtime with isolated assembly loading, typed contracts, event-driven communication, and a 100ms heartbeat loop — the foundation for proactive agent behavior.
 
 **Key accomplishments:**
+
 - Typed module contracts (IModule, IModuleMetadata, generic IModuleInput/IModuleOutput)
 - Isolated plugin loading via AssemblyLoadContext with hot directory discovery
 - Thread-safe module registry with cross-context name-based type handling
@@ -125,7 +152,6 @@
 
 ---
 
-
 ## v1.1 WebUI Runtime Dashboard (Shipped: 2026-02-23)
 
 **Phases:** 3-7 | **Plans:** 10 | **Tasks:** 8 | **LOC:** 3,741 C#/Razor/CSS (+2,951 from v1.0)
@@ -134,6 +160,7 @@
 **Delivered:** Real-time web-based monitoring and control dashboard for the OpenAnima runtime — Blazor Server with SignalR push, module management, heartbeat monitoring, and a complete desktop app experience.
 
 **Key accomplishments:**
+
 - Converted runtime to Blazor Server web host with service facades and browser auto-launch
 - Dark-themed responsive dashboard with collapsible sidebar, module list, and heartbeat status
 - SignalR real-time push with per-tick latency tracking and sparkline visualization
@@ -147,7 +174,6 @@
 
 ---
 
-
 ## v1.2 LLM Integration (Shipped: 2026-02-25)
 
 **Phases:** 8-10 | **Plans:** 6 | **Tasks:** 12 | **LOC:** 6,352 C#/Razor/CSS/JS (+2,611 from v1.1)
@@ -156,6 +182,7 @@
 **Delivered:** LLM conversation capability — OpenAI-compatible API client with streaming, real-time chat UI with Markdown rendering, and context window management with token tracking and send blocking.
 
 **Key accomplishments:**
+
 - OpenAI-compatible LLM API client with streaming, comprehensive error handling, and SDK built-in retry
 - Real-time chat UI with token-by-token streaming, role-based styling, and auto-scroll
 - Markdown rendering with syntax highlighting, copy-to-clipboard, and regenerate last response
@@ -167,7 +194,6 @@
 
 ---
 
-
 ## v1.3 True Modularization & Visual Wiring (Shipped: 2026-02-28)
 
 **Phases:** 11-19 + 12.5 | **Plans:** 21 | **Tasks:** 65+ | **LOC:** ~4,800 C#/Razor/JS added
@@ -176,6 +202,7 @@
 **Delivered:** Visual drag-and-drop wiring editor with port-based module connections — transform hardcoded LLM/chat/heartbeat into modular architecture with topological execution, cycle detection, and real-time status monitoring.
 
 **Key accomplishments:**
+
 - Port type system (Text, Trigger) with color-coded visual distinction and connection validation
 - Wiring engine with Kahn's algorithm for topological execution and cycle detection
 - Visual HTML5/SVG editor with pan/zoom, bezier connections, and auto-save
@@ -188,4 +215,3 @@
 **Archive:** [milestones/v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) | [milestones/v1.3-REQUIREMENTS.md](milestones/v1.3-REQUIREMENTS.md) | [milestones/v1.3-MILESTONE-AUDIT.md](milestones/v1.3-MILESTONE-AUDIT.md)
 
 ---
-

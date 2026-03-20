@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Latest shipped:** v1.8 SDK Runtime Parity (2026-03-18)
-**Current milestone:** v1.9 Event-Driven Propagation Engine
-**Phase 44 complete:** Config Schema Sidebar — EditorConfigSidebar renders IModuleConfigSchema fields with defaults (2026-03-19)
+**Latest shipped:** v1.9 Event-Driven Propagation Engine (2026-03-20)
+**Milestones complete:** v1.0–v1.9 (10 milestones, 44 phases, 99 plans)
+**Next milestone:** TBD — use `/gsd:new-milestone` to define
 
 ## What This Is
 
@@ -73,7 +73,7 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ Template generates working ExecuteAsync method with port handling stubs (TEMP-05) — v1.4
 - ✓ Developer can read quick-start guide showing create-build-pack workflow (DOC-01) — v1.4
 - ✓ Quick-start guide produces working module in under 5 minutes (DOC-02) — v1.4
-- ✓ API reference documents all public interfaces (IModule, IModuleExecutor, ITickable, IEventBus) (DOC-03) — v1.4
+- ✓ API reference documents all public interfaces (IModule, IModuleExecutor, IEventBus) (DOC-03) — v1.4
 - ✓ API reference documents port system (PortType, PortMetadata, InputPortAttribute, OutputPortAttribute) (DOC-04) — v1.4
 - ✓ API reference includes code examples for common patterns (DOC-05) — v1.4
 - ✓ User can create new Anima with custom name (ANIMA-01) — v1.5
@@ -124,27 +124,26 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ LLMModule messages input port with priority rule for multi-turn conversations (MSG-02) — v1.8
 - ✓ IModuleStorage per-Anima per-Module persistent storage paths (STOR-01) — v1.8
 - ✓ External ContextModule with conversation history and persistence (ECTX-01, ECTX-02) — v1.8
+- ✓ Event-driven propagation engine with per-module SemaphoreSlim routing (PROP-01, PROP-02) — v1.9
+- ✓ Cyclic wiring topologies accepted (PROP-03) — v1.9
+- ✓ Modules terminate propagation by not producing output (PROP-04) — v1.9
+- ✓ HeartbeatModule standalone PeriodicTimer signal source (BEAT-05) — v1.9
+- ✓ HeartbeatModule interval configurable via EditorConfigSidebar schema rendering (BEAT-06) — v1.9
+- ✓ ITickable interface removed — pure data-driven execution model — v1.9
 
 ## Next Milestone
 
-v1.9 Event-Driven Propagation Engine — Transform execution model from DAG topological sort to event-driven propagation network with cyclic topology support.
+TBD — use `/gsd:new-milestone` to define next milestone.
 
-### Active
-
-- ✓ Module executes immediately on input arrival, not heartbeat-driven (PROP-01) — v1.9
-- ✓ Module output fans out to all connected downstream ports (PROP-02) — v1.9
-- ✓ Cyclic wiring topologies allowed (PROP-03) — v1.9
-- ✓ Modules can choose not to produce output, naturally terminating propagation (PROP-04) — v1.9
-- [ ] HeartbeatModule becomes standalone timer signal source (BEAT-05)
-- ✓ HeartbeatModule interval is user-configurable via EditorConfigSidebar schema rendering (BEAT-06) — v1.9
-
-### Deferred (not in v1.8)
+### Deferred
 
 - [ ] Each Anima has independent module instances (ANIMA-08 — global singleton kept for DI compatibility)
 - [ ] User can view list of all installed modules (MODMGMT-01)
 - [ ] User can install module from .oamod package (MODMGMT-02)
 - [ ] User can uninstall module (MODMGMT-03)
 - [ ] User can search and filter modules by name (MODMGMT-06)
+- [ ] Propagation convergence control (TTL, energy decay, content-based dampening)
+- [ ] Dynamic port count (TextJoin fixed 3 ports limitation)
 
 ### Future
 
@@ -176,16 +175,16 @@ v1.9 Event-Driven Propagation Engine — Transform execution model from DAG topo
 
 ## Context
 
-Shipped v1.8 with ~25,015 LOC across all source files (C#, Razor, CSS, JS).
+Shipped v1.9 with ~27,500 LOC across all source files (C#, Razor, CSS, JS).
 Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4, Microsoft.Extensions.Http.Resilience 8.7.0.
 
-v1.8 delivered SDK runtime parity:
-- PluginLoader DI-aware constructor resolution — external modules receive all Contracts services via FullName matching
-- ChatMessageInput in Contracts with SerializeList/DeserializeList — multi-turn conversation support
-- LLMModule messages input port with semaphore-based priority rule
-- IModuleStorage per-Anima per-Module persistent storage with bound instance injection
-- External ContextModule — real SDK module validating the full surface end-to-end
-- Full test suite: 389/389 green
+v1.9 delivered event-driven propagation engine:
+- WiringEngine replaced DAG topological sort with per-module SemaphoreSlim event-driven routing
+- Cyclic wiring topologies accepted — ConnectionGraph no longer rejects cycles
+- HeartbeatModule refactored to standalone PeriodicTimer with config-driven interval
+- ITickable interface removed from Contracts — pure data-driven execution
+- ModuleSchemaService + EditorConfigSidebar schema-aware rendering for IModuleConfigSchema modules
+- Full test suite: 394/394 green
 
 Known tech debt:
 - ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred
@@ -193,8 +192,7 @@ Known tech debt:
 - ILLMService remains in Core (ChatMessageInput moved to Contracts but ILLMService depends on LLMResult + streaming)
 - Schema mismatch between CLI and Runtime (extended manifest fields)
 - TextJoin fixed 3 input ports — static port system limitation
-- Nyquist validation partial across v1.8 phases
-- ~~IModuleConfigSchema has no production consumer yet~~ Resolved: Phase 44 wired GetSchema() to EditorConfigSidebar
+- Startup ordering: WiringInitializationService starts before AnimaInitializationService — first HeartbeatModule tick uses 100ms fallback (self-corrects on tick 2)
 
 ## Key Decisions
 
@@ -276,6 +274,9 @@ Known tech debt:
 | No convergence control for cycles | Modules terminate cycles by not producing output; TTL/energy decay deferred until real-world need | ✓ Good — v1.9 |
 | FixedTextModule trigger input port | Replaces `.execute` subscription with explicit port-driven trigger path | ✓ Good — v1.9 |
 | ITickable removed from Contracts | No remaining implementors after propagation engine; duck-typing decision superseded | ✓ Good — v1.9 |
+| ModuleSchemaService static type map + IServiceProvider | Avoids reflection scanning; DI-based resolution for built-in + external modules | ✓ Good — v1.9 |
+| Schema defaults merged into _currentConfig on load | Auto-save not triggered on load, only on user edits — no spurious persistence | ✓ Good — v1.9 |
+| Raw kvp fallback in EditorConfigSidebar | Non-schema modules continue working unchanged — backward compatible | ✓ Good — v1.9 |
 
 ## Constraints
 
@@ -286,4 +287,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-19 after Phase 44 Config Schema Sidebar complete*
+*Last updated: 2026-03-20 after v1.9 milestone*

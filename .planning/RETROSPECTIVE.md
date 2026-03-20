@@ -2,6 +2,49 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v1.9 — Event-Driven Propagation Engine
+
+**Shipped:** 2026-03-20
+**Phases:** 3 | **Plans:** 6 | **Commits:** ~15
+
+### What Was Built
+- WiringEngine replaced DAG topological sort with event-driven per-module SemaphoreSlim routing — modules execute on data arrival, output fans out downstream
+- ConnectionGraph accepts cyclic graphs (DFS HasCycle is informational only) — feedback loops enabled without engine rejection
+- HeartbeatModule refactored to standalone PeriodicTimer with IModuleConfigSchema — config-driven interval with 50ms floor clamp
+- ITickable interface removed from Contracts — pure data-driven execution model, no remaining implementors
+- ModuleSchemaService resolves IModuleConfigSchema by module name via static type map + DI
+- EditorConfigSidebar schema-aware rendering with type-appropriate inputs, DisplayName labels, and schema defaults merged on load
+
+### What Worked
+- Tight 3-phase scope (engine → heartbeat → sidebar) delivered cleanly in 2 days with zero regressions
+- Phase 44 as gap closure — added after initial 42-43 roadmap to close BEAT-06 frontend gap before shipping
+- Per-module SemaphoreSlim(1,1) keyed by targetModuleRuntimeName — clean wave isolation without module awareness
+- ITickable removal was surgical — single interface deletion cascaded cleanly through HeartbeatLoop/HeartbeatModule/Contracts
+- Schema defaults merge pattern (inject on load, auto-save only on edit) avoids spurious persistence
+
+### What Was Inefficient
+- BEAT-05 missing formal VERIFICATION.md — procedural gap persists despite 5 unit tests and UAT 4/4 passed (audit caught it twice)
+- v1.9 ROADMAP initially created with only 2 phases; Phase 44 gap closure added retroactively after Phase 43 verification revealed BEAT-06 sidebar gap
+- Phase 43 plan checkboxes in ROADMAP.md not marked as [x] after completion — stale tracking in roadmap source
+
+### Patterns Established
+- Event-driven propagation: modules execute via EventBus routing subscriptions, not topological sort — all future modules follow this pattern
+- Schema-first config: modules implementing IModuleConfigSchema get automatic sidebar rendering with defaults — no manual EditorConfigSidebar cases needed
+- ModuleSchemaService: static type map for built-in modules + IServiceProvider.GetService fallback for external modules — extensible without reflection
+
+### Key Lessons
+1. Gap closure phases (Phase 44) should be anticipated at roadmap creation — schema rendering was a known IModuleConfigSchema gap from v1.7
+2. Three-phase milestones with tight dependency chains (42→43→44) ship faster than broad multi-phase milestones — fewer coordination points
+3. VERIFICATION.md should be generated as part of plan execution, not as a separate audit step — procedural gaps persist across re-audits
+4. Static type maps for DI-based resolution are pragmatic — avoids reflection scanning while remaining extensible via the fallback path
+
+### Cost Observations
+- Model mix: ~70% sonnet (executor), ~20% haiku (research), ~10% opus (planning/audit)
+- Sessions: ~2 sessions across 2 days
+- Notable: Smallest milestone by phase count (3) but cleanest execution — zero deviations in Phase 44, single auto-fix in Phase 43
+
+---
+
 ## Milestone: v1.8 — SDK Runtime Parity
 
 **Shipped:** 2026-03-18
@@ -166,14 +209,17 @@
 
 ## Cross-Milestone Trends
 
+| Milestone | Commits | Phases | Notable Patterns |
+|-----------|---------|--------|------------------|
+| v1.9 | ~15 | 3 | Event-driven propagation, cycle support, schema-first config |
 | v1.8 | 45 | 4 | PluginLoader DI, ChatMessageInput migration, IModuleStorage, ContextModule |
 | v1.7 | ~40 | 6 | ActivityChannelHost, Contracts expansion, module decoupling |
 | v1.6 | 25 | 4 | Cross-Anima routing, format detection, HTTP module |
-| v1.1 | ~25 | 5 | Blazor Server architecture established |
-| v1.2 | ~20 | 3 | OpenAI SDK integration pattern |
-| v1.3 | ~40 | 10 | SVG editor, port system, verification backfill |
-| v1.4 | ~20 | 3 | CLI tool, .oamod packaging |
 | v1.5 | 55 | 5 | Multi-instance architecture, i18n, module config |
+| v1.4 | ~20 | 3 | CLI tool, .oamod packaging |
+| v1.3 | ~40 | 10 | SVG editor, port system, verification backfill |
+| v1.2 | ~20 | 3 | OpenAI SDK integration pattern |
+| v1.1 | ~25 | 5 | Blazor Server architecture established |
 
 ### Cumulative Quality
 
@@ -184,9 +230,11 @@
 | v1.2 | ~6,400 | Streaming, token counting | 0 |
 | v1.3 | ~11,000 | SVG editor, topological sort | 0 |
 | v1.4 | ~14,500 | CLI framework, .oamod format | 3 |
+| v1.5 | ~20,000 | Multi-Anima runtime, i18n, module config | 5 |
 | v1.6 | ~13,610 | Routing event chain, SSRF guard, self-correction loop | 5 |
 | v1.7 | ~23,734 | ActivityChannelHost, SemaphoreSlim skip, [StatelessModule] | 5 |
 | v1.8 | ~25,015 | ContractsTypeMap DI, bound service injection, semaphore priority | 7 |
+| v1.9 | ~27,500 | Event-driven propagation, ITickable removal, schema-first sidebar | 6 |
 
 ### Top Lessons (Verified Across Milestones)
 
