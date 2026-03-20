@@ -72,6 +72,9 @@ builder.Services.AddWiringServices();
 // --- Register run services ---
 builder.Services.AddRunServices();
 
+// --- Register workspace tool services ---
+builder.Services.AddToolServices();
+
 // --- Register named HTTP client with resilience pipeline ---
 builder.Services.AddHttpClient("HttpRequest")
     .AddStandardResilienceHandler();
