@@ -44,9 +44,9 @@ Declared values (multiples of 4 only):
 | 2xl | 48px | Page top padding |
 
 Exceptions:
-- Artifact inline preview left border indicator: 3px (matches existing `.error-inline` border-left pattern)
-- State badge padding: 2px 8px (matches existing `RunStateBadge` pattern)
-- Memory node URI label: 2px 6px pill padding
+- Artifact inline preview left border indicator: 4px (nearest multiple of 4 to prior 3px pattern)
+- State badge padding: 4px 8px (nearest multiple of 4 to prior RunStateBadge pattern)
+- Memory node URI label: 4px 8px pill padding (nearest multiple of 4 to prior 2px 6px)
 - Touch target minimum for interactive rows: 44px min-height
 
 ---
@@ -151,13 +151,15 @@ Truncation: first 200 lines or 10KB, whichever is smaller. Truncation notice: "S
 
 ### MemoryGraph Page Layout
 
+Focal point: the selected `MemoryNodeCard` in the right detail panel is the primary focal point. It occupies 70% of the horizontal space, sits at eye level on load, and is the only editable surface on the page. The URI tree is a navigation aid — visually subordinate (lower contrast, smaller type, narrower column).
+
 ```
 ┌─────────────────────────────────────────────────────┐
 │  Memory                              [+ New Node]   │  page title + primary CTA
 ├─────────────────────────────────────────────────────┤
 │  [URI search input]                                  │  filter bar, full width
 ├──────────────────────┬──────────────────────────────┤
-│  URI TREE            │  NODE DETAIL                 │
+│  URI TREE            │  NODE DETAIL  ← focal point  │
 │  (30% width)         │  (70% width)                 │
 │                      │                              │
 │  core://             │  [MemoryNodeCard — selected] │
@@ -182,7 +184,7 @@ Truncation: first 200 lines or 10KB, whichever is smaller. Truncation notice: "S
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  [URI pill: core://agent/identity]                  │  accent bg, mono 12px, 2px 6px padding
+│  [URI pill: core://agent/identity]                  │  accent bg, mono 12px, 4px 8px padding
 │                                                     │
 │  Content                                            │  label, 12px, text-secondary
 │  ┌───────────────────────────────────────────────┐  │
@@ -245,7 +247,8 @@ Truncation: first 200 lines or 10KB, whichever is smaller. Truncation notice: "S
 | Artifact truncation notice | Showing first {N} lines — 查看完整内容 |
 | Artifact expand button | 查看完整内容 |
 | Artifact collapse button | 收起 |
-| Artifact load error | Failed to load artifact content. |
+| Artifact load error | Failed to load artifact content. Try refreshing the page or check the run logs. |
+| Artifact load error retry button | Retry |
 | Memory page title | Memory |
 | Memory empty state heading | No memory nodes yet |
 | Memory empty state body | Create a node to start building this Anima's memory graph. |
