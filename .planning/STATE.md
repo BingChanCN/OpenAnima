@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Structured Cognition Foundation
 status: unknown
-stopped_at: Phase 48 UI-SPEC approved
-last_updated: "2026-03-21T10:37:31.123Z"
+stopped_at: Completed 47-02-PLAN.md
+last_updated: "2026-03-21T11:29:34.363Z"
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 10
-  completed_plans: 8
+  total_plans: 12
+  completed_plans: 9
 ---
 
 # Project State: OpenAnima
@@ -58,6 +58,7 @@ Plan: 2 of 3
 | Phase 46-workspace-tool-surface P03 | 13min | 2 tasks | 7 files |
 | Phase 46-workspace-tool-surface P04 | 20min | 2 tasks | 4 files |
 | Phase 47-run-inspection-observability P01 | 29min | 2 tasks | 9 files |
+| Phase 47-run-inspection-observability P02 | 30 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 47-01]: WiringEngineScopeTests uses hand-rolled ILogger<WiringEngine> spy — no mocking library available; CapturingScopeLogger captures BeginScope state objects for assertion
 - [Phase 47-01]: BeginScope wraps inner try/catch in all 3 WiringEngine port-type branches so scope is active during ForwardPayloadAsync and step recorder calls
 - [Phase 47-01]: RunService BeginScope wraps LogInformation call in StartRunAsync/PauseRunAsync — ambient scope for any downstream log calls within that block
+- [Phase 47-02]: TimelineEntry private record merges StepRecord+RunStateEvent into uniform ordered list; Razor null-forgiving ! not valid in attributes — use local var binding
+- [Phase 47-02]: StepTimelineRow uses role=button not role=listitem — interactive elements need button role even inside role=list container
 
 ### Pending Todos
 
@@ -102,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T10:37:31.119Z
-Stopped at: Phase 48 UI-SPEC approved
-Resume file: .planning/phases/48-artifact-memory-foundation/48-UI-SPEC.md
+Last session: 2026-03-21T11:29:34.361Z
+Stopped at: Completed 47-02-PLAN.md
+Resume file: None
