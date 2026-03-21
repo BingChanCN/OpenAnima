@@ -30,10 +30,10 @@ Requirements for the v2.0 milestone. Each requirement maps to a single roadmap p
 
 ### Run Inspection & Observability
 
-- [ ] **OBS-01**: User can inspect a per-run timeline showing step start, completion, cancellation, and failure events
+- [x] **OBS-01**: User can inspect a per-run timeline showing step start, completion, cancellation, and failure events
 - [ ] **OBS-02**: User can inspect per-step inputs, outputs, errors, durations, and linked artifacts
-- [ ] **OBS-03**: User can inspect why a node ran, including upstream trigger and downstream fan-out visibility
-- [ ] **OBS-04**: Developer can correlate logs, traces, and tool events by run ID and step ID during debugging
+- [x] **OBS-03**: User can inspect why a node ran, including upstream trigger and downstream fan-out visibility
+- [x] **OBS-04**: Developer can correlate logs, traces, and tool events by run ID and step ID during debugging
 
 ### Artifact & Memory Foundation
 
@@ -100,10 +100,10 @@ Explicitly excluded from v2.0 to prevent scope creep.
 | WORK-03 | Phase 46 | Complete |
 | WORK-04 | Phase 46 | Complete |
 | WORK-05 | Phase 46 | Complete |
-| OBS-01 | Phase 47 | Pending |
+| OBS-01 | Phase 47 | Complete |
 | OBS-02 | Phase 47 | Pending |
-| OBS-03 | Phase 47 | Pending |
-| OBS-04 | Phase 47 | Pending |
+| OBS-03 | Phase 47 | Complete |
+| OBS-04 | Phase 47 | Complete |
 | ART-01 | Phase 48 | Pending |
 | ART-02 | Phase 48 | Pending |
 | MEM-01 | Phase 48 | Pending |
