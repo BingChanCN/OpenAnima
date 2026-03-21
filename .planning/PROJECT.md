@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Latest shipped:** Phase 48 artifact-memory-foundation (2026-03-21)
+**Latest shipped:** Phase 49 structured-cognition-workflows (2026-03-21)
 **Milestones complete:** v1.0–v1.9 (10 milestones, 44 phases, 99 plans)
-**Next milestone:** v2.0 Structured Cognition Foundation (Phase 48 complete, Phase 49 next)
+**Current milestone:** v2.0 Structured Cognition Foundation — all phases complete
 
 ## What This Is
 
@@ -136,8 +136,8 @@ Agents that proactively think and act on their own, while module connections rem
 - [x] Durable task runtime with stable run identity, persistence, resume/cancel, and convergence bounds — Validated in Phase 45: durable-task-runtime-foundation
 - [x] Workspace-aware developer tool surface for file search, git inspection, and bounded command execution — Validated in Phase 46: workspace-tool-surface
 - [x] Run inspector with per-step timeline, inputs/outputs, errors, and graph trigger visibility — Validated in Phase 47: run-inspection-observability
-- [ ] Artifact and provenance-backed memory foundation linked to runs and steps
-- [ ] Structured cognition workflow that analyzes a bound codebase and produces grounded report artifacts
+- [x] Artifact and provenance-backed memory foundation linked to runs and steps — Validated in Phase 48: artifact-memory-foundation
+- [x] Structured cognition workflow that analyzes a bound codebase and produces grounded report artifacts — Validated in Phase 49: structured-cognition-workflows
 
 ## Current Milestone: v2.0 Structured Cognition Foundation
 
@@ -334,4 +334,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-21 after completing Phase 47 run-inspection-observability*
+*Last updated: 2026-03-21 after completing Phase 49 structured-cognition-workflows*
