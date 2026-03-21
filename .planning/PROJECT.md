@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Latest shipped:** Phase 47 run-inspection-observability (2026-03-21)
+**Latest shipped:** Phase 48 artifact-memory-foundation (2026-03-21)
 **Milestones complete:** v1.0–v1.9 (10 milestones, 44 phases, 99 plans)
-**Next milestone:** v2.0 Structured Cognition Foundation (Phase 47 complete, Phase 48 next)
+**Next milestone:** v2.0 Structured Cognition Foundation (Phase 48 complete, Phase 49 next)
 
 ## What This Is
 
