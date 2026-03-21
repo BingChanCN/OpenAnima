@@ -210,7 +210,11 @@ Plans:
   2. One workflow can route work through built-in modules, LLM modules, workspace tools, and other Anima under the same run.
   3. User can run an end-to-end codebase analysis workflow against a bound workspace and receive a grounded final report artifact.
   4. Structured cognition remains inspectable as graph execution, step history, and linked artifacts rather than a hidden single-prompt loop.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 49-01-PLAN.md — JoinBarrierModule, PropagationId activation, LLMModule concurrency fix, DI registration
+- [ ] 49-02-PLAN.md — WorkflowPresetService, RunDescriptor schema migration, codebase analysis preset JSON
+- [ ] 49-03-PLAN.md — WorkflowProgressBar, WorkflowPresetSelector, RunCard/RunLaunchPanel integration
 
 ## Progress
 
@@ -264,13 +268,13 @@ Plans:
 | 42. Propagation Engine | v1.9 | 3/3 | Complete | 2026-03-19 |
 | 43. Heartbeat Refactor | v1.9 | 2/2 | Complete | 2026-03-19 |
 | 44. Config Schema Sidebar Integration | v1.9 | 1/1 | Complete | 2026-03-19 |
-| 45. Durable Task Runtime Foundation | 3/3 | Complete    | 2026-03-20 | - |
-| 46. Workspace Tool Surface | 4/4 | Complete    | 2026-03-20 | - |
-| 47. Run Inspection & Observability | 3/3 | Complete    | 2026-03-21 | - |
-| 48. Artifact & Memory Foundation | 5/5 | Complete    | 2026-03-21 | - |
-| 49. Structured Cognition Workflows | v2.0 | 0/TBD | Not started | - |
+| 45. Durable Task Runtime Foundation | v2.0 | 3/3 | Complete | 2026-03-20 |
+| 46. Workspace Tool Surface | v2.0 | 4/4 | Complete | 2026-03-20 |
+| 47. Run Inspection & Observability | v2.0 | 3/3 | Complete | 2026-03-21 |
+| 48. Artifact & Memory Foundation | v2.0 | 5/5 | Complete | 2026-03-21 |
+| 49. Structured Cognition Workflows | v2.0 | 0/3 | Not started | - |
 
 **Total shipped: 44 phases, 99 plans across 10 milestones**
 
 ---
-*Last updated: 2026-03-21 — Phase 48 plans created*
+*Last updated: 2026-03-21 — Phase 49 plans created*
