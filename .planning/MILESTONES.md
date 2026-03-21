@@ -1,5 +1,27 @@
 # Milestones
 
+## v2.0 Structured Cognition Foundation (Shipped: 2026-03-21)
+
+**Phases:** 45-49 | **Plans:** 18 | **Tasks:** ~40 | **LOC:** ~11,234 C# added (+11,234 insertions)
+**Git range:** feat(45-01)..feat(49-03) | **Timeline:** 2026-03-20 → 2026-03-21 (2 days)
+
+**Delivered:** Structured cognition developer-agent foundation — durable task runtime with SQLite persistence and convergence control, 15 workspace and memory tools for repo-grounded execution, run inspector with propagation chain visualization, provenance-backed artifact and memory graph, and graph-native workflow presets for end-to-end codebase analysis.
+
+**Key accomplishments:**
+
+- Durable task runtime with SQLite persistence, run lifecycle engine (create/start/pause/resume/cancel/fail), convergence guard with configurable step budgets, and /runs UI page with real-time SignalR updates
+- 12 workspace tools (file_read, file_write, directory_list, file_search, grep_search, git_status, git_diff, git_log, git_show, git_commit, git_checkout, shell_exec) + 3 memory tools with CommandBlacklistGuard safety
+- Run inspector at /runs/{RunId} with mixed chronological timeline, accordion step detail, PropagationColorAssigner chain visualization, TimelineFilterBar, and click-to-highlight causality tracing
+- Artifact store with ArtifactFileWriter path safety and provenance-backed memory graph with GlossaryIndex (Aho-Corasick), DisclosureMatcher, snapshot versioning, and /memory UI page
+- Graph-native structured cognition: JoinBarrierModule fan-in, PropagationId carry-through, WorkflowPresetService with codebase analysis preset, WorkflowProgressBar, and WorkflowPresetSelector UI
+- Full test suite: 495/495 green, zero regressions across all 5 phases
+
+**Tech debt (accepted):** 11 items — BootMemoryInjector not called from run-start path, GetToolDescriptors() not consumed by LLM, WorkflowProgressBar imprecise fraction, SUMMARY frontmatter documentation gaps, pre-existing CS0618 warnings. See v2.0-MILESTONE-AUDIT.md.
+
+**Archive:** [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md) | [milestones/v2.0-REQUIREMENTS.md](milestones/v2.0-REQUIREMENTS.md) | [milestones/v2.0-MILESTONE-AUDIT.md](milestones/v2.0-MILESTONE-AUDIT.md)
+
+---
+
 ## v1.9 Event-Driven Propagation Engine (Shipped: 2026-03-20)
 
 **Phases:** 42-44 | **Plans:** 6 | **Tasks:** 12 | **LOC:** ~2,457 C# added (+3,270 insertions)
@@ -8,6 +30,7 @@
 **Delivered:** Event-driven propagation engine — modules execute on data arrival with output fan-out, cyclic topologies supported, HeartbeatModule refactored to standalone timer with config-schema-driven sidebar rendering.
 
 **Key accomplishments:**
+
 - Replaced DAG topological sort with event-driven per-module SemaphoreSlim routing — modules execute immediately on data arrival, output fans out to all connected downstream ports
 - Cyclic wiring topologies accepted — ConnectionGraph no longer rejects cycles, enabling feedback loops in module networks
 - HeartbeatModule refactored to standalone PeriodicTimer with config-driven interval (50ms floor) — no longer drives WiringEngine execution loop

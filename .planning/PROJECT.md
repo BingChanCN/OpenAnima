@@ -2,13 +2,13 @@
 
 ## Current State
 
-**Latest shipped:** Phase 49 structured-cognition-workflows (2026-03-21)
-**Milestones complete:** v1.0–v1.9 (10 milestones, 44 phases, 99 plans)
-**Current milestone:** v2.0 Structured Cognition Foundation — all phases complete
+**Latest shipped:** v2.0 Structured Cognition Foundation (2026-03-21)
+**Milestones complete:** v1.0–v2.0 (11 milestones, 49 phases, 117 plans)
+**Codebase:** ~41,773 LOC (C#, Razor, CSS, JS) | 495 tests green
 
 ## What This Is
 
-A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Users create multiple independent Anima instances — each with its own heartbeat, module wiring, chat interface, and configuration. Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based dashboard, visual drag-and-drop wiring editor, LLM-powered chat, and full Chinese/English internationalization.
+A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Users create multiple independent Anima instances — each with its own heartbeat, module wiring, chat interface, and configuration. Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based dashboard, visual drag-and-drop wiring editor, LLM-powered chat, durable task runtime with workspace tools, run inspection with propagation chain visualization, provenance-backed memory graph, graph-native workflow presets, and full Chinese/English internationalization.
 
 ## Core Value
 
@@ -130,25 +130,15 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ HeartbeatModule standalone PeriodicTimer signal source (BEAT-05) — v1.9
 - ✓ HeartbeatModule interval configurable via EditorConfigSidebar schema rendering (BEAT-06) — v1.9
 - ✓ ITickable interface removed — pure data-driven execution model — v1.9
+- ✓ Durable task runtime with stable run identity, SQLite persistence, resume/cancel lifecycle, and convergence bounds (RUN-01~05, CTRL-01~02) — v2.0
+- ✓ Workspace-aware developer tool surface: 12 file/git/shell tools + 3 memory tools with CommandBlacklistGuard safety (WORK-01~05) — v2.0
+- ✓ Run inspector with per-step timeline, inputs/outputs, errors, propagation chain visualization, and log correlation (OBS-01~04) — v2.0
+- ✓ Artifact store and provenance-backed memory graph with GlossaryIndex, DisclosureMatcher, and /memory UI (ART-01~02, MEM-01~03) — v2.0
+- ✓ Structured cognition workflows: JoinBarrier fan-in, PropagationId tracking, workflow presets, codebase analysis E2E (COG-01~04) — v2.0
 
 ### Active
 
-- [x] Durable task runtime with stable run identity, persistence, resume/cancel, and convergence bounds — Validated in Phase 45: durable-task-runtime-foundation
-- [x] Workspace-aware developer tool surface for file search, git inspection, and bounded command execution — Validated in Phase 46: workspace-tool-surface
-- [x] Run inspector with per-step timeline, inputs/outputs, errors, and graph trigger visibility — Validated in Phase 47: run-inspection-observability
-- [x] Artifact and provenance-backed memory foundation linked to runs and steps — Validated in Phase 48: artifact-memory-foundation
-- [x] Structured cognition workflow that analyzes a bound codebase and produces grounded report artifacts — Validated in Phase 49: structured-cognition-workflows
-
-## Current Milestone: v2.0 Structured Cognition Foundation
-
-**Goal:** Turn the existing event-driven graph runtime into a usable long-running developer-agent foundation with durable runs, repo-grounded tooling, inspectable execution, and provenance-backed memory.
-
-**Target features:**
-- Durable task runtime and convergence control
-- Workspace-aware tool modules for repo inspection and bounded command execution
-- Run inspection and observability UI
-- Artifact store and provenance-backed memory retrieval
-- End-to-end structured cognition codebase analysis workflow
+(No active milestone — use `/gsd:new-milestone` to start next)
 
 ### Deferred
 
@@ -162,19 +152,19 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Future
 
+- Semantic code intelligence (symbol resolution, refactoring-grade analysis)
+- Story/narrative writing workflow presets
+- Higher-level agent templates and personas built on graph primitives
+- Vector/embedding memory retrieval alongside provenance-backed lexical retrieval
+- Explicit autonomy/permission profiles for destructive workspace mutations
+- Remote/distributed run execution workers
+- Module marketplace discovery, install, and update ecosystem
 - Tiered thinking loop (code heartbeat → fast model triage → deep model reasoning)
 - Language-agnostic module protocol with typed input/output interfaces
-- Dynamic module loading — download from marketplace and run without manual setup
-- C# modules loaded as in-process assemblies; other-language modules as packaged executables via IPC
-- Permission system with autonomy levels (manual / assist / auto)
-- Agent memory and conversation history persistence (beyond session)
 - Additional port types (Stream, Media, etc.) for richer module communication
 - Anima background execution (run in background while viewing different Anima)
 - Anima execution statistics (uptime, module execution count)
 - Module dependency resolution and auto-install
-- Module marketplace integration
-- Loop control module for iterative execution
-- Variable storage module for state persistence
 - Additional language support (Japanese, Korean, etc.)
 
 ### Out of Scope
@@ -190,45 +180,16 @@ Agents that proactively think and act on their own, while module connections rem
 
 ## Context
 
-Shipped v1.9 with ~27,500 LOC across all source files (C#, Razor, CSS, JS).
+Shipped v2.0 with ~41,773 LOC across all source files (C#, Razor, CSS, JS).
 Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4, Microsoft.Extensions.Http.Resilience 8.7.0, Microsoft.Data.Sqlite 8.0.12, Dapper 2.1.72.
+Full test suite: 495/495 green.
 
-v1.9 delivered event-driven propagation engine:
-- WiringEngine replaced DAG topological sort with per-module SemaphoreSlim event-driven routing
-- Cyclic wiring topologies accepted — ConnectionGraph no longer rejects cycles
-- HeartbeatModule refactored to standalone PeriodicTimer with config-driven interval
-- ITickable interface removed from Contracts — pure data-driven execution
-- ModuleSchemaService + EditorConfigSidebar schema-aware rendering for IModuleConfigSchema modules
-- Full test suite: 429/429 green
-
-v2.0 Phase 45 delivered durable task runtime foundation:
-- Domain types: RunState, StepStatus, RunDescriptor, StepRecord, RunResult, ConvergenceCheckResult, RunStateEvent
-- SQLite persistence via IRunRepository with Dapper
-- RunService lifecycle engine (create/start/complete/fail/resume)
-- ConvergenceGuard with configurable step budgets and restore-on-resume
-- StepRecorder with hash-based dedup and SignalR push
-- RunRecoveryService for startup recovery of interrupted runs
-- /runs UI page with 5 shared Blazor components and real-time SignalR updates
-- 35 new unit tests (429 total)
-
-v2.0 Phase 46 delivered workspace tool surface:
-- 12 workspace tools: file_read, file_write, directory_list, file_search, grep_search, git_status, git_diff, git_log, git_show, git_commit, git_checkout, shell_exec
-- IWorkspaceTool interface with ToolDescriptor self-description and ToolResult structured envelopes
-- CommandBlacklistGuard for shell_exec safety (blocks rm -rf, format, shutdown, etc.)
-- WorkspaceToolModule orchestrator with DI wiring and port registration
-- Git tools return parsed structured JSON (not raw git output)
-- All tools validate paths within workspace root
-
-v2.0 Phase 47 delivered run inspection and observability:
-- RunDetail page at /runs/{RunId} with run overview, mixed chronological timeline, accordion step detail
-- PropagationColorAssigner for deterministic chain color coding
-- StepTimelineRow with expand/collapse, error display, propagation chain highlighting
-- StateEventRow for state transition visualization
-- TimelineFilterBar with module/status/chain dropdowns
-- Propagation chain causality: click chain ID to filter timeline, highlight/dim related entries
-- Real-time SignalR push updates for step completion and state changes
-- WiringEngine/RunService BeginScope log correlation
-- 11 new unit tests (322 total across test files)
+v2.0 delivered structured cognition developer-agent foundation:
+- Durable task runtime: SQLite persistence, RunService lifecycle engine, ConvergenceGuard step budgets, StepRecorder with hash-based dedup, RunRecoveryService, /runs UI with SignalR real-time
+- Workspace tool surface: 12 file/git/shell tools + IWorkspaceTool interface + CommandBlacklistGuard safety + WorkspaceToolModule orchestrator
+- Run inspector: RunDetail page with mixed timeline, step accordion, PropagationColorAssigner chain visualization, TimelineFilterBar, ILogger.BeginScope correlation
+- Artifact & memory: ArtifactStore + ArtifactFileWriter + MemoryGraph with GlossaryIndex (Aho-Corasick) + DisclosureMatcher + snapshot versioning + 3 memory tools + /memory UI
+- Structured cognition: JoinBarrierModule fan-in + PropagationId carry-through + LLMModule WaitAsync serialization + WorkflowPresetService + codebase analysis preset + WorkflowProgressBar/PresetSelector UI
 
 Known tech debt:
 - ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred
@@ -236,7 +197,9 @@ Known tech debt:
 - ILLMService remains in Core (ChatMessageInput moved to Contracts but ILLMService depends on LLMResult + streaming)
 - Schema mismatch between CLI and Runtime (extended manifest fields)
 - TextJoin fixed 3 input ports — static port system limitation
-- Startup ordering: WiringInitializationService starts before AnimaInitializationService — first HeartbeatModule tick uses 100ms fallback (self-corrects on tick 2)
+- BootMemoryInjector registered in DI but never called from run-start path
+- GetToolDescriptors() declared but never consumed by LLM — no tool schema injection
+- 26+ pre-existing CS0618 deprecation warnings for IAnimaContext/IAnimaModuleConfigService
 
 ## Key Decisions
 
@@ -324,6 +287,18 @@ Known tech debt:
 | ModuleSchemaService static type map + IServiceProvider | Avoids reflection scanning; DI-based resolution for built-in + external modules | ✓ Good — v1.9 |
 | Schema defaults merged into _currentConfig on load | Auto-save not triggered on load, only on user edits — no spurious persistence | ✓ Good — v1.9 |
 | Raw kvp fallback in EditorConfigSidebar | Non-schema modules continue working unchanged — backward compatible | ✓ Good — v1.9 |
+| SQLite + Dapper for run persistence | Lightweight embedded DB, no external dependency; Dapper for clean SQL mapping | ✓ Good — v2.0 |
+| ConvergenceGuard per-run step budgets | Configurable max steps with restore-on-resume; prevents infinite loops | ✓ Good — v2.0 |
+| IHubContext optional injection | SignalR push nullable in RunService/StepRecorder — testable without hub | ✓ Good — v2.0 |
+| CommandBlacklistGuard (blacklist model) | All commands allowed except blocked list — simpler than whitelist for dev tools | ✓ Good — v2.0 |
+| IWorkspaceTool stateless with per-call workspace root | Tools are stateless, workspace bound per-call not per-instance | ✓ Good — v2.0 |
+| 12-char hex artifact IDs | Lower collision probability than 8-char step IDs across runs | ✓ Good — v2.0 |
+| Aho-Corasick for GlossaryIndex | Single-pass multi-keyword matching with failure link propagation | ✓ Good — v2.0 |
+| DisclosureMatcher static method | No instance state — callers pass nodes and context | ✓ Good — v2.0 |
+| JoinBarrierModule double-check pattern | Fast-path count check before Wait(0) guard, re-check after acquiring | ✓ Good — v2.0 |
+| LLMModule WaitAsync for workflow branches | Serializes concurrent calls instead of Wait(0) drop — correctness for workflow fan-out | ✓ Good — v2.0 |
+| WorkflowPresetService presetsDir constructor arg | Testable preset loading with pragma_table_info migration check | ✓ Good — v2.0 |
+| Preset JSON as Content Include in csproj | No manual copy step at runtime — CopyToOutputDirectory Always | ✓ Good — v2.0 |
 
 ## Constraints
 
@@ -334,4 +309,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-21 after completing Phase 49 structured-cognition-workflows*
+*Last updated: 2026-03-21 after v2.0 milestone*

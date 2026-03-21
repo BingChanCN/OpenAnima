@@ -207,6 +207,54 @@
 
 ---
 
+## Milestone: v2.0 — Structured Cognition Foundation
+
+**Shipped:** 2026-03-21
+**Phases:** 5 | **Plans:** 18 | **Commits:** 48
+
+### What Was Built
+- Durable task runtime: RunDescriptor/StepRecord/RunStateEvent domain types, SQLite persistence via IRunRepository with Dapper, RunService lifecycle engine, ConvergenceGuard step budgets, StepRecorder with hash-based dedup, RunRecoveryService, /runs UI page with 5 shared components and SignalR real-time
+- Workspace tool surface: 12 tools (file_read, file_write, directory_list, file_search, grep_search, git_status, git_diff, git_log, git_show, git_commit, git_checkout, shell_exec) + IWorkspaceTool interface + CommandBlacklistGuard + WorkspaceToolModule orchestrator
+- Run inspector: RunDetail page with mixed chronological timeline, StepTimelineRow accordion, PropagationColorAssigner chain visualization, TimelineFilterBar with module/status/chain dropdowns, click-to-highlight causality
+- Artifact & memory: ArtifactStore SQLite+filesystem, ArtifactFileWriter with path safety, MemoryGraph with GlossaryIndex (Aho-Corasick), DisclosureMatcher, snapshot versioning, 3 memory tools, BootMemoryInjector, /memory UI page
+- Structured cognition: JoinBarrierModule fan-in with double-check semaphore, PropagationId carry-through in StepRecorder, LLMModule WaitAsync serialization, WorkflowPresetService with DB migration, codebase analysis preset JSON, WorkflowProgressBar + WorkflowPresetSelector UI
+
+### What Worked
+- 5-phase linear dependency chain (45→46→47→48→49) executed cleanly in 2 days — largest milestone by plan count (18) with fastest per-plan velocity
+- Each phase boundary was a clean capability addition consumed by the next — RunRepository → WorkspaceTools → RunDetail → ArtifactStore → WorkflowPresets
+- SQLite + Dapper per-operation connection pattern established in Phase 45, reused consistently in ArtifactStore and MemoryGraph — no connection lifecycle bugs
+- PropagationId carry-through via ConcurrentDictionary (same pattern as _stepAnimaIds) — pattern reuse reduces implementation risk
+- 495/495 tests green at milestone end — zero regressions despite 125 files changed and 11,234 insertions
+
+### What Was Inefficient
+- BootMemoryInjector registered in DI but never called from run-start path — integration gap caught by audit, accepted as tech debt
+- GetToolDescriptors() declared on IWorkspaceTool but never consumed by LLMModule — tool schema injection not wired
+- SUMMARY frontmatter missing requirements_completed for 5 of 25 requirements (WORK-02/03/04, OBS-04, COG-01) — documentation gap persists from v1.8 pattern
+- WorkflowProgressBar uses raw step count as numerator vs node count denominator — imprecise fraction, accepted for v2.0
+- Nyquist VALIDATION.md exists for 4/5 phases but none are compliant (wave_0 incomplete); Phase 46 missing entirely
+
+### Patterns Established
+- Per-operation SQLite connections with WAL mode for concurrent access — RunRepository, ArtifactStore, MemoryGraph all follow this
+- IWorkspaceTool stateless interface with per-call workspaceRoot — tools don't hold workspace state
+- Double-check semaphore guard: fast-path count check before Wait(0), re-check after acquiring — JoinBarrierModule fan-in
+- WaitAsync for workflow branch serialization vs Wait(0) skip-when-busy — LLMModule needs correctness over throughput in workflow context
+- Preset JSON as Content Include in csproj with CopyToOutputDirectory Always — no manual copy step
+- 12-char hex IDs for artifacts vs 8-char for steps — lower collision probability for cross-run references
+
+### Key Lessons
+1. Linear dependency chains (A→B→C→D→E) execute faster than broad parallel phases — each phase builds directly on the previous, minimizing context switching
+2. SQLite WAL + per-operation connections is the right pattern for embedded persistence — zero connection management bugs across 3 independent stores
+3. SUMMARY frontmatter requirements_completed gap is a systemic issue (v1.8, v1.9, v2.0) — needs automation or executor-level enforcement
+4. Integration gaps (BootMemoryInjector, GetToolDescriptors) emerge when phases are designed independently — cross-phase wiring review at roadmap creation would catch these
+5. Nyquist validation strategy continues to be partially adopted — consider making it a mandatory plan step rather than optional phase artifact
+
+### Cost Observations
+- Model mix: ~65% sonnet (executor), ~25% haiku (research), ~10% opus (planning/audit)
+- Sessions: ~4 sessions across 2 days
+- Notable: 18 plans in 2 days is fastest delivery rate — 9 plans/day vs previous best of ~6 plans/day (v1.7)
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Commits | Phases | Notable Patterns |
@@ -215,6 +263,7 @@
 | v1.8 | 45 | 4 | PluginLoader DI, ChatMessageInput migration, IModuleStorage, ContextModule |
 | v1.7 | ~40 | 6 | ActivityChannelHost, Contracts expansion, module decoupling |
 | v1.6 | 25 | 4 | Cross-Anima routing, format detection, HTTP module |
+| v2.0 | 48 | 5 | Durable runs, workspace tools, run inspector, memory graph, workflow presets |
 | v1.5 | 55 | 5 | Multi-instance architecture, i18n, module config |
 | v1.4 | ~20 | 3 | CLI tool, .oamod packaging |
 | v1.3 | ~40 | 10 | SVG editor, port system, verification backfill |
@@ -235,6 +284,7 @@
 | v1.7 | ~23,734 | ActivityChannelHost, SemaphoreSlim skip, [StatelessModule] | 5 |
 | v1.8 | ~25,015 | ContractsTypeMap DI, bound service injection, semaphore priority | 7 |
 | v1.9 | ~27,500 | Event-driven propagation, ITickable removal, schema-first sidebar | 6 |
+| v2.0 | ~41,773 | SQLite WAL stores, IWorkspaceTool, JoinBarrier, Aho-Corasick glossary, workflow presets | 11 |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -246,3 +296,5 @@
 6. Update tracking tables immediately after plan completion — stale docs create audit noise (v1.6 lesson)
 7. SDK validation via a real external module is the most effective API surface verification — catches binding gaps that unit tests miss (v1.8 lesson)
 8. Gap closure plans are healthy — catching issues in verification and fixing in a dedicated plan is better than ignoring (v1.8 lesson)
+9. Linear phase dependency chains deliver faster than broad parallel phases — each builds directly on previous with minimal context switching (v2.0 lesson)
+10. SQLite WAL + per-operation connections is the reliable embedded persistence pattern — zero connection bugs across 3 independent stores (v2.0 lesson)
