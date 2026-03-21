@@ -1,0 +1,110 @@
+{
+  "name": "preset-codebase-analysis",
+  "version": "1.0",
+  "nodes": [
+    {
+      "moduleId": "scan-llm",
+      "moduleName": "LLMModule",
+      "position": { "x": 100, "y": 300 },
+      "size": { "width": 200, "height": 100 }
+    },
+    {
+      "moduleId": "scan-tools",
+      "moduleName": "WorkspaceToolModule",
+      "position": { "x": 100, "y": 500 },
+      "size": { "width": 200, "height": 100 }
+    },
+    {
+      "moduleId": "arch-llm",
+      "moduleName": "LLMModule",
+      "position": { "x": 400, "y": 100 },
+      "size": { "width": 200, "height": 100 }
+    },
+    {
+      "moduleId": "quality-llm",
+      "moduleName": "LLMModule",
+      "position": { "x": 400, "y": 300 },
+      "size": { "width": 200, "height": 100 }
+    },
+    {
+      "moduleId": "deps-llm",
+      "moduleName": "LLMModule",
+      "position": { "x": 400, "y": 500 },
+      "size": { "width": 200, "height": 100 }
+    },
+    {
+      "moduleId": "security-llm",
+      "moduleName": "LLMModule",
+      "position": { "x": 400, "y": 700 },
+      "size": { "width": 200, "height": 100 }
+    },
+    {
+      "moduleId": "join-barrier",
+      "moduleName": "JoinBarrierModule",
+      "position": { "x": 700, "y": 400 },
+      "size": { "width": 200, "height": 100 }
+    },
+    {
+      "moduleId": "synth-llm",
+      "moduleName": "LLMModule",
+      "position": { "x": 1000, "y": 400 },
+      "size": { "width": 200, "height": 100 }
+    }
+  ],
+  "connections": [
+    {
+      "sourceModuleId": "scan-llm",
+      "sourcePortName": "response",
+      "targetModuleId": "arch-llm",
+      "targetPortName": "prompt"
+    },
+    {
+      "sourceModuleId": "scan-llm",
+      "sourcePortName": "response",
+      "targetModuleId": "quality-llm",
+      "targetPortName": "prompt"
+    },
+    {
+      "sourceModuleId": "scan-llm",
+      "sourcePortName": "response",
+      "targetModuleId": "deps-llm",
+      "targetPortName": "prompt"
+    },
+    {
+      "sourceModuleId": "scan-llm",
+      "sourcePortName": "response",
+      "targetModuleId": "security-llm",
+      "targetPortName": "prompt"
+    },
+    {
+      "sourceModuleId": "arch-llm",
+      "sourcePortName": "response",
+      "targetModuleId": "join-barrier",
+      "targetPortName": "input_1"
+    },
+    {
+      "sourceModuleId": "quality-llm",
+      "sourcePortName": "response",
+      "targetModuleId": "join-barrier",
+      "targetPortName": "input_2"
+    },
+    {
+      "sourceModuleId": "deps-llm",
+      "sourcePortName": "response",
+      "targetModuleId": "join-barrier",
+      "targetPortName": "input_3"
+    },
+    {
+      "sourceModuleId": "security-llm",
+      "sourcePortName": "response",
+      "targetModuleId": "join-barrier",
+      "targetPortName": "input_4"
+    },
+    {
+      "sourceModuleId": "join-barrier",
+      "sourcePortName": "output",
+      "targetModuleId": "synth-llm",
+      "targetPortName": "prompt"
+    }
+  ]
+}
