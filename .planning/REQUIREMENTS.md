@@ -46,8 +46,8 @@ Requirements for the v2.0 milestone. Each requirement maps to a single roadmap p
 ### Structured Cognition Workflows
 
 - [x] **COG-01**: A graph-native run can activate multiple nodes in parallel and fan out through existing wiring during one long-running task
-- [ ] **COG-02**: A long-running run can route work through built-in modules, LLM modules, tool modules, and other Anima as part of one workflow
-- [ ] **COG-03**: User can run an end-to-end codebase analysis workflow against a bound workspace and receive a grounded final report artifact
+- [x] **COG-02**: A long-running run can route work through built-in modules, LLM modules, tool modules, and other Anima as part of one workflow
+- [x] **COG-03**: User can run an end-to-end codebase analysis workflow against a bound workspace and receive a grounded final report artifact
 - [x] **COG-04**: Structured cognition remains inspectable as visible graph execution rather than collapsing into a hidden single-prompt loop
 
 ## v2.x Deferred Requirements
@@ -110,8 +110,8 @@ Explicitly excluded from v2.0 to prevent scope creep.
 | MEM-02 | Phase 48 | Complete |
 | MEM-03 | Phase 48 | Complete |
 | COG-01 | Phase 49 | Complete |
-| COG-02 | Phase 49 | Pending |
-| COG-03 | Phase 49 | Pending |
+| COG-02 | Phase 49 | Complete |
+| COG-03 | Phase 49 | Complete |
 | COG-04 | Phase 49 | Complete |
 
 **Coverage:**

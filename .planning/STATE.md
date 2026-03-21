@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Structured Cognition Foundation
 status: unknown
-stopped_at: Completed 49-01-PLAN.md
-last_updated: "2026-03-21T14:36:08.225Z"
+stopped_at: Completed 49-02-PLAN.md
+last_updated: "2026-03-21T14:44:39.518Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 18
-  completed_plans: 16
+  completed_plans: 17
 ---
 
 # Project State: OpenAnima
@@ -66,6 +66,7 @@ Plan: 1 of 3
 | Phase 48 P04 | 17 | 2 tasks | 7 files |
 | Phase 48 P05 | 10 | 2 tasks | 7 files |
 | Phase 49 P01 | 1013 | 3 tasks | 11 files |
+| Phase 49-structured-cognition-workflows P02 | 5min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,8 @@ Recent decisions affecting current work:
 - [Phase 49]: JoinBarrierModule uses double-check pattern with Wait(0) guard and re-check inside to prevent race conditions
 - [Phase 49]: StepRecorder carries PropagationId via _stepPropagationIds ConcurrentDictionary (same pattern as _stepAnimaIds)
 - [Phase 49]: LLMModule uses WaitAsync(ct) for serialization instead of Wait(0) drop semantics for workflow branch correctness
+- [Phase 49-02]: WorkflowPresetService takes presetsDir as constructor arg for testability; MigrateSchemaAsync uses pragma_table_info to check workflow_preset column before ALTER TABLE
+- [Phase 49-02]: scan-tools (WorkspaceToolModule) in preset has no port connections — invoked by LLM via tool calling at runtime, not through wiring; present for editor visibility only
 
 ### Pending Todos
 
@@ -135,6 +138,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T14:36:08.223Z
-Stopped at: Completed 49-01-PLAN.md
+Last session: 2026-03-21T14:44:39.516Z
+Stopped at: Completed 49-02-PLAN.md
 Resume file: None
