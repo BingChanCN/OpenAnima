@@ -27,6 +27,10 @@ public class ModuleRuntimeInitializationTests : IDisposable
     private readonly string _tempConfigDir;
     private readonly string _tempDataRoot;
 
+    /// <summary>
+    /// Module types resolvable from the test DI container (excludes WorkspaceToolModule which requires
+    /// IRunService/IStepRecorder/IWorkspaceTool not registered in the test setup).
+    /// </summary>
     private static readonly Type[] ExpectedBuiltInModuleTypes =
     {
         typeof(LLMModule),
@@ -34,6 +38,7 @@ public class ModuleRuntimeInitializationTests : IDisposable
         typeof(ChatOutputModule),
         typeof(HeartbeatModule),
         typeof(FixedTextModule),
+        typeof(JoinBarrierModule),
         typeof(TextJoinModule),
         typeof(TextSplitModule),
         typeof(ConditionalBranchModule),
@@ -42,6 +47,17 @@ public class ModuleRuntimeInitializationTests : IDisposable
         typeof(AnimaRouteModule),
         typeof(HttpRequestModule)
     };
+
+    /// <summary>
+    /// All module names registered in PortRegistry at startup (includes WorkspaceToolModule
+    /// whose ports ARE registered even though it requires extra DI services for construction).
+    /// </summary>
+    private static readonly string[] ExpectedRegisteredPortModuleNames =
+        ExpectedBuiltInModuleTypes
+            .Select(t => t.Name)
+            .Append("WorkspaceToolModule")
+            .OrderBy(name => name)
+            .ToArray();
 
     private static readonly string[] ExpectedBuiltInModuleNames =
         ExpectedBuiltInModuleTypes.Select(type => type.Name).OrderBy(name => name).ToArray();
@@ -118,7 +134,7 @@ public class ModuleRuntimeInitializationTests : IDisposable
             .OrderBy(name => name)
             .ToArray();
 
-        Assert.Equal(ExpectedBuiltInModuleNames, registeredModuleNames);
+        Assert.Equal(ExpectedRegisteredPortModuleNames, registeredModuleNames);
 
         var llmPorts = registry.GetPorts("LLMModule");
         Assert.Equal(4, llmPorts.Count);
@@ -192,8 +208,8 @@ public class ModuleRuntimeInitializationTests : IDisposable
             .OrderBy(name => name)
             .ToArray();
 
-        Assert.Equal(ExpectedBuiltInModuleNames, registeredModuleNames);
-        Assert.Equal(12, registeredModuleNames.Length);
+        Assert.Equal(ExpectedRegisteredPortModuleNames, registeredModuleNames);
+        Assert.Equal(14, registeredModuleNames.Length);
 
         // Demo modules absent
         Assert.DoesNotContain(allPorts, p => p.ModuleName == "TextInput");

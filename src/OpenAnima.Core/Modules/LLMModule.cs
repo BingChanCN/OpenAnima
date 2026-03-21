@@ -101,7 +101,7 @@ public class LLMModule : IModuleExecutor
         // Priority rule: if messages port fired, suppress prompt execution.
         if (_messagesPortFired) return;
 
-        if (!_executionGuard.Wait(0)) return;
+        await _executionGuard.WaitAsync(ct);
 
         try
         {
@@ -128,7 +128,7 @@ public class LLMModule : IModuleExecutor
         var messages = ChatMessageInput.DeserializeList(json);
         if (messages.Count == 0) return;
 
-        if (!_executionGuard.Wait(0)) return;
+        await _executionGuard.WaitAsync(ct);
 
         try
         {
