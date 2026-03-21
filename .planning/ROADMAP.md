@@ -177,7 +177,11 @@ Plans:
   2. User can inspect per-step inputs, outputs, errors, durations, and linked artifacts from the run timeline.
   3. User can see why a node ran, including its upstream trigger and downstream fan-out path.
   4. Developer can correlate logs, traces, and tool events by run ID and step ID during debugging.
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 47-01-PLAN.md — Test scaffolds, PropagationColorAssigner, RunCard nav, localization, ILogger.BeginScope
+- [ ] 47-02-PLAN.md — RunDetail page with overview, mixed timeline, accordion step detail, SignalR
+- [ ] 47-03-PLAN.md — Timeline filtering, propagation chain color grouping, click-highlight
 
 ### Phase 48: Artifact & Memory Foundation
 **Goal**: Runs produce durable artifacts and provenance-backed retrieval records that can ground later work.
@@ -256,11 +260,11 @@ Plans:
 | 44. Config Schema Sidebar Integration | v1.9 | 1/1 | Complete | 2026-03-19 |
 | 45. Durable Task Runtime Foundation | 3/3 | Complete    | 2026-03-20 | - |
 | 46. Workspace Tool Surface | 4/4 | Complete    | 2026-03-20 | - |
-| 47. Run Inspection & Observability | v2.0 | 0/TBD | Not started | - |
+| 47. Run Inspection & Observability | v2.0 | 0/3 | Planning | - |
 | 48. Artifact & Memory Foundation | v2.0 | 0/TBD | Not started | - |
 | 49. Structured Cognition Workflows | v2.0 | 0/TBD | Not started | - |
 
 **Total shipped: 44 phases, 99 plans across 10 milestones**
 
 ---
-*Last updated: 2026-03-21 — Phase 46 plans created*
+*Last updated: 2026-03-21 — Phase 47 plans created*
