@@ -62,6 +62,40 @@ public class RunDbInitializer
 
         CREATE INDEX IF NOT EXISTS idx_artifacts_run_id ON artifacts(run_id);
         CREATE INDEX IF NOT EXISTS idx_artifacts_step_id ON artifacts(step_id);
+
+        CREATE TABLE IF NOT EXISTS memory_nodes (
+            uri                 TEXT NOT NULL,
+            anima_id            TEXT NOT NULL,
+            content             TEXT NOT NULL,
+            disclosure_trigger  TEXT,
+            keywords            TEXT,
+            source_artifact_id  TEXT,
+            source_step_id      TEXT,
+            created_at          TEXT NOT NULL,
+            updated_at          TEXT NOT NULL,
+            PRIMARY KEY (uri, anima_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS memory_edges (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            anima_id    TEXT NOT NULL,
+            from_uri    TEXT NOT NULL,
+            to_uri      TEXT NOT NULL,
+            label       TEXT NOT NULL,
+            created_at  TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS memory_snapshots (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            uri         TEXT NOT NULL,
+            anima_id    TEXT NOT NULL,
+            content     TEXT NOT NULL,
+            snapshot_at TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_memory_nodes_anima ON memory_nodes(anima_id);
+        CREATE INDEX IF NOT EXISTS idx_memory_edges_anima ON memory_edges(anima_id, from_uri);
+        CREATE INDEX IF NOT EXISTS idx_memory_snapshots_uri ON memory_snapshots(uri, anima_id, id DESC);
         """;
 
     /// <summary>
