@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
 using OpenAnima.Core.Ports;
+using OpenAnima.Core.Runs;
 using OpenAnima.Core.Wiring;
 
 namespace OpenAnima.Tests.Unit;
@@ -68,7 +69,87 @@ public class WiringEngineScopeTests
         Assert.True(scopeDict.ContainsKey("TargetModule"), "Scope should contain TargetModule");
     }
 
+    [Fact]
+    public async Task PropagationId_PassedToRecordStepStartAsync_IsNonNullAndEightChars()
+    {
+        // Arrange: spy IStepRecorder that captures the propagationId argument
+        var spyRecorder = new SpyStepRecorder();
+        var eventBus = new InMemoryEventBus();
+        var portRegistry = new SimplePortRegistry();
+
+        portRegistry.RegisterPorts("SourceMod",
+        [
+            new PortMetadata("out", PortType.Text, PortDirection.Output, "SourceMod")
+        ]);
+
+        var engine = new WiringEngine(
+            eventBus,
+            portRegistry,
+            animaId: "test-anima",
+            stepRecorder: spyRecorder);
+
+        var config = new WiringConfiguration
+        {
+            Name = "prop-test",
+            Nodes =
+            [
+                new ModuleNode { ModuleId = "src", ModuleName = "SourceMod" },
+                new ModuleNode { ModuleId = "tgt", ModuleName = "TargetMod" }
+            ],
+            Connections =
+            [
+                new PortConnection
+                {
+                    SourceModuleId = "src",
+                    SourcePortName = "out",
+                    TargetModuleId = "tgt",
+                    TargetPortName = "in"
+                }
+            ]
+        };
+
+        engine.LoadConfiguration(config);
+
+        // Act — publish an event to trigger the routing subscription
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "SourceMod.port.out",
+            SourceModuleId = "SourceMod",
+            Payload = "hello"
+        }, CancellationToken.None);
+
+        // Assert: RecordStepStartAsync was called with a non-null 8-char hex propagationId
+        Assert.True(spyRecorder.CapturedPropagationIds.Count > 0, "RecordStepStartAsync should have been called");
+        var capturedId = spyRecorder.CapturedPropagationIds[0];
+        Assert.NotNull(capturedId);
+        Assert.Equal(8, capturedId!.Length);
+        // Verify it's hex (all chars are 0-9a-f)
+        Assert.All(capturedId, c => Assert.True(Uri.IsHexDigit(c), $"char '{c}' is not hex"));
+    }
+
     // ── Test doubles ─────────────────────────────────────────────────────────
+
+    private sealed class SpyStepRecorder : IStepRecorder
+    {
+        public List<string?> CapturedPropagationIds { get; } = new();
+
+        public Task<string?> RecordStepStartAsync(
+            string animaId, string moduleName, string? inputSummary, string? propagationId,
+            CancellationToken ct = default)
+        {
+            CapturedPropagationIds.Add(propagationId);
+            return Task.FromResult<string?>("spy-step-1");
+        }
+
+        public Task RecordStepCompleteAsync(string? stepId, string moduleName, string? outputSummary, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task RecordStepCompleteAsync(string? stepId, string moduleName, string? outputSummary, string? artifactContent, string? artifactMimeType, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task RecordStepFailedAsync(string? stepId, string moduleName, Exception ex, CancellationToken ct = default)
+            => Task.CompletedTask;
+    }
 
     private sealed class CapturingScopeLogger : ILogger<WiringEngine>
     {
