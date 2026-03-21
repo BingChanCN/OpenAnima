@@ -40,8 +40,8 @@ Requirements for the v2.0 milestone. Each requirement maps to a single roadmap p
 - [x] **ART-01**: System can persist intermediate notes, reports, and final outputs as durable artifacts linked to run and step records
 - [x] **ART-02**: User can inspect run artifacts from the run inspector with source linkage back to the generating step
 - [x] **MEM-01**: System can store retrieval records derived from artifacts with provenance metadata including source artifact, step, and timestamp
-- [ ] **MEM-02**: Any memory injected into a run is inspectable and links back to its source artifact or step
-- [ ] **MEM-03**: Retrieved memory can be used to ground downstream run decisions without relying on hidden session-only prompt state
+- [x] **MEM-02**: Any memory injected into a run is inspectable and links back to its source artifact or step
+- [x] **MEM-03**: Retrieved memory can be used to ground downstream run decisions without relying on hidden session-only prompt state
 
 ### Structured Cognition Workflows
 
@@ -107,8 +107,8 @@ Explicitly excluded from v2.0 to prevent scope creep.
 | ART-01 | Phase 48 | Complete |
 | ART-02 | Phase 48 | Complete |
 | MEM-01 | Phase 48 | Complete |
-| MEM-02 | Phase 48 | Pending |
-| MEM-03 | Phase 48 | Pending |
+| MEM-02 | Phase 48 | Complete |
+| MEM-03 | Phase 48 | Complete |
 | COG-01 | Phase 49 | Pending |
 | COG-02 | Phase 49 | Pending |
 | COG-03 | Phase 49 | Pending |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Structured Cognition Foundation
 status: unknown
-stopped_at: Completed 48-03-PLAN.md
-last_updated: "2026-03-21T12:29:18.136Z"
+stopped_at: Completed 48-04-PLAN.md
+last_updated: "2026-03-21T12:36:35.419Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 15
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State: OpenAnima
@@ -63,6 +63,7 @@ Plan: 2 of 5
 | Phase 48 P01 | 5min | 2 tasks | 6 files |
 | Phase 48-artifact-memory-foundation P02 | 8min | 2 tasks | 10 files |
 | Phase 48 P03 | 12min | 2 tasks | 6 files |
+| Phase 48 P04 | 17 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,10 @@ Recent decisions affecting current work:
 - [Phase 48]: FormatSize uses if/else in ArtifactViewer: Razor parser interprets relational patterns (< N) in switch expressions inside @code blocks as HTML tags — if/else avoids RZ1006
 - [Phase 48]: IArtifactStore optional constructor param on StepRecorder — backward-compatible DI, artifact writing is no-op when store is null
 - [Phase 48]: ArtifactFileWriter and IArtifactStore registered in RunServiceExtensions.AddRunServices — all callers get artifact support automatically
+- [Phase 48]: [Phase 48-04]: MemoryModule uses private QueryRequest/WriteRequest records — no public DTO leakage from module internals
+- [Phase 48]: [Phase 48-04]: BootMemoryInjector.InjectBootMemoriesAsync is a no-op when no core:// nodes exist — safe to call unconditionally at run start
+- [Phase 48]: [Phase 48-04]: MemoryWriteTool converts CSV keywords to JSON array inline — consistent with GlossaryIndex.Build expectations
+- [Phase 48]: [Phase 48-04]: Memory tools registered as IWorkspaceTool singletons — WorkspaceToolModule picks them up via IEnumerable<IWorkspaceTool>
 
 ### Pending Todos
 
@@ -122,6 +127,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T12:29:18.134Z
-Stopped at: Completed 48-03-PLAN.md
+Last session: 2026-03-21T12:36:35.417Z
+Stopped at: Completed 48-04-PLAN.md
 Resume file: None
