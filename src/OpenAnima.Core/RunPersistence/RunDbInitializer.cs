@@ -49,6 +49,19 @@ public class RunDbInitializer
         CREATE INDEX IF NOT EXISTS idx_run_state_events_run_id ON run_state_events(run_id, occurred_at);
         CREATE INDEX IF NOT EXISTS idx_step_events_run_id ON step_events(run_id, occurred_at);
         CREATE INDEX IF NOT EXISTS idx_step_events_propagation ON step_events(propagation_id);
+
+        CREATE TABLE IF NOT EXISTS artifacts (
+            artifact_id     TEXT NOT NULL PRIMARY KEY,
+            run_id          TEXT NOT NULL,
+            step_id         TEXT NOT NULL,
+            mime_type       TEXT NOT NULL,
+            file_path       TEXT NOT NULL,
+            file_size_bytes INTEGER NOT NULL,
+            created_at      TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_artifacts_run_id ON artifacts(run_id);
+        CREATE INDEX IF NOT EXISTS idx_artifacts_step_id ON artifacts(step_id);
         """;
 
     /// <summary>
