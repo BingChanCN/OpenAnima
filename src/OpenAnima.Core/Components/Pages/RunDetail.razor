@@ -59,12 +59,31 @@ else
 
     <h2 class="section-title">@L["RunDetail.TimelineHeading"]</h2>
 
-    @if (_timeline.Count > 100)
+    <TimelineFilterBar ModuleNames="_moduleNames"
+                       Statuses="_statuses"
+                       ChainIds="_chainIds"
+                       SelectedModule="_filterModule"
+                       SelectedStatus="_filterStatus"
+                       SelectedChain="_filterChain"
+                       HasActiveFilters="_hasActiveFilters"
+                       OnModuleFilterChanged="HandleModuleFilter"
+                       OnStatusFilterChanged="HandleStatusFilter"
+                       OnChainFilterChanged="HandleChainFilter"
+                       OnClearFilters="HandleClearFilters" />
+
+    @if (_steps.Count >= 100)
     {
-        <div class="long-timeline-banner">@L["RunDetail.LongTimelineBanner", _timeline.Count]</div>
+        <div class="long-timeline-banner">@L["RunDetail.LongTimelineBanner", _steps.Count]</div>
     }
 
-    @if (_timeline.Count == 0)
+    @if (_filteredTimeline.Count == 0 && _timeline.Count > 0)
+    {
+        <div class="empty-state">
+            <h3>@L["RunDetail.EmptyFilter.Heading"]</h3>
+            <p>@L["RunDetail.EmptyFilter.Body"]</p>
+        </div>
+    }
+    else if (_timeline.Count == 0)
     {
         <div class="empty-state">
             <h3>@L["RunDetail.EmptyTimeline.Heading"]</h3>
@@ -74,7 +93,7 @@ else
     else
     {
         <div class="timeline-list" role="list">
-            @foreach (var entry in _timeline)
+            @foreach (var entry in _filteredTimeline)
             {
                 @if (entry.IsStateEvent && entry.StateEvent != null)
                 {
@@ -84,12 +103,15 @@ else
                 else if (!entry.IsStateEvent && entry.Step != null)
                 {
                     var step = entry.Step;
+                    var isDimmed = _activeChainId != null && step.PropagationId != _activeChainId;
                     <StepTimelineRow Step="@step"
                                      IsExpanded="@(_expandedStepId == step.StepId)"
                                      IsHighlighted="@(_activeChainId != null && step.PropagationId == _activeChainId)"
-                                     IsDimmed="@(_activeChainId != null && step.PropagationId != _activeChainId)"
+                                     IsDimmed="isDimmed"
+                                     ChainStepCount="@(_steps.Count(s => s.PropagationId == step.PropagationId))"
                                      OnToggle="@(() => ToggleStep(step.StepId))"
-                                     OnChainClick="@(() => HighlightChain(step.PropagationId))" />
+                                     OnChainClick="@(() => HandleChainClick(step.PropagationId))"
+                                     OnChainFilterShortcut="@(() => HandleChainFilterShortcut(step.PropagationId))" />
                 }
             }
         </div>
@@ -109,6 +131,25 @@ else
     private string? _expandedStepId;
     private string? _activeChainId;
     private int _wallSecondsElapsed = 0;
+
+    private string? _filterModule;
+    private string? _filterStatus;
+    private string? _filterChain;
+
+    private IReadOnlyList<string> _moduleNames => _steps.Select(s => s.ModuleName).Distinct().OrderBy(n => n).ToList();
+    private IReadOnlyList<string> _statuses => _steps.Select(s => s.Status).Distinct().OrderBy(s => s).ToList();
+    private IReadOnlyList<string> _chainIds => _steps.Where(s => !string.IsNullOrEmpty(s.PropagationId)).Select(s => s.PropagationId).Distinct().OrderBy(c => c).ToList();
+    private bool _hasActiveFilters => _filterModule != null || _filterStatus != null || _filterChain != null;
+
+    private List<TimelineEntry> _filteredTimeline => _timeline.Where(e =>
+    {
+        if (e.IsStateEvent) return _filterModule == null && _filterStatus == null && _filterChain == null;
+        var step = e.Step!;
+        if (_filterModule != null && step.ModuleName != _filterModule) return false;
+        if (_filterStatus != null && step.Status != _filterStatus) return false;
+        if (_filterChain != null && step.PropagationId != _filterChain) return false;
+        return true;
+    }).ToList();
 
     private record TimelineEntry(string OccurredAt, bool IsStateEvent, StepRecord? Step, RunStateEvent? StateEvent);
 
@@ -166,10 +207,21 @@ else
         _expandedStepId = _expandedStepId == stepId ? null : stepId;
     }
 
-    private void HighlightChain(string? propagationId)
+    private void HandleChainClick(string? propagationId)
     {
         if (string.IsNullOrEmpty(propagationId)) return;
         _activeChainId = _activeChainId == propagationId ? null : propagationId;
+    }
+
+    private void HandleModuleFilter(string? value) { _filterModule = value; }
+    private void HandleStatusFilter(string? value) { _filterStatus = value; }
+    private void HandleChainFilter(string? value) { _filterChain = value; _activeChainId = null; }
+    private void HandleClearFilters() { _filterModule = null; _filterStatus = null; _filterChain = null; _activeChainId = null; }
+    private void HandleChainFilterShortcut(string? propagationId)
+    {
+        if (string.IsNullOrEmpty(propagationId)) return;
+        _filterChain = propagationId;
+        _activeChainId = null;
     }
 
     public async ValueTask DisposeAsync()

@@ -59,6 +59,16 @@
                                       @onclick="OnChainClick"
                                       @onclick:preventDefault="true"
                                       aria-label="Filter by propagation chain @Step.PropagationId">@Step.PropagationId</a>
+                @if (!string.IsNullOrEmpty(Step.PropagationId))
+                {
+                    <span> — </span>
+                    <a @onclick="OnChainFilterShortcut"
+                       @onclick:preventDefault="true"
+                       href="#"
+                       aria-label="@($"Filter by propagation chain {Step.PropagationId}")">
+                        @L["RunDetail.Step.PropagationChain", Step.PropagationId[..Math.Min(8, Step.PropagationId.Length)], ChainStepCount]
+                    </a>
+                }
             </div>
         </div>
     }
@@ -69,8 +79,10 @@
     [Parameter] public bool IsExpanded { get; set; }
     [Parameter] public bool IsHighlighted { get; set; }
     [Parameter] public bool IsDimmed { get; set; }
+    [Parameter] public int ChainStepCount { get; set; }
     [Parameter] public EventCallback OnToggle { get; set; }
     [Parameter] public EventCallback OnChainClick { get; set; }
+    [Parameter] public EventCallback OnChainFilterShortcut { get; set; }
 
     private string ChainColor => PropagationColorAssigner.GetColor(Step.PropagationId);
     private string RowClass => $"step-row {(IsExpanded ? "expanded" : "")} {(IsHighlighted ? "highlighted" : "")} {(IsDimmed ? "dimmed" : "")}".Trim();
