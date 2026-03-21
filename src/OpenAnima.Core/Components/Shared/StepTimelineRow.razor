@@ -47,12 +47,7 @@
             }
             @if (Step.ArtifactRefId != null)
             {
-                <span class="artifact-link"
-                      aria-disabled="true"
-                      tabindex="-1"
-                      title="@L["RunDetail.Step.ArtifactLinkTitle"]">
-                    @L["RunDetail.Step.ArtifactLink"]
-                </span>
+                <ArtifactViewer ArtifactRefId="@Step.ArtifactRefId" />
             }
             <div class="step-propagation">
                 Propagation chain: <a href="#"
