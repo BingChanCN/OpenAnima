@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Structured Cognition Foundation
 status: unknown
-stopped_at: Completed 48-01-PLAN.md
-last_updated: "2026-03-21T12:05:14.318Z"
+stopped_at: Completed 48-02-PLAN.md
+last_updated: "2026-03-21T12:09:14.206Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 15
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State: OpenAnima
@@ -27,7 +27,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-20)
 ## Current Position
 
 Phase: 48 (artifact-memory-foundation) — EXECUTING
-Plan: 1 of 5
+Plan: 2 of 5
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Plan: 1 of 5
 | Phase 47-run-inspection-observability P02 | 30 | 2 tasks | 5 files |
 | Phase 47-run-inspection-observability P03 | 8 | 2 tasks | 3 files |
 | Phase 48 P01 | 5min | 2 tasks | 6 files |
+| Phase 48-artifact-memory-foundation P02 | 8min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,9 @@ Recent decisions affecting current work:
 - [Phase 48-01]: ArtifactStore uses per-operation connections (same WAL pattern as RunRepository) — no shared connection state
 - [Phase 48-01]: 12-char hex artifact IDs vs 8-char step IDs for lower collision probability across runs
 - [Phase 48-01]: FileSizeBytes computed from Encoding.UTF8.GetByteCount at write time — no second file read needed
+- [Phase 48-02]: GlossaryIndex.FindMatches deduplicates by keyword via HashSet<string> — prevents duplicate results when same keyword appears multiple times in content
+- [Phase 48-02]: DisclosureMatcher.Match is static — callers pass nodes and context, no instance state needed
+- [Phase 48-02]: Aho-Corasick failure links propagate parent Matches into children during BFS Build — enables single-pass FindMatches without separate output-link traversal
 
 ### Pending Todos
 
@@ -114,6 +118,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T12:05:14.315Z
-Stopped at: Completed 48-01-PLAN.md
+Last session: 2026-03-21T12:09:14.204Z
+Stopped at: Completed 48-02-PLAN.md
 Resume file: None
