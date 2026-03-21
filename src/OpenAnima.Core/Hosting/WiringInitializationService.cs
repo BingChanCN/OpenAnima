@@ -36,6 +36,7 @@ public class WiringInitializationService : IHostedService
         typeof(AnimaOutputPortModule),
         typeof(AnimaRouteModule),
         typeof(HttpRequestModule),
+        typeof(JoinBarrierModule),
         typeof(WorkspaceToolModule)
     };
 
@@ -57,6 +58,7 @@ public class WiringInitializationService : IHostedService
         typeof(AnimaOutputPortModule),
         typeof(AnimaRouteModule),
         typeof(HttpRequestModule),
+        typeof(JoinBarrierModule),
         typeof(WorkspaceToolModule)
     };
 

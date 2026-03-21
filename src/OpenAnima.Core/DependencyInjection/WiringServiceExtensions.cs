@@ -60,6 +60,7 @@ public static class WiringServiceExtensions
         services.AddSingleton<AnimaOutputPortModule>();
         services.AddSingleton<AnimaRouteModule>();
         services.AddSingleton<HttpRequestModule>();
+        services.AddSingleton<JoinBarrierModule>();
 
         services.AddSingleton<ModuleSchemaService>();
 

@@ -202,11 +202,13 @@ public class JoinBarrierModuleTests
 
         public async Task PublishAsync<TPayload>(ModuleEvent<TPayload> evt, CancellationToken ct = default)
         {
-            if (typeof(TPayload) == typeof(string) && evt.Payload is string strPayload)
+            // Only capture output events (not internal input re-publications)
+            if (typeof(TPayload) == typeof(string) && evt.Payload is string strPayload
+                && evt.EventName.EndsWith(".port.output"))
                 Published.Add((evt.EventName, strPayload));
 
-            foreach (var (name, handler) in _subs.Where(s => s.name == evt.EventName).ToList())
-                await handler(evt, ct);
+            foreach (var sub in _subs.Where(s => s.EventName == evt.EventName).ToList())
+                await sub.Handler(evt, ct);
         }
     }
 
