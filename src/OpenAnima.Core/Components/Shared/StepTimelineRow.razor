@@ -1,0 +1,97 @@
+@using OpenAnima.Core.Runs
+@inject IStringLocalizer<SharedResources> L
+
+<div class="@RowClass"
+     role="listitem"
+     tabindex="0"
+     @onclick="OnToggle"
+     @onkeydown="HandleKeyDown"
+     style="border-left: 3px solid @ChainColor;">
+    <div class="step-row-content">
+        <span class="step-status @StatusClass">@StatusIcon</span>
+        <span class="step-module">@Step.ModuleName</span>
+        @if (Step.DurationMs.HasValue)
+        {
+            <span class="step-duration">@(Step.DurationMs)ms</span>
+        }
+        <span class="step-time">@Step.OccurredAt[..19]</span>
+        <span class="step-chevron">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </span>
+    </div>
+
+    @if (IsExpanded)
+    {
+        <div class="step-detail">
+            @if (Step.InputSummary != null)
+            {
+                <div class="step-field">
+                    <label>@L["RunDetail.Step.Input"]</label>
+                    <pre class="step-content">@Step.InputSummary</pre>
+                </div>
+            }
+            @if (Step.OutputSummary != null)
+            {
+                <div class="step-field">
+                    <label>@L["RunDetail.Step.Output"]</label>
+                    <pre class="step-content">@Step.OutputSummary</pre>
+                </div>
+            }
+            @if (Step.ErrorInfo != null)
+            {
+                <div class="step-error">
+                    <pre>@Step.ErrorInfo</pre>
+                </div>
+            }
+            @if (Step.ArtifactRefId != null)
+            {
+                <span class="artifact-link"
+                      aria-disabled="true"
+                      tabindex="-1"
+                      title="@L["RunDetail.Step.ArtifactLinkTitle"]">
+                    @L["RunDetail.Step.ArtifactLink"]
+                </span>
+            }
+            <div class="step-propagation">
+                Propagation chain: <a href="#"
+                                      @onclick="OnChainClick"
+                                      @onclick:preventDefault="true"
+                                      aria-label="Filter by propagation chain @Step.PropagationId">@Step.PropagationId</a>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public StepRecord Step { get; set; } = default!;
+    [Parameter] public bool IsExpanded { get; set; }
+    [Parameter] public bool IsHighlighted { get; set; }
+    [Parameter] public bool IsDimmed { get; set; }
+    [Parameter] public EventCallback OnToggle { get; set; }
+    [Parameter] public EventCallback OnChainClick { get; set; }
+
+    private string ChainColor => PropagationColorAssigner.GetColor(Step.PropagationId);
+    private string RowClass => $"step-row {(IsExpanded ? "expanded" : "")} {(IsHighlighted ? "highlighted" : "")} {(IsDimmed ? "dimmed" : "")}".Trim();
+    private string StatusIcon => Step.Status switch
+    {
+        "Completed" => "✓",
+        "Failed" => "✗",
+        "Running" => "●",
+        _ => "○"
+    };
+    private string StatusClass => Step.Status switch
+    {
+        "Completed" => "status-completed",
+        "Failed" => "status-failed",
+        "Running" => "status-running",
+        _ => "status-default"
+    };
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+            await OnToggle.InvokeAsync();
+    }
+}

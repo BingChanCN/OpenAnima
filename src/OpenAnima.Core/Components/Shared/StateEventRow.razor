@@ -1,0 +1,20 @@
+@using OpenAnima.Core.Runs
+
+<div class="state-event-row" role="listitem">
+    <span class="state-event-icon">◆</span>
+    <span class="state-event-text">
+        @Event.State@(Event.Reason != null ? $" — {Event.Reason}" : "")
+    </span>
+    <span class="state-event-time">@Event.OccurredAt[..19]</span>
+</div>
+
+<style>
+    .state-event-row { display: flex; align-items: center; gap: 8px; padding: 6px 16px; background: var(--surface-dark); border-bottom: 1px solid var(--border-color); min-height: 32px; }
+    .state-event-icon { color: var(--text-muted); font-size: 10px; width: 20px; text-align: center; }
+    .state-event-text { font-size: 12px; color: var(--text-muted); flex: 1; }
+    .state-event-time { font-size: 12px; color: var(--text-muted); }
+</style>
+
+@code {
+    [Parameter] public RunStateEvent Event { get; set; } = default!;
+}
