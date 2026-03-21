@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openanima.io/schemas/module.json",
+  "schemaVersion": "1.0",
+  "id": "PortModule",
+  "name": "PortModule",
+  "version": "1.0.0",
+  "description": "The PortModule module",
+  "author": "",
+  "entryAssembly": "PortModule.dll",
+  "openanima": {
+    "minVersion": "1.4.0"
+  },
+  "ports": {
+    "inputs": [],
+    "outputs": []
+  }
+}

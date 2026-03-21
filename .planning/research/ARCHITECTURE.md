@@ -1,333 +1,233 @@
-# Architecture Patterns
+# Architecture Research
 
-**Domain:** SDK Runtime Parity — PluginLoader DI, IModuleContext.DataDirectory, LLM structured input, external ContextModule
-**Researched:** 2026-03-16
-**Confidence:** HIGH (all conclusions from direct codebase inspection — no external sources needed)
+**Domain:** OpenAnima v2.0 Structured Cognition Foundation — local-first graph runtime for developer agents
+**Researched:** 2026-03-20
+**Confidence:** HIGH
 
----
+## Standard Architecture
 
-## Current Architecture (v1.7 Baseline)
+### System Overview
 
-```
-IServiceProvider (singleton DI container)
-  ├── AnimaContext  (implements IModuleContext — ActiveAnimaId, ActiveAnimaChanged)
-  ├── AnimaModuleConfigService  (implements IModuleConfig — per-Anima per-module config)
-  ├── ICrossAnimaRouter
-  ├── IEventBus  (global singleton — known limitation ANIMA-08)
-  ├── LLMModule, ChatInputModule, ... (12 built-in modules — AddSingleton, full DI)
-  └── AnimaRuntimeManager
-        └── AnimaRuntime (per-Anima)
-              ├── EventBus (isolated)
-              ├── PluginRegistry (isolated)
-              ├── HeartbeatLoop
-              ├── WiringEngine
-              └── ActivityChannelHost (3 named channels: heartbeat/chat/routing)
-
-PluginLoader (standalone, no DI)
-  └── Activator.CreateInstance(moduleType)  ← zero DI, parameterless constructor only
-```
-
-**The gap:** External modules loaded via PluginLoader get no services. Built-in modules get
-full DI because they are registered with `services.AddSingleton<T>()` and resolved by the
-container. External modules bypass the container entirely.
-
----
-
-## v1.8 Integration Points
-
-### PLUG-01: PluginLoader DI Injection
-
-**What needs to change:** `PluginLoader.LoadModule()` currently calls
-`Activator.CreateInstance(moduleType)` with no arguments. It needs to resolve constructor
-parameters from `IServiceProvider` instead.
-
-**Constraint — cross-context type identity:** The external module's constructor parameter
-types (e.g. `IModuleConfig`) are loaded from the plugin's `PluginLoadContext`, not the
-host's. Direct `ActivatorUtilities.CreateInstance(sp, moduleType)` will fail because the
-host's `IModuleConfig` type identity does not match the plugin's loaded copy.
-
-**Solution — reflection-based service injection:**
-Inspect constructor parameters by `FullName`, resolve matching services from
-`IServiceProvider` by interface FullName comparison, then invoke the constructor via
-`ConstructorInfo.Invoke`. This mirrors the existing duck-typing pattern already used for
-`ITickable` in `HeartbeatLoop`.
-
-**Component changes:**
-
-| Component | Change Type | What Changes |
-|-----------|-------------|--------------|
-| `PluginLoader` | Modify | Accept `IServiceProvider` in constructor; replace `Activator.CreateInstance` with reflection-based injection |
-| `AnimaServiceExtensions` or `AnimaRuntime` | Modify | Pass `IServiceProvider` when constructing `PluginLoader` |
-
-**New injection flow:**
-```
-PluginLoader.LoadModule(moduleDirectory)
-  → reflect constructor parameters by FullName
-  → for each param: match against known Contracts interface FullNames
-  → resolve from IServiceProvider: IModuleConfig, IModuleContext, IEventBus, ICrossAnimaRouter
-  → invoke constructor with resolved args (null for unresolvable optional params)
-  → call InitializeAsync()
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Experience / Control Layer                      │
+├─────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
+│  │ Visual Graph │  │ Run Timeline │  │ Artifact /   │              │
+│  │ Editor       │  │ Inspector    │  │ Report Views │              │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘              │
+│         │                 │                 │                      │
+├─────────┴─────────────────┴─────────────────┴──────────────────────┤
+│                   Task / Cognition Runtime Layer                   │
+├─────────────────────────────────────────────────────────────────────┤
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │ Task Orchestrator / Run Manager                              │  │
+│  │ - create/resume/cancel runs                                  │  │
+│  │ - bind workspace + objective                                 │  │
+│  │ - enforce budgets / stop conditions                          │  │
+│  └──────────────┬────────────────────────────────────────────────┘  │
+│                 │                                                   │
+│  ┌──────────────┴──────────────┐   ┌─────────────────────────────┐  │
+│  │ WiringEngine + Event Fanout │   │ ActivityChannelHost Lanes   │  │
+│  │ CrossAnimaRouter            │   │ heartbeat / chat / routing  │  │
+│  └──────────────┬──────────────┘   └──────────────┬──────────────┘  │
+│                 │                                 │                 │
+│  ┌──────────────┴──────────────┐   ┌──────────────┴──────────────┐  │
+│  │ LLM / Tool / Memory Modules │   │ Run Timeline Projection     │  │
+│  └─────────────────────────────┘   └─────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────────┤
+│                 Persistence / Workspace / Telemetry                │
+├─────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
+│  │ SQLite Run   │  │ Artifact     │  │ OpenTelemetry│              │
+│  │ Store        │  │ Store + FTS  │  │ + Logs       │              │
+│  └──────────────┘  └──────────────┘  └──────────────┘              │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │ Workspace Service (repo root, file IO, rg, git, commands)    │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-**Services injectable into external modules (Contracts surface only):**
-- `IModuleConfig` — per-Anima per-module config (singleton in DI)
-- `IModuleContext` — ActiveAnimaId + ActiveAnimaChanged event (singleton in DI)
-- `IEventBus` — global singleton (ANIMA-08 known limitation, acceptable for v1.8)
-- `ICrossAnimaRouter` — cross-Anima routing (singleton in DI)
+### Component Responsibilities
 
-**PortModule canary** already declares these as optional constructor parameters — it will
-validate injection without any changes to the module itself.
+| Component | Responsibility | Typical Implementation |
+|-----------|----------------|------------------------|
+| Task Orchestrator | Owns run lifecycle, objectives, cancellation, resume, and budgets | Application service over existing runtime primitives plus SQLite-backed state |
+| WiringEngine | Owns graph fan-out and per-target delivery | Keep existing event-driven routing model and extend it with run metadata |
+| ActivityChannelHost | Owns serial execution lanes and queue-pressure signals | Keep existing channel host; add run-aware metrics and backpressure surfacing |
+| Workspace Service | Owns repo root, file search/read, git access, and bounded command execution | Thin adapters over filesystem + external CLI tools |
+| Artifact Store | Owns durable outputs, notes, partial reports, and source-linked files | File-backed artifacts with SQLite metadata rows |
+| Memory Index | Owns retrieval over artifacts and summaries | SQLite FTS5 and provenance metadata first |
+| Run Inspector | Owns user-facing replay/debug surfaces | Blazor + SignalR projections over persisted run/step state |
 
----
+## Recommended Project Structure
 
-### STOR-01: IModuleContext.DataDirectory
-
-**What needs to change:** `IModuleContext` in `OpenAnima.Contracts` currently exposes only
-`ActiveAnimaId` and `ActiveAnimaChanged`. It needs a method that returns a per-Anima
-per-module storage path.
-
-**Path convention:**
-```
-data/animas/{animaId}/module-data/{moduleId}/
-```
-This mirrors the existing `module-configs/{moduleId}.json` pattern in
-`AnimaModuleConfigService`.
-
-**Component changes:**
-
-| Component | Change Type | What Changes |
-|-----------|-------------|--------------|
-| `IModuleContext` (Contracts) | Modify | Add `string GetDataDirectory(string moduleId)` method |
-| `AnimaContext` (Core) | Modify | Implement `GetDataDirectory` — constructs path from `animasRoot + ActiveAnimaId + "module-data" + moduleId`, calls `Directory.CreateDirectory` |
-| `AnimaServiceExtensions` | Modify | Pass `animasRoot` to `AnimaContext` constructor (currently `AnimaContext` has no constructor params) |
-
-**Design decision — method vs property:**
-`GetDataDirectory(string moduleId)` as a method (not a property) because the path is
-module-specific. A module calls `_context.GetDataDirectory(Metadata.Name)` and gets a
-ready-to-use path.
-
-**Directory creation:** `GetDataDirectory` creates the directory on first call (same
-pattern as `AnimaModuleConfigService.GetConfigPath`). Modules do not need to call
-`Directory.CreateDirectory` themselves.
-
----
-
-### MSG-01: LLMModule Structured Message List Input
-
-**Current state:** `LLMModule` subscribes to `LLMModule.port.prompt` (a `string` event).
-Internally it already builds a `List<ChatMessageInput>` — it adds a system message if
-routing is configured, then appends the user string as a single user message. The
-`ChatMessageInput` record lives in `OpenAnima.Core.LLM` (not Contracts).
-
-**What needs to change:** Add a second input port that accepts a pre-built message list,
-allowing an upstream module (ContextModule) to pass conversation history directly.
-
-**Recommended approach — JSON-serialized Text port:**
-Avoid adding a new `PortType` enum value (breaking change to Contracts, affects port
-validation, editor rendering, all existing port type switches). Instead, define a
-convention: the `messages` port carries a JSON-serialized `List<ChatMessageInput>`.
-`LLMModule` deserializes on receipt. This is consistent with how `ConditionalBranchModule`
-passes expression strings through Text ports.
-
-**ChatMessageInput location:** Currently in `OpenAnima.Core.LLM`. For external modules
-(ContextModule) to construct `ChatMessageInput` values, the record must move to
-`OpenAnima.Contracts`. `ILLMService` also lives in Core — it stays there for v1.8
-(PROJECT.md notes this as known debt).
-
-**Component changes:**
-
-| Component | Change Type | What Changes |
-|-----------|-------------|--------------|
-| `ChatMessageInput` record | Move | `OpenAnima.Core.LLM` → `OpenAnima.Contracts` |
-| `LLMModule` | Modify | Add `[InputPort("messages", PortType.Text)]`; subscribe to `LLMModule.port.messages`; deserialize JSON to `List<ChatMessageInput>`; prepend system message if routing configured; `messages` port takes precedence over `prompt` port |
-| `ILLMService` | No change | Stays in Core for v1.8 |
-
-**Port priority:** When both `prompt` and `messages` ports receive data in the same tick,
-`messages` takes precedence (it carries full history). `prompt` remains for backward
-compatibility with existing single-turn wiring configurations.
-
----
-
-### ECTX-01: External ContextModule
-
-**What it is:** An external SDK module (lives outside Core, loaded via PluginLoader) that:
-1. Subscribes to `ChatInputModule.port.userMessage` — receives user input
-2. Maintains an in-memory conversation history (`List<ChatMessageInput>`)
-3. Appends the new user message to history
-4. Serializes history to JSON
-5. Publishes to `ContextModule.port.messages` (Text port, JSON payload)
-6. LLMModule receives the full history on its `messages` port
-7. Subscribes to `LLMModule.port.response` — appends assistant response to history
-
-**Dependencies this module needs (all injectable via PLUG-01):**
-- `IEventBus` — subscribe to user messages, publish to LLM messages port
-- `IModuleContext` — get `ActiveAnimaId` for storage path (via STOR-01)
-- `IModuleConfig` — read config (e.g. max history length)
-
-**Storage:** Uses `IModuleContext.GetDataDirectory("ContextModule")` to persist history
-across sessions. On `InitializeAsync`, loads history from disk. On each message, appends
-and persists.
-
-**Component:** New file, external to Core. Lives in a separate project (e.g.
-`ContextModule/`). No changes to Core required beyond PLUG-01, STOR-01, MSG-01.
-
----
-
-## Data Flow After v1.8
-
-### Single-turn (existing, unchanged)
-```
-User types → ChatInputModule → [chat channel] → EventBus
-  → LLMModule.port.prompt (string)
-  → LLMModule builds [user message]
-  → LLM API call
-  → ChatOutputModule → UI
+```text
+src/
+├── OpenAnima.Contracts/                 # shared runtime contracts
+│   ├── Tasks/                           # run, step, artifact contract types
+│   ├── Workspace/                       # tool/workspace abstractions
+│   └── Memory/                          # retrieval record contracts
+├── OpenAnima.Core/                      # host runtime + UI
+│   ├── Runtime/
+│   │   ├── Tasks/                       # TaskOrchestrator, run lifecycle, budgets
+│   │   ├── Observability/               # timeline projection, telemetry hooks
+│   │   └── Execution/                   # run metadata propagation helpers
+│   ├── Workspace/                       # rg/git/command/file adapters
+│   ├── Persistence/
+│   │   ├── Sqlite/                      # run/event/artifact tables
+│   │   └── Artifacts/                   # on-disk artifact storage
+│   ├── Memory/                          # retrieval/index services
+│   ├── Components/
+│   │   ├── Pages/                       # run inspector / artifacts / task views
+│   │   └── Shared/                      # timeline cards, step inspectors
+│   └── Wiring/                          # existing graph runtime (extend, don’t replace)
+└── OpenAnima.Cli/                       # developer tooling and packaging
 ```
 
-### Multi-turn with ContextModule (new)
-```
-User types → ChatInputModule → [chat channel] → EventBus
-  → ContextModule.port.userMessage (string)
-  → ContextModule appends to history List<ChatMessageInput>
-  → ContextModule serializes to JSON
-  → ContextModule publishes to ContextModule.port.messages (Text/JSON)
-  → WiringEngine routes to LLMModule.port.messages
-  → LLMModule deserializes List<ChatMessageInput>
-  → LLMModule prepends system message if routing configured
-  → LLM API call with full history
-  → ChatOutputModule → UI
-  → ContextModule subscribes to LLMModule.port.response
-  → ContextModule appends assistant response to history
-  → ContextModule persists history to DataDirectory
-```
+### Structure Rationale
 
----
+- **Contracts/** should hold new run/workspace/memory types so built-in and external modules can participate in the same task model.
+- **Core/Runtime/** should own lifecycle and orchestration, because this is product logic, not just UI glue.
+- **Core/Workspace/** should isolate OS/process interactions from graph logic.
+- **Core/Persistence/** should separate file artifacts from SQLite metadata to keep the storage model debuggable.
+- **Wiring/** stays central: v2.0 should extend the existing runtime rather than create a parallel orchestration engine.
 
-## Component Boundary Map
+## Architectural Patterns
 
-```
-OpenAnima.Contracts (public SDK surface — changes in v1.8)
-  ├── IModule, IModuleExecutor, IModuleMetadata
-  ├── IModuleConfig
-  ├── IModuleContext  (+ GetDataDirectory — new method)
-  ├── IEventBus, ICrossAnimaRouter
-  ├── ChatMessageInput  (moved from Core.LLM — new)
-  └── Ports/, Routing/
+### Pattern 1: Run-Centric Orchestration
 
-OpenAnima.Core (runtime host — changes in v1.8)
-  ├── Plugins/PluginLoader       (modify: accept IServiceProvider, reflection-based injection)
-  ├── Anima/AnimaContext          (modify: implement GetDataDirectory, accept animasRoot)
-  ├── DependencyInjection/AnimaServiceExtensions  (modify: pass animasRoot to AnimaContext)
-  ├── Modules/LLMModule           (modify: add messages port, use ChatMessageInput from Contracts)
-  └── LLM/ILLMService             (no change — stays in Core)
+**What:** Every long-running user objective becomes a durable run with identity, status, budgets, and step history.
+**When to use:** Any workflow that must survive refresh, inspection, retry, or restart.
+**Trade-offs:** Adds persistence and bookkeeping, but prevents invisible work and lost progress.
 
-ContextModule/ (new external project)
-  └── ContextModule.cs            (new: IModuleExecutor, uses IEventBus + IModuleContext + IModuleConfig)
+**Example:**
+```csharp
+public sealed record TaskRun(
+    Guid RunId,
+    string Objective,
+    string WorkspaceRoot,
+    string Status,
+    int StepBudget,
+    DateTime CreatedAtUtc);
 ```
 
----
+### Pattern 2: Append-Only Step Timeline + Current-State Projection
 
-## Build Order
+**What:** Record execution as append-only events/steps, then project them into current UI state.
+**When to use:** Multi-node execution where users need replay/debug visibility.
+**Trade-offs:** Slightly more write volume, but much better explainability and recovery.
 
-Dependencies flow strictly in this order — each step unblocks the next:
+**Example:**
+```csharp
+await runStore.AppendStepAsync(new RunStepEvent(
+    runId,
+    moduleId,
+    "Started",
+    DateTime.UtcNow));
+```
 
-**Step 1 — Move ChatMessageInput to Contracts**
-Unblocks: ContextModule can reference it. LLMModule still compiles (same type, new namespace).
-Risk: Any Core code importing `OpenAnima.Core.LLM.ChatMessageInput` needs namespace update.
-Scope: `OpenAnima.Contracts` (add record), `OpenAnima.Core.LLM` (remove record, add shim or
-update usings), `LLMModule.cs` (update using).
+### Pattern 3: Tool Adapter Boundary
 
-**Step 2 — Add IModuleContext.GetDataDirectory**
-Unblocks: AnimaContext implementation, ContextModule storage.
-No downstream breakage — additive interface change.
-Scope: `OpenAnima.Contracts/IModuleContext.cs` (add method signature).
+**What:** Wrap file search, git, and command execution behind normalized services/contracts.
+**When to use:** Any external process or filesystem interaction.
+**Trade-offs:** More wrapper code up front, but safer permissions, better telemetry, and testability.
 
-**Step 3 — Implement AnimaContext.GetDataDirectory**
-Requires: Step 2 (interface), animasRoot passed to AnimaContext constructor.
-Unblocks: ContextModule can call `_context.GetDataDirectory(...)`.
-Scope: `AnimaContext.cs` (add constructor param + implementation),
-`AnimaServiceExtensions.cs` (pass animasRoot).
+**Example:**
+```csharp
+public interface IWorkspaceCommandRunner
+{
+    Task<CommandResult> RunAsync(WorkspaceCommand command, CancellationToken ct);
+}
+```
 
-**Step 4 — PluginLoader DI injection**
-Requires: Steps 1-3 complete (so injected services expose full v1.8 surface).
-Unblocks: External modules receive all Contracts services.
-Scope: `PluginLoader.cs` (add IServiceProvider param, replace Activator.CreateInstance).
+### Pattern 4: Provenance-Backed Memory
 
-**Step 5 — LLMModule messages port**
-Requires: Step 1 (ChatMessageInput in Contracts).
-Can be done in parallel with Steps 2-4.
-Scope: `LLMModule.cs` (add port attribute, add subscription, add deserialization).
+**What:** Store memory as summaries, notes, or extracted facts that link back to artifacts and run steps.
+**When to use:** Retrieval for long-running developer tasks.
+**Trade-offs:** Less magical than opaque vector memory, but far more auditable.
 
-**Step 6 — ContextModule (external)**
-Requires: Steps 1-5 complete.
-Validates the entire v1.8 surface end-to-end.
-Scope: New project `ContextModule/`.
+## Data Flow
 
----
+### Request Flow
 
-## Anti-Patterns to Avoid
+```text
+[User Objective]
+    ↓
+[Task Orchestrator] → [Run Store] → [Wiring / Modules] → [Artifacts + Timeline]
+    ↓                     ↓              ↓                    ↓
+[Run Inspector UI] ← [Projection] ← [Telemetry] ← [Workspace / LLM / Memory]
+```
 
-### Anti-Pattern 1: ActivatorUtilities.CreateInstance for cross-context types
-**What:** Using `ActivatorUtilities.CreateInstance(serviceProvider, pluginType)` directly.
-**Why bad:** The plugin's `IModuleConfig` type loaded in `PluginLoadContext` has a different
-identity than the host's `IModuleConfig`. The DI container cannot match them — throws at
-runtime with `InvalidOperationException`.
-**Instead:** Reflect constructor parameters by `FullName`, resolve from `IServiceProvider`
-by interface name, invoke constructor via `ConstructorInfo.Invoke`. Same pattern as the
-existing duck-typing for `ITickable`.
+### State Management
 
-### Anti-Pattern 2: Adding PortType.MessageList to Contracts
-**What:** New enum value for structured message payloads.
-**Why bad:** Breaks port validation, editor rendering, and all existing port type switches
-in WiringEngine, PortTypeValidator, and the SVG editor. Requires coordinated changes across
-multiple components.
-**Instead:** JSON-serialize `List<ChatMessageInput>` over existing `PortType.Text` port.
-Convention documented in module metadata description field.
+```text
+[SQLite Run Store]
+    ↓ (project)
+[Runtime Services] ←→ [Module / Tool Events] → [Timeline / Artifact Projections]
+    ↓
+[SignalR / Blazor UI]
+```
 
-### Anti-Pattern 3: Moving ILLMService to Contracts in v1.8
-**What:** Moving `ILLMService` alongside `ChatMessageInput` to Contracts.
-**Why bad:** `ILLMService` exposes `IAsyncEnumerable<StreamingResult>` — streaming is a
-Core concern. External modules should not call LLM directly; they compose via ports.
-**Instead:** Only `ChatMessageInput` moves to Contracts. `ILLMService` stays in Core.
+### Key Data Flows
 
-### Anti-Pattern 4: Storing conversation history in LLMModule
-**What:** Adding history accumulation directly to `LLMModule`.
-**Why bad:** LLMModule is a singleton shared across Animas (ANIMA-08). Per-Anima history
-stored in a singleton creates cross-Anima contamination.
-**Instead:** History lives in ContextModule (external, stateful per-Anima via DataDirectory).
-LLMModule remains stateless — it receives a complete message list each call.
+1. **Developer task flow:** user submits objective → run created → graph executes workspace tools → artifacts written → memory records extracted → final report shown.
+2. **Inspection flow:** persisted steps/events → projection service → live UI timeline with per-node inputs, outputs, errors, and durations.
+3. **Memory reinjection flow:** prior artifacts/summaries retrieved by workspace + objective → memory module injects them into the next run path.
 
-### Anti-Pattern 5: IModuleContext.DataDirectory as a property
-**What:** `string DataDirectory { get; }` on `IModuleContext`.
-**Why bad:** The path is module-specific. A property would return the same path for all
-modules using the same context instance, or require the module to pass its own ID in a
-separate call anyway.
-**Instead:** `string GetDataDirectory(string moduleId)` as a method. The module passes
-`Metadata.Name` and gets back a ready-to-use, already-created directory path.
+## Scaling Considerations
 
----
+| Scale | Architecture Adjustments |
+|-------|--------------------------|
+| Single-user local app | Keep monolith, SQLite, file artifacts, in-process channels |
+| Heavy local power-user workflows | Add quotas, artifact pruning, bounded command concurrency, and selective step payload storage |
+| Future remote/multi-user product | Only then consider external DB, remote workers, and OTLP backends |
 
-## Scalability Considerations
+### Scaling Priorities
 
-| Concern | v1.8 (current) | Future |
-|---------|----------------|--------|
-| Module instance isolation | Global singleton (ANIMA-08 deferred) | Per-Anima instances when ANIMA-08 resolved |
-| History storage | In-memory + DataDirectory JSON file | Could swap to SQLite per module |
-| DI injection scope | IServiceProvider singleton services only | Per-Anima scoped services when ANIMA-08 resolved |
-| Cross-context type matching | FullName string comparison | No change needed — already proven pattern |
+1. **First bottleneck:** unbounded step/event volume — solve with projections, payload truncation, and artifact summaries.
+2. **Second bottleneck:** workspace tool throughput — solve with explicit concurrency limits and cached repo snapshots, not distributed systems.
 
----
+## Anti-Patterns
+
+### Anti-Pattern 1: Putting all cognition inside one LLM node
+
+**What people do:** treat the graph as decoration while a single prompt loop does the real work.
+**Why it's wrong:** destroys inspectability, weakens structure-driven cognition, and makes failures opaque.
+**Do this instead:** keep planning, tool use, memory lookup, and routing as separate visible graph steps.
+
+### Anti-Pattern 2: Building a second orchestration system beside WiringEngine
+
+**What people do:** add a hidden task engine that bypasses the event-driven graph.
+**Why it's wrong:** duplicates semantics, splits debugging surfaces, and makes the editor dishonest.
+**Do this instead:** attach run metadata, budgets, and persistence to the existing graph/runtime primitives.
+
+## Integration Points
+
+### External Services
+
+| Service | Integration Pattern | Notes |
+|---------|---------------------|-------|
+| LLM provider | Existing `ILLMService` / OpenAI-compatible client | Keep provider abstraction; v2.0 is about orchestration, not model-provider expansion |
+| ripgrep / git / shell commands | Process adapters with explicit workspace root and timeout | Capture stdout/stderr/exit code as run artifacts |
+| SQLite | Embedded local persistence layer | Use for run/step/artifact metadata and FTS-backed retrieval |
+| OpenTelemetry | Host instrumentation + local exporter first | Useful for deep debugging before adding remote telemetry backends |
+
+### Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| Task Orchestrator ↔ WiringEngine | events + run metadata | Orchestrator should not bypass graph semantics |
+| Workspace Service ↔ Tool Modules | explicit service/contracts | Keep OS/process logic out of module business logic |
+| Artifact Store ↔ Memory Index | append + index | Every retrieved memory item should point back to a durable artifact |
+| Run Store ↔ UI | projection + SignalR | UI should consume projections, not raw execution internals |
 
 ## Sources
 
-- Codebase direct analysis: `PluginLoader.cs`, `AnimaContext.cs`, `LLMModule.cs`,
-  `AnimaServiceExtensions.cs`, `AnimaModuleConfigService.cs`, `AnimaRuntime.cs`,
-  `IModuleContext.cs`, `IModuleConfig.cs`, `ILLMService.cs`, `PortModule.cs`,
-  `WiringServiceExtensions.cs`, `AnimaRuntimeManager.cs`
-- Confidence: HIGH — all findings from direct source inspection
-- Known decisions from PROJECT.md: ANIMA-08 (global IEventBus singleton), ILLMService stays in Core
+- Direct codebase inspection: `WiringEngine`, `ActivityChannelHost`, `ModuleStorageService`, `EditorStateService`
+- `.planning/PROJECT.md` — validated current architecture and deferred constraints
+- Official docs referenced in stack research: OpenTelemetry .NET, Microsoft.Data.Sqlite, SQLite FTS5
 
 ---
-
-*Architecture research for: OpenAnima v1.8 SDK Runtime Parity*
-*Researched: 2026-03-16*
+*Architecture research for: OpenAnima v2.0 Structured Cognition Foundation*
+*Researched: 2026-03-20*
