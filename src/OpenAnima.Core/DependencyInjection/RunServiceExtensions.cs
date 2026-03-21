@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using OpenAnima.Core.Artifacts;
 using OpenAnima.Core.Hosting;
+using OpenAnima.Core.Memory;
 using OpenAnima.Core.RunPersistence;
 using OpenAnima.Core.Runs;
+using OpenAnima.Core.Tools;
 
 namespace OpenAnima.Core.DependencyInjection;
 
@@ -13,7 +15,8 @@ public static class RunServiceExtensions
 {
     /// <summary>
     /// Registers all run-related services: database factory, repository, run service,
-    /// step recorder, and crash recovery hosted service.
+    /// step recorder, crash recovery hosted service, memory graph, boot injector,
+    /// and memory workspace tools.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="dataRoot">Optional data root directory. Defaults to 'data' in app base directory.</param>
@@ -41,6 +44,15 @@ public static class RunServiceExtensions
 
         // Recovery service runs on startup — detects and marks crashed runs as Interrupted
         services.AddHostedService<RunRecoveryService>();
+
+        // Memory graph
+        services.AddSingleton<IMemoryGraph, MemoryGraph>();
+        services.AddSingleton<BootMemoryInjector>();
+
+        // Memory workspace tools (picked up by WorkspaceToolModule via IEnumerable<IWorkspaceTool>)
+        services.AddSingleton<IWorkspaceTool, MemoryQueryTool>();
+        services.AddSingleton<IWorkspaceTool, MemoryWriteTool>();
+        services.AddSingleton<IWorkspaceTool, MemoryDeleteTool>();
 
         return services;
     }
