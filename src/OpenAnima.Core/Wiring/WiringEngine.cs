@@ -159,17 +159,26 @@ public class WiringEngine : IWiringEngine
                         var stepId = _stepRecorder != null
                             ? await _stepRecorder.RecordStepStartAsync(_animaId, targetModuleRuntimeName, inputSummary, propagationId: null, ct)
                             : null;
-                        try
+                        using (_logger.BeginScope(new Dictionary<string, object?>
                         {
-                            await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
-                            if (_stepRecorder != null && stepId != null)
-                                await _stepRecorder.RecordStepCompleteAsync(stepId, targetModuleRuntimeName, evt.Payload?.ToString(), ct);
-                        }
-                        catch (Exception ex)
+                            ["RunId"] = _animaId,
+                            ["StepId"] = stepId,
+                            ["SourceModule"] = sourceModuleRuntimeName,
+                            ["TargetModule"] = targetModuleRuntimeName
+                        }))
                         {
-                            if (_stepRecorder != null && stepId != null)
-                                await _stepRecorder.RecordStepFailedAsync(stepId, targetModuleRuntimeName, ex, ct);
-                            throw;
+                            try
+                            {
+                                await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
+                                if (_stepRecorder != null && stepId != null)
+                                    await _stepRecorder.RecordStepCompleteAsync(stepId, targetModuleRuntimeName, evt.Payload?.ToString(), ct);
+                            }
+                            catch (Exception ex)
+                            {
+                                if (_stepRecorder != null && stepId != null)
+                                    await _stepRecorder.RecordStepFailedAsync(stepId, targetModuleRuntimeName, ex, ct);
+                                throw;
+                            }
                         }
                     }
                     finally
@@ -188,18 +197,27 @@ public class WiringEngine : IWiringEngine
                         var stepId = _stepRecorder != null
                             ? await _stepRecorder.RecordStepStartAsync(_animaId, targetModuleRuntimeName, inputSummary, propagationId: null, ct)
                             : null;
-                        try
+                        using (_logger.BeginScope(new Dictionary<string, object?>
                         {
-                            await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
-                            // Trigger ports have no meaningful text output — pass null to skip non-productive detection
-                            if (_stepRecorder != null && stepId != null)
-                                await _stepRecorder.RecordStepCompleteAsync(stepId, targetModuleRuntimeName, outputSummary: null, ct);
-                        }
-                        catch (Exception ex)
+                            ["RunId"] = _animaId,
+                            ["StepId"] = stepId,
+                            ["SourceModule"] = sourceModuleRuntimeName,
+                            ["TargetModule"] = targetModuleRuntimeName
+                        }))
                         {
-                            if (_stepRecorder != null && stepId != null)
-                                await _stepRecorder.RecordStepFailedAsync(stepId, targetModuleRuntimeName, ex, ct);
-                            throw;
+                            try
+                            {
+                                await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
+                                // Trigger ports have no meaningful text output — pass null to skip non-productive detection
+                                if (_stepRecorder != null && stepId != null)
+                                    await _stepRecorder.RecordStepCompleteAsync(stepId, targetModuleRuntimeName, outputSummary: null, ct);
+                            }
+                            catch (Exception ex)
+                            {
+                                if (_stepRecorder != null && stepId != null)
+                                    await _stepRecorder.RecordStepFailedAsync(stepId, targetModuleRuntimeName, ex, ct);
+                                throw;
+                            }
                         }
                     }
                     finally
@@ -218,17 +236,26 @@ public class WiringEngine : IWiringEngine
                         var stepId = _stepRecorder != null
                             ? await _stepRecorder.RecordStepStartAsync(_animaId, targetModuleRuntimeName, inputSummary, propagationId: null, ct)
                             : null;
-                        try
+                        using (_logger.BeginScope(new Dictionary<string, object?>
                         {
-                            await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
-                            if (_stepRecorder != null && stepId != null)
-                                await _stepRecorder.RecordStepCompleteAsync(stepId, targetModuleRuntimeName, evt.Payload?.ToString(), ct);
-                        }
-                        catch (Exception ex)
+                            ["RunId"] = _animaId,
+                            ["StepId"] = stepId,
+                            ["SourceModule"] = sourceModuleRuntimeName,
+                            ["TargetModule"] = targetModuleRuntimeName
+                        }))
                         {
-                            if (_stepRecorder != null && stepId != null)
-                                await _stepRecorder.RecordStepFailedAsync(stepId, targetModuleRuntimeName, ex, ct);
-                            throw;
+                            try
+                            {
+                                await ForwardPayloadAsync(evt, targetEventName, sourceModuleRuntimeName, ct);
+                                if (_stepRecorder != null && stepId != null)
+                                    await _stepRecorder.RecordStepCompleteAsync(stepId, targetModuleRuntimeName, evt.Payload?.ToString(), ct);
+                            }
+                            catch (Exception ex)
+                            {
+                                if (_stepRecorder != null && stepId != null)
+                                    await _stepRecorder.RecordStepFailedAsync(stepId, targetModuleRuntimeName, ex, ct);
+                                throw;
+                            }
                         }
                     }
                     finally

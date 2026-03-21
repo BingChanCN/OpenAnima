@@ -362,4 +362,70 @@
   <data name="Editor.Config.None" xml:space="preserve">
     <value>无</value>
   </data>
+  <data name="RunDetail.PageTitle" xml:space="preserve">
+    <value>运行详情</value>
+  </data>
+  <data name="RunDetail.BackLink" xml:space="preserve">
+    <value>← 运行列表</value>
+  </data>
+  <data name="RunDetail.TimelineHeading" xml:space="preserve">
+    <value>时间线</value>
+  </data>
+  <data name="RunDetail.Filter.Module" xml:space="preserve">
+    <value>模块</value>
+  </data>
+  <data name="RunDetail.Filter.Status" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="RunDetail.Filter.Chain" xml:space="preserve">
+    <value>传播链</value>
+  </data>
+  <data name="RunDetail.Filter.AllModules" xml:space="preserve">
+    <value>所有模块</value>
+  </data>
+  <data name="RunDetail.Filter.AllStatuses" xml:space="preserve">
+    <value>所有状态</value>
+  </data>
+  <data name="RunDetail.Filter.AllChains" xml:space="preserve">
+    <value>所有传播链</value>
+  </data>
+  <data name="RunDetail.Filter.ClearFilters" xml:space="preserve">
+    <value>清除筛选</value>
+  </data>
+  <data name="RunDetail.EmptyTimeline.Heading" xml:space="preserve">
+    <value>暂无步骤</value>
+  </data>
+  <data name="RunDetail.EmptyTimeline.Body" xml:space="preserve">
+    <value>运行执行时，步骤将显示在此处。</value>
+  </data>
+  <data name="RunDetail.EmptyFilter.Heading" xml:space="preserve">
+    <value>无匹配步骤</value>
+  </data>
+  <data name="RunDetail.EmptyFilter.Body" xml:space="preserve">
+    <value>请尝试调整上方的筛选条件。</value>
+  </data>
+  <data name="RunDetail.NotFound.Heading" xml:space="preserve">
+    <value>未找到运行</value>
+  </data>
+  <data name="RunDetail.NotFound.Body" xml:space="preserve">
+    <value>此运行 ID 不存在或已被删除。</value>
+  </data>
+  <data name="RunDetail.Step.Input" xml:space="preserve">
+    <value>输入</value>
+  </data>
+  <data name="RunDetail.Step.Output" xml:space="preserve">
+    <value>输出</value>
+  </data>
+  <data name="RunDetail.Step.ArtifactLink" xml:space="preserve">
+    <value>查看完整内容 ↗</value>
+  </data>
+  <data name="RunDetail.Step.ArtifactLinkTitle" xml:space="preserve">
+    <value>制品查看器将在未来版本中推出</value>
+  </data>
+  <data name="RunDetail.Step.PropagationChain" xml:space="preserve">
+    <value>传播链: {0} — {1} 步</value>
+  </data>
+  <data name="RunDetail.LongTimelineBanner" xml:space="preserve">
+    <value>显示全部 {0} 个步骤。使用筛选缩小范围。</value>
+  </data>
 </root>

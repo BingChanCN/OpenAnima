@@ -1,6 +1,7 @@
 @using OpenAnima.Core.Runs
+@inject NavigationManager NavigationManager
 
-<div class="run-card">
+<div class="run-card" role="link" @onclick="NavigateToDetail" style="cursor: pointer;">
     <div class="run-card-header">
         <span class="run-card-id">@Run.RunId</span>
         <span class="run-card-objective">@Run.Objective</span>
@@ -14,11 +15,13 @@
             {
                 <button class="btn btn-secondary btn-sm"
                         aria-label="Pause run @Run.RunId"
+                        @onclick:stopPropagation="true"
                         @onclick="() => OnPause.InvokeAsync(Run.RunId)">
                     Pause Run
                 </button>
                 <button class="btn btn-danger btn-sm"
                         aria-label="Cancel run @Run.RunId"
+                        @onclick:stopPropagation="true"
                         @onclick="() => OnCancel.InvokeAsync(Run.RunId)">
                     Cancel Run
                 </button>
@@ -27,11 +30,13 @@
             {
                 <button class="btn btn-primary btn-sm"
                         aria-label="Resume run @Run.RunId"
+                        @onclick:stopPropagation="true"
                         @onclick="() => OnResume.InvokeAsync(Run.RunId)">
                     Resume Run
                 </button>
                 <button class="btn btn-danger btn-sm"
                         aria-label="Cancel run @Run.RunId"
+                        @onclick:stopPropagation="true"
                         @onclick="() => OnCancel.InvokeAsync(Run.RunId)">
                     Cancel Run
                 </button>
@@ -94,4 +99,9 @@
 
     [Parameter]
     public EventCallback<string> OnCancel { get; set; }
+
+    private void NavigateToDetail()
+    {
+        NavigationManager.NavigateTo($"/runs/{Run.RunId}");
+    }
 }

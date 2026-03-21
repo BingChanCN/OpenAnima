@@ -79,7 +79,10 @@ public class RunService : IRunService
         _activeRuns[runId] = context;
         _animaActiveRunMap[animaId] = runId;
 
-        _logger.LogInformation("Run {RunId} started for Anima {AnimaId}", runId, animaId);
+        using (_logger.BeginScope(new Dictionary<string, object?> { ["RunId"] = runId }))
+        {
+            _logger.LogInformation("Run {RunId} started for Anima {AnimaId}", runId, animaId);
+        }
 
         await PushRunStateChangedAsync(animaId, runId, "Running", null, ct);
 
@@ -102,7 +105,10 @@ public class RunService : IRunService
 
         await _repository.AppendStateEventAsync(runId, RunState.Paused, reason, ct);
 
-        _logger.LogInformation("Run {RunId} paused: {Reason}", runId, reason);
+        using (_logger.BeginScope(new Dictionary<string, object?> { ["RunId"] = runId }))
+        {
+            _logger.LogInformation("Run {RunId} paused: {Reason}", runId, reason);
+        }
 
         await PushRunStateChangedAsync(context.Descriptor.AnimaId, runId, "Paused", reason, ct);
 

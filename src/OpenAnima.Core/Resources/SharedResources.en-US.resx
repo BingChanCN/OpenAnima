@@ -362,4 +362,70 @@
   <data name="Editor.Config.None" xml:space="preserve">
     <value>None</value>
   </data>
+  <data name="RunDetail.PageTitle" xml:space="preserve">
+    <value>Run Detail</value>
+  </data>
+  <data name="RunDetail.BackLink" xml:space="preserve">
+    <value>← Runs</value>
+  </data>
+  <data name="RunDetail.TimelineHeading" xml:space="preserve">
+    <value>Timeline</value>
+  </data>
+  <data name="RunDetail.Filter.Module" xml:space="preserve">
+    <value>Module</value>
+  </data>
+  <data name="RunDetail.Filter.Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="RunDetail.Filter.Chain" xml:space="preserve">
+    <value>Chain</value>
+  </data>
+  <data name="RunDetail.Filter.AllModules" xml:space="preserve">
+    <value>All modules</value>
+  </data>
+  <data name="RunDetail.Filter.AllStatuses" xml:space="preserve">
+    <value>All statuses</value>
+  </data>
+  <data name="RunDetail.Filter.AllChains" xml:space="preserve">
+    <value>All chains</value>
+  </data>
+  <data name="RunDetail.Filter.ClearFilters" xml:space="preserve">
+    <value>Clear filters</value>
+  </data>
+  <data name="RunDetail.EmptyTimeline.Heading" xml:space="preserve">
+    <value>No steps yet</value>
+  </data>
+  <data name="RunDetail.EmptyTimeline.Body" xml:space="preserve">
+    <value>Steps will appear here as the run executes.</value>
+  </data>
+  <data name="RunDetail.EmptyFilter.Heading" xml:space="preserve">
+    <value>No matching steps</value>
+  </data>
+  <data name="RunDetail.EmptyFilter.Body" xml:space="preserve">
+    <value>Try adjusting the filters above.</value>
+  </data>
+  <data name="RunDetail.NotFound.Heading" xml:space="preserve">
+    <value>Run not found</value>
+  </data>
+  <data name="RunDetail.NotFound.Body" xml:space="preserve">
+    <value>This run ID does not exist or has been removed.</value>
+  </data>
+  <data name="RunDetail.Step.Input" xml:space="preserve">
+    <value>Input</value>
+  </data>
+  <data name="RunDetail.Step.Output" xml:space="preserve">
+    <value>Output</value>
+  </data>
+  <data name="RunDetail.Step.ArtifactLink" xml:space="preserve">
+    <value>View full content ↗</value>
+  </data>
+  <data name="RunDetail.Step.ArtifactLinkTitle" xml:space="preserve">
+    <value>Artifact viewer coming in a future release</value>
+  </data>
+  <data name="RunDetail.Step.PropagationChain" xml:space="preserve">
+    <value>Propagation chain: {0} — {1} steps</value>
+  </data>
+  <data name="RunDetail.LongTimelineBanner" xml:space="preserve">
+    <value>Showing all {0} steps. Use filters to narrow the view.</value>
+  </data>
 </root>
