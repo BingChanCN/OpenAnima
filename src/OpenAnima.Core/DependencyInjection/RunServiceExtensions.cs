@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using OpenAnima.Core.Artifacts;
 using OpenAnima.Core.Hosting;
 using OpenAnima.Core.RunPersistence;
 using OpenAnima.Core.Runs;
@@ -26,6 +27,11 @@ public static class RunServiceExtensions
 
         // Ensure data directory exists
         Directory.CreateDirectory(dataRoot);
+
+        var artifactsRoot = Path.Combine(dataRoot, "artifacts");
+        Directory.CreateDirectory(artifactsRoot);
+        services.AddSingleton(new ArtifactFileWriter(artifactsRoot));
+        services.AddSingleton<IArtifactStore, ArtifactStore>();
 
         services.AddSingleton(new RunDbConnectionFactory(dbPath));
         services.AddSingleton<RunDbInitializer>();

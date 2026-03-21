@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using OpenAnima.Core.Artifacts;
 using OpenAnima.Core.Hubs;
 using OpenAnima.Core.RunPersistence;
 
@@ -21,6 +22,7 @@ public class StepRecorder : IStepRecorder
     private readonly IRunRepository _repository;
     private readonly ILogger<StepRecorder> _logger;
     private readonly IHubContext<RuntimeHub, IRuntimeClient>? _hubContext;
+    private readonly IArtifactStore? _artifactStore;
 
     /// <summary>Tracks step start times keyed by stepId, used to compute duration on completion.</summary>
     private readonly ConcurrentDictionary<string, DateTimeOffset> _stepStartTimes = new();
@@ -35,12 +37,14 @@ public class StepRecorder : IStepRecorder
         IRunService runService,
         IRunRepository repository,
         ILogger<StepRecorder> logger,
-        IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null)
+        IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null,
+        IArtifactStore? artifactStore = null)
     {
         _runService = runService ?? throw new ArgumentNullException(nameof(runService));
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _hubContext = hubContext;
+        _artifactStore = artifactStore;
     }
 
     /// <inheritdoc/>
@@ -127,6 +131,71 @@ public class StepRecorder : IStepRecorder
         await _repository.AppendStepEventAsync(step, ct);
 
         // Convergence check — may trigger auto-pause
+        var checkResult = context.ConvergenceGuard.Check(moduleName, outputHash);
+        if (checkResult.Action != ConvergenceAction.Continue)
+        {
+            _logger.LogInformation(
+                "Convergence guard triggered for run {RunId}: {Reason}",
+                context.RunId, checkResult.Reason);
+            await _runService.PauseRunAsync(context.RunId, checkResult.Reason!, ct);
+        }
+
+        await PushStepCompletedAsync(animaId, context.RunId, stepId, moduleName, "Completed", durationMs, ct);
+    }
+
+    /// <inheritdoc/>
+    public async Task RecordStepCompleteAsync(
+        string? stepId,
+        string moduleName,
+        string? outputSummary,
+        string? artifactContent,
+        string? artifactMimeType,
+        CancellationToken ct = default)
+    {
+        if (stepId == null) return;
+        if (!_stepAnimaIds.TryGetValue(stepId, out var animaId)) return;
+        var context = _runService.GetActiveRun(animaId);
+        _stepStartTimes.TryRemove(stepId, out var startedAt);
+        _stepAnimaIds.TryRemove(stepId, out _);
+        if (context == null) return;
+
+        // Write artifact if content provided
+        string? artifactRefId = null;
+        if (artifactContent != null && _artifactStore != null)
+        {
+            var mimeType = artifactMimeType ?? "text/plain";
+            artifactRefId = await _artifactStore.WriteArtifactAsync(
+                context.RunId, stepId, mimeType, artifactContent, ct);
+        }
+
+        var durationMs = startedAt != default
+            ? (int)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds
+            : (int?)null;
+
+        var truncatedOutput = Truncate(outputSummary, MaxSummaryLength);
+        string? outputHash = null;
+        if (outputSummary != null)
+        {
+            var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(truncatedOutput ?? string.Empty));
+            outputHash = Convert.ToHexString(hashBytes);
+        }
+
+        // Use a fresh completion StepId — this is the canonical record
+        var step = new StepRecord
+        {
+            StepId = Guid.NewGuid().ToString("N")[..8],
+            RunId = context.RunId,
+            PropagationId = string.Empty,
+            ModuleName = moduleName,
+            Status = "Completed",
+            OutputSummary = truncatedOutput,
+            ArtifactRefId = artifactRefId,
+            DurationMs = durationMs,
+            OccurredAt = DateTimeOffset.UtcNow.ToString("O")
+        };
+
+        await _repository.AppendStepEventAsync(step, ct);
+
         var checkResult = context.ConvergenceGuard.Check(moduleName, outputHash);
         if (checkResult.Action != ConvergenceAction.Continue)
         {

@@ -38,6 +38,24 @@ public interface IStepRecorder
         CancellationToken ct = default);
 
     /// <summary>
+    /// Records step completion with optional artifact content. When artifactContent is non-null,
+    /// the content is persisted as a durable artifact and the step's ArtifactRefId is set.
+    /// </summary>
+    /// <param name="stepId">The step ID returned by <see cref="RecordStepStartAsync"/>. If null, this is a no-op.</param>
+    /// <param name="moduleName">The name of the module that completed execution.</param>
+    /// <param name="outputSummary">Optional summary of the output payload (truncated to 500 chars).</param>
+    /// <param name="artifactContent">Optional full artifact content to persist durably.</param>
+    /// <param name="artifactMimeType">MIME type for the artifact. Defaults to "text/plain" if null.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task RecordStepCompleteAsync(
+        string? stepId,
+        string moduleName,
+        string? outputSummary,
+        string? artifactContent,
+        string? artifactMimeType,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Records a step that failed due to an exception.
     /// </summary>
     /// <param name="stepId">The step ID returned by <see cref="RecordStepStartAsync"/>. If null, this is a no-op.</param>
