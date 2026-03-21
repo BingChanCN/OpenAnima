@@ -1,0 +1,76 @@
+.back-link {
+    color: var(--accent-color);
+    font-size: 14px;
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.run-overview {
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.run-overview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.run-id {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.run-objective {
+    font-size: 14px;
+    color: var(--text-primary);
+    margin-top: 8px;
+}
+
+.run-meta {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.run-workspace {
+    font-family: var(--font-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 400px;
+}
+
+.run-budgets {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.long-timeline-banner {
+    background: var(--surface-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}

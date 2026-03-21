@@ -1,0 +1,179 @@
+@page "/runs/{RunId}"
+@using OpenAnima.Core.Runs
+@using OpenAnima.Core.RunPersistence
+@using Microsoft.AspNetCore.SignalR.Client
+@inject IRunService RunService
+@inject IRunRepository Repository
+@inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResources> L
+@implements IAsyncDisposable
+
+@if (_notFound)
+{
+    <div class="empty-state">
+        <h3>@L["RunDetail.NotFound.Heading"]</h3>
+        <p>@L["RunDetail.NotFound.Body"]</p>
+    </div>
+}
+else if (_run == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <a href="/runs" class="back-link">@L["RunDetail.BackLink"]</a>
+    <h1 class="page-title">@L["RunDetail.PageTitle"]</h1>
+
+    <div class="run-overview">
+        <div class="run-overview-header">
+            <span class="run-id">@_run.RunId</span>
+            <RunStateBadge State="@_run.CurrentState" />
+        </div>
+        <div class="run-objective">@_run.Objective</div>
+        <div class="run-meta">
+            <span>@_run.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss") UTC</span>
+            <span class="run-workspace">@_run.WorkspaceRoot</span>
+        </div>
+        @if (_run.MaxSteps.HasValue || _run.MaxWallSeconds.HasValue)
+        {
+            <div class="run-budgets">
+                @if (_run.MaxSteps.HasValue)
+                {
+                    <BudgetIndicator Current="@_steps.Count" Max="@_run.MaxSteps" Label="steps" />
+                }
+                @if (_run.MaxWallSeconds.HasValue)
+                {
+                    <BudgetIndicator Current="@_wallSecondsElapsed" Max="@_run.MaxWallSeconds" Label="seconds" />
+                }
+            </div>
+        }
+        @{
+            var stopReason = _stateEvents.LastOrDefault(e =>
+                e.State is "Paused" or "Cancelled" or "Failed" or "Interrupted")?.Reason;
+        }
+        @if (!string.IsNullOrEmpty(stopReason))
+        {
+            <StopReasonBanner Reason="@stopReason" />
+        }
+    </div>
+
+    <h2 class="section-title">@L["RunDetail.TimelineHeading"]</h2>
+
+    @if (_timeline.Count > 100)
+    {
+        <div class="long-timeline-banner">@L["RunDetail.LongTimelineBanner", _timeline.Count]</div>
+    }
+
+    @if (_timeline.Count == 0)
+    {
+        <div class="empty-state">
+            <h3>@L["RunDetail.EmptyTimeline.Heading"]</h3>
+            <p>@L["RunDetail.EmptyTimeline.Body"]</p>
+        </div>
+    }
+    else
+    {
+        <div class="timeline-list" role="list">
+            @foreach (var entry in _timeline)
+            {
+                @if (entry.IsStateEvent && entry.StateEvent != null)
+                {
+                    var stateEvent = entry.StateEvent;
+                    <StateEventRow Event="@stateEvent" />
+                }
+                else if (!entry.IsStateEvent && entry.Step != null)
+                {
+                    var step = entry.Step;
+                    <StepTimelineRow Step="@step"
+                                     IsExpanded="@(_expandedStepId == step.StepId)"
+                                     IsHighlighted="@(_activeChainId != null && step.PropagationId == _activeChainId)"
+                                     IsDimmed="@(_activeChainId != null && step.PropagationId != _activeChainId)"
+                                     OnToggle="@(() => ToggleStep(step.StepId))"
+                                     OnChainClick="@(() => HighlightChain(step.PropagationId))" />
+                }
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter]
+    public string RunId { get; set; } = string.Empty;
+
+    private RunDescriptor? _run;
+    private List<StepRecord> _steps = new();
+    private List<RunStateEvent> _stateEvents = new();
+    private List<TimelineEntry> _timeline = new();
+    private bool _notFound;
+    private HubConnection? _hubConnection;
+    private string? _expandedStepId;
+    private string? _activeChainId;
+    private int _wallSecondsElapsed = 0;
+
+    private record TimelineEntry(string OccurredAt, bool IsStateEvent, StepRecord? Step, RunStateEvent? StateEvent);
+
+    private void RebuildTimeline()
+    {
+        var entries = new List<TimelineEntry>();
+        foreach (var s in _steps)
+            entries.Add(new TimelineEntry(s.OccurredAt, false, s, null));
+        foreach (var e in _stateEvents)
+            entries.Add(new TimelineEntry(e.OccurredAt, true, null, e));
+        _timeline = entries.OrderBy(e => e.OccurredAt).ThenBy(e => e.IsStateEvent ? 0 : 1).ToList();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _run = await RunService.GetRunByIdAsync(RunId);
+        if (_run == null) { _notFound = true; return; }
+
+        _steps = (await Repository.GetStepsByRunIdAsync(RunId)).ToList();
+        _stateEvents = (await Repository.GetStateEventsByRunIdAsync(RunId)).ToList();
+        RebuildTimeline();
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/hubs/runtime"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<string, string, string, string, string, int?>("ReceiveStepCompleted",
+            async (animaId, runId, stepId, moduleName, status, durationMs) =>
+            {
+                if (runId != RunId) return;
+                var updatedSteps = await Repository.GetStepsByRunIdAsync(RunId);
+                _steps = updatedSteps.ToList();
+                RebuildTimeline();
+                await InvokeAsync(StateHasChanged);
+            });
+
+        _hubConnection.On<string, string, string, string?>("ReceiveRunStateChanged",
+            async (animaId, runId, state, reason) =>
+            {
+                if (runId != RunId) return;
+                var parsed = Enum.Parse<RunState>(state);
+                _run = _run! with { CurrentState = parsed };
+                var updatedEvents = await Repository.GetStateEventsByRunIdAsync(RunId);
+                _stateEvents = updatedEvents.ToList();
+                RebuildTimeline();
+                await InvokeAsync(StateHasChanged);
+            });
+
+        await _hubConnection.StartAsync();
+    }
+
+    private void ToggleStep(string stepId)
+    {
+        _expandedStepId = _expandedStepId == stepId ? null : stepId;
+    }
+
+    private void HighlightChain(string? propagationId)
+    {
+        if (string.IsNullOrEmpty(propagationId)) return;
+        _activeChainId = _activeChainId == propagationId ? null : propagationId;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection != null) await _hubConnection.DisposeAsync();
+    }
+}
