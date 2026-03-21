@@ -2,9 +2,9 @@
 
 ## Current State
 
-**Latest shipped:** Phase 46 workspace-tool-surface (2026-03-21)
+**Latest shipped:** Phase 47 run-inspection-observability (2026-03-21)
 **Milestones complete:** v1.0–v1.9 (10 milestones, 44 phases, 99 plans)
-**Next milestone:** v2.0 Structured Cognition Foundation (Phase 46 complete, Phase 47 next)
+**Next milestone:** v2.0 Structured Cognition Foundation (Phase 47 complete, Phase 48 next)
 
 ## What This Is
 
@@ -135,7 +135,7 @@ Agents that proactively think and act on their own, while module connections rem
 
 - [x] Durable task runtime with stable run identity, persistence, resume/cancel, and convergence bounds — Validated in Phase 45: durable-task-runtime-foundation
 - [x] Workspace-aware developer tool surface for file search, git inspection, and bounded command execution — Validated in Phase 46: workspace-tool-surface
-- [ ] Run inspector with per-step timeline, inputs/outputs, errors, and graph trigger visibility
+- [x] Run inspector with per-step timeline, inputs/outputs, errors, and graph trigger visibility — Validated in Phase 47: run-inspection-observability
 - [ ] Artifact and provenance-backed memory foundation linked to runs and steps
 - [ ] Structured cognition workflow that analyzes a bound codebase and produces grounded report artifacts
 
@@ -218,6 +218,17 @@ v2.0 Phase 46 delivered workspace tool surface:
 - WorkspaceToolModule orchestrator with DI wiring and port registration
 - Git tools return parsed structured JSON (not raw git output)
 - All tools validate paths within workspace root
+
+v2.0 Phase 47 delivered run inspection and observability:
+- RunDetail page at /runs/{RunId} with run overview, mixed chronological timeline, accordion step detail
+- PropagationColorAssigner for deterministic chain color coding
+- StepTimelineRow with expand/collapse, error display, propagation chain highlighting
+- StateEventRow for state transition visualization
+- TimelineFilterBar with module/status/chain dropdowns
+- Propagation chain causality: click chain ID to filter timeline, highlight/dim related entries
+- Real-time SignalR push updates for step completion and state changes
+- WiringEngine/RunService BeginScope log correlation
+- 11 new unit tests (322 total across test files)
 
 Known tech debt:
 - ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred
@@ -323,4 +334,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-21 after completing Phase 46 workspace-tool-surface*
+*Last updated: 2026-03-21 after completing Phase 47 run-inspection-observability*
