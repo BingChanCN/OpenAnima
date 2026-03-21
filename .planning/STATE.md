@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Structured Cognition Foundation
 status: unknown
-stopped_at: Phase 49 UI-SPEC approved
-last_updated: "2026-03-21T13:15:24.260Z"
+stopped_at: Completed 49-01-PLAN.md
+last_updated: "2026-03-21T14:36:08.225Z"
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
+  total_plans: 18
+  completed_plans: 16
 ---
 
 # Project State: OpenAnima
@@ -22,12 +22,12 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-20)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 48 — artifact-memory-foundation
+**Current focus:** Phase 49 — structured-cognition-workflows
 
 ## Current Position
 
-Phase: 48 (artifact-memory-foundation) — EXECUTING
-Plan: 2 of 5
+Phase: 49 (structured-cognition-workflows) — EXECUTING
+Plan: 1 of 3
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Plan: 2 of 5
 | Phase 48 P03 | 12min | 2 tasks | 6 files |
 | Phase 48 P04 | 17 | 2 tasks | 7 files |
 | Phase 48 P05 | 10 | 2 tasks | 7 files |
+| Phase 49 P01 | 1013 | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,9 @@ Recent decisions affecting current work:
 - [Phase 48-05]: MemoryGraph uses @inject IAnimaContext for consistency with existing pages like Runs.razor
 - [Phase 48-05]: URI tree is flat list ordered by Uri — no recursive rendering, sufficient for v2.0
 - [Phase 48-05]: MemoryNodeCard fires EventCallback to parent, parent owns all persistence calls
+- [Phase 49]: JoinBarrierModule uses double-check pattern with Wait(0) guard and re-check inside to prevent race conditions
+- [Phase 49]: StepRecorder carries PropagationId via _stepPropagationIds ConcurrentDictionary (same pattern as _stepAnimaIds)
+- [Phase 49]: LLMModule uses WaitAsync(ct) for serialization instead of Wait(0) drop semantics for workflow branch correctness
 
 ### Pending Todos
 
@@ -131,6 +135,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T13:15:24.257Z
-Stopped at: Phase 49 UI-SPEC approved
-Resume file: .planning/phases/49-structured-cognition-workflows/49-UI-SPEC.md
+Last session: 2026-03-21T14:36:08.223Z
+Stopped at: Completed 49-01-PLAN.md
+Resume file: None
