@@ -1,0 +1,157 @@
+@using OpenAnima.Core.Memory
+@inject IStringLocalizer<SharedResources> L
+
+<div class="node-card">
+    <div class="node-uri-pill">@Node.Uri</div>
+
+    <label class="field-label">Content</label>
+    <textarea class="node-content-input"
+              @bind="EditContent"
+              @bind:event="oninput"
+              rows="8"
+              aria-label="Memory node content for @Node.Uri"></textarea>
+
+    <label class="field-label">Disclosure Trigger</label>
+    <input class="node-trigger-input"
+           type="text"
+           @bind="EditTrigger"
+           @bind:event="oninput"
+           placeholder="e.g. when user mentions project X"
+           aria-label="Disclosure trigger for @Node.Uri" />
+
+    <label class="field-label">Keywords (glossary)</label>
+    <div class="keyword-tags">
+        @foreach (var kw in _keywords)
+        {
+            <span class="keyword-tag">
+                @kw
+                <button class="keyword-remove"
+                        @onclick="() => RemoveKeyword(kw)"
+                        aria-label="Remove keyword @kw">×</button>
+            </span>
+        }
+        <input class="keyword-add-input"
+               type="text"
+               @bind="_newKeyword"
+               @bind:event="oninput"
+               @onkeydown="HandleKeywordKeyDown"
+               placeholder="+ add keyword"
+               aria-label="Add keyword" />
+    </div>
+
+    <label class="field-label">Provenance</label>
+    <div class="node-provenance">
+        @if (Node.SourceStepId != null || Node.SourceArtifactId != null)
+        {
+            <span>Source:</span>
+            @if (Node.SourceStepId != null)
+            {
+                <span class="provenance-value">Step @Node.SourceStepId</span>
+            }
+            @if (Node.SourceArtifactId != null)
+            {
+                <span>·</span>
+                <span class="provenance-value">Artifact @Node.SourceArtifactId</span>
+            }
+        }
+        <div class="node-timestamps">
+            Created: @FormatTimestamp(Node.CreatedAt) · Updated: @FormatTimestamp(Node.UpdatedAt)
+        </div>
+    </div>
+
+    <div class="node-actions">
+        <button class="btn-save"
+                @onclick="OnSave"
+                aria-label="Save changes to @Node.Uri">
+            Save Changes
+        </button>
+        <button class="btn-danger"
+                @onclick="OnDeleteClick"
+                aria-label="Delete memory node @Node.Uri">
+            Delete Node
+        </button>
+    </div>
+
+    @if (_showSaveFlash)
+    {
+        <div class="save-flash">Saved</div>
+    }
+</div>
+
+@code {
+    [Parameter] public MemoryNode Node { get; set; } = default!;
+    [Parameter] public EventCallback<MemoryNode> OnSaveNode { get; set; }
+    [Parameter] public EventCallback<string> OnDeleteNode { get; set; }
+
+    private string EditContent { get; set; } = "";
+    private string? EditTrigger { get; set; }
+    private List<string> _keywords = new();
+    private string _newKeyword = "";
+    private bool _showSaveFlash;
+
+    protected override void OnParametersSet()
+    {
+        EditContent = Node.Content;
+        EditTrigger = Node.DisclosureTrigger;
+        _keywords = ParseKeywords(Node.Keywords);
+    }
+
+    private static List<string> ParseKeywords(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return new();
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new(); }
+        catch { return new(); }
+    }
+
+    private static string SerializeKeywords(List<string> keywords)
+        => System.Text.Json.JsonSerializer.Serialize(keywords);
+
+    private void RemoveKeyword(string kw)
+    {
+        _keywords.Remove(kw);
+    }
+
+    private void HandleKeywordKeyDown(KeyboardEventArgs e)
+    {
+        if ((e.Key == "Enter" || e.Key == ",") && !string.IsNullOrWhiteSpace(_newKeyword))
+        {
+            var trimmed = _newKeyword.Trim().TrimEnd(',');
+            if (!string.IsNullOrEmpty(trimmed) && !_keywords.Contains(trimmed))
+                _keywords.Add(trimmed);
+            _newKeyword = "";
+        }
+    }
+
+    private async Task OnSave()
+    {
+        var updated = Node with
+        {
+            Content = EditContent,
+            DisclosureTrigger = string.IsNullOrWhiteSpace(EditTrigger) ? null : EditTrigger,
+            Keywords = _keywords.Count > 0 ? SerializeKeywords(_keywords) : null,
+            UpdatedAt = DateTimeOffset.UtcNow.ToString("O")
+        };
+        await OnSaveNode.InvokeAsync(updated);
+        _showSaveFlash = true;
+        _ = HideSaveFlash();
+    }
+
+    private async Task HideSaveFlash()
+    {
+        await Task.Delay(1500);
+        _showSaveFlash = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnDeleteClick()
+    {
+        await OnDeleteNode.InvokeAsync(Node.Uri);
+    }
+
+    private static string FormatTimestamp(string iso)
+    {
+        if (DateTimeOffset.TryParse(iso, out var dt))
+            return dt.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss");
+        return iso;
+    }
+}
