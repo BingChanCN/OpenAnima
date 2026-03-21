@@ -33,6 +33,9 @@ public class StepRecorder : IStepRecorder
     /// </summary>
     private readonly ConcurrentDictionary<string, string> _stepAnimaIds = new();
 
+    /// <summary>Tracks the PropagationId for each in-flight step, carried from start to completion.</summary>
+    private readonly ConcurrentDictionary<string, string> _stepPropagationIds = new();
+
     public StepRecorder(
         IRunService runService,
         IRunRepository repository,
@@ -65,6 +68,7 @@ public class StepRecorder : IStepRecorder
 
         _stepStartTimes[stepId] = now;
         _stepAnimaIds[stepId] = animaId;
+        _stepPropagationIds[stepId] = propagationId ?? string.Empty;
 
         var step = new StepRecord
         {
@@ -99,6 +103,7 @@ public class StepRecorder : IStepRecorder
         // Remove tracking entries before early return to avoid leaks
         _stepStartTimes.TryRemove(stepId, out var startedAt);
         _stepAnimaIds.TryRemove(stepId, out _);
+        _stepPropagationIds.TryRemove(stepId, out var carriedPropagationId);
 
         if (context == null) return;
 
@@ -120,7 +125,7 @@ public class StepRecorder : IStepRecorder
         {
             StepId = Guid.NewGuid().ToString("N")[..8],
             RunId = context.RunId,
-            PropagationId = string.Empty,
+            PropagationId = carriedPropagationId ?? string.Empty,
             ModuleName = moduleName,
             Status = "Completed",
             OutputSummary = truncatedOutput,
@@ -157,6 +162,7 @@ public class StepRecorder : IStepRecorder
         var context = _runService.GetActiveRun(animaId);
         _stepStartTimes.TryRemove(stepId, out var startedAt);
         _stepAnimaIds.TryRemove(stepId, out _);
+        _stepPropagationIds.TryRemove(stepId, out var carriedPropagationId);
         if (context == null) return;
 
         // Write artifact if content provided
@@ -185,7 +191,7 @@ public class StepRecorder : IStepRecorder
         {
             StepId = Guid.NewGuid().ToString("N")[..8],
             RunId = context.RunId,
-            PropagationId = string.Empty,
+            PropagationId = carriedPropagationId ?? string.Empty,
             ModuleName = moduleName,
             Status = "Completed",
             OutputSummary = truncatedOutput,
@@ -223,6 +229,7 @@ public class StepRecorder : IStepRecorder
         var context = _runService.GetActiveRun(animaId);
         _stepStartTimes.TryRemove(stepId, out _);
         _stepAnimaIds.TryRemove(stepId, out _);
+        _stepPropagationIds.TryRemove(stepId, out var carriedPropagationId);
 
         if (context == null) return;
 
@@ -230,7 +237,7 @@ public class StepRecorder : IStepRecorder
         {
             StepId = Guid.NewGuid().ToString("N")[..8],
             RunId = context.RunId,
-            PropagationId = string.Empty,
+            PropagationId = carriedPropagationId ?? string.Empty,
             ModuleName = moduleName,
             Status = "Failed",
             ErrorInfo = ex.Message,
