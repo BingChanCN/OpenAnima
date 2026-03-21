@@ -1,9 +1,11 @@
 @page "/runs"
 @using OpenAnima.Core.Runs
 @using OpenAnima.Core.Anima
+@using OpenAnima.Core.Wiring
 @using OpenAnima.Core.Workflows
 @inject IRunService RunService
 @inject IAnimaContext AnimaContext
+@inject IAnimaRuntimeManager RuntimeManager
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResources> L
 @inject WorkflowPresetService PresetService
@@ -106,6 +108,18 @@ else
     {
         _startError = null;
         var animaId = AnimaContext.ActiveAnimaId;
+
+        // Load preset wiring config into the engine before starting the run
+        if (!string.IsNullOrEmpty(args.workflowPreset))
+        {
+            var config = await PresetService.LoadPresetAsync(args.workflowPreset);
+            if (config != null)
+            {
+                var runtime = RuntimeManager.GetRuntime(animaId ?? "");
+                runtime?.WiringEngine.LoadConfiguration(config);
+            }
+        }
+
         var result = await RunService.StartRunAsync(animaId, args.objective, args.workspace, args.maxSteps, args.maxWallSeconds, args.workflowPreset);
         if (result.IsSuccess)
         {

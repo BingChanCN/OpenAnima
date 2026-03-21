@@ -1,3 +1,6 @@
+using System.Text.Json;
+using OpenAnima.Core.Wiring;
+
 namespace OpenAnima.Core.Workflows;
 
 /// <summary>
@@ -7,6 +10,11 @@ namespace OpenAnima.Core.Workflows;
 public class WorkflowPresetService
 {
     private readonly string _presetsDir;
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
 
     public WorkflowPresetService(string presetsDir)
     {
@@ -39,6 +47,19 @@ public class WorkflowPresetService
     {
         var path = Path.Combine(_presetsDir, $"{presetName}.json");
         return File.Exists(path) ? path : null;
+    }
+
+    /// <summary>
+    /// Loads a preset JSON file as a <see cref="WiringConfiguration"/>.
+    /// Returns null if the preset file does not exist.
+    /// </summary>
+    public async Task<WiringConfiguration?> LoadPresetAsync(string presetName, CancellationToken ct = default)
+    {
+        var path = GetPresetPath(presetName);
+        if (path == null) return null;
+
+        await using var stream = File.OpenRead(path);
+        return await JsonSerializer.DeserializeAsync<WiringConfiguration>(stream, JsonOptions, ct);
     }
 
     private static string BuildDisplayName(string name)
