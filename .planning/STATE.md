@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Structured Cognition Foundation
 status: unknown
-stopped_at: "Checkpoint: Task 2 human-verify in 49-03-PLAN.md"
-last_updated: "2026-03-21T14:51:14.927Z"
+stopped_at: Completed 49-03-PLAN.md — Phase 49 complete
+last_updated: "2026-03-21T15:11:13.712Z"
 progress:
   total_phases: 5
   completed_phases: 5
@@ -68,6 +68,7 @@ Plan: 1 of 3
 | Phase 49 P01 | 1013 | 3 tasks | 11 files |
 | Phase 49-structured-cognition-workflows P02 | 5min | 2 tasks | 12 files |
 | Phase 49-structured-cognition-workflows P03 | 3 | 1 tasks | 5 files |
+| Phase 49 P03 | 45min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,8 @@ Recent decisions affecting current work:
 - [Phase 49-03]: GetTotalNodes returns 0 for unknown presets so WorkflowProgressBar hides cleanly via TotalNodes > 0 guard
 - [Phase 49-03]: StepCount (SignalR ReceiveStepCompleted) used as CompletedNodes proxy for WorkflowProgressBar — live progress without additional tracking infrastructure
 - [Phase 49-03]: OnStartRun EventCallback tuple extended with workflowPreset as final element — single surface area change across RunLaunchPanel, Runs, and HandleStartRun
+- [Phase 49]: Preset JSON files declared as Content Include in csproj with CopyToOutputDirectory Always — no manual copy step at runtime
+- [Phase 49]: WorkflowPresetService.LoadPresetAsync called in Runs.razor HandleStartRun before run starts — wiring config loaded into engine for preset runs
 
 ### Pending Todos
 
@@ -142,6 +145,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T14:51:14.925Z
-Stopped at: Checkpoint: Task 2 human-verify in 49-03-PLAN.md
+Last session: 2026-03-21T15:11:13.710Z
+Stopped at: Completed 49-03-PLAN.md — Phase 49 complete
 Resume file: None
