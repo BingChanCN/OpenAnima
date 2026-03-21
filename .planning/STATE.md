@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Structured Cognition Foundation
 status: unknown
-stopped_at: Completed 48-04-PLAN.md
-last_updated: "2026-03-21T12:36:35.419Z"
+stopped_at: "Checkpoint: Task 3 human-verify — awaiting user visual verification of /memory page"
+last_updated: "2026-03-21T12:50:18.001Z"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 # Project State: OpenAnima
@@ -64,6 +64,7 @@ Plan: 2 of 5
 | Phase 48-artifact-memory-foundation P02 | 8min | 2 tasks | 10 files |
 | Phase 48 P03 | 12min | 2 tasks | 6 files |
 | Phase 48 P04 | 17 | 2 tasks | 7 files |
+| Phase 48 P05 | 10 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,9 @@ Recent decisions affecting current work:
 - [Phase 48]: [Phase 48-04]: BootMemoryInjector.InjectBootMemoriesAsync is a no-op when no core:// nodes exist — safe to call unconditionally at run start
 - [Phase 48]: [Phase 48-04]: MemoryWriteTool converts CSV keywords to JSON array inline — consistent with GlossaryIndex.Build expectations
 - [Phase 48]: [Phase 48-04]: Memory tools registered as IWorkspaceTool singletons — WorkspaceToolModule picks them up via IEnumerable<IWorkspaceTool>
+- [Phase 48-05]: MemoryGraph uses @inject IAnimaContext for consistency with existing pages like Runs.razor
+- [Phase 48-05]: URI tree is flat list ordered by Uri — no recursive rendering, sufficient for v2.0
+- [Phase 48-05]: MemoryNodeCard fires EventCallback to parent, parent owns all persistence calls
 
 ### Pending Todos
 
@@ -127,6 +131,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T12:36:35.417Z
-Stopped at: Completed 48-04-PLAN.md
+Last session: 2026-03-21T12:50:17.999Z
+Stopped at: Checkpoint: Task 3 human-verify — awaiting user visual verification of /memory page
 Resume file: None
