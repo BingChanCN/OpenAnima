@@ -48,7 +48,8 @@ Exceptions:
 - Progress bar track height: 4px (xs — established BudgetIndicator pattern)
 - Node card title bar height: 28px (SVG NodeCard — existing constant, not changed)
 - Port spacing in SVG NodeCard: 24px per port row (existing constant, not changed)
-- Status dot radius: 4px, pulse ring radius: 7px (existing NodeCard pattern — not changed)
+- Status dot radius: 4px (existing NodeCard pattern — not changed)
+- Pulse ring radius: 7px — this is an SVG animation radius applied to the `<circle>` element inside NodeCard's canvas, not a layout spacing token. Do not apply this value to any layout, padding, or margin property.
 - Sidebar width expanded: 240px; collapsed: 72px (existing MainLayout — not changed)
 - Touch target minimum for action buttons: 44px tall on mobile (accessibility floor)
 
@@ -61,16 +62,17 @@ Source: Measured from `RunCard.razor`, `BudgetIndicator.razor`, `MainLayout.razo
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px | 400 (regular) | 1.5 |
-| Label / badge / meta | 12px | 500 (medium) | 1.5 |
+| Label / badge / meta | 12px | 400 (regular) | 1.5 |
 | Heading (section titles, legend) | 20px | 600 (semibold) | 1.2 |
-| Display (page title h1) | 28px | 700 (bold) | 1.2 |
+| Display (page title h1) | 28px | 600 (semibold) | 1.2 |
 
 Notes:
+- Only two font weights are in use: 400 (regular) for body copy, labels, badges, and meta text; 600 (semibold) for all headings and display text. No intermediate weight (500) and no bold (700) are used in this phase.
 - Monospace font (`var(--font-mono)`) applies at the same size/weight as the element's role — e.g. run IDs are 12px/400 mono, step counts are 14px/400 mono. No separate type scale entry needed.
 - Port labels inside SVG NodeCard use 11px/400 — this is an SVG-specific exception inside the canvas, not a general typography token. Do not replicate 11px outside the SVG editor canvas.
 - Nav labels: 0.875rem (14px) / 400. Nav section headers: 0.7rem (~11px) / 600 uppercase — existing sidebar pattern, unchanged.
 
-Source: `app.css` body rule (14px/1.5), `RunLaunchPanel.razor` legend (20px/600), `RunCard.razor` .run-card-objective (14px), `MainLayout.razor.css` nav-label (0.875rem), RunStateBadge (12px/500).
+Source: `app.css` body rule (14px/1.5), `RunLaunchPanel.razor` legend (20px/600), `RunCard.razor` .run-card-objective (14px), `MainLayout.razor.css` nav-label (0.875rem), RunStateBadge (12px — consolidated to 400).
 
 ---
 
@@ -110,6 +112,14 @@ All values reference existing CSS custom properties. Do not introduce new hex va
 - Label: `var(--text-secondary)`, 12px, monospace — "X / Y nodes completed"
 
 Source: `app.css` `:root`, `BudgetIndicator.razor`, `RunStateBadge.razor`, `StopReasonBanner.razor`, `NodeCard.razor`, `MainLayout.razor.css`.
+
+---
+
+## Focal Point
+
+**Primary screen: Runs page during an active workflow run.**
+
+The primary visual anchor on the Runs page during an active workflow run is the **WorkflowProgressBar** inside the active RunCard. The progress bar's fill — moving left-to-right in `--success-color` against the dark `--border-color` track — is the first element that draws the eye because it is the only animated, horizontally-expanding element on the page. It sits immediately below the run objective text and above the BudgetIndicator, placing it at the vertical center of the card. The RunStateBadge ("Running" in `--success-color`) in the card header provides the secondary anchor, confirming run state. Everything else (timestamps, workspace path, step count) reads as supporting meta at lower visual weight.
 
 ---
 
