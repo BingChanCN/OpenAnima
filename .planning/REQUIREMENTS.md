@@ -38,7 +38,7 @@ Requirements for the v2.0 milestone. Each requirement maps to a single roadmap p
 ### Artifact & Memory Foundation
 
 - [x] **ART-01**: System can persist intermediate notes, reports, and final outputs as durable artifacts linked to run and step records
-- [ ] **ART-02**: User can inspect run artifacts from the run inspector with source linkage back to the generating step
+- [x] **ART-02**: User can inspect run artifacts from the run inspector with source linkage back to the generating step
 - [x] **MEM-01**: System can store retrieval records derived from artifacts with provenance metadata including source artifact, step, and timestamp
 - [ ] **MEM-02**: Any memory injected into a run is inspectable and links back to its source artifact or step
 - [ ] **MEM-03**: Retrieved memory can be used to ground downstream run decisions without relying on hidden session-only prompt state
@@ -105,7 +105,7 @@ Explicitly excluded from v2.0 to prevent scope creep.
 | OBS-03 | Phase 47 | Complete |
 | OBS-04 | Phase 47 | Complete |
 | ART-01 | Phase 48 | Complete |
-| ART-02 | Phase 48 | Pending |
+| ART-02 | Phase 48 | Complete |
 | MEM-01 | Phase 48 | Complete |
 | MEM-02 | Phase 48 | Pending |
 | MEM-03 | Phase 48 | Pending |
