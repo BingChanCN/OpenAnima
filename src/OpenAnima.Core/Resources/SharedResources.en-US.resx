@@ -59,6 +59,9 @@
   <data name="Nav.Settings" xml:space="preserve">
     <value>Settings</value>
   </data>
+  <data name="Nav.Memory" xml:space="preserve">
+    <value>Memory</value>
+  </data>
   <data name="Anima.Create" xml:space="preserve">
     <value>Create Anima</value>
   </data>

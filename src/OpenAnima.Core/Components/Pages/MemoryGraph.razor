@@ -1,0 +1,212 @@
+@page "/memory"
+@using OpenAnima.Core.Memory
+@using OpenAnima.Core.Anima
+@inject IMemoryGraph MemoryGraphService
+@inject IAnimaContext AnimaContext
+@inject IStringLocalizer<SharedResources> L
+
+<div class="memory-page">
+    <div class="memory-header">
+        <h1 class="memory-title">Memory</h1>
+        <button class="btn-new-node" @onclick="StartNewNode">+ New Node</button>
+    </div>
+
+    <div class="memory-filter">
+        <input type="text"
+               class="uri-search-input"
+               placeholder="Search by URI path..."
+               @bind="_searchFilter"
+               @bind:event="oninput" />
+        @if (!string.IsNullOrEmpty(_searchFilter))
+        {
+            <button class="search-clear" @onclick="ClearSearch" aria-label="Clear search">×</button>
+        }
+    </div>
+
+    <div class="memory-layout">
+        <div class="uri-tree-panel" role="tree" aria-label="Memory URI tree">
+            @if (_treeNodes.Count == 0)
+            {
+                <div class="empty-state">
+                    <h3>No memory nodes yet</h3>
+                    <p>Create a node to start building this Anima's memory graph.</p>
+                </div>
+            }
+            else
+            {
+                @foreach (var node in FilteredNodes)
+                {
+                    <div class="tree-node @(node.Uri == _selectedUri ? "selected" : "")"
+                         role="treeitem"
+                         aria-selected="@(node.Uri == _selectedUri)"
+                         @onclick="() => SelectNode(node.Uri)">
+                        <span class="tree-indicator">@(node.Uri == _selectedUri ? "●" : "○")</span>
+                        <span class="tree-uri">@node.Uri</span>
+                    </div>
+                }
+            }
+        </div>
+
+        <div class="node-detail-panel">
+            @if (_isCreatingNew)
+            {
+                <div class="new-node-form">
+                    <label class="field-label">URI</label>
+                    <input type="text"
+                           class="new-node-uri-input"
+                           @bind="_newUri"
+                           @bind:event="oninput"
+                           placeholder="e.g. core://agent/identity"
+                           @ref="_uriInputRef"
+                           aria-label="New memory node URI" />
+                    <label class="field-label">Content</label>
+                    <textarea class="new-node-content-input"
+                              @bind="_newContent"
+                              @bind:event="oninput"
+                              rows="6"
+                              aria-label="New memory node content"></textarea>
+                    <div class="new-node-actions">
+                        <button class="btn-create" @onclick="CreateNewNode">Create Node</button>
+                        <button class="btn-cancel" @onclick="CancelNewNode">Cancel</button>
+                    </div>
+                </div>
+            }
+            else if (_selectedNode != null)
+            {
+                <MemoryNodeCard Node="_selectedNode"
+                                OnSaveNode="SaveNode"
+                                OnDeleteNode="ConfirmDelete" />
+            }
+            else
+            {
+                <div class="no-selection">
+                    Select a memory node to view or edit.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (_showDeleteConfirm)
+{
+    <div class="confirm-overlay" @onclick="CancelDelete">
+        <div class="confirm-dialog" @onclick:stopPropagation="true">
+            <h3>Delete memory node?</h3>
+            <p>This will permanently remove the node and all its edges. This cannot be undone.</p>
+            <div class="confirm-actions">
+                <button class="btn-danger" @onclick="ExecuteDelete">Delete Node</button>
+                <button class="btn-cancel" @onclick="CancelDelete">Keep Node</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<MemoryNode> _treeNodes = new();
+    private string? _selectedUri;
+    private MemoryNode? _selectedNode;
+    private string _searchFilter = "";
+    private bool _isCreatingNew;
+    private string _newUri = "";
+    private string _newContent = "";
+    private bool _showDeleteConfirm;
+    private string? _pendingDeleteUri;
+    private ElementReference _uriInputRef;
+
+    private IEnumerable<MemoryNode> FilteredNodes =>
+        string.IsNullOrEmpty(_searchFilter)
+            ? _treeNodes
+            : _treeNodes.Where(n => n.Uri.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNodes();
+    }
+
+    private async Task LoadNodes()
+    {
+        var animaId = AnimaContext.ActiveAnimaId;
+        if (animaId == null) return;
+        _treeNodes = (await MemoryGraphService.GetAllNodesAsync(animaId)).OrderBy(n => n.Uri).ToList();
+    }
+
+    private async Task SelectNode(string uri)
+    {
+        _selectedUri = uri;
+        _isCreatingNew = false;
+        var animaId = AnimaContext.ActiveAnimaId;
+        if (animaId != null)
+            _selectedNode = await MemoryGraphService.GetNodeAsync(animaId, uri);
+    }
+
+    private void StartNewNode()
+    {
+        _isCreatingNew = true;
+        _selectedNode = null;
+        _selectedUri = null;
+        _newUri = "";
+        _newContent = "";
+    }
+
+    private void CancelNewNode()
+    {
+        _isCreatingNew = false;
+    }
+
+    private async Task CreateNewNode()
+    {
+        var animaId = AnimaContext.ActiveAnimaId;
+        if (animaId == null || string.IsNullOrWhiteSpace(_newUri)) return;
+        var now = DateTimeOffset.UtcNow.ToString("O");
+        var node = new MemoryNode
+        {
+            Uri = _newUri.Trim(),
+            AnimaId = animaId,
+            Content = _newContent,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        await MemoryGraphService.WriteNodeAsync(node);
+        _isCreatingNew = false;
+        await LoadNodes();
+        await SelectNode(node.Uri);
+    }
+
+    private async Task SaveNode(MemoryNode updated)
+    {
+        await MemoryGraphService.WriteNodeAsync(updated);
+        await LoadNodes();
+        _selectedNode = updated;
+    }
+
+    private void ConfirmDelete(string uri)
+    {
+        _pendingDeleteUri = uri;
+        _showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteConfirm = false;
+        _pendingDeleteUri = null;
+    }
+
+    private async Task ExecuteDelete()
+    {
+        var animaId = AnimaContext.ActiveAnimaId;
+        if (animaId != null && _pendingDeleteUri != null)
+        {
+            await MemoryGraphService.DeleteNodeAsync(animaId, _pendingDeleteUri);
+            _selectedNode = null;
+            _selectedUri = null;
+            await LoadNodes();
+        }
+        _showDeleteConfirm = false;
+        _pendingDeleteUri = null;
+    }
+
+    private void ClearSearch()
+    {
+        _searchFilter = "";
+    }
+}

@@ -1,0 +1,270 @@
+.memory-page {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.memory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.memory-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.btn-new-node {
+    background: var(--accent-color);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.btn-new-node:hover {
+    opacity: 0.9;
+}
+
+.memory-filter {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.uri-search-input {
+    width: 100%;
+    background: var(--surface-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 14px;
+    padding: 8px 12px;
+}
+
+.uri-search-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.memory-layout {
+    display: grid;
+    grid-template-columns: 30% 1fr;
+    gap: 16px;
+    min-height: 500px;
+}
+
+@@media (max-width: 768px) {
+    .memory-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.uri-tree-panel {
+    background: var(--surface-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 16px;
+    overflow-y: auto;
+    max-height: 70vh;
+}
+
+.tree-node {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
+    color: var(--text-secondary);
+    min-height: 44px;
+}
+
+.tree-node:hover {
+    background: var(--surface-card);
+}
+
+.tree-node.selected {
+    background: var(--active-bg, rgba(108, 140, 255, 0.1));
+    color: var(--text-primary);
+}
+
+.tree-indicator {
+    color: var(--accent-color);
+    font-size: 8px;
+}
+
+.tree-uri {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.node-detail-panel {
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 16px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 32px 16px;
+}
+
+.empty-state h3 {
+    font-size: 14px;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+}
+
+.empty-state p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.no-selection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.field-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    margin-top: 12px;
+}
+
+.field-label:first-child {
+    margin-top: 0;
+}
+
+.new-node-uri-input,
+.new-node-content-input {
+    width: 100%;
+    background: var(--surface-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 14px;
+    padding: 8px;
+}
+
+.new-node-content-input {
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+.new-node-uri-input:focus,
+.new-node-content-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.new-node-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.btn-create {
+    background: var(--accent-color);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.btn-cancel {
+    background: none;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.confirm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.confirm-dialog {
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+}
+
+.confirm-dialog h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+}
+
+.confirm-dialog p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0 0 16px 0;
+    line-height: 1.5;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.btn-danger {
+    background: none;
+    color: var(--error-color);
+    border: 1px solid var(--error-color);
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.btn-danger:hover {
+    background: rgba(248, 113, 113, 0.1);
+}

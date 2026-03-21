@@ -59,6 +59,9 @@
   <data name="Nav.Settings" xml:space="preserve">
     <value>设置</value>
   </data>
+  <data name="Nav.Memory" xml:space="preserve">
+    <value>记忆</value>
+  </data>
   <data name="Anima.Create" xml:space="preserve">
     <value>创建 Anima</value>
   </data>
