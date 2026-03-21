@@ -129,7 +129,7 @@
 
 - [x] **Phase 45: Durable Task Runtime Foundation** - Durable runs have stable identity, persisted state, resume/cancel lifecycle, and bounded execution. (completed 2026-03-20)
 - [x] **Phase 46: Workspace Tool Surface** - Runs can inspect and act on a bound repository through explicit workspace tools. (completed 2026-03-20)
-- [ ] **Phase 47: Run Inspection & Observability** - Users can inspect timelines, step details, graph triggers, and correlated diagnostics for each run.
+- [x] **Phase 47: Run Inspection & Observability** - Users can inspect timelines, step details, graph triggers, and correlated diagnostics for each run. (completed 2026-03-21)
 - [ ] **Phase 48: Artifact & Memory Foundation** - Runs persist artifacts and provenance-backed retrieval records that stay inspectable.
 - [ ] **Phase 49: Structured Cognition Workflows** - Graph-native workflows use tools, memory, and multi-node routing to deliver grounded codebase analysis.
 
@@ -193,7 +193,13 @@ Plans:
   3. Any stored memory record shows provenance including source artifact, source step, and timestamp.
   4. Any memory injected into a later run is inspectable and links back to its originating artifact or step.
   5. Downstream runs can use retrieved memory as explicit grounding rather than hidden session-only prompt state.
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 48-01-PLAN.md — Artifact persistence layer (ArtifactRecord, IArtifactStore, DB schema, tests)
+- [ ] 48-02-PLAN.md — Memory graph persistence (MemoryNode/Edge/Snapshot, IMemoryGraph, GlossaryIndex, DisclosureMatcher, tests)
+- [ ] 48-03-PLAN.md — StepRecorder artifact hook, ArtifactViewer UI, DI wiring
+- [ ] 48-04-PLAN.md — MemoryModule, memory workspace tools, BootMemoryInjector, DI wiring
+- [ ] 48-05-PLAN.md — Memory graph page UI, MemoryNodeCard, nav link, localization
 
 ### Phase 49: Structured Cognition Workflows
 **Goal**: Users can run visible, graph-native cognition workflows that analyze a workspace and deliver grounded results.
@@ -260,8 +266,8 @@ Plans:
 | 44. Config Schema Sidebar Integration | v1.9 | 1/1 | Complete | 2026-03-19 |
 | 45. Durable Task Runtime Foundation | 3/3 | Complete    | 2026-03-20 | - |
 | 46. Workspace Tool Surface | 4/4 | Complete    | 2026-03-20 | - |
-| 47. Run Inspection & Observability | 2/3 | In Progress|  | - |
-| 48. Artifact & Memory Foundation | v2.0 | 0/TBD | Not started | - |
+| 47. Run Inspection & Observability | 3/3 | Complete   | 2026-03-21 | - |
+| 48. Artifact & Memory Foundation | v2.0 | 0/5 | Planned | - |
 | 49. Structured Cognition Workflows | v2.0 | 0/TBD | Not started | - |
 
 **Total shipped: 44 phases, 99 plans across 10 milestones**

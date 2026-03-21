@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Structured Cognition Foundation
 status: unknown
-stopped_at: Completed 47-02-PLAN.md
-last_updated: "2026-03-21T11:29:34.363Z"
+stopped_at: Completed 47-03-PLAN.md
+last_updated: "2026-03-21T11:45:25.219Z"
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 12
-  completed_plans: 9
+  completed_phases: 3
+  total_plans: 15
+  completed_plans: 10
 ---
 
 # Project State: OpenAnima
@@ -59,6 +59,7 @@ Plan: 2 of 3
 | Phase 46-workspace-tool-surface P04 | 20min | 2 tasks | 4 files |
 | Phase 47-run-inspection-observability P01 | 29min | 2 tasks | 9 files |
 | Phase 47-run-inspection-observability P02 | 30 | 2 tasks | 5 files |
+| Phase 47-run-inspection-observability P03 | 8 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,9 @@ Recent decisions affecting current work:
 - [Phase 47-01]: RunService BeginScope wraps LogInformation call in StartRunAsync/PauseRunAsync — ambient scope for any downstream log calls within that block
 - [Phase 47-02]: TimelineEntry private record merges StepRecord+RunStateEvent into uniform ordered list; Razor null-forgiving ! not valid in attributes — use local var binding
 - [Phase 47-02]: StepTimelineRow uses role=button not role=listitem — interactive elements need button role even inside role=list container
+- [Phase 47-03]: State event rows pass through filter only when no filters active — keeps run state transitions visible alongside steps when unfiltered
+- [Phase 47-03]: HandleChainFilterShortcut clears _activeChainId — filter and highlight are mutually exclusive modes in RunDetail
+- [Phase 47-03]: TimelineFilterBar uses EventCallback<string?> parameters — parent (RunDetail) owns all filter state, child only notifies
 
 ### Pending Todos
 
@@ -105,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T11:29:34.361Z
-Stopped at: Completed 47-02-PLAN.md
+Last session: 2026-03-21T11:45:25.216Z
+Stopped at: Completed 47-03-PLAN.md
 Resume file: None
