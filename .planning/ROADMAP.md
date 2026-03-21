@@ -266,7 +266,7 @@ Plans:
 | 44. Config Schema Sidebar Integration | v1.9 | 1/1 | Complete | 2026-03-19 |
 | 45. Durable Task Runtime Foundation | 3/3 | Complete    | 2026-03-20 | - |
 | 46. Workspace Tool Surface | 4/4 | Complete    | 2026-03-20 | - |
-| 47. Run Inspection & Observability | 3/3 | Complete   | 2026-03-21 | - |
+| 47. Run Inspection & Observability | 3/3 | Complete    | 2026-03-21 | - |
 | 48. Artifact & Memory Foundation | v2.0 | 0/5 | Planned | - |
 | 49. Structured Cognition Workflows | v2.0 | 0/TBD | Not started | - |
 
