@@ -1,20 +1,21 @@
 .editor-config-sidebar {
-    position: fixed;
-    right: -400px;
+    position: absolute;
+    right: 220px; /* Attach exactly to the left of the 220px palette area */
     top: 0;
-    width: 400px;
-    height: 100vh;
-    background: var(--card-bg);
+    width: 380px;
+    height: 100%;
+    background: var(--surface-card);
     border-left: 1px solid var(--border-color);
-    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.2);
-    transition: right 0.3s ease;
-    z-index: 1000;
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateX(100%); /* Start hidden behind/inside the palette area */
+    z-index: 90; /* Canvas is 10, palette is 100, so this slides *under* the palette */
     display: flex;
     flex-direction: column;
 }
 
 .editor-config-sidebar.visible {
-    right: 0;
+    transform: translateX(0); /* Slide out to its designated spot left of the palette */
 }
 
 .sidebar-header {
@@ -31,10 +32,15 @@
     font-weight: 600;
 }
 
-.close-btn {
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.action-btn {
     background: none;
     border: none;
-    font-size: 1.5rem;
     cursor: pointer;
     color: var(--text-secondary);
     padding: 0;
@@ -43,12 +49,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
-    transition: background-color 0.1s;
+    border-radius: 6px;
+    transition: background-color 0.2s, color 0.2s;
 }
 
-.close-btn:hover {
+.action-btn:hover {
     background: var(--hover-bg);
+    color: var(--text-primary);
+}
+
+.action-btn.text-error:hover {
+    background: rgba(248, 113, 113, 0.1);
+    color: var(--error-color);
 }
 
 .sidebar-content {
@@ -168,7 +180,8 @@
     margin-bottom: 0.25rem;
 }
 
-.config-field input {
+.config-field input,
+.config-field select {
     background: var(--surface-dark);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
@@ -179,7 +192,8 @@
     transition: border-color 0.2s;
 }
 
-.config-field input:focus {
+.config-field input:focus,
+.config-field select:focus {
     border-color: var(--accent-color, #667eea);
 }
 

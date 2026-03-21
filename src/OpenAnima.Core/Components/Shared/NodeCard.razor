@@ -18,9 +18,9 @@
           fill="#1c1e2e"
           stroke="@GetBorderStroke()"
           stroke-width="@GetBorderWidth()"
-          class="node-card-background @GetNodeStateClass()"
+          class="node-card-background @GetNodeStateClass() cursor-pointer"
           @onclick="HandleCardClick"
-          style="cursor: pointer;" />
+/>
 
     <!-- Title bar -->
     <rect x="0" y="0"
@@ -30,16 +30,16 @@
           fill="#161822"
           @onmousedown="HandleTitleBarMouseDown"
           @onmousedown:preventDefault
-          style="cursor: move;" />
+          class="cursor-move" />
 
     <!-- Title text -->
     @((MarkupString)$"<text x=\"{_nodeWidth / 2}\" y=\"{_titleHeight / 2 + 4}\" fill=\"#e4e6f0\" font-size=\"13\" font-family=\"var(--font-family)\" text-anchor=\"middle\" font-weight=\"500\" style=\"pointer-events: none\">{Node.ModuleName}</text>")
 
     <!-- Status indicator -->
     <circle cx="@(_nodeWidth - 12)" cy="@(_titleHeight / 2)" r="4"
-            class="node-status-dot @GetNodeStateClass()"
+            class="node-status-dot @GetNodeStateClass() cursor-default"
             fill="@_editorState.GetNodeBorderColor(Node.ModuleId)"
-            style="cursor: default;" />
+/>
 
     @if (IsRunningState())
     {
@@ -60,7 +60,7 @@
         <circle cx="0" cy="@portY" r="6"
                 fill="@PortColors.GetHex(port.Type)"
                 @onmouseup="@(() => HandlePortMouseUp(port))"
-                style="cursor: crosshair;" />
+                class="cursor-crosshair" />
 
         @((MarkupString)$"<text x=\"14\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\" style=\"pointer-events: none\">{port.Name}</text>")
     }
@@ -74,7 +74,7 @@
                 fill="@PortColors.GetHex(port.Type)"
                 @onmousedown="@(() => HandlePortMouseDown(port))"
                 @onmousedown:preventDefault
-                style="cursor: crosshair;" />
+                class="cursor-crosshair" />
 
         @((MarkupString)$"<text x=\"{_nodeWidth - 14}\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\" text-anchor=\"end\" style=\"pointer-events: none\">{port.Name}</text>")
     }

@@ -143,7 +143,7 @@ else
             }
             @if (ports.Count == 0)
             {
-                <p class="text-muted" style="font-size: 0.85rem;">@L["Modules.Detail.NoPorts"]</p>
+                <p class="text-muted">@L["Modules.Detail.NoPorts"]</p>
             }
             else
             {
@@ -152,7 +152,7 @@ else
                         <div class="port-column-header">@L["Modules.Detail.Inputs"]</div>
                         @if (inputs.Count == 0)
                         {
-                            <span class="text-muted" style="font-size: 0.75rem;">@L["Modules.Detail.None"]</span>
+                            <span class="text-muted">@L["Modules.Detail.None"]</span>
                         }
                         else
                         {
@@ -166,7 +166,7 @@ else
                         <div class="port-column-header">@L["Modules.Detail.Outputs"]</div>
                         @if (outputs.Count == 0)
                         {
-                            <span class="text-muted" style="font-size: 0.75rem;">@L["Modules.Detail.None"]</span>
+                            <span class="text-muted">@L["Modules.Detail.None"]</span>
                         }
                         else
                         {

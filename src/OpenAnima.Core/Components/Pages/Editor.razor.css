@@ -1,15 +1,18 @@
 .editor-container {
     display: flex;
     flex-direction: row;
-    height: 100vh;
+    height: 100%;
     width: 100%;
     background-color: var(--bg-primary);
+    position: relative;
+    overflow: hidden;
 }
 
 .canvas-area {
     flex: 1;
     overflow: hidden;
     position: relative;
+    z-index: 10;
 }
 
 .palette-area {
@@ -17,4 +20,6 @@
     flex-shrink: 0;
     background-color: var(--surface-dark);
     border-left: 1px solid var(--border-color);
+    position: relative;
+    z-index: 100;
 }

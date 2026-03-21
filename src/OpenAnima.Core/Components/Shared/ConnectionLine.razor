@@ -7,7 +7,7 @@
       fill="none"
       pointer-events="@(IsPreview ? "none" : "stroke")"
       @onclick="HandleClick"
-      style="@(IsPreview ? "" : "cursor: pointer;")" />
+      class="@(IsPreview ? "" : "cursor-pointer")" />
 
 <!-- Visible bezier curve -->
 <path d="@_pathData"
