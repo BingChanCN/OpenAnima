@@ -18,15 +18,15 @@ public class EditorStateService
 
     private readonly IPortRegistry _portRegistry;
     private readonly IConfigurationLoader _configLoader;
-    private readonly IWiringEngine _wiringEngine;
+    private readonly IWiringEngine? _wiringEngine;
     private readonly ILogger<EditorStateService> _logger;
     private CancellationTokenSource? _autoSaveDebounce;
 
     public EditorStateService(
         IPortRegistry portRegistry,
         IConfigurationLoader configLoader,
-        IWiringEngine wiringEngine,
-        ILogger<EditorStateService> logger)
+        ILogger<EditorStateService> logger,
+        IWiringEngine? wiringEngine = null)
     {
         _portRegistry = portRegistry;
         _configLoader = configLoader;
@@ -529,8 +529,8 @@ public class EditorStateService
             // Save configuration
             await _configLoader.SaveAsync(Configuration, _autoSaveDebounce.Token);
 
-            // Reload into wiring engine to keep it in sync
-            _wiringEngine.LoadConfiguration(Configuration);
+            // Reload into wiring engine to keep it in sync (optional — per-Anima engine may not be available)
+            _wiringEngine?.LoadConfiguration(Configuration);
 
             _logger.LogDebug("Auto-saved configuration: {ConfigName}", Configuration.Name);
         }

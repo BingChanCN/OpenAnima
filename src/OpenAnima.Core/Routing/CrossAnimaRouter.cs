@@ -20,7 +20,9 @@ public class CrossAnimaRouter : ICrossAnimaRouter
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
     private readonly ILogger<CrossAnimaRouter> _logger;
-    private readonly IAnimaRuntimeManager? _runtimeManager;
+    private readonly Lazy<IAnimaRuntimeManager>? _lazyRuntimeManager;
+
+    private IAnimaRuntimeManager? RuntimeManager => _lazyRuntimeManager?.Value;
 
     /// <summary>Thread-safe registry mapping "animaId::portName" compound keys to PortRegistration records.</summary>
     private readonly ConcurrentDictionary<string, PortRegistration> _registry = new();
@@ -41,11 +43,19 @@ public class CrossAnimaRouter : ICrossAnimaRouter
     /// to the target Anima's EventBus. When null, the router still works but relies on external
     /// delivery (e.g., for backward compatibility or testing without full runtime setup).
     /// </param>
-    public CrossAnimaRouter(ILogger<CrossAnimaRouter> logger, IAnimaRuntimeManager? runtimeManager = null)
+    public CrossAnimaRouter(ILogger<CrossAnimaRouter> logger, Lazy<IAnimaRuntimeManager>? lazyRuntimeManager = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _runtimeManager = runtimeManager;
+        _lazyRuntimeManager = lazyRuntimeManager;
         StartCleanupLoop();
+    }
+
+    /// <summary>
+    /// Convenience constructor for tests and scenarios where the manager is already available.
+    /// </summary>
+    public CrossAnimaRouter(ILogger<CrossAnimaRouter> logger, IAnimaRuntimeManager? runtimeManager = null)
+        : this(logger, runtimeManager != null ? new Lazy<IAnimaRuntimeManager>(() => runtimeManager) : null)
+    {
     }
 
     // ── ICrossAnimaRouter implementation ──────────────────────────────────
@@ -140,7 +150,7 @@ public class CrossAnimaRouter : ICrossAnimaRouter
         // Phase 34: Deliver request via the target Anima's ActivityChannelHost routing channel.
         // If channel host is available, enqueue the route work item (serialized, non-blocking).
         // Fall back to direct EventBus publish when channel host is not available (e.g. legacy tests).
-        var runtime = _runtimeManager?.GetOrCreateRuntime(targetAnimaId);
+        var runtime = RuntimeManager?.GetOrCreateRuntime(targetAnimaId);
         if (runtime != null)
         {
             try
@@ -160,7 +170,7 @@ public class CrossAnimaRouter : ICrossAnimaRouter
                     correlationId, key);
             }
         }
-        else if (_runtimeManager != null)
+        else if (RuntimeManager != null)
         {
             _logger.LogWarning(
                 "CrossAnimaRouter: no runtime found for {TargetAnimaId}. Request {CorrelationId} will time out.",
