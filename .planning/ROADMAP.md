@@ -272,7 +272,7 @@ Plans:
 | 46. Workspace Tool Surface | v2.0 | 4/4 | Complete | 2026-03-20 |
 | 47. Run Inspection & Observability | v2.0 | 3/3 | Complete | 2026-03-21 |
 | 48. Artifact & Memory Foundation | v2.0 | 5/5 | Complete | 2026-03-21 |
-| 49. Structured Cognition Workflows | 3/3 | Complete   | 2026-03-21 | - |
+| 49. Structured Cognition Workflows | 3/3 | Complete    | 2026-03-21 | - |
 
 **Total shipped: 44 phases, 99 plans across 10 milestones**
 
