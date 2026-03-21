@@ -1,3 +1,5 @@
+@using OpenAnima.Core.Workflows
+
 <div class="launch-panel">
     <fieldset>
         <legend>New Run</legend>
@@ -27,6 +29,10 @@
                 <span class="error-inline">@_workspaceError</span>
             }
         </div>
+
+        <WorkflowPresetSelector Presets="@Presets"
+                                 SelectedPreset="@_selectedPreset"
+                                 OnPresetSelected="HandlePresetSelected" />
 
         <div class="form-row">
             <div class="form-field">
@@ -103,12 +109,16 @@
 
 @code {
     [Parameter]
-    public EventCallback<(string objective, string workspace, int? maxSteps, int? maxWallSeconds)> OnStartRun { get; set; }
+    public EventCallback<(string objective, string workspace, int? maxSteps, int? maxWallSeconds, string? workflowPreset)> OnStartRun { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<WorkflowPresetInfo> Presets { get; set; } = [];
 
     private string _objective = string.Empty;
     private string _workspaceRoot = string.Empty;
     private string _maxStepsStr = string.Empty;
     private string _maxWallTimeStr = string.Empty;
+    private string? _selectedPreset;
 
     private string? _objectiveError;
     private string? _workspaceError;
@@ -166,6 +176,11 @@
         return valid;
     }
 
+    private void HandlePresetSelected(string? preset)
+    {
+        _selectedPreset = preset;
+    }
+
     private async Task HandleSubmit()
     {
         if (!Validate()) return;
@@ -178,12 +193,13 @@
 
         try
         {
-            await OnStartRun.InvokeAsync((_objective.Trim(), _workspaceRoot.Trim(), maxSteps, maxWallSeconds));
+            await OnStartRun.InvokeAsync((_objective.Trim(), _workspaceRoot.Trim(), maxSteps, maxWallSeconds, _selectedPreset));
             // Clear form on success
             _objective = string.Empty;
             _workspaceRoot = string.Empty;
             _maxStepsStr = string.Empty;
             _maxWallTimeStr = string.Empty;
+            _selectedPreset = null;
         }
         catch
         {

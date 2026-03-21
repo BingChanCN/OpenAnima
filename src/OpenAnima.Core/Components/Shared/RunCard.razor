@@ -44,6 +44,11 @@
         </div>
     </div>
 
+    @if (!string.IsNullOrEmpty(Run.WorkflowPreset))
+    {
+        <WorkflowProgressBar CompletedNodes="@StepCount" TotalNodes="@GetTotalNodes(Run.WorkflowPreset)" />
+    }
+
     @if (!string.IsNullOrEmpty(StopReason))
     {
         <StopReasonBanner Reason="@StopReason" />
@@ -103,5 +108,14 @@
     private void NavigateToDetail()
     {
         NavigationManager.NavigateTo($"/runs/{Run.RunId}");
+    }
+
+    private static int GetTotalNodes(string? presetName)
+    {
+        return presetName switch
+        {
+            "preset-codebase-analysis" => 8,
+            _ => 0
+        };
     }
 }

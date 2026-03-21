@@ -1,15 +1,17 @@
 @page "/runs"
 @using OpenAnima.Core.Runs
 @using OpenAnima.Core.Anima
+@using OpenAnima.Core.Workflows
 @inject IRunService RunService
 @inject IAnimaContext AnimaContext
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResources> L
+@inject WorkflowPresetService PresetService
 @implements IAsyncDisposable
 
 <h1 class="page-title">Runs</h1>
 
-<RunLaunchPanel OnStartRun="HandleStartRun" />
+<RunLaunchPanel OnStartRun="HandleStartRun" Presets="@_presets" />
 
 @if (_startError != null)
 {
@@ -54,9 +56,11 @@ else
     private bool _showCancelConfirm;
     private string? _cancelTargetRunId;
     private string? _startError;
+    private IReadOnlyList<WorkflowPresetInfo> _presets = [];
 
     protected override async Task OnInitializedAsync()
     {
+        _presets = PresetService.ListPresets();
         _runs = (await RunService.GetAllRunsAsync()).ToList();
 
         foreach (var run in _runs)
@@ -98,11 +102,11 @@ else
         await _hubConnection.StartAsync();
     }
 
-    private async Task HandleStartRun((string objective, string workspace, int? maxSteps, int? maxWallSeconds) args)
+    private async Task HandleStartRun((string objective, string workspace, int? maxSteps, int? maxWallSeconds, string? workflowPreset) args)
     {
         _startError = null;
         var animaId = AnimaContext.ActiveAnimaId;
-        var result = await RunService.StartRunAsync(animaId, args.objective, args.workspace, args.maxSteps, args.maxWallSeconds);
+        var result = await RunService.StartRunAsync(animaId, args.objective, args.workspace, args.maxSteps, args.maxWallSeconds, args.workflowPreset);
         if (result.IsSuccess)
         {
             _runs = (await RunService.GetAllRunsAsync()).ToList();
