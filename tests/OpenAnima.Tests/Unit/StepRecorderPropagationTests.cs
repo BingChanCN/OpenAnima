@@ -131,7 +131,7 @@ public class StepRecorderPropagationTests
             => animaId == _animaId ? _context : null;
 
         public Task<RunResult> StartRunAsync(string animaId, string objective, string workspaceRoot,
-            int? maxSteps = null, int? maxWallSeconds = null, CancellationToken ct = default)
+            int? maxSteps = null, int? maxWallSeconds = null, string? workflowPreset = null, CancellationToken ct = default)
             => Task.FromResult(RunResult.Ok(_context.RunId));
 
         public Task<RunResult> PauseRunAsync(string runId, string reason, CancellationToken ct = default)

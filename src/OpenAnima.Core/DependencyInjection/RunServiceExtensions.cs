@@ -5,6 +5,7 @@ using OpenAnima.Core.Memory;
 using OpenAnima.Core.RunPersistence;
 using OpenAnima.Core.Runs;
 using OpenAnima.Core.Tools;
+using OpenAnima.Core.Workflows;
 
 namespace OpenAnima.Core.DependencyInjection;
 
@@ -53,6 +54,11 @@ public static class RunServiceExtensions
         services.AddSingleton<IWorkspaceTool, MemoryQueryTool>();
         services.AddSingleton<IWorkspaceTool, MemoryWriteTool>();
         services.AddSingleton<IWorkspaceTool, MemoryDeleteTool>();
+
+        // Workflow preset discovery
+        var presetsDir = Path.Combine(AppContext.BaseDirectory, "wiring-configs", "presets");
+        Directory.CreateDirectory(presetsDir);
+        services.AddSingleton(new WorkflowPresetService(presetsDir));
 
         return services;
     }

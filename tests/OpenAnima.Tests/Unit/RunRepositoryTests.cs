@@ -210,6 +210,44 @@ public class RunRepositoryTests : IDisposable
         Assert.Equal(3, count);
     }
 
+    // --- WorkflowPreset persistence ---
+
+    [Fact]
+    public async Task CreateRunAsync_PersistsWorkflowPreset_AndGetRunByIdAsyncReturnsIt()
+    {
+        var descriptor = new RunDescriptor
+        {
+            RunId = "run-preset1",
+            AnimaId = "anima01",
+            Objective = "Preset test",
+            WorkspaceRoot = "/workspace/test",
+            MaxSteps = null,
+            MaxWallSeconds = null,
+            CreatedAt = DateTimeOffset.UtcNow,
+            CurrentState = RunState.Created,
+            WorkflowPreset = "preset-codebase-analysis"
+        };
+        await _repository.CreateRunAsync(descriptor);
+
+        var result = await _repository.GetRunByIdAsync("run-preset1");
+
+        Assert.NotNull(result);
+        Assert.Equal("preset-codebase-analysis", result!.WorkflowPreset);
+    }
+
+    [Fact]
+    public async Task GetRunByIdAsync_ReturnsNullWorkflowPreset_ForRunsWithoutPreset()
+    {
+        // A run created without a workflow preset should return null for WorkflowPreset
+        var descriptor = MakeDescriptor("run-preset2");
+        await _repository.CreateRunAsync(descriptor);
+
+        var result = await _repository.GetRunByIdAsync("run-preset2");
+
+        Assert.NotNull(result);
+        Assert.Null(result!.WorkflowPreset);
+    }
+
     // --- Helpers ---
 
     private static RunDescriptor MakeDescriptor(string runId) => new()

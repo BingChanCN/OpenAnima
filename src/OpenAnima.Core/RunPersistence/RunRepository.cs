@@ -26,8 +26,8 @@ public class RunRepository : IRunRepository
     public async Task CreateRunAsync(RunDescriptor descriptor, CancellationToken ct = default)
     {
         const string insertRun = """
-            INSERT INTO runs (run_id, anima_id, objective, workspace_root, max_steps, max_wall_seconds, created_at, updated_at)
-            VALUES (@RunId, @AnimaId, @Objective, @WorkspaceRoot, @MaxSteps, @MaxWallSeconds, @CreatedAt, @UpdatedAt)
+            INSERT INTO runs (run_id, anima_id, objective, workspace_root, max_steps, max_wall_seconds, workflow_preset, created_at, updated_at)
+            VALUES (@RunId, @AnimaId, @Objective, @WorkspaceRoot, @MaxSteps, @MaxWallSeconds, @WorkflowPreset, @CreatedAt, @UpdatedAt)
             """;
 
         const string insertCreatedEvent = """
@@ -48,6 +48,7 @@ public class RunRepository : IRunRepository
             descriptor.WorkspaceRoot,
             descriptor.MaxSteps,
             descriptor.MaxWallSeconds,
+            descriptor.WorkflowPreset,
             CreatedAt = now,
             UpdatedAt = now
         });
@@ -99,6 +100,7 @@ public class RunRepository : IRunRepository
                    r.workspace_root AS WorkspaceRoot,
                    r.max_steps AS MaxSteps,
                    r.max_wall_seconds AS MaxWallSeconds,
+                   r.workflow_preset AS WorkflowPreset,
                    r.created_at AS CreatedAt,
                    e.state AS CurrentStateStr
             FROM runs r
@@ -125,6 +127,7 @@ public class RunRepository : IRunRepository
                    r.workspace_root AS WorkspaceRoot,
                    r.max_steps AS MaxSteps,
                    r.max_wall_seconds AS MaxWallSeconds,
+                   r.workflow_preset AS WorkflowPreset,
                    r.created_at AS CreatedAt,
                    e.state AS CurrentStateStr
             FROM runs r
@@ -152,6 +155,7 @@ public class RunRepository : IRunRepository
                    r.workspace_root AS WorkspaceRoot,
                    r.max_steps AS MaxSteps,
                    r.max_wall_seconds AS MaxWallSeconds,
+                   r.workflow_preset AS WorkflowPreset,
                    r.created_at AS CreatedAt,
                    e.state AS CurrentStateStr
             FROM runs r
@@ -276,6 +280,10 @@ public class RunRepository : IRunRepository
         public string WorkspaceRoot { get; init; } = string.Empty;
         public int? MaxSteps { get; init; }
         public int? MaxWallSeconds { get; init; }
+
+        /// <summary>Name of the workflow preset used to start this run, or null for manual wiring.</summary>
+        public string? WorkflowPreset { get; init; }
+
         public string CreatedAt { get; init; } = string.Empty;
 
         /// <summary>Raw string value of the latest state event's <c>state</c> column.</summary>
@@ -290,6 +298,7 @@ public class RunRepository : IRunRepository
         WorkspaceRoot = row.WorkspaceRoot,
         MaxSteps = row.MaxSteps,
         MaxWallSeconds = row.MaxWallSeconds,
+        WorkflowPreset = row.WorkflowPreset,
         CreatedAt = DateTimeOffset.Parse(row.CreatedAt),
         CurrentState = Enum.Parse<RunState>(row.CurrentStateStr)
     };

@@ -49,6 +49,7 @@ public class RunService : IRunService
         string workspaceRoot,
         int? maxSteps = null,
         int? maxWallSeconds = null,
+        string? workflowPreset = null,
         CancellationToken ct = default)
     {
         var runId = Guid.NewGuid().ToString("N")[..8];
@@ -63,7 +64,8 @@ public class RunService : IRunService
             MaxSteps = maxSteps,
             MaxWallSeconds = maxWallSeconds,
             CreatedAt = now,
-            CurrentState = RunState.Created
+            CurrentState = RunState.Created,
+            WorkflowPreset = workflowPreset
         };
 
         // Persist Created row + initial Created state event

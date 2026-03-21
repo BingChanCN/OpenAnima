@@ -258,4 +258,32 @@ public class RunServiceTests : IAsyncDisposable
 
         Assert.True(all.Count >= 2);
     }
+
+    // --- WorkflowPreset ---
+
+    [Fact]
+    public async Task StartRunAsync_WithWorkflowPreset_StoresPresetInRunDescriptor()
+    {
+        var result = await _service.StartRunAsync(
+            "anima-preset-01", "Preset objective", "/workspace",
+            workflowPreset: "preset-codebase-analysis");
+
+        Assert.True(result.IsSuccess);
+
+        var descriptor = await _repository.GetRunByIdAsync(result.RunId!);
+        Assert.NotNull(descriptor);
+        Assert.Equal("preset-codebase-analysis", descriptor!.WorkflowPreset);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_WithoutWorkflowPreset_StoresNullInRunDescriptor()
+    {
+        var result = await _service.StartRunAsync("anima-preset-02", "Manual objective", "/workspace");
+
+        Assert.True(result.IsSuccess);
+
+        var descriptor = await _repository.GetRunByIdAsync(result.RunId!);
+        Assert.NotNull(descriptor);
+        Assert.Null(descriptor!.WorkflowPreset);
+    }
 }

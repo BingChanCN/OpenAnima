@@ -121,5 +121,25 @@ public class RunDbInitializer
         await conn.ExecuteAsync("PRAGMA journal_mode=WAL;");
         await conn.ExecuteAsync("PRAGMA synchronous=NORMAL;");
         await conn.ExecuteAsync(SchemaScript);
+
+        // Additive migrations for columns added after initial schema creation
+        await MigrateSchemaAsync(conn);
+    }
+
+    /// <summary>
+    /// Applies additive schema migrations for columns added after the initial schema creation.
+    /// All migrations are idempotent — safe to call on every startup.
+    /// </summary>
+    private static async Task MigrateSchemaAsync(Microsoft.Data.Sqlite.SqliteConnection conn)
+    {
+        // Check if workflow_preset column exists (added in Phase 49-02)
+        var columns = await conn.QueryAsync<string>(
+            "SELECT name FROM pragma_table_info('runs')");
+        var columnSet = new HashSet<string>(columns);
+
+        if (!columnSet.Contains("workflow_preset"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE runs ADD COLUMN workflow_preset TEXT");
+        }
     }
 }
