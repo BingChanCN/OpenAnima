@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Structured Cognition Foundation
 status: unknown
-stopped_at: Completed 49-02-PLAN.md
-last_updated: "2026-03-21T14:44:39.518Z"
+stopped_at: "Checkpoint: Task 2 human-verify in 49-03-PLAN.md"
+last_updated: "2026-03-21T14:51:14.927Z"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 18
-  completed_plans: 17
+  completed_plans: 18
 ---
 
 # Project State: OpenAnima
@@ -67,6 +67,7 @@ Plan: 1 of 3
 | Phase 48 P05 | 10 | 2 tasks | 7 files |
 | Phase 49 P01 | 1013 | 3 tasks | 11 files |
 | Phase 49-structured-cognition-workflows P02 | 5min | 2 tasks | 12 files |
+| Phase 49-structured-cognition-workflows P03 | 3 | 1 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,9 @@ Recent decisions affecting current work:
 - [Phase 49]: LLMModule uses WaitAsync(ct) for serialization instead of Wait(0) drop semantics for workflow branch correctness
 - [Phase 49-02]: WorkflowPresetService takes presetsDir as constructor arg for testability; MigrateSchemaAsync uses pragma_table_info to check workflow_preset column before ALTER TABLE
 - [Phase 49-02]: scan-tools (WorkspaceToolModule) in preset has no port connections — invoked by LLM via tool calling at runtime, not through wiring; present for editor visibility only
+- [Phase 49-03]: GetTotalNodes returns 0 for unknown presets so WorkflowProgressBar hides cleanly via TotalNodes > 0 guard
+- [Phase 49-03]: StepCount (SignalR ReceiveStepCompleted) used as CompletedNodes proxy for WorkflowProgressBar — live progress without additional tracking infrastructure
+- [Phase 49-03]: OnStartRun EventCallback tuple extended with workflowPreset as final element — single surface area change across RunLaunchPanel, Runs, and HandleStartRun
 
 ### Pending Todos
 
@@ -138,6 +142,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T14:44:39.516Z
-Stopped at: Completed 49-02-PLAN.md
+Last session: 2026-03-21T14:51:14.925Z
+Stopped at: Checkpoint: Task 2 human-verify in 49-03-PLAN.md
 Resume file: None

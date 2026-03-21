@@ -131,7 +131,7 @@
 - [x] **Phase 46: Workspace Tool Surface** - Runs can inspect and act on a bound repository through explicit workspace tools. (completed 2026-03-20)
 - [x] **Phase 47: Run Inspection & Observability** - Users can inspect timelines, step details, graph triggers, and correlated diagnostics for each run. (completed 2026-03-21)
 - [x] **Phase 48: Artifact & Memory Foundation** - Runs persist artifacts and provenance-backed retrieval records that stay inspectable. (completed 2026-03-21)
-- [ ] **Phase 49: Structured Cognition Workflows** - Graph-native workflows use tools, memory, and multi-node routing to deliver grounded codebase analysis.
+- [x] **Phase 49: Structured Cognition Workflows** - Graph-native workflows use tools, memory, and multi-node routing to deliver grounded codebase analysis. (completed 2026-03-21)
 
 ## Phase Details
 
@@ -272,7 +272,7 @@ Plans:
 | 46. Workspace Tool Surface | v2.0 | 4/4 | Complete | 2026-03-20 |
 | 47. Run Inspection & Observability | v2.0 | 3/3 | Complete | 2026-03-21 |
 | 48. Artifact & Memory Foundation | v2.0 | 5/5 | Complete | 2026-03-21 |
-| 49. Structured Cognition Workflows | 2/3 | In Progress|  | - |
+| 49. Structured Cognition Workflows | 3/3 | Complete   | 2026-03-21 | - |
 
 **Total shipped: 44 phases, 99 plans across 10 milestones**
 
