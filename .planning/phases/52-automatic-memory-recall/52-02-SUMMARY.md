@@ -50,7 +50,7 @@ patterns-established:
   - "Pattern: CapturingLLMService.LastMessages captures message list for XML content assertions in LLMModule tests"
   - "Pattern: reflection-based invocation of ExecuteWithMessagesListAsync in tests avoids event bus complexity"
 
-requirements-completed: [MEMR-01, MEMR-02, MEMR-03, MEMR-05]
+requirements-completed: [MEMR-01, MEMR-02, MEMR-03, MEMR-04, MEMR-05]
 
 # Metrics
 duration: 10min
