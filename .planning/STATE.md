@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 55 context gathered
-last_updated: "2026-03-22T13:57:14.268Z"
+stopped_at: Completed 54-02-PLAN.md
+last_updated: "2026-03-22T13:57:52.113Z"
 progress:
   total_phases: 6
   completed_phases: 5
@@ -63,6 +63,7 @@ Plan: 2 of 2
 | Phase 53 P01 | 3m | 2 tasks | 4 files |
 | Phase 53 P02 | 6m | 1 tasks | 3 files |
 | Phase 54 P01 | 5 | 1 tasks | 3 files |
+| Phase 54 P02 | 10m | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,8 @@ Recent decisions affecting current work:
 - [Phase 53]: Tool block appended to existing system message[0] -- memory/routing content comes first, tools last; BuildToolDescriptorBlock returns null for empty lists to prevent empty XML tags
 - [Phase 54]: SedimentationService accepts Func<IReadOnlyList<ChatMessage>, CancellationToken, Task<string>>? llmCallOverride constructor parameter — production builds ChatClient from config, tests inject fake delegate without mocking OpenAI SDK
 - [Phase 54]: Keyword normalization: if value starts with '[', treat as JSON array and keep as-is; otherwise split on comma and serialize to JSON array — matches MemoryWriteTool pattern
+- [Phase 54]: TriggerSedimentation fires on both non-routing and routing paths using fire-and-forget Task.Run with CancellationToken.None and snapshot-captured message values
+- [Phase 54]: ISedimentationService injected as optional constructor parameter (= null) in LLMModule for backward compatibility with existing callers
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T13:57:14.264Z
-Stopped at: Phase 55 context gathered
-Resume file: .planning/phases/55-memory-review-surfaces/55-CONTEXT.md
+Last session: 2026-03-22T13:57:52.111Z
+Stopped at: Completed 54-02-PLAN.md
+Resume file: None
