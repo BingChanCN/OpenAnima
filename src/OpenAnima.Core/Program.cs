@@ -66,6 +66,9 @@ builder.Services.AddScoped<ChatSessionState>();
 // --- Register Anima services ---
 builder.Services.AddAnimaServices();
 
+// --- Register LLM provider registry ---
+builder.Services.AddProviderServices();
+
 // --- Register wiring services ---
 builder.Services.AddWiringServices();
 
