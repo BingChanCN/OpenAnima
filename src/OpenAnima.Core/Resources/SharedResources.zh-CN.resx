@@ -527,4 +527,40 @@
   <data name="Providers.ValidationModelIdDuplicate" xml:space="preserve">
     <value>已存在具有此 ID 的模型。</value>
   </data>
+  <data name="Editor.LLM.Provider" xml:space="preserve">
+    <value>提供商</value>
+  </data>
+  <data name="Editor.LLM.ProviderPlaceholder" xml:space="preserve">
+    <value>请选择 Provider</value>
+  </data>
+  <data name="Editor.LLM.ManualOption" xml:space="preserve">
+    <value>手动配置</value>
+  </data>
+  <data name="Editor.LLM.Model" xml:space="preserve">
+    <value>模型</value>
+  </data>
+  <data name="Editor.LLM.ModelPlaceholder" xml:space="preserve">
+    <value>请选择 Model</value>
+  </data>
+  <data name="Editor.LLM.ProviderDisabledWarning" xml:space="preserve">
+    <value>该提供商已禁用，保存的选择仍有效但不会被使用</value>
+  </data>
+  <data name="Editor.LLM.ModelNotSelectedWarning" xml:space="preserve">
+    <value>未选择模型，保存后此模块将无法运行</value>
+  </data>
+  <data name="Editor.LLM.ManualHint" xml:space="preserve">
+    <value>手动配置将覆盖全局设置，但优先级低于已选择的提供商</value>
+  </data>
+  <data name="Editor.LLM.ApiUrl" xml:space="preserve">
+    <value>API 地址</value>
+  </data>
+  <data name="Editor.LLM.ApiKey" xml:space="preserve">
+    <value>API 密钥</value>
+  </data>
+  <data name="Editor.LLM.ModelName" xml:space="preserve">
+    <value>模型名称</value>
+  </data>
+  <data name="Editor.LLM.NoProvidersRegistered" xml:space="preserve">
+    <value>尚无已注册的提供商，请前往设置添加</value>
+  </data>
 </root>

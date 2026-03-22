@@ -15,6 +15,7 @@
 @inject LanguageService LangSvc
 @inject IStringLocalizer<SharedResources> L
 @inject ModuleSchemaService _schemaService
+@inject ILLMProviderRegistry _providerRegistry
 
 <div class="editor-config-sidebar @(_editorState.SelectedNodeId != null ? "visible" : "")">
     @if (_selectedNode != null)
@@ -128,6 +129,116 @@
                 @if (_currentConfig.Count == 0)
                 {
                     <p class="text-muted">@L["Editor.Config.NoConfigFields"]</p>
+                }
+                else if (_selectedNode.ModuleName == "LLMModule" && _currentSchema != null)
+                {
+                    @* LLM Module: Custom cascading dropdown UI *@
+                    var llmSlug = _currentConfig.GetValueOrDefault("llmProviderSlug", "");
+                    var llmModelId = _currentConfig.GetValueOrDefault("llmModelId", "");
+                    var allProviders = _providerRegistry.GetAllProviders();
+
+                    <div class="config-form">
+                        @* Provider Dropdown *@
+                        <div class="config-field">
+                            <label>@L["Editor.LLM.Provider"]</label>
+                            <select value="@llmSlug"
+                                    @onchange="HandleProviderChanged">
+                                <option value="">@L["Editor.LLM.ProviderPlaceholder"]</option>
+                                @foreach (var provider in allProviders)
+                                {
+                                    var modelCount = _providerRegistry.GetModels(provider.Slug).Count;
+                                    var displayText = $"{provider.DisplayName} ({modelCount} models)";
+
+                                    if (!provider.IsEnabled && provider.Slug != llmSlug)
+                                    {
+                                        @* Disabled provider not currently selected — greyed, not selectable *@
+                                        <option value="@provider.Slug" disabled>@displayText (已禁用)</option>
+                                    }
+                                    else if (!provider.IsEnabled && provider.Slug == llmSlug)
+                                    {
+                                        @* Disabled provider IS the currently saved selection — show it as current value *@
+                                        <option value="@provider.Slug">@displayText (已禁用)</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@provider.Slug">@displayText</option>
+                                    }
+                                }
+                                <option disabled>──────────</option>
+                                <option value="__manual__">@L["Editor.LLM.ManualOption"]</option>
+                            </select>
+
+                            @* Inline warning when saved provider is disabled *@
+                            @if (!string.IsNullOrEmpty(llmSlug) && llmSlug != "__manual__")
+                            {
+                                var savedProvider = _providerRegistry.GetProvider(llmSlug);
+                                if (savedProvider != null && !savedProvider.IsEnabled)
+                                {
+                                    <span class="warning-inline">@L["Editor.LLM.ProviderDisabledWarning"]</span>
+                                }
+                            }
+                        </div>
+
+                        @* Model Dropdown — visible only when a registered provider is selected *@
+                        @if (!string.IsNullOrEmpty(llmSlug) && llmSlug != "__manual__")
+                        {
+                            var models = _providerRegistry.GetModels(llmSlug);
+                            <div class="config-field">
+                                <label>@L["Editor.LLM.Model"]</label>
+                                <select value="@llmModelId"
+                                        @onchange="@(e => HandleConfigChanged("llmModelId", e.Value?.ToString() ?? ""))">
+                                    <option value="">@L["Editor.LLM.ModelPlaceholder"]</option>
+                                    @foreach (var model in models)
+                                    {
+                                        var modelDisplay = string.IsNullOrEmpty(model.DisplayAlias)
+                                            ? model.ModelId
+                                            : $"{model.ModelId} ({model.DisplayAlias})";
+
+                                        @* NOTE: No model-disabled rendering — LLMModelInfo has no IsEnabled field.
+                                           All models from a provider are rendered as selectable. Model-level
+                                           disable requires adding IsEnabled to LLMModelInfo (future phase). *@
+                                        <option value="@model.ModelId">@modelDisplay</option>
+                                    }
+                                </select>
+
+                                @* Incomplete config warning — provider selected but no model *@
+                                @if (string.IsNullOrEmpty(llmModelId))
+                                {
+                                    <span class="warning-inline">@L["Editor.LLM.ModelNotSelectedWarning"]</span>
+                                }
+                            </div>
+                        }
+
+                        @* No providers registered hint *@
+                        @if (allProviders.Count == 0 && string.IsNullOrEmpty(llmSlug))
+                        {
+                            <span class="field-hint">@L["Editor.LLM.NoProvidersRegistered"]</span>
+                        }
+
+                        @* Manual Configuration Fields — visible only when __manual__ selected *@
+                        @if (llmSlug == "__manual__")
+                        {
+                            <span class="field-hint">@L["Editor.LLM.ManualHint"]</span>
+                            <div class="config-field">
+                                <label>@L["Editor.LLM.ApiUrl"]</label>
+                                <input type="text"
+                                       value="@_currentConfig.GetValueOrDefault("apiUrl", "")"
+                                       @oninput="@(e => HandleConfigChanged("apiUrl", e.Value?.ToString() ?? ""))" />
+                            </div>
+                            <div class="config-field">
+                                <label>@L["Editor.LLM.ApiKey"]</label>
+                                <input type="password"
+                                       value="@_currentConfig.GetValueOrDefault("apiKey", "")"
+                                       @oninput="@(e => HandleConfigChanged("apiKey", e.Value?.ToString() ?? ""))" />
+                            </div>
+                            <div class="config-field">
+                                <label>@L["Editor.LLM.ModelName"]</label>
+                                <input type="text"
+                                       value="@_currentConfig.GetValueOrDefault("modelName", "")"
+                                       @oninput="@(e => HandleConfigChanged("modelName", e.Value?.ToString() ?? ""))" />
+                            </div>
+                        }
+                    </div>
                 }
                 else if (_currentSchema != null)
                 {
@@ -384,8 +495,11 @@
     {
         _currentConfig[key] = newValue;
 
-        // Allow empty values for "template", "body", and "headers" keys
-        if (key != "template" && key != "body" && key != "headers" && string.IsNullOrWhiteSpace(newValue))
+        // Allow empty values for "template", "body", "headers", and LLM selection keys
+        // (llmProviderSlug and llmModelId are legitimately empty when unselected)
+        if (key != "template" && key != "body" && key != "headers"
+            && key != "llmProviderSlug" && key != "llmModelId"
+            && string.IsNullOrWhiteSpace(newValue))
         {
             _validationErrors[key] = "empty";
         }
@@ -399,6 +513,15 @@
         {
             TriggerAutoSave();
         }
+    }
+
+    private void HandleProviderChanged(ChangeEventArgs e)
+    {
+        var newSlug = e.Value?.ToString() ?? "";
+        HandleConfigChanged("llmProviderSlug", newSlug);
+
+        // Clear model selection when provider changes (cascade reset)
+        HandleConfigChanged("llmModelId", "");
     }
 
     private async void TriggerAutoSave()

@@ -527,4 +527,40 @@
   <data name="Providers.ValidationModelIdDuplicate" xml:space="preserve">
     <value>A model with this ID already exists.</value>
   </data>
+  <data name="Editor.LLM.Provider" xml:space="preserve">
+    <value>Provider</value>
+  </data>
+  <data name="Editor.LLM.ProviderPlaceholder" xml:space="preserve">
+    <value>Select Provider</value>
+  </data>
+  <data name="Editor.LLM.ManualOption" xml:space="preserve">
+    <value>Manual Configuration</value>
+  </data>
+  <data name="Editor.LLM.Model" xml:space="preserve">
+    <value>Model</value>
+  </data>
+  <data name="Editor.LLM.ModelPlaceholder" xml:space="preserve">
+    <value>Select Model</value>
+  </data>
+  <data name="Editor.LLM.ProviderDisabledWarning" xml:space="preserve">
+    <value>This provider is disabled. The saved selection is retained but will not be used.</value>
+  </data>
+  <data name="Editor.LLM.ModelNotSelectedWarning" xml:space="preserve">
+    <value>No model selected. This module will not run after saving.</value>
+  </data>
+  <data name="Editor.LLM.ManualHint" xml:space="preserve">
+    <value>Manual configuration overrides global settings but has lower priority than a selected provider.</value>
+  </data>
+  <data name="Editor.LLM.ApiUrl" xml:space="preserve">
+    <value>API URL</value>
+  </data>
+  <data name="Editor.LLM.ApiKey" xml:space="preserve">
+    <value>API Key</value>
+  </data>
+  <data name="Editor.LLM.ModelName" xml:space="preserve">
+    <value>Model Name</value>
+  </data>
+  <data name="Editor.LLM.NoProvidersRegistered" xml:space="preserve">
+    <value>No providers registered. Go to Settings to add one.</value>
+  </data>
 </root>
