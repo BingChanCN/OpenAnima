@@ -39,9 +39,9 @@ Requirements for milestone v2.0.1. Each maps to roadmap phases.
 ### Tool Awareness & Memory Tools
 
 - [ ] **TOOL-01**: LLM receives descriptors for only the tools available in the current execution context
-- [ ] **TOOL-02**: Developer-agent can create typed memory graph edges through a `memory_link` tool
-- [ ] **TOOL-03**: Developer-agent can explicitly retrieve relevant memories through a `memory_recall` tool
-- [ ] **TOOL-04**: Developer-agent can manage memory graph relationships without bypassing existing node provenance rules
+- [x] **TOOL-02**: Developer-agent can create typed memory graph edges through a `memory_link` tool
+- [x] **TOOL-03**: Developer-agent can explicitly retrieve relevant memories through a `memory_recall` tool
+- [x] **TOOL-04**: Developer-agent can manage memory graph relationships without bypassing existing node provenance rules
 
 ### Living Memory
 
@@ -110,9 +110,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MEMR-04 | Phase 52 | Complete |
 | MEMR-05 | Phase 52 | Complete |
 | TOOL-01 | Phase 53 | Pending |
-| TOOL-02 | Phase 53 | Pending |
-| TOOL-03 | Phase 53 | Pending |
-| TOOL-04 | Phase 53 | Pending |
+| TOOL-02 | Phase 53 | Complete |
+| TOOL-03 | Phase 53 | Complete |
+| TOOL-04 | Phase 53 | Complete |
 | LIVM-01 | Phase 54 | Pending |
 | LIVM-02 | Phase 54 | Pending |
 | LIVM-03 | Phase 54 | Pending |

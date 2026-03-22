@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 54 context gathered
-last_updated: "2026-03-22T13:16:25.050Z"
+stopped_at: Completed 53-01-PLAN.md
+last_updated: "2026-03-22T13:22:07.492Z"
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State: OpenAnima
@@ -22,12 +22,12 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-22)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 52 — automatic-memory-recall
+**Current focus:** Phase 53 — tool-aware-memory-operations
 
 ## Current Position
 
-Phase: 52 (automatic-memory-recall) — EXECUTING
-Plan: 2 of 2
+Phase: 53 (tool-aware-memory-operations) — EXECUTING
+Plan: 1 of 2
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Plan: 2 of 2
 | Phase 51 P02 | continuation | 2 tasks | 4 files |
 | Phase 52 P01 | 2m 30s | 2 tasks | 4 files |
 | Phase 52 P02 | 10m | 2 tasks | 8 files |
+| Phase 53 P01 | 3m | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,9 @@ Recent decisions affecting current work:
 - [Phase 52]: RecallType stays Disclosure when a node matches both disclosure trigger and glossary — priority is not downgraded by the glossary match
 - [Phase 52]: BuiltInModuleDecouplingTests allowlist updated with Core.Memory and Core.Runs as Phase 52 exceptions for LLMModule memory wiring
 - [Phase 52]: Memory system message insertion order: memory at [0], then routing at [0] pushes memory to [1] — routing first, memory second, then conversation
+- [Phase 53]: MemoryRecallTool calls RebuildGlossaryAsync before FindGlossaryMatches to ensure trie is populated per-call
+- [Phase 53]: MemoryRecallTool deduplicates via HashSet<string> on URIs so nodes matching both glossary and disclosure paths appear once
+- [Phase 53]: MemoryEdge has no SourceStepId -- provenance tracked at WorkspaceToolModule dispatch level via StepRecord, not on the edge
 
 ### Pending Todos
 
@@ -99,6 +103,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T13:16:25.046Z
-Stopped at: Phase 54 context gathered
-Resume file: .planning/phases/54-living-memory-sedimentation/54-CONTEXT.md
+Last session: 2026-03-22T13:22:07.490Z
+Stopped at: Completed 53-01-PLAN.md
+Resume file: None
