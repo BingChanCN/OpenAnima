@@ -219,7 +219,11 @@ Plans:
   2. Automatically created or updated memories retain provenance back to the source run, step, or artifact.
   3. When the same memory changes over time, the system records a new snapshot instead of silently overwriting prior state.
   4. Exchanges that do not yield stable knowledge do not create raw transcript-dump memories.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 54-01-PLAN.md — ISedimentationService interface, SedimentationService TDD implementation with extraction LLM call, JSON parsing, MemoryNode writing, and unit tests
+- [ ] 54-02-PLAN.md — LLMModule fire-and-forget wiring, DI registration, and integration tests
 
 ### Phase 55: Memory Review Surfaces
 **Goal**: Users can inspect how memory changed, why it exists, and how it connects to other memory.
@@ -289,10 +293,10 @@ Plans:
 | 51. LLM Module Configuration | 2/2 | Complete    | 2026-03-22 | - |
 | 52. Automatic Memory Recall | 2/2 | Complete    | 2026-03-22 | - |
 | 53. Tool-Aware Memory Operations | 2/2 | Complete   | 2026-03-22 | - |
-| 54. Living Memory Sedimentation | v2.0.1 | 0/TBD | Not started | - |
+| 54. Living Memory Sedimentation | v2.0.1 | 0/2 | Not started | - |
 | 55. Memory Review Surfaces | v2.0.1 | 0/TBD | Not started | - |
 
 **Total shipped: 49 phases, 117 plans across 11 milestones**
 
 ---
-*Last updated: 2026-03-22 — Phase 53 plans created*
+*Last updated: 2026-03-22 — Phase 54 plans created*
