@@ -16,9 +16,9 @@ Requirements for milestone v2.0.1. Each maps to roadmap phases.
 - [x] **PROV-05**: User can add one or more model records under a provider with stable model IDs and optional display aliases
 - [x] **PROV-06**: User can manually maintain provider model lists even when provider-side model discovery is unavailable
 - [x] **PROV-07**: User API keys are write-only in the UI after save and are never echoed back in plaintext
-- [ ] **PROV-08**: User API keys are stored securely and are excluded from logs, provenance, and normal module config rendering
+- [x] **PROV-08**: User API keys are stored securely and are excluded from logs, provenance, and normal module config rendering
 - [x] **PROV-09**: User can test a provider connection without revealing the stored API key
-- [ ] **PROV-10**: Developer can query provider and model metadata through a platform-level `ILLMProviderRegistry` contract
+- [x] **PROV-10**: Developer can query provider and model metadata through a platform-level `ILLMProviderRegistry` contract
 
 ### LLM Node Configuration
 
@@ -33,7 +33,7 @@ Requirements for milestone v2.0.1. Each maps to roadmap phases.
 - [ ] **MEMR-01**: Developer-agent run startup injects core boot memory into the run timeline automatically
 - [x] **MEMR-02**: LLM calls automatically recall matching memory nodes using disclosure triggers from the active conversation context
 - [x] **MEMR-03**: LLM calls automatically recall matching memory nodes using glossary keyword matches from the active conversation context
-- [ ] **MEMR-04**: Memory injected into LLM context is ranked, deduplicated, and bounded so recall does not overwhelm prompt budget
+- [x] **MEMR-04**: Memory injected into LLM context is ranked, deduplicated, and bounded so recall does not overwhelm prompt budget
 - [x] **MEMR-05**: Recalled memory includes visible provenance showing why it was recalled and where it came from
 
 ### Tool Awareness & Memory Tools
@@ -96,9 +96,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROV-05 | Phase 50 | Complete |
 | PROV-06 | Phase 50 | Complete |
 | PROV-07 | Phase 50 | Complete |
-| PROV-08 | Phase 57 (gap closure) | Pending |
+| PROV-08 | Phase 57 (gap closure) | Complete |
 | PROV-09 | Phase 50 | Complete |
-| PROV-10 | Phase 57 (gap closure) | Pending |
+| PROV-10 | Phase 57 (gap closure) | Complete |
 | LLMN-01 | Phase 51 | Complete |
 | LLMN-02 | Phase 51 | Complete |
 | LLMN-03 | Phase 51 | Complete |
@@ -107,7 +107,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MEMR-01 | Phase 57 (gap closure) | Pending |
 | MEMR-02 | Phase 52 | Complete |
 | MEMR-03 | Phase 52 | Complete |
-| MEMR-04 | Phase 57 (gap closure) | Pending |
+| MEMR-04 | Phase 57 (gap closure) | Complete |
 | MEMR-05 | Phase 52 | Complete |
 | TOOL-01 | Phase 53 | Complete |
 | TOOL-02 | Phase 53 | Complete |

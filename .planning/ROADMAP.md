@@ -331,7 +331,7 @@ Plans:
 | 54. Living Memory Sedimentation | 2/2 | Complete   | 2026-03-22 | - |
 | 55. Memory Review Surfaces | 2/2 | Complete    | 2026-03-22 | - |
 | 56. Sedimentation LLM Configuration | v2.0.1 | 0/1 | Planned | - |
-| 57. Integration Wiring & Metadata Fixes | v2.0.1 | 0/2 | Planned | - |
+| 57. Integration Wiring & Metadata Fixes | 1/2 | In Progress|  | - |
 
 **Total shipped: 49 phases, 117 plans across 11 milestones**
 
