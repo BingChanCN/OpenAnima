@@ -55,17 +55,18 @@ Source: CONTEXT.md decisions + existing component CSS measurements.
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px | 400 | 1.5 |
-| Label | 13px | 500 | 1.4 |
+| Label | 13px | 400 | 1.4 |
 | Section heading | 16px | 600 | 1.2 |
 | Page title | 20px (1.4rem) | 600 | 1.2 |
 
 Notes:
+- Exactly 2 weights in use: 400 (body and all labels) and 600 (all headings and page title).
+- Weight 500 is not used in this phase. Labels (input labels, status badges) use 400 — visual distinction from body text is achieved via smaller size (13px) and uppercase or muted colour, not weight.
 - Base font-size is 14px on `html, body` (from app.css line 48).
 - Section headings map to existing `.section-title` (1rem = 14px) and `.page-title` (1.4rem ≈ 20px).
-- Labels (input labels, status badges) use 13px at weight 500 — matches `.input-label` (0.8rem ≈ 11px, rounded to 13px for inline form labels per `.setting-label` 0.9rem pattern).
 - Monospace font (`--font-mono`) used exclusively for the masked API key display: `sk-****...1234`.
 
-Source: app.css + Settings.razor.css + AnimaCreateDialog.razor.css.
+Source: app.css + Settings.razor.css + AnimaCreateDialog.razor.css. Weight collapsed from 3 to 2 per typography constraint.
 
 ---
 
@@ -82,7 +83,7 @@ All values resolved from CSS custom properties declared in app.css `:root`.
 
 Accent (`#6c8cff`) reserved for:
 1. "Add Provider" primary action button (`btn-primary`)
-2. "Save" button inside provider create/edit dialog (`btn-primary`)
+2. "Save Provider" button inside provider create/edit dialog (`btn-primary`)
 3. Input focus ring border on all form fields (`border-color` on `:focus`)
 4. Connection test button in its default (non-loading) state
 5. Enabled status indicator dot on provider cards
@@ -95,6 +96,14 @@ Secondary semantic colors:
 Disabled provider card: Full card opacity reduced to 0.5, status indicator uses `--warning-color`.
 
 Source: app.css `:root` token declarations. CONTEXT.md decision: "Disabled providers should be visually distinct (greyed out card)."
+
+---
+
+## Visual Hierarchy
+
+Primary focal anchor: the "Add Provider" button and the provider card list that follows it together form the single focal region of the Settings — Providers section. When the list is empty, the empty state heading ("No providers configured") is the sole focal element and must render at page title weight (600) to draw the eye. When providers exist, each card's provider name (weight 600, 16px) is the focal anchor within its tile; all secondary metadata (model count, base URL, status) renders at body weight (400, 14px) and sits visually subordinate.
+
+Action buttons on cards ("Edit Provider", "Delete Provider") are right-aligned secondary affordances — they must not compete visually with the card's name and status indicator. The modal dialog's primary action ("Save Provider") anchors the bottom-right of the dialog footer at accent colour; the cancel/discard action is muted (`btn-secondary`).
 
 ---
 
@@ -129,7 +138,7 @@ Components to be created or extended in this phase:
 | State | Display |
 |-------|---------|
 | Never saved | Empty input, placeholder "Paste API key..." |
-| Saved (view mode) | `sk-****...1234` in `--font-mono`, read-only, with "Edit" affordance |
+| Saved (view mode) | `sk-****...1234` in `--font-mono`, read-only, with "Edit Provider" affordance |
 | Edit mode | Empty input (cleared for fresh paste), focus ring accent border |
 
 The masked format always shows the first 3 non-`sk-` chars of prefix and last 4 chars of the stored ciphertext identifier — never the actual secret.
@@ -154,7 +163,7 @@ Disable:
 4. On confirm: provider status becomes disabled, card enters disabled visual state.
 
 Delete:
-1. User clicks "Delete" on provider card (only visible on disabled providers or with zero models).
+1. User clicks "Delete Provider" on provider card (only visible on disabled providers or with zero models).
 2. `ConfirmDialog` opens with `ConfirmButtonClass="btn-danger"`, listing affected modules.
 3. On confirm: provider removed from list with no animation (instant removal consistent with existing patterns).
 
@@ -174,10 +183,11 @@ All UI text uses `IStringLocalizer<SharedResources>` — keys are listed. Englis
 | Empty state body | `Providers.EmptyBody` | "Add a provider to start using registry-backed LLM modules." |
 | Provider card model count | `Providers.ModelCount` | "{0} model(s)" |
 | Provider card disabled label | `Providers.DisabledLabel` | "Disabled" |
-| Edit button | `Common.Edit` | "Edit" |
-| Save button | `Common.Save` | "Save" |
-| Cancel button | `Common.Cancel` | "Cancel" |
-| Delete button | `Common.Delete` | "Delete" |
+| Edit button | `Providers.EditProvider` | "Edit Provider" |
+| Save button (create mode) | `Providers.SaveProvider` | "Save Provider" |
+| Discard button (edit mode, with changes) | `Providers.DiscardChanges` | "Discard Changes" |
+| Close button (create mode, no input entered) | `Providers.CloseDialog` | "Close" |
+| Delete button | `Providers.DeleteProvider` | "Delete Provider" |
 | Disable button | `Providers.Disable` | "Disable" |
 | Re-enable button | `Providers.Enable` | "Enable" |
 | Connection test button | `Providers.TestConnection` | "Test Connection" |
@@ -188,23 +198,28 @@ All UI text uses `IStringLocalizer<SharedResources>` — keys are listed. Englis
 | Model ID label | `Providers.ModelId` | "Model ID" |
 | Model alias label | `Providers.ModelAlias` | "Display alias (optional)" |
 | Add model button | `Providers.AddModel` | "Add Model" |
-| Remove model button | `Providers.RemoveModel` | "Remove" |
+| Remove model button | `Providers.RemoveModel` | "Remove Model" |
 | Disable confirm title | `Providers.DisableConfirmTitle` | "Disable Provider?" |
 | Disable confirm message | `Providers.DisableConfirmMessage` | "This will mark {0} LLM module(s) as unavailable. They will retain their selections but will not run until the provider is re-enabled." |
 | Delete confirm title | `Providers.DeleteConfirmTitle` | "Delete Provider?" |
 | Delete confirm message | `Providers.DeleteConfirmMessage` | "This will permanently delete this provider and {0} model(s). {1} LLM module(s) will show their selections as unavailable." |
-| Delete confirm action | `Providers.DeleteConfirmAction` | "Delete" |
+| Delete confirm action | `Providers.DeleteConfirmAction` | "Delete Provider" |
 | Inline validation: name required | `Providers.ValidationNameRequired` | "Provider name is required." |
 | Inline validation: URL required | `Providers.ValidationUrlRequired` | "Base URL is required." |
 | Inline validation: URL format | `Providers.ValidationUrlFormat` | "Enter a valid URL (e.g. https://api.openai.com)." |
 | Inline validation: model ID required | `Providers.ValidationModelIdRequired` | "Model ID is required." |
 | Inline validation: duplicate model ID | `Providers.ValidationModelIdDuplicate` | "A model with this ID already exists." |
 
+Dialog cancel/discard logic:
+- Create mode, no input entered: show "Close" (`Providers.CloseDialog`) — no confirmation needed.
+- Create mode, input entered: show "Discard Changes" (`Providers.DiscardChanges`) — dismisses without saving.
+- Edit mode: show "Discard Changes" (`Providers.DiscardChanges`) regardless of whether changes were made.
+
 Destructive actions:
 - Disable: `ConfirmDialog` with `ConfirmButtonClass="btn-secondary"` (disable is reversible) — confirm text "Disable"
-- Delete: `ConfirmDialog` with `ConfirmButtonClass="btn-danger"` — confirm text "Delete"
+- Delete: `ConfirmDialog` with `ConfirmButtonClass="btn-danger"` — confirm text "Delete Provider"
 
-Source: REQUIREMENTS.md PROV-01 through PROV-09 + CONTEXT.md lifecycle decisions. Empty state inferred from success criteria (PROV-01 requires user can "create a global LLM provider").
+Source: REQUIREMENTS.md PROV-01 through PROV-09 + CONTEXT.md lifecycle decisions. Empty state inferred from success criteria (PROV-01 requires user can "create a global LLM provider"). CTA keys revised: `Common.Save`/`Common.Cancel` replaced with phase-specific keys per copywriting contract.
 
 ---
 
