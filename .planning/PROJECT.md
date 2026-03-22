@@ -4,8 +4,8 @@
 
 **Latest shipped:** v2.0 Structured Cognition Foundation (2026-03-21)
 **Milestones complete:** v1.0–v2.0 (11 milestones, 49 phases, 117 plans)
-**Phase 53 complete:** Tool-Aware Memory Operations — MemoryRecallTool (keyword+disclosure dual-path recall), MemoryLinkTool (validated graph edge creation), both registered in DI; LLMModule injects `<available-tools>` XML into system messages when tools are present (2026-03-22)
-**Codebase:** ~41,773 LOC (C#, Razor, CSS, JS) | 569 tests green
+**Phase 54 complete:** Living Memory Sedimentation — ISedimentationService extracts stable knowledge from LLM exchanges via secondary LLM call, writes provenance-backed MemoryNodes with auto-snapshotting; fire-and-forget trigger wired into LLMModule post-response (2026-03-22)
+**Codebase:** ~42,100 LOC (C#, Razor, CSS, JS) | 585 tests green
 
 ## Current Milestone: v2.0.1 Provider Registry & Living Memory
 
@@ -162,7 +162,7 @@ Agents that proactively think and act on their own, while module connections rem
 - [x] memory_link tool for creating graph edges — Validated in Phase 53: tool-aware-memory-operations
 - [x] memory_recall tool for keyword/glossary-based retrieval — Validated in Phase 53: tool-aware-memory-operations
 - [x] GetToolDescriptors injected into LLM prompt so agent knows available tools — Validated in Phase 53: tool-aware-memory-operations
-- [ ] Conversation auto-sedimentation into memory graph
+- [x] Conversation auto-sedimentation into memory graph — Validated in Phase 54: living-memory-sedimentation
 - [ ] Snapshot history viewer in /memory UI
 - [ ] Edge management tools for LLM agent
 
@@ -335,4 +335,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-22 after Phase 53 (tool-aware-memory-operations) completion*
+*Last updated: 2026-03-22 after Phase 54 (living-memory-sedimentation) completion*
