@@ -72,3 +72,49 @@
 .empty-body {
     font-size: 14px;
 }
+
+.section-description {
+    font-size: 0.85rem;
+    color: var(--text-secondary, #aaa);
+    margin-bottom: 1rem;
+}
+
+.sediment-config-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.sediment-select {
+    background: var(--bg-secondary, #1e1e1e);
+    color: var(--text-primary, #e0e0e0);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 4px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 200px;
+    flex: 1;
+}
+
+.sediment-select:focus {
+    outline: none;
+    border-color: var(--accent-color, #4a9eff);
+}
+
+.warning-inline {
+    font-size: 0.8rem;
+    color: var(--warning-color, #e6a817);
+    border-left: 3px solid var(--warning-color, #e6a817);
+    padding: 0.4rem 0.75rem;
+    margin-bottom: 0.75rem;
+    background: rgba(230, 168, 23, 0.08);
+    border-radius: 0 4px 4px 0;
+}
+
+.saved-indicator {
+    font-size: 0.8rem;
+    color: var(--success-color, #4caf50);
+    margin-top: 0.25rem;
+}

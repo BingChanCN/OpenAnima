@@ -626,4 +626,31 @@
   <data name="Memory.ProvenanceEdgeError" xml:space="preserve">
     <value>无法加载关系，请刷新页面重试。</value>
   </data>
+  <data name="Sedimentation.SectionTitle" xml:space="preserve">
+    <value>活体记忆</value>
+  </data>
+  <data name="Sedimentation.Description" xml:space="preserve">
+    <value>选择为当前 Anima 的自动记忆沉淀提供支持的 LLM 提供商和模型。</value>
+  </data>
+  <data name="Sedimentation.Provider" xml:space="preserve">
+    <value>提供商</value>
+  </data>
+  <data name="Sedimentation.ProviderPlaceholder" xml:space="preserve">
+    <value>-- 选择提供商 --</value>
+  </data>
+  <data name="Sedimentation.Model" xml:space="preserve">
+    <value>模型</value>
+  </data>
+  <data name="Sedimentation.ModelPlaceholder" xml:space="preserve">
+    <value>-- 选择模型 --</value>
+  </data>
+  <data name="Sedimentation.ProviderDisabledWarning" xml:space="preserve">
+    <value>所选提供商已禁用，沉淀功能将在重新启用后激活。</value>
+  </data>
+  <data name="Sedimentation.Saved" xml:space="preserve">
+    <value>已保存</value>
+  </data>
+  <data name="Sedimentation.NoProviders" xml:space="preserve">
+    <value>尚未注册提供商，请先在上方添加。</value>
+  </data>
 </root>

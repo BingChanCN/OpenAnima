@@ -1,9 +1,15 @@
 @page "/settings"
 @using OpenAnima.Core.Providers
+@using OpenAnima.Core.Anima
+@using OpenAnima.Core.Services
+@using OpenAnima.Contracts
 @inject LanguageService LanguageService
 @inject IStringLocalizer<SharedResources> L
 @inject IJSRuntime JS
 @inject LLMProviderRegistryService ProviderRegistry
+@inject IAnimaContext AnimaContext
+@inject IAnimaModuleConfigService ConfigService
+@inject ILLMProviderRegistry LlmRegistry
 @implements IDisposable
 
 <div class="settings-container">
@@ -50,6 +56,59 @@
             @L["Providers.AddProvider"]
         </button>
     </div>
+
+    <div class="settings-section card">
+        <h2 class="section-title">@L["Sedimentation.SectionTitle"]</h2>
+        <p class="section-description">@L["Sedimentation.Description"]</p>
+
+        @if (!LlmRegistry.GetAllProviders().Any(p => p.IsEnabled))
+        {
+            <p class="text-muted">@L["Sedimentation.NoProviders"]</p>
+        }
+        else
+        {
+            <div class="sediment-config-row">
+                <label class="setting-label">@L["Sedimentation.Provider"]</label>
+                <select class="sediment-select" value="@_sedimentProviderSlug" @onchange="HandleSedimentProviderChanged">
+                    <option value="">@L["Sedimentation.ProviderPlaceholder"]</option>
+                    @foreach (var provider in LlmRegistry.GetAllProviders().Where(p => p.IsEnabled))
+                    {
+                        <option value="@provider.Slug">
+                            @provider.DisplayName (@LlmRegistry.GetModels(provider.Slug).Count)
+                        </option>
+                    }
+                </select>
+            </div>
+
+            @if (_sedimentProviderDisabled)
+            {
+                <div class="warning-inline">@L["Sedimentation.ProviderDisabledWarning"]</div>
+            }
+
+            @if (!string.IsNullOrEmpty(_sedimentProviderSlug))
+            {
+                var models = LlmRegistry.GetModels(_sedimentProviderSlug);
+                <div class="sediment-config-row">
+                    <label class="setting-label">@L["Sedimentation.Model"]</label>
+                    <select class="sediment-select" value="@_sedimentModelId" @onchange="HandleSedimentModelChanged">
+                        <option value="">@L["Sedimentation.ModelPlaceholder"]</option>
+                        @foreach (var model in models)
+                        {
+                            var display = string.IsNullOrEmpty(model.DisplayAlias)
+                                ? model.ModelId
+                                : $"{model.ModelId} ({model.DisplayAlias})";
+                            <option value="@model.ModelId">@display</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            @if (_sedimentSaved)
+            {
+                <div class="saved-indicator">@L["Sedimentation.Saved"]</div>
+            }
+        }
+    </div>
 </div>
 
 <ProviderDialog IsVisible="_showProviderDialog"
@@ -84,10 +143,19 @@
     // Pending lifecycle target
     private string? _pendingLifecycleSlug;
 
+    // Sedimentation config state
+    private string _sedimentProviderSlug = "";
+    private string _sedimentModelId = "";
+    private bool _sedimentProviderDisabled;
+    private bool _sedimentSaved;
+    private CancellationTokenSource? _savedIndicatorCts;
+
     protected override async Task OnInitializedAsync()
     {
         await ProviderRegistry.InitializeAsync();
         _providers = new List<LLMProviderRecord>(ProviderRegistry.GetAllProviderRecords());
+        AnimaContext.ActiveAnimaChanged += OnActiveAnimaChanged;
+        LoadSedimentConfig();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -237,8 +305,78 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    // --- Sedimentation config ---
+
+    private void LoadSedimentConfig()
+    {
+        if (string.IsNullOrEmpty(AnimaContext.ActiveAnimaId)) return;
+        var config = ConfigService.GetConfig(AnimaContext.ActiveAnimaId, "Sedimentation");
+        _sedimentProviderSlug = config.GetValueOrDefault("sedimentProviderSlug", "");
+        _sedimentModelId = config.GetValueOrDefault("sedimentModelId", "");
+
+        // Check if saved provider is now disabled
+        _sedimentProviderDisabled = false;
+        if (!string.IsNullOrEmpty(_sedimentProviderSlug))
+        {
+            var provider = LlmRegistry.GetProvider(_sedimentProviderSlug);
+            _sedimentProviderDisabled = provider == null || !provider.IsEnabled;
+        }
+    }
+
+    private void OnActiveAnimaChanged()
+    {
+        LoadSedimentConfig();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleSedimentProviderChanged(ChangeEventArgs e)
+    {
+        _sedimentProviderSlug = e.Value?.ToString() ?? "";
+        _sedimentModelId = ""; // cascade reset
+        _sedimentProviderDisabled = false;
+        await SaveSedimentConfigAsync();
+    }
+
+    private async Task HandleSedimentModelChanged(ChangeEventArgs e)
+    {
+        _sedimentModelId = e.Value?.ToString() ?? "";
+        await SaveSedimentConfigAsync();
+    }
+
+    private async Task SaveSedimentConfigAsync()
+    {
+        if (string.IsNullOrEmpty(AnimaContext.ActiveAnimaId)) return;
+        await ConfigService.SetConfigAsync(
+            AnimaContext.ActiveAnimaId,
+            "Sedimentation",
+            new Dictionary<string, string>
+            {
+                ["sedimentProviderSlug"] = _sedimentProviderSlug,
+                ["sedimentModelId"] = _sedimentModelId
+            });
+        await ShowSavedIndicator();
+    }
+
+    private async Task ShowSavedIndicator()
+    {
+        _savedIndicatorCts?.Cancel();
+        _savedIndicatorCts = new CancellationTokenSource();
+        _sedimentSaved = true;
+        StateHasChanged();
+        try
+        {
+            await Task.Delay(2000, _savedIndicatorCts.Token);
+            _sedimentSaved = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (TaskCanceledException) { }
+    }
+
     public void Dispose()
     {
         LanguageService.LanguageChanged -= OnLanguageServiceChanged;
+        AnimaContext.ActiveAnimaChanged -= OnActiveAnimaChanged;
+        _savedIndicatorCts?.Cancel();
+        _savedIndicatorCts?.Dispose();
     }
 }

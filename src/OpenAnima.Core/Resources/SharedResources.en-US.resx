@@ -626,4 +626,31 @@
   <data name="Memory.ProvenanceEdgeError" xml:space="preserve">
     <value>Could not load relationships. Refresh the page to retry.</value>
   </data>
+  <data name="Sedimentation.SectionTitle" xml:space="preserve">
+    <value>Living Memory</value>
+  </data>
+  <data name="Sedimentation.Description" xml:space="preserve">
+    <value>Select which LLM provider and model powers automatic memory sedimentation for the active Anima.</value>
+  </data>
+  <data name="Sedimentation.Provider" xml:space="preserve">
+    <value>Provider</value>
+  </data>
+  <data name="Sedimentation.ProviderPlaceholder" xml:space="preserve">
+    <value>-- Select provider --</value>
+  </data>
+  <data name="Sedimentation.Model" xml:space="preserve">
+    <value>Model</value>
+  </data>
+  <data name="Sedimentation.ModelPlaceholder" xml:space="preserve">
+    <value>-- Select model --</value>
+  </data>
+  <data name="Sedimentation.ProviderDisabledWarning" xml:space="preserve">
+    <value>Selected provider is disabled. Sedimentation will not activate until the provider is re-enabled.</value>
+  </data>
+  <data name="Sedimentation.Saved" xml:space="preserve">
+    <value>Saved</value>
+  </data>
+  <data name="Sedimentation.NoProviders" xml:space="preserve">
+    <value>No providers registered. Add a provider above first.</value>
+  </data>
 </root>
