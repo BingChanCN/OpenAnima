@@ -88,12 +88,27 @@ public class BuiltInModuleDecouplingTests
             }
         }
 
-        // LLMModule exception: OpenAnima.Core.LLM (documented in Phase 36)
+        // LLMModule exceptions:
+        // - OpenAnima.Core.LLM (documented in Phase 36)
+        // - OpenAnima.Core.Providers (Phase 51: ILLMProviderRegistry + LLMProviderRegistryService)
+        // - OpenAnima.Core.Services (Phase 51: IAnimaModuleConfigService for auto-clear SetConfigAsync)
         var llmCoreUsings = GetCoreUsings("LLMModule.cs");
-        if (llmCoreUsings.Count != 1 || llmCoreUsings[0] != "using OpenAnima.Core.LLM;")
+        var expectedLlmUsings = new HashSet<string>
         {
-            failures.Add(
-                $"LLMModule.cs: expected only 'using OpenAnima.Core.LLM;' but found {FormatUsings(llmCoreUsings)}");
+            "using OpenAnima.Core.LLM;",
+            "using OpenAnima.Core.Providers;",
+            "using OpenAnima.Core.Services;"
+        };
+        var unexpectedLlmUsings = llmCoreUsings.Where(u => !expectedLlmUsings.Contains(u)).ToList();
+        var missingLlmUsings = expectedLlmUsings.Where(u => !llmCoreUsings.Contains(u)).ToList();
+        if (unexpectedLlmUsings.Count > 0 || missingLlmUsings.Count > 0)
+        {
+            var issues = new List<string>();
+            if (unexpectedLlmUsings.Count > 0)
+                issues.Add($"unexpected: {FormatUsings(unexpectedLlmUsings)}");
+            if (missingLlmUsings.Count > 0)
+                issues.Add($"missing: {FormatUsings(missingLlmUsings)}");
+            failures.Add($"LLMModule.cs: Core using mismatch — {string.Join("; ", issues)}");
         }
 
         // ChatInputModule exception: OpenAnima.Core.Channels (Phase 37 wiring requirement)

@@ -7,6 +7,7 @@ using OpenAnima.Core.LLM;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Routing;
 using OpenAnima.Core.Services;
+using OpenAnima.Core.Providers;
 using OpenAnima.Tests.TestHelpers;
 
 namespace OpenAnima.Tests.Integration;
@@ -33,7 +34,8 @@ public class LLMModuleMessagesPortTests
         var eventBus = CreateEventBus();
         var capturingLlm = new CapturingFakeLlmService("LLM response");
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new TestAnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new TestAnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         var messages = new List<ChatMessageInput>
@@ -74,7 +76,8 @@ public class LLMModuleMessagesPortTests
         var eventBus = CreateEventBus();
         var capturingLlm = new CapturingFakeLlmService("The answer is 42");
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new TestAnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new TestAnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         var responseTcs = new TaskCompletionSource<string>();
@@ -111,7 +114,8 @@ public class LLMModuleMessagesPortTests
         var eventBus = CreateEventBus();
         var capturingLlm = new CapturingFakeLlmService("should not be called");
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new TestAnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new TestAnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         // Act — publish invalid JSON
@@ -140,7 +144,8 @@ public class LLMModuleMessagesPortTests
         var eventBus = CreateEventBus();
         var capturingLlm = new CapturingFakeLlmService("should not be called");
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new TestAnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new TestAnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         // Act — publish empty array
@@ -169,7 +174,8 @@ public class LLMModuleMessagesPortTests
         var eventBus = CreateEventBus();
         var capturingLlm = new CapturingFakeLlmService("prompt response");
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new TestAnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new TestAnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         var responseTcs = new TaskCompletionSource<string>();
@@ -207,7 +213,8 @@ public class LLMModuleMessagesPortTests
         var eventBus = CreateEventBus();
         var capturingLlm = new SlowCapturingFakeLlmService("messages response", delayMs: 50);
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new TestAnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new TestAnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         var responseTcs = new TaskCompletionSource<string>();
@@ -275,7 +282,8 @@ public class LLMModuleMessagesPortTests
 
         var animaContext = new TestAnimaContext { ActiveAnimaId = animaId };
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            configService, animaContext, router: router);
+            configService, animaContext,
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: router);
         await module.InitializeAsync();
 
         var messages = new List<ChatMessageInput> { new("user", "Summarize this") };

@@ -5,6 +5,7 @@ using OpenAnima.Core.Anima;
 using OpenAnima.Core.Events;
 using OpenAnima.Core.LLM;
 using OpenAnima.Core.Modules;
+using OpenAnima.Core.Providers;
 using OpenAnima.Tests.TestHelpers;
 
 namespace OpenAnima.Tests.Modules;
@@ -27,7 +28,8 @@ public class ModuleTests
         var eventBus = CreateEventBus();
         var mockLlm = new FakeLLMService("Hello back!");
         var module = new LLMModule(mockLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new AnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         Assert.Equal(ModuleExecutionState.Idle, module.GetState());
@@ -61,7 +63,8 @@ public class ModuleTests
         var eventBus = CreateEventBus();
         var mockLlm = new FakeLLMService(throwError: true);
         var module = new LLMModule(mockLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new AnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         // Act — publish prompt; handler will throw

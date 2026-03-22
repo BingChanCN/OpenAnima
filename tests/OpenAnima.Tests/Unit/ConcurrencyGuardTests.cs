@@ -4,6 +4,7 @@ using OpenAnima.Core.Anima;
 using OpenAnima.Core.Events;
 using OpenAnima.Core.LLM;
 using OpenAnima.Core.Modules;
+using OpenAnima.Core.Providers;
 using OpenAnima.Tests.TestHelpers;
 
 namespace OpenAnima.Tests.Unit;
@@ -25,7 +26,8 @@ public class ConcurrencyGuardTests
         var eventBus = CreateEventBus();
         var slowLlm = new SlowFakeLLMService(delayMs: 200);
         var module = new LLMModule(slowLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new AnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         // Act — fire two prompts concurrently
@@ -59,7 +61,8 @@ public class ConcurrencyGuardTests
         var eventBus = CreateEventBus();
         var slowLlm = new SlowFakeLLMService(delayMs: 100);
         var module = new LLMModule(slowLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new AnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         var responseTcs1 = new TaskCompletionSource<string>();

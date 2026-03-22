@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
 using OpenAnima.Contracts.Routing;
@@ -11,6 +12,7 @@ using OpenAnima.Core.Hosting;
 using OpenAnima.Core.LLM;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Ports;
+using OpenAnima.Core.Providers;
 using OpenAnima.Core.Routing;
 using OpenAnima.Core.Services;
 
@@ -94,6 +96,13 @@ public class ModuleRuntimeInitializationTests : IDisposable
             new CrossAnimaRouter(
                 sp.GetRequiredService<ILogger<CrossAnimaRouter>>(),
                 sp.GetRequiredService<IAnimaRuntimeManager>()));
+
+        // Register provider registry services needed by LLMModule (Phase 51)
+        var providersRoot = Path.Combine(_tempDataRoot, "providers");
+        services.AddSingleton<LLMProviderRegistryService>(_ =>
+            new LLMProviderRegistryService(providersRoot, NullLogger<LLMProviderRegistryService>.Instance));
+        services.AddSingleton<ILLMProviderRegistry>(sp =>
+            sp.GetRequiredService<LLMProviderRegistryService>());
 
         services.AddHttpClient("HttpRequest");
 

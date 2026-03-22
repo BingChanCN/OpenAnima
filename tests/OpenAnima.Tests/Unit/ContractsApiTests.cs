@@ -114,10 +114,11 @@ public class ContractsApiTests
     }
 
     [Fact]
-    public void ConfigFieldType_Has_Exactly_Eight_Values()
+    public void ConfigFieldType_Has_Exactly_Nine_Values()
     {
+        // Updated in Phase 51: CascadingDropdown added for provider/model cascading UI
         var values = Enum.GetValues<ConfigFieldType>();
-        Assert.Equal(8, values.Length);
+        Assert.Equal(9, values.Length);
     }
 
     [Theory]

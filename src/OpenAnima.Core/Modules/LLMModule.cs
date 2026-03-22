@@ -5,6 +5,8 @@ using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
 using OpenAnima.Contracts.Routing;
 using OpenAnima.Core.LLM;
+using OpenAnima.Core.Providers;
+using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.Modules;
 
@@ -26,16 +28,18 @@ namespace OpenAnima.Core.Modules;
 [InputPort("prompt", PortType.Text)]
 [OutputPort("response", PortType.Text)]
 [OutputPort("error", PortType.Text)]
-public class LLMModule : IModuleExecutor
+public class LLMModule : IModuleExecutor, IModuleConfigSchema
 {
     private const int DefaultMaxRetries = 2;
 
     private readonly ILLMService _llmService;
-    private readonly IModuleConfig _configService;
+    private readonly IAnimaModuleConfigService _configService;
     private readonly IModuleContext _animaContext;
     private readonly IEventBus _eventBus;
     private readonly ILogger<LLMModule> _logger;
     private readonly ICrossAnimaRouter? _router;
+    private readonly ILLMProviderRegistry _providerRegistry;
+    private readonly LLMProviderRegistryService _registryService;
     private readonly FormatDetector _formatDetector = new();
     private readonly List<IDisposable> _subscriptions = new();
 
@@ -48,7 +52,8 @@ public class LLMModule : IModuleExecutor
         "LLMModule", "1.0.0", "Sends prompt to LLM and outputs response");
 
     public LLMModule(ILLMService llmService, IEventBus eventBus, ILogger<LLMModule> logger,
-        IModuleConfig configService, IModuleContext animaContext,
+        IAnimaModuleConfigService configService, IModuleContext animaContext,
+        ILLMProviderRegistry providerRegistry, LLMProviderRegistryService registryService,
         ICrossAnimaRouter? router = null)
     {
         _llmService = llmService;
@@ -56,8 +61,79 @@ public class LLMModule : IModuleExecutor
         _logger = logger;
         _configService = configService;
         _animaContext = animaContext;
+        _providerRegistry = providerRegistry;
+        _registryService = registryService;
         _router = router;
     }
+
+    // -----------------------------------------------------------------------
+    // IModuleConfigSchema
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Returns the configuration schema for LLMModule.
+    /// Two-tier provider/model cascading dropdowns (provider group, orders 0-1) plus
+    /// manual per-Anima override fields (manual group, orders 10-12) for backward
+    /// compatibility with pre-Phase 51 apiUrl/apiKey/modelName configurations.
+    /// </summary>
+    public IReadOnlyList<ConfigFieldDescriptor> GetSchema() =>
+    [
+        new ConfigFieldDescriptor(
+            Key: "llmProviderSlug",
+            Type: ConfigFieldType.CascadingDropdown,
+            DisplayName: "提供商",
+            DefaultValue: "",
+            Description: null,
+            EnumValues: null,
+            Group: "provider",
+            Order: 0,
+            Required: false,
+            ValidationPattern: null),
+        new ConfigFieldDescriptor(
+            Key: "llmModelId",
+            Type: ConfigFieldType.CascadingDropdown,
+            DisplayName: "模型",
+            DefaultValue: "",
+            Description: null,
+            EnumValues: null,
+            Group: "provider",
+            Order: 1,
+            Required: false,
+            ValidationPattern: null),
+        new ConfigFieldDescriptor(
+            Key: "apiUrl",
+            Type: ConfigFieldType.String,
+            DisplayName: "API 地址",
+            DefaultValue: "",
+            Description: null,
+            EnumValues: null,
+            Group: "manual",
+            Order: 10,
+            Required: false,
+            ValidationPattern: null),
+        new ConfigFieldDescriptor(
+            Key: "apiKey",
+            Type: ConfigFieldType.Secret,
+            DisplayName: "API 密钥",
+            DefaultValue: "",
+            Description: null,
+            EnumValues: null,
+            Group: "manual",
+            Order: 11,
+            Required: false,
+            ValidationPattern: null),
+        new ConfigFieldDescriptor(
+            Key: "modelName",
+            Type: ConfigFieldType.String,
+            DisplayName: "模型名称",
+            DefaultValue: "",
+            Description: null,
+            EnumValues: null,
+            Group: "manual",
+            Order: 12,
+            Required: false,
+            ValidationPattern: null),
+    ];
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -254,11 +330,72 @@ public class LLMModule : IModuleExecutor
         }
     }
 
-    /// <summary>Calls the LLM (per-Anima custom client or global service).</summary>
+    /// <summary>
+    /// Calls the LLM using three-layer precedence resolution (Phase 51+):
+    /// LAYER 1: Provider-backed (llmProviderSlug + llmModelId from ILLMProviderRegistry)
+    /// LAYER 2: Manual per-Anima (apiUrl + apiKey + modelName from config)
+    /// LAYER 3: Global ILLMService fallback
+    ///
+    /// Auto-clears stale config keys when the referenced provider or model has been deleted.
+    /// The __manual__ sentinel bypasses provider resolution and goes directly to Layer 2.
+    /// </summary>
     private async Task<LLMResult> CallLlmAsync(string animaId,
         IReadOnlyList<ChatMessageInput> messages, CancellationToken ct)
     {
         var config = _configService.GetConfig(animaId, Metadata.Name);
+
+        // LAYER 1: Provider-backed (Phase 51)
+        if (config.TryGetValue("llmProviderSlug", out var slug) &&
+            !string.IsNullOrWhiteSpace(slug) && slug != "__manual__")
+        {
+            var provider = _providerRegistry.GetProvider(slug);
+
+            if (provider == null)
+            {
+                // Provider was deleted — auto-clear both keys and fall through
+                await ClearProviderSelectionAsync(animaId);
+            }
+            else if (provider.IsEnabled)
+            {
+                var modelId = config.GetValueOrDefault("llmModelId", "");
+                if (!string.IsNullOrWhiteSpace(modelId))
+                {
+                    // Verify the model still exists in the provider's model list
+                    var model = _providerRegistry.GetModel(slug, modelId);
+                    if (model == null)
+                    {
+                        // Model was deleted from live provider — auto-clear only llmModelId
+                        // (retain llmProviderSlug) and fall through to Layer 2/3
+                        await ClearModelSelectionAsync(animaId);
+                        _logger.LogInformation(
+                            "Auto-cleared stale model selection '{ModelId}' for provider '{Slug}' on Anima {AnimaId}",
+                            modelId, slug, animaId);
+                    }
+                    else
+                    {
+                        var decryptedKey = _registryService.GetDecryptedApiKey(slug);
+                        return await CompleteWithCustomClientAsync(
+                            provider.BaseUrl, decryptedKey, modelId, messages, ct);
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug(
+                        "Provider '{Slug}' selected but no model; falling back",
+                        slug);
+                }
+            }
+            else
+            {
+                _logger.LogDebug(
+                    "Provider '{Slug}' is disabled; falling back to manual config",
+                    slug);
+            }
+        }
+
+        // LAYER 2: Manual per-Anima (existing logic, unchanged)
+        // Re-read config because ClearProviderSelectionAsync/ClearModelSelectionAsync may have mutated it
+        config = _configService.GetConfig(animaId, Metadata.Name);
 
         var hasApiUrl = config.TryGetValue("apiUrl", out var apiUrl) && !string.IsNullOrWhiteSpace(apiUrl);
         var hasApiKey = config.TryGetValue("apiKey", out var apiKey) && !string.IsNullOrWhiteSpace(apiKey);
@@ -278,7 +415,32 @@ public class LLMModule : IModuleExecutor
                 animaId);
         }
 
+        // LAYER 3: Global ILLMService (existing fallback, unchanged)
         return await _llmService.CompleteAsync(messages, ct);
+    }
+
+    /// <summary>
+    /// Clears both llmProviderSlug and llmModelId when the provider itself was deleted.
+    /// </summary>
+    private async Task ClearProviderSelectionAsync(string animaId)
+    {
+        var config = _configService.GetConfig(animaId, Metadata.Name);
+        config.Remove("llmProviderSlug");
+        config.Remove("llmModelId");
+        await _configService.SetConfigAsync(animaId, Metadata.Name, config);
+        _logger.LogInformation(
+            "Auto-cleared stale provider selection for Anima {AnimaId}", animaId);
+    }
+
+    /// <summary>
+    /// Clears only llmModelId when the model was deleted but the provider still exists.
+    /// Retains llmProviderSlug so the user's provider choice is preserved.
+    /// </summary>
+    private async Task ClearModelSelectionAsync(string animaId)
+    {
+        var config = _configService.GetConfig(animaId, Metadata.Name);
+        config.Remove("llmModelId");
+        await _configService.SetConfigAsync(animaId, Metadata.Name, config);
     }
 
     /// <summary>
