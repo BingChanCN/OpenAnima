@@ -260,6 +260,11 @@ Plans:
   1. MemoryRecallService produces Boot recall nodes so `<boot-memory>` XML section in BuildMemorySystemMessage is populated.
   2. Settings.razor disable/delete confirms pass actual affected-module counts instead of hardcoded 0.
   3. PROV-08, PROV-10, and MEMR-04 appear in their respective plan SUMMARY `requirements_completed` metadata.
+**Plans**: 2 plans
+
+Plans:
+- [ ] 57-01-PLAN.md — Boot recall in MemoryRecallService, provider impact counts in Settings.razor, and unit tests
+- [ ] 57-02-PLAN.md — SUMMARY metadata patches for PROV-08, PROV-10, and MEMR-04
 
 ## Progress
 
@@ -322,9 +327,9 @@ Plans:
 | 54. Living Memory Sedimentation | 2/2 | Complete   | 2026-03-22 | - |
 | 55. Memory Review Surfaces | 2/2 | Complete    | 2026-03-22 | - |
 | 56. Sedimentation LLM Configuration | v2.0.1 | 0/0 | Planned | - |
-| 57. Integration Wiring & Metadata Fixes | v2.0.1 | 0/0 | Planned | - |
+| 57. Integration Wiring & Metadata Fixes | v2.0.1 | 0/2 | Planned | - |
 
 **Total shipped: 49 phases, 117 plans across 11 milestones**
 
 ---
-*Last updated: 2026-03-22 — Phase 54 plans created*
+*Last updated: 2026-03-23 — Phase 57 plans created*
