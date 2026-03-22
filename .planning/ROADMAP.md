@@ -143,7 +143,7 @@
 - [x] **Phase 53: Tool-Aware Memory Operations** - LLM sees only context-available tools and can retrieve or link memory safely through dedicated tools. (completed 2026-03-22)
 - [x] **Phase 54: Living Memory Sedimentation** - Completed exchanges automatically create durable, provenance-backed memory without transcript spam. (completed 2026-03-22)
 - [x] **Phase 55: Memory Review Surfaces** - Users can inspect memory history, provenance, and graph relationships from supported review surfaces. (completed 2026-03-22)
-- [ ] **Phase 56: Sedimentation LLM Configuration** - Users can configure which LLM provider/model powers living memory sedimentation so the pipeline activates on fresh deployments. (planned)
+- [x] **Phase 56: Sedimentation LLM Configuration** - Users can configure which LLM provider/model powers living memory sedimentation so the pipeline activates on fresh deployments. (planned) (completed 2026-03-22)
 - [ ] **Phase 57: Integration Wiring & Metadata Fixes** - Boot memory reaches LLM prompt context, provider impact counts reflect reality, and plan metadata gaps are closed. (planned)
 
 ## Phase Details
@@ -330,7 +330,7 @@ Plans:
 | 53. Tool-Aware Memory Operations | 2/2 | Complete    | 2026-03-22 | - |
 | 54. Living Memory Sedimentation | 2/2 | Complete   | 2026-03-22 | - |
 | 55. Memory Review Surfaces | 2/2 | Complete    | 2026-03-22 | - |
-| 56. Sedimentation LLM Configuration | v2.0.1 | 0/1 | Planned | - |
+| 56. Sedimentation LLM Configuration | 1/1 | Complete   | 2026-03-22 | - |
 | 57. Integration Wiring & Metadata Fixes | 1/2 | In Progress|  | - |
 
 **Total shipped: 49 phases, 117 plans across 11 milestones**
