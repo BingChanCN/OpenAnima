@@ -46,6 +46,7 @@ metrics:
   files_modified: 1
   tests_added: 28
   tests_total: 523
+requirements-completed: [PROV-08, PROV-10]
 ---
 
 # Phase 50 Plan 01: Provider Registry Backend Summary
