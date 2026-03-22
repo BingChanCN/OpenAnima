@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 51-02-PLAN.md
-last_updated: "2026-03-22T12:47:16.949Z"
+stopped_at: Completed 52-01-PLAN.md
+last_updated: "2026-03-22T12:54:26.292Z"
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 9
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State: OpenAnima
@@ -22,11 +22,11 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-22)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 51 — llm-module-configuration
+**Current focus:** Phase 52 — automatic-memory-recall
 
 ## Current Position
 
-Phase: 51 (llm-module-configuration) — EXECUTING
+Phase: 52 (automatic-memory-recall) — EXECUTING
 Plan: 2 of 2
 
 ## Performance Metrics
@@ -58,6 +58,7 @@ Plan: 2 of 2
 | Phase 50 P03 | 3m | 2 tasks | 2 files |
 | Phase 51 P01 | 23 | 2 tasks | 13 files |
 | Phase 51 P02 | continuation | 2 tasks | 4 files |
+| Phase 52 P01 | 2m 30s | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Recent decisions affecting current work:
 - [Phase 51]: NullRegistryServiceFactory uses Lazy<T> singleton with shared temp dir for integration test isolation of LLMModule constructor
 - [Phase 51]: Model-level disabled rendering excluded: LLMModelInfo has no IsEnabled field, no dead i18n key Editor.LLM.ModelDisabledWarning added
 - [Phase 51]: LLM sidebar cascade reset: HandleProviderChanged clears llmModelId to prevent stale cross-provider model binding
+- [Phase 52]: MemoryRecallService deduplicates glossary keyword matches per URI, joining multiple keywords in one reason string rather than producing duplicate RecalledNode entries
+- [Phase 52]: RecallType stays Disclosure when a node matches both disclosure trigger and glossary — priority is not downgraded by the glossary match
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T12:40:55.726Z
-Stopped at: Completed 51-02-PLAN.md
+Last session: 2026-03-22T12:54:26.290Z
+Stopped at: Completed 52-01-PLAN.md
 Resume file: None
