@@ -1,32 +1,35 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Structured Cognition Foundation
-status: milestone_complete
-stopped_at: "v2.0 milestone archived"
-last_updated: "2026-03-21T16:30:00.000Z"
+milestone: v2.0.1
+milestone_name: Provider Registry & Living Memory
+status: defining_requirements
+stopped_at: null
+last_updated: "2026-03-22T00:00:00.000Z"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 18
-  completed_plans: 18
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State: OpenAnima
 
-**Last updated:** 2026-03-21
-**Current milestone:** v2.0 Structured Cognition Foundation (SHIPPED)
+**Last updated:** 2026-03-22
+**Current milestone:** v2.0.1 Provider Registry & Living Memory
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-21)
+See: `.planning/PROJECT.md` (updated 2026-03-22)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements
 
 ## Current Position
 
-Milestone v2.0 complete. No active phase.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-22 — Milestone v2.0.1 started
 
 ## Performance Metrics
 
@@ -67,6 +70,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-21
-Stopped at: v2.0 milestone archived
+Last session: 2026-03-22
+Stopped at: Defining requirements for v2.0.1
 Resume file: None

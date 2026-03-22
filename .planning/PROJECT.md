@@ -6,6 +6,19 @@
 **Milestones complete:** v1.0–v2.0 (11 milestones, 49 phases, 117 plans)
 **Codebase:** ~41,773 LOC (C#, Razor, CSS, JS) | 495 tests green
 
+## Current Milestone: v2.0.1 Provider Registry & Living Memory
+
+**Goal:** Make LLM configuration UI-driven with a global provider/model registry, and activate the memory system so agents can automatically recall, accumulate, and link knowledge during execution.
+
+**Target features:**
+- Global LLM Provider registry (Settings page) with two-layer Provider > Model hierarchy
+- Editor LLM module dropdown selection from registered providers/models
+- BootMemoryInjector wired into run-start path
+- DisclosureMatcher and GlossaryIndex wired into LLM call path for automatic memory recall
+- New memory tools (memory_link, memory_recall) and GetToolDescriptors injection
+- Conversation auto-sedimentation into memory graph
+- Snapshot history UI and edge management tools
+
 ## What This Is
 
 A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Users create multiple independent Anima instances — each with its own heartbeat, module wiring, chat interface, and configuration. Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based dashboard, visual drag-and-drop wiring editor, LLM-powered chat, durable task runtime with workspace tools, run inspection with propagation chain visualization, provenance-backed memory graph, graph-native workflow presets, and full Chinese/English internationalization.
@@ -138,7 +151,19 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Active
 
-(No active milestone — use `/gsd:new-milestone` to start next)
+- [ ] Global LLM Provider registry with two-layer Provider > Model hierarchy
+- [ ] Settings page UI for provider/model CRUD management
+- [ ] Editor LLM module selects provider/model via dropdown (with manual fallback)
+- [ ] ILLMProviderRegistry interface in Contracts for third-party module access
+- [ ] BootMemoryInjector called at run-start path
+- [ ] DisclosureMatcher wired into LLM prompt assembly for context-triggered memory injection
+- [ ] GlossaryIndex keyword matching active during LLM calls
+- [ ] memory_link tool for creating graph edges
+- [ ] memory_recall tool for keyword/glossary-based retrieval
+- [ ] GetToolDescriptors injected into LLM prompt so agent knows available tools
+- [ ] Conversation auto-sedimentation into memory graph
+- [ ] Snapshot history viewer in /memory UI
+- [ ] Edge management tools for LLM agent
 
 ### Deferred
 
@@ -309,4 +334,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-21 after v2.0 milestone*
+*Last updated: 2026-03-22 after v2.0.1 milestone start*
