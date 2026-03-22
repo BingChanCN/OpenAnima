@@ -173,7 +173,11 @@ Plans:
   3. If a saved provider or model later becomes disabled or removed, the module still shows the prior selection as unavailable instead of silently clearing it.
   4. Advanced users can switch to manual API URL, API key, and model inputs for migration or non-registry scenarios.
   5. When provider-backed, manual, and legacy global settings all exist, the module resolves them in one deterministic precedence order on every run.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 51-01-PLAN.md — Contracts extension, LLMModule IModuleConfigSchema implementation, CallLlmAsync three-layer precedence, and unit tests
+- [ ] 51-02-PLAN.md — EditorConfigSidebar LLM-specific cascading dropdown UI, i18n keys, and visual verification
 
 ### Phase 52: Automatic Memory Recall
 **Goal**: Developer-agent runs and LLM calls automatically recall relevant memory without overwhelming prompt context.
