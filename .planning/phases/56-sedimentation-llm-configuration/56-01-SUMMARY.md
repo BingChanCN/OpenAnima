@@ -36,7 +36,7 @@ decisions:
 metrics:
   duration: "4m"
   completed_date: "2026-03-23"
-  tasks_completed: 1
+  tasks_completed: 2
   files_changed: 5
 ---
 
@@ -62,6 +62,7 @@ Added a "Living Memory" configuration section to the Settings page (`/settings`)
 |------|------|--------|-------|
 | 1 (RED) | Create SedimentationConfigIntegrationTests | dfde836 | tests/Unit/SedimentationConfigIntegrationTests.cs |
 | 1 (GREEN) | Implement Settings.razor section + CSS + i18n | 00f8df6 | Settings.razor, Settings.razor.css, 2x resx |
+| 2 | Visual verification of sedimentation config in Settings | (approved) | — |
 
 ## Verification Results
 
@@ -91,8 +92,8 @@ Added a "Living Memory" configuration section to the Settings page (`/settings`)
 
 None — plan executed exactly as written.
 
-## Checkpoint Pending
+## Checkpoint Outcome
 
-Task 2 (`checkpoint:human-verify`) is pending visual verification at `/settings`.
+Task 2 (`checkpoint:human-verify`) was approved by the user. Living Memory section on `/settings` confirmed visually correct with functional provider/model dropdowns.
 
 ## Self-Check: PASSED
