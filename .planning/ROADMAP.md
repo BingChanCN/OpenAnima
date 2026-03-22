@@ -189,7 +189,11 @@ Plans:
   3. LLM calls automatically recall relevant memories when glossary keywords in the active conversation context match stored memory terms.
   4. Recalled memory is ranked, deduplicated, and capped so prompt context stays bounded instead of flooding the model.
   5. Each recalled memory item visibly explains where it came from and why it was selected.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 52-01-PLAN.md — IMemoryRecallService contract, RecalledMemoryResult records, MemoryRecallService TDD implementation
+- [ ] 52-02-PLAN.md — Boot memory wiring in RunService, LLMModule memory injection, DI registration, integration tests
 
 ### Phase 53: Tool-Aware Memory Operations
 **Goal**: LLM execution stays aware of its real tool surface and can manipulate memory relationships through explicit, provenance-safe tools.
@@ -279,7 +283,7 @@ Plans:
 | 49. Structured Cognition Workflows | v2.0 | 3/3 | Complete | 2026-03-21 |
 | 50. Provider Registry | 3/3 | Complete    | 2026-03-22 | - |
 | 51. LLM Module Configuration | v2.0.1 | 0/TBD | Not started | - |
-| 52. Automatic Memory Recall | v2.0.1 | 0/TBD | Not started | - |
+| 52. Automatic Memory Recall | v2.0.1 | 0/2 | Not started | - |
 | 53. Tool-Aware Memory Operations | v2.0.1 | 0/TBD | Not started | - |
 | 54. Living Memory Sedimentation | v2.0.1 | 0/TBD | Not started | - |
 | 55. Memory Review Surfaces | v2.0.1 | 0/TBD | Not started | - |
@@ -287,4 +291,4 @@ Plans:
 **Total shipped: 49 phases, 117 plans across 11 milestones**
 
 ---
-*Last updated: 2026-03-22 — Phase 50 plans created*
+*Last updated: 2026-03-22 — Phase 52 plans created*
