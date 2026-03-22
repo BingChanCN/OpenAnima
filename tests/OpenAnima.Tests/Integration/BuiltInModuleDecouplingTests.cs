@@ -94,6 +94,7 @@ public class BuiltInModuleDecouplingTests
         // - OpenAnima.Core.Services (Phase 51: IAnimaModuleConfigService for auto-clear SetConfigAsync)
         // - OpenAnima.Core.Memory (Phase 52: IMemoryRecallService for automatic memory recall)
         // - OpenAnima.Core.Runs (Phase 52: IStepRecorder for MemoryRecall StepRecord in run timeline)
+        // - OpenAnima.Core.Tools (Phase 53: WorkspaceToolModule + ToolDescriptor for tool descriptor injection)
         var llmCoreUsings = GetCoreUsings("LLMModule.cs");
         var expectedLlmUsings = new HashSet<string>
         {
@@ -101,7 +102,8 @@ public class BuiltInModuleDecouplingTests
             "using OpenAnima.Core.Providers;",
             "using OpenAnima.Core.Services;",
             "using OpenAnima.Core.Memory;",
-            "using OpenAnima.Core.Runs;"
+            "using OpenAnima.Core.Runs;",
+            "using OpenAnima.Core.Tools;"
         };
         var unexpectedLlmUsings = llmCoreUsings.Where(u => !expectedLlmUsings.Contains(u)).ToList();
         var missingLlmUsings = expectedLlmUsings.Where(u => !llmCoreUsings.Contains(u)).ToList();

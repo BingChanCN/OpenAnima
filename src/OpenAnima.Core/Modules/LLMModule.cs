@@ -7,6 +7,7 @@ using OpenAnima.Contracts.Routing;
 using OpenAnima.Core.LLM;
 using OpenAnima.Core.Memory;
 using OpenAnima.Core.Providers;
+using OpenAnima.Core.Tools;
 using OpenAnima.Core.Runs;
 using OpenAnima.Core.Services;
 
@@ -44,6 +45,7 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
     private readonly LLMProviderRegistryService _registryService;
     private readonly IMemoryRecallService? _memoryRecallService;
     private readonly IStepRecorder? _stepRecorder;
+    private readonly WorkspaceToolModule? _workspaceToolModule;
     private readonly FormatDetector _formatDetector = new();
     private readonly List<IDisposable> _subscriptions = new();
 
@@ -60,7 +62,8 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
         ILLMProviderRegistry providerRegistry, LLMProviderRegistryService registryService,
         ICrossAnimaRouter? router = null,
         IMemoryRecallService? memoryRecallService = null,
-        IStepRecorder? stepRecorder = null)
+        IStepRecorder? stepRecorder = null,
+        WorkspaceToolModule? workspaceToolModule = null)
     {
         _llmService = llmService;
         _eventBus = eventBus;
@@ -72,6 +75,7 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
         _router = router;
         _memoryRecallService = memoryRecallService;
         _stepRecorder = stepRecorder;
+        _workspaceToolModule = workspaceToolModule;
     }
 
     // -----------------------------------------------------------------------
@@ -285,6 +289,28 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
                 if (ports.Count > 0)
                 {
                     messages.Insert(0, new ChatMessageInput("system", BuildSystemMessage(ports)));
+                }
+            }
+        }
+
+        // Inject tool descriptors when WorkspaceToolModule is enabled for this Anima (Phase 53).
+        if (_workspaceToolModule != null)
+        {
+            var toolDescriptors = _workspaceToolModule.GetToolDescriptors();
+            var toolBlock = BuildToolDescriptorBlock(toolDescriptors);
+            if (toolBlock != null)
+            {
+                // Append to existing messages[0] system message if one exists,
+                // or insert a new system message.
+                if (messages.Count > 0 && messages[0].Role == "system")
+                {
+                    // Append tool block to existing system message (Phase 52 memory or routing)
+                    messages[0] = new ChatMessageInput("system",
+                        messages[0].Content + "\n\n" + toolBlock);
+                }
+                else
+                {
+                    messages.Insert(0, new ChatMessageInput("system", toolBlock));
                 }
             }
         }
@@ -653,6 +679,34 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
         }
 
         sb.Append("</system-memory>");
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Builds the XML tool descriptor block for system message injection.
+    /// Returns null when no tools are available (omit block entirely per CONTEXT.md decision).
+    /// </summary>
+    private static string? BuildToolDescriptorBlock(IReadOnlyList<ToolDescriptor> descriptors)
+    {
+        if (descriptors.Count == 0) return null;
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("<available-tools>");
+        foreach (var tool in descriptors)
+        {
+            sb.Append($"  <tool name=\"{tool.Name}\" description=\"{tool.Description}\">");
+            if (tool.Parameters.Count > 0)
+            {
+                sb.AppendLine();
+                foreach (var param in tool.Parameters)
+                {
+                    sb.AppendLine($"    <param name=\"{param.Name}\" required=\"{param.Required.ToString().ToLowerInvariant()}\"/>");
+                }
+                sb.Append("  ");
+            }
+            sb.AppendLine("</tool>");
+        }
+        sb.Append("</available-tools>");
         return sb.ToString();
     }
 
