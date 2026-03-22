@@ -204,7 +204,11 @@ Plans:
   2. Developer-agent can explicitly retrieve relevant memories for the current task through a `memory_recall` tool.
   3. Developer-agent can create typed memory graph relationships through a `memory_link` tool.
   4. Memory tool operations preserve existing provenance rules instead of allowing untraceable graph changes.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 53-01-PLAN.md — MemoryRecallTool and MemoryLinkTool implementations, DI registration, and unit tests
+- [ ] 53-02-PLAN.md — LLMModule WorkspaceToolModule integration, tool descriptor XML injection, and injection tests
 
 ### Phase 54: Living Memory Sedimentation
 **Goal**: Completed LLM exchanges automatically turn stable learnings into durable memory updates with provenance and change history.
@@ -284,11 +288,11 @@ Plans:
 | 50. Provider Registry | 3/3 | Complete    | 2026-03-22 | - |
 | 51. LLM Module Configuration | 2/2 | Complete   | 2026-03-22 | - |
 | 52. Automatic Memory Recall | v2.0.1 | 0/2 | Not started | - |
-| 53. Tool-Aware Memory Operations | v2.0.1 | 0/TBD | Not started | - |
+| 53. Tool-Aware Memory Operations | v2.0.1 | 0/2 | Not started | - |
 | 54. Living Memory Sedimentation | v2.0.1 | 0/TBD | Not started | - |
 | 55. Memory Review Surfaces | v2.0.1 | 0/TBD | Not started | - |
 
 **Total shipped: 49 phases, 117 plans across 11 milestones**
 
 ---
-*Last updated: 2026-03-22 — Phase 52 plans created*
+*Last updated: 2026-03-22 — Phase 53 plans created*
