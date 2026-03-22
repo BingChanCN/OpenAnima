@@ -19,7 +19,7 @@ public class BootMemoryInjectorWiringTests
         var spyGraph = new FakeMemoryGraph();
         var spyRecorder = new FakeStepRecorder();
         var injector = new BootMemoryInjector(
-            spyGraph, spyRecorder, NullLogger<BootMemoryInjector>.Instance);
+            spyGraph, new Lazy<IStepRecorder>(spyRecorder), NullLogger<BootMemoryInjector>.Instance);
 
         var repo = new FakeRunRepository();
         var service = new RunService(
@@ -41,7 +41,7 @@ public class BootMemoryInjectorWiringTests
         var spyGraph = new FakeMemoryGraph { PrefixNodes = [MakeNode("core://test")] };
         var spyRecorder = new FakeStepRecorder();
         var injector = new BootMemoryInjector(
-            spyGraph, spyRecorder, NullLogger<BootMemoryInjector>.Instance);
+            spyGraph, new Lazy<IStepRecorder>(spyRecorder), NullLogger<BootMemoryInjector>.Instance);
 
         var repo = new FakeRunRepository();
         var service = new RunService(

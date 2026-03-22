@@ -31,7 +31,7 @@ public class RunServiceTests : IAsyncDisposable
 
         var fakeGraph = new FakeMemoryGraph();
         var fakeStepRecorder = new FakeStepRecorder();
-        var bootMemoryInjector = new BootMemoryInjector(fakeGraph, fakeStepRecorder, NullLogger<BootMemoryInjector>.Instance);
+        var bootMemoryInjector = new BootMemoryInjector(fakeGraph, new Lazy<IStepRecorder>(fakeStepRecorder), NullLogger<BootMemoryInjector>.Instance);
 
         _service = new RunService(
             _repository,

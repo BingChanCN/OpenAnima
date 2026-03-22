@@ -48,7 +48,10 @@ public static class RunServiceExtensions
 
         // Memory graph
         services.AddSingleton<IMemoryGraph, MemoryGraph>();
-        services.AddSingleton<BootMemoryInjector>();
+        services.AddSingleton(sp => new BootMemoryInjector(
+            sp.GetRequiredService<IMemoryGraph>(),
+            new Lazy<IStepRecorder>(sp.GetRequiredService<IStepRecorder>),
+            sp.GetRequiredService<ILogger<BootMemoryInjector>>()));
         services.AddSingleton<IMemoryRecallService, MemoryRecallService>();
 
         // Memory workspace tools (picked up by WorkspaceToolModule via IEnumerable<IWorkspaceTool>)
