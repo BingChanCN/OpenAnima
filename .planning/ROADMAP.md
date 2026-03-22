@@ -137,7 +137,7 @@
 
 **Milestone Goal:** Make LLM configuration UI-driven with a global provider/model registry, and activate automatic recall, memory tools, living memory sedimentation, and review surfaces so agents can accumulate and reuse knowledge safely.
 
-- [ ] **Phase 50: Provider Registry** - Users can manage global providers, models, and secure credentials without breaking downstream references.
+- [x] **Phase 50: Provider Registry** - Users can manage global providers, models, and secure credentials without breaking downstream references. (completed 2026-03-22)
 - [ ] **Phase 51: LLM Module Configuration** - Users can configure LLM modules from the registry while preserving manual and legacy fallback behavior.
 - [ ] **Phase 52: Automatic Memory Recall** - Runs and LLM calls automatically inject relevant, bounded, explainable memory.
 - [ ] **Phase 53: Tool-Aware Memory Operations** - LLM sees only context-available tools and can retrieve or link memory safely through dedicated tools.
@@ -273,7 +273,7 @@ Plans:
 | 47. Run Inspection & Observability | v2.0 | 3/3 | Complete | 2026-03-21 |
 | 48. Artifact & Memory Foundation | v2.0 | 5/5 | Complete | 2026-03-21 |
 | 49. Structured Cognition Workflows | v2.0 | 3/3 | Complete | 2026-03-21 |
-| 50. Provider Registry | 2/3 | In Progress|  | - |
+| 50. Provider Registry | 3/3 | Complete   | 2026-03-22 | - |
 | 51. LLM Module Configuration | v2.0.1 | 0/TBD | Not started | - |
 | 52. Automatic Memory Recall | v2.0.1 | 0/TBD | Not started | - |
 | 53. Tool-Aware Memory Operations | v2.0.1 | 0/TBD | Not started | - |
