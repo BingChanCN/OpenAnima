@@ -30,7 +30,7 @@ Requirements for milestone v2.0.1. Each maps to roadmap phases.
 
 ### Memory Recall
 
-- [ ] **MEMR-01**: Developer-agent run startup injects core boot memory into the run timeline automatically
+- [x] **MEMR-01**: Developer-agent run startup injects core boot memory into the run timeline automatically
 - [x] **MEMR-02**: LLM calls automatically recall matching memory nodes using disclosure triggers from the active conversation context
 - [x] **MEMR-03**: LLM calls automatically recall matching memory nodes using glossary keyword matches from the active conversation context
 - [x] **MEMR-04**: Memory injected into LLM context is ranked, deduplicated, and bounded so recall does not overwhelm prompt budget
@@ -104,7 +104,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LLMN-03 | Phase 51 | Complete |
 | LLMN-04 | Phase 51 | Complete |
 | LLMN-05 | Phase 51 | Complete |
-| MEMR-01 | Phase 52 | Pending |
+| MEMR-01 | Phase 52 | Complete |
 | MEMR-02 | Phase 52 | Complete |
 | MEMR-03 | Phase 52 | Complete |
 | MEMR-04 | Phase 52 | Complete |

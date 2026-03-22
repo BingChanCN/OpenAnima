@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 52-01-PLAN.md
-last_updated: "2026-03-22T12:54:26.292Z"
+stopped_at: Completed 52-02-PLAN.md
+last_updated: "2026-03-22T13:07:56.701Z"
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State: OpenAnima
@@ -59,6 +59,7 @@ Plan: 2 of 2
 | Phase 51 P01 | 23 | 2 tasks | 13 files |
 | Phase 51 P02 | continuation | 2 tasks | 4 files |
 | Phase 52 P01 | 2m 30s | 2 tasks | 4 files |
+| Phase 52 P02 | 10m | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ Recent decisions affecting current work:
 - [Phase 51]: LLM sidebar cascade reset: HandleProviderChanged clears llmModelId to prevent stale cross-provider model binding
 - [Phase 52]: MemoryRecallService deduplicates glossary keyword matches per URI, joining multiple keywords in one reason string rather than producing duplicate RecalledNode entries
 - [Phase 52]: RecallType stays Disclosure when a node matches both disclosure trigger and glossary — priority is not downgraded by the glossary match
+- [Phase 52]: BuiltInModuleDecouplingTests allowlist updated with Core.Memory and Core.Runs as Phase 52 exceptions for LLMModule memory wiring
+- [Phase 52]: Memory system message insertion order: memory at [0], then routing at [0] pushes memory to [1] — routing first, memory second, then conversation
 
 ### Pending Todos
 
@@ -96,6 +99,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T12:54:26.290Z
-Stopped at: Completed 52-01-PLAN.md
+Last session: 2026-03-22T13:07:56.699Z
+Stopped at: Completed 52-02-PLAN.md
 Resume file: None
