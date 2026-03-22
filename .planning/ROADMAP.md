@@ -233,7 +233,11 @@ Plans:
   1. User can open a memory node on `/memory` and browse its snapshot history over time.
   2. User can inspect provenance for a memory node or a recalled memory directly from `/memory`.
   3. User can inspect memory graph edges from supported UI-backed review surfaces.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 55-01-PLAN.md — Backend query methods (GetIncomingEdgesAsync, GetStepByIdAsync), LineDiff helper, i18n keys, and unit tests
+- [ ] 55-02-PLAN.md — MemoryNodeCard three collapsible sections (Provenance, Snapshot History, Relationships), CSS, and visual verification
 
 ## Progress
 
