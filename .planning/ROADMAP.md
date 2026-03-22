@@ -133,7 +133,7 @@
 
 </details>
 
-### 📋 v2.0.1 Provider Registry & Living Memory (Planned)
+### v2.0.1 Provider Registry & Living Memory (Planned)
 
 **Milestone Goal:** Make LLM configuration UI-driven with a global provider/model registry, and activate automatic recall, memory tools, living memory sedimentation, and review surfaces so agents can accumulate and reuse knowledge safely.
 
@@ -156,7 +156,12 @@
   3. User can disable or delete a provider only after the UI clearly surfaces which models or existing selections would be affected.
   4. Saved API keys remain write-only after save, never appear in plaintext UI/log/provenance surfaces, and provider connection tests work without exposing the stored secret.
   5. Platform consumers can query provider and model metadata through a deterministic `ILLMProviderRegistry` contract.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 50-01-PLAN.md — Contracts, data model, encryption, registry service, DI, and unit tests
+- [ ] 50-02-PLAN.md — Blazor UI components, localization, and Settings page CRUD wiring
+- [ ] 50-03-PLAN.md — Connection test button, lifecycle flows, and visual verification
 
 ### Phase 51: LLM Module Configuration
 **Goal**: Users can configure LLM modules through provider-backed selections while preserving manual and legacy compatibility.
@@ -268,7 +273,7 @@
 | 47. Run Inspection & Observability | v2.0 | 3/3 | Complete | 2026-03-21 |
 | 48. Artifact & Memory Foundation | v2.0 | 5/5 | Complete | 2026-03-21 |
 | 49. Structured Cognition Workflows | v2.0 | 3/3 | Complete | 2026-03-21 |
-| 50. Provider Registry | v2.0.1 | 0/TBD | Not started | - |
+| 50. Provider Registry | v2.0.1 | 0/3 | Not started | - |
 | 51. LLM Module Configuration | v2.0.1 | 0/TBD | Not started | - |
 | 52. Automatic Memory Recall | v2.0.1 | 0/TBD | Not started | - |
 | 53. Tool-Aware Memory Operations | v2.0.1 | 0/TBD | Not started | - |
@@ -278,4 +283,4 @@
 **Total shipped: 49 phases, 117 plans across 11 milestones**
 
 ---
-*Last updated: 2026-03-22 — v2.0.1 roadmap created*
+*Last updated: 2026-03-22 — Phase 50 plans created*
