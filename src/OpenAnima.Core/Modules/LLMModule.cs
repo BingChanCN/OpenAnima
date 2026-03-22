@@ -5,7 +5,9 @@ using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
 using OpenAnima.Contracts.Routing;
 using OpenAnima.Core.LLM;
+using OpenAnima.Core.Memory;
 using OpenAnima.Core.Providers;
+using OpenAnima.Core.Runs;
 using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.Modules;
@@ -40,6 +42,8 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
     private readonly ICrossAnimaRouter? _router;
     private readonly ILLMProviderRegistry _providerRegistry;
     private readonly LLMProviderRegistryService _registryService;
+    private readonly IMemoryRecallService? _memoryRecallService;
+    private readonly IStepRecorder? _stepRecorder;
     private readonly FormatDetector _formatDetector = new();
     private readonly List<IDisposable> _subscriptions = new();
 
@@ -54,7 +58,9 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
     public LLMModule(ILLMService llmService, IEventBus eventBus, ILogger<LLMModule> logger,
         IAnimaModuleConfigService configService, IModuleContext animaContext,
         ILLMProviderRegistry providerRegistry, LLMProviderRegistryService registryService,
-        ICrossAnimaRouter? router = null)
+        ICrossAnimaRouter? router = null,
+        IMemoryRecallService? memoryRecallService = null,
+        IStepRecorder? stepRecorder = null)
     {
         _llmService = llmService;
         _eventBus = eventBus;
@@ -64,6 +70,8 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
         _providerRegistry = providerRegistry;
         _registryService = registryService;
         _router = router;
+        _memoryRecallService = memoryRecallService;
+        _stepRecorder = stepRecorder;
     }
 
     // -----------------------------------------------------------------------
@@ -239,6 +247,31 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
         if (config.TryGetValue("llmMaxRetries", out var retriesStr) && int.TryParse(retriesStr, out var retriesVal) && retriesVal >= 0)
         {
             maxRetries = retriesVal;
+        }
+
+        // Memory recall: inject system-memory message from matching nodes
+        if (_memoryRecallService != null)
+        {
+            // Extract latest user message as context (match scope: latest user message only)
+            var latestUserMessage = messages.LastOrDefault(m => m.Role.Equals("user", StringComparison.OrdinalIgnoreCase));
+            if (latestUserMessage != null)
+            {
+                var recallResult = await _memoryRecallService.RecallAsync(animaId, latestUserMessage.Content, ct);
+                if (recallResult.HasAny)
+                {
+                    // Record MemoryRecall StepRecord for run timeline observability
+                    if (_stepRecorder != null)
+                    {
+                        var summary = string.Join("; ", recallResult.Nodes.Select(n => $"{n.Node.Uri} ({n.Reason})"));
+                        var stepId = await _stepRecorder.RecordStepStartAsync(animaId, "MemoryRecall", summary, null, ct);
+                        await _stepRecorder.RecordStepCompleteAsync(stepId, "MemoryRecall", $"{recallResult.Nodes.Count} nodes recalled", ct);
+                    }
+
+                    // Build XML system message and insert at index 0
+                    var memoryXml = BuildMemorySystemMessage(recallResult);
+                    messages.Insert(0, new ChatMessageInput("system", memoryXml));
+                }
+            }
         }
 
         // Prepend system message if AnimaRoute configured.
@@ -584,6 +617,50 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
             return new LLMResult(false, null, $"Per-Anima LLM error: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Builds the XML system memory message from recalled nodes.
+    /// Boot nodes appear in a &lt;boot-memory&gt; section; Disclosure and Glossary nodes
+    /// appear in a &lt;recalled-memory&gt; section with uri and reason attributes.
+    /// </summary>
+    private static string BuildMemorySystemMessage(RecalledMemoryResult result)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("<system-memory>");
+
+        // Boot nodes (RecallType == "Boot")
+        var bootNodes = result.Nodes.Where(n => n.RecallType == "Boot").ToList();
+        if (bootNodes.Count > 0)
+        {
+            sb.AppendLine("  <boot-memory>");
+            foreach (var n in bootNodes)
+            {
+                sb.AppendLine($"    <node uri=\"{EscapeXmlAttribute(n.Node.Uri)}\">{EscapeXmlContent(n.TruncatedContent)}</node>");
+            }
+            sb.AppendLine("  </boot-memory>");
+        }
+
+        // Recalled nodes (Disclosure + Glossary)
+        var recalledNodes = result.Nodes.Where(n => n.RecallType != "Boot").ToList();
+        if (recalledNodes.Count > 0)
+        {
+            sb.AppendLine("  <recalled-memory>");
+            foreach (var n in recalledNodes)
+            {
+                sb.AppendLine($"    <node uri=\"{EscapeXmlAttribute(n.Node.Uri)}\" reason=\"{EscapeXmlAttribute(n.Reason)}\">{EscapeXmlContent(n.TruncatedContent)}</node>");
+            }
+            sb.AppendLine("  </recalled-memory>");
+        }
+
+        sb.Append("</system-memory>");
+        return sb.ToString();
+    }
+
+    private static string EscapeXmlAttribute(string value)
+        => value.Replace("&", "&amp;").Replace("\"", "&quot;").Replace("<", "&lt;").Replace(">", "&gt;");
+
+    private static string EscapeXmlContent(string value)
+        => value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 
     public Task ShutdownAsync(CancellationToken cancellationToken = default)
     {
