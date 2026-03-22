@@ -11,8 +11,8 @@ Requirements for milestone v2.0.1. Each maps to roadmap phases.
 
 - [x] **PROV-01**: User can create a global LLM provider with display name, base URL, and API key in Settings
 - [x] **PROV-02**: User can edit provider metadata without losing linked model records
-- [ ] **PROV-03**: User can disable a provider without silently breaking existing LLM node selections
-- [ ] **PROV-04**: User can delete a provider only when its usage impact is surfaced clearly
+- [x] **PROV-03**: User can disable a provider without silently breaking existing LLM node selections
+- [x] **PROV-04**: User can delete a provider only when its usage impact is surfaced clearly
 - [x] **PROV-05**: User can add one or more model records under a provider with stable model IDs and optional display aliases
 - [x] **PROV-06**: User can manually maintain provider model lists even when provider-side model discovery is unavailable
 - [x] **PROV-07**: User API keys are write-only in the UI after save and are never echoed back in plaintext
@@ -91,8 +91,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | PROV-01 | Phase 50 | Complete |
 | PROV-02 | Phase 50 | Complete |
-| PROV-03 | Phase 50 | Pending |
-| PROV-04 | Phase 50 | Pending |
+| PROV-03 | Phase 50 | Complete |
+| PROV-04 | Phase 50 | Complete |
 | PROV-05 | Phase 50 | Complete |
 | PROV-06 | Phase 50 | Complete |
 | PROV-07 | Phase 50 | Complete |
