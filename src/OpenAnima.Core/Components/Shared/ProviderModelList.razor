@@ -1,0 +1,171 @@
+@using OpenAnima.Core.Providers
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
+@implements IDisposable
+
+<div class="model-list">
+    @for (int i = 0; i < _editableModels.Count; i++)
+    {
+        var idx = i;
+        var model = _editableModels[idx];
+        <div class="model-row">
+            <div class="model-field-group">
+                <input class="model-field"
+                       type="text"
+                       placeholder="@L["Providers.ModelId"]"
+                       value="@model.ModelId"
+                       @oninput="@(e => OnModelIdChanged(idx, e.Value?.ToString() ?? string.Empty))" />
+                @if (_validationErrors.TryGetValue($"modelId_{idx}", out var modelIdError))
+                {
+                    <span class="validation-error">@modelIdError</span>
+                }
+            </div>
+            <input class="model-field"
+                   type="text"
+                   placeholder="@L["Providers.ModelAlias"]"
+                   value="@model.DisplayAlias"
+                   @oninput="@(e => OnAliasChanged(idx, e.Value?.ToString()))" />
+            <input class="model-field model-field-small"
+                   type="number"
+                   placeholder="Max tokens"
+                   value="@(model.MaxTokensText ?? string.Empty)"
+                   @oninput="@(e => OnMaxTokensChanged(idx, e.Value?.ToString()))" />
+            <label class="model-streaming-label">
+                <input type="checkbox"
+                       checked="@model.SupportsStreaming"
+                       @onchange="@(e => OnStreamingChanged(idx, (bool)(e.Value ?? true)))" />
+                Streaming
+            </label>
+            <button class="btn btn-secondary model-remove-btn"
+                    type="button"
+                    @onclick="@(() => RemoveModel(idx))">
+                @L["Providers.RemoveModel"]
+            </button>
+        </div>
+    }
+    <button class="btn btn-secondary" type="button" @onclick="AddModel">
+        @L["Providers.AddModel"]
+    </button>
+</div>
+
+@code {
+    [Parameter] public List<ProviderModelRecord> Models { get; set; } = new();
+    [Parameter] public EventCallback<List<ProviderModelRecord>> ModelsChanged { get; set; }
+
+    private List<EditableModel> _editableModels = new();
+    private Dictionary<string, string> _validationErrors = new();
+
+    private class EditableModel
+    {
+        public string ModelId { get; set; } = string.Empty;
+        public string? DisplayAlias { get; set; }
+        public string? MaxTokensText { get; set; }
+        public bool SupportsStreaming { get; set; } = true;
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Rebuild editable list only if count changed (avoid clobbering in-progress edits)
+        if (_editableModels.Count != Models.Count)
+        {
+            _editableModels = Models.Select(m => new EditableModel
+            {
+                ModelId = m.ModelId,
+                DisplayAlias = m.DisplayAlias,
+                MaxTokensText = m.MaxTokens?.ToString(),
+                SupportsStreaming = m.SupportsStreaming
+            }).ToList();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        LangSvc.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnModelIdChanged(int idx, string value)
+    {
+        _editableModels[idx].ModelId = value;
+        ValidateAndNotify();
+    }
+
+    private void OnAliasChanged(int idx, string? value)
+    {
+        _editableModels[idx].DisplayAlias = string.IsNullOrWhiteSpace(value) ? null : value;
+        NotifyChange();
+    }
+
+    private void OnMaxTokensChanged(int idx, string? value)
+    {
+        _editableModels[idx].MaxTokensText = value;
+        NotifyChange();
+    }
+
+    private void OnStreamingChanged(int idx, bool value)
+    {
+        _editableModels[idx].SupportsStreaming = value;
+        NotifyChange();
+    }
+
+    private void AddModel()
+    {
+        _editableModels.Add(new EditableModel());
+        NotifyChange();
+    }
+
+    private void RemoveModel(int idx)
+    {
+        _editableModels.RemoveAt(idx);
+        ValidateAndNotify();
+    }
+
+    private void ValidateAndNotify()
+    {
+        _validationErrors.Clear();
+
+        for (int i = 0; i < _editableModels.Count; i++)
+        {
+            var model = _editableModels[i];
+            if (string.IsNullOrWhiteSpace(model.ModelId))
+            {
+                _validationErrors[$"modelId_{i}"] = L["Providers.ValidationModelIdRequired"];
+            }
+            else
+            {
+                // Check for duplicates
+                var hasDuplicate = _editableModels
+                    .Where((m, j) => j != i && m.ModelId == model.ModelId)
+                    .Any();
+                if (hasDuplicate)
+                {
+                    _validationErrors[$"modelId_{i}"] = L["Providers.ValidationModelIdDuplicate"];
+                }
+            }
+        }
+
+        NotifyChange();
+    }
+
+    private void NotifyChange()
+    {
+        var records = _editableModels
+            .Where(m => !string.IsNullOrWhiteSpace(m.ModelId))
+            .Select(m => new ProviderModelRecord
+            {
+                ModelId = m.ModelId.Trim(),
+                DisplayAlias = m.DisplayAlias,
+                MaxTokens = int.TryParse(m.MaxTokensText, out var mt) ? mt : null,
+                SupportsStreaming = m.SupportsStreaming
+            })
+            .ToList();
+
+        ModelsChanged.InvokeAsync(records);
+    }
+
+    public void Dispose()
+    {
+        LangSvc.LanguageChanged -= OnLanguageChanged;
+    }
+}

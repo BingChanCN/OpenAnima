@@ -431,4 +431,100 @@
   <data name="RunDetail.LongTimelineBanner" xml:space="preserve">
     <value>显示全部 {0} 个步骤。使用筛选缩小范围。</value>
   </data>
+  <data name="Providers.SectionTitle" xml:space="preserve">
+    <value>LLM 提供商</value>
+  </data>
+  <data name="Providers.AddProvider" xml:space="preserve">
+    <value>添加提供商</value>
+  </data>
+  <data name="Providers.EmptyHeading" xml:space="preserve">
+    <value>尚未配置提供商</value>
+  </data>
+  <data name="Providers.EmptyBody" xml:space="preserve">
+    <value>添加提供商以开始使用注册表支持的 LLM 模块。</value>
+  </data>
+  <data name="Providers.ModelCount" xml:space="preserve">
+    <value>{0} 个模型</value>
+  </data>
+  <data name="Providers.DisabledLabel" xml:space="preserve">
+    <value>已禁用</value>
+  </data>
+  <data name="Providers.EditProvider" xml:space="preserve">
+    <value>编辑提供商</value>
+  </data>
+  <data name="Providers.SaveProvider" xml:space="preserve">
+    <value>保存提供商</value>
+  </data>
+  <data name="Providers.DiscardChanges" xml:space="preserve">
+    <value>放弃更改</value>
+  </data>
+  <data name="Providers.CloseDialog" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="Providers.DeleteProvider" xml:space="preserve">
+    <value>删除提供商</value>
+  </data>
+  <data name="Providers.Disable" xml:space="preserve">
+    <value>禁用</value>
+  </data>
+  <data name="Providers.Enable" xml:space="preserve">
+    <value>启用</value>
+  </data>
+  <data name="Providers.TestConnection" xml:space="preserve">
+    <value>测试连接</value>
+  </data>
+  <data name="Providers.TestSuccess" xml:space="preserve">
+    <value>连接成功</value>
+  </data>
+  <data name="Providers.TestFailed" xml:space="preserve">
+    <value>连接失败: {0}</value>
+  </data>
+  <data name="Providers.ApiKeyPlaceholder" xml:space="preserve">
+    <value>粘贴 API 密钥...</value>
+  </data>
+  <data name="Providers.ApiKeyEditHint" xml:space="preserve">
+    <value>清除并重新输入以替换密钥</value>
+  </data>
+  <data name="Providers.ModelId" xml:space="preserve">
+    <value>模型 ID</value>
+  </data>
+  <data name="Providers.ModelAlias" xml:space="preserve">
+    <value>显示别名（可选）</value>
+  </data>
+  <data name="Providers.AddModel" xml:space="preserve">
+    <value>添加模型</value>
+  </data>
+  <data name="Providers.RemoveModel" xml:space="preserve">
+    <value>移除模型</value>
+  </data>
+  <data name="Providers.DisableConfirmTitle" xml:space="preserve">
+    <value>禁用提供商？</value>
+  </data>
+  <data name="Providers.DisableConfirmMessage" xml:space="preserve">
+    <value>这将使 {0} 个 LLM 模块标记为不可用。它们将保留选择但在提供商重新启用前无法运行。</value>
+  </data>
+  <data name="Providers.DeleteConfirmTitle" xml:space="preserve">
+    <value>删除提供商？</value>
+  </data>
+  <data name="Providers.DeleteConfirmMessage" xml:space="preserve">
+    <value>这将永久删除此提供商和 {0} 个模型。{1} 个 LLM 模块将显示其选择为不可用。</value>
+  </data>
+  <data name="Providers.DeleteConfirmAction" xml:space="preserve">
+    <value>删除提供商</value>
+  </data>
+  <data name="Providers.ValidationNameRequired" xml:space="preserve">
+    <value>提供商名称为必填项。</value>
+  </data>
+  <data name="Providers.ValidationUrlRequired" xml:space="preserve">
+    <value>基础 URL 为必填项。</value>
+  </data>
+  <data name="Providers.ValidationUrlFormat" xml:space="preserve">
+    <value>请输入有效的 URL（例如 https://api.openai.com）。</value>
+  </data>
+  <data name="Providers.ValidationModelIdRequired" xml:space="preserve">
+    <value>模型 ID 为必填项。</value>
+  </data>
+  <data name="Providers.ValidationModelIdDuplicate" xml:space="preserve">
+    <value>已存在具有此 ID 的模型。</value>
+  </data>
 </root>

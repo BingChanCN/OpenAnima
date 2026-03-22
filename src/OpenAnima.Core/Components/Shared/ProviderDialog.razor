@@ -1,0 +1,214 @@
+@using OpenAnima.Core.Providers
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
+@implements IDisposable
+
+@if (IsVisible)
+{
+    <div class="modal-backdrop" @onclick="HandleCancel"></div>
+    <div class="modal-dialog" @onclick:stopPropagation="true" @onkeydown="HandleKeyDown" tabindex="-1">
+        <div class="modal-header">
+            <h2>@(EditTarget == null ? L["Providers.AddProvider"] : L["Providers.EditProvider"])</h2>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">@L["Anima.NameLabel"]</label>
+                <input class="form-input"
+                       type="text"
+                       value="@_displayName"
+                       placeholder="e.g. OpenAI"
+                       @oninput="OnDisplayNameInput" />
+                @if (_validationErrors.TryGetValue("name", out var nameError))
+                {
+                    <span class="validation-error">@nameError</span>
+                }
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Slug</label>
+                <div class="slug-display">@_slug</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Base URL</label>
+                <input class="form-input"
+                       type="url"
+                       value="@_baseUrl"
+                       placeholder="https://api.openai.com"
+                       @oninput="OnBaseUrlInput" />
+                @if (_validationErrors.TryGetValue("url", out var urlError))
+                {
+                    <span class="validation-error">@urlError</span>
+                }
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">API Key</label>
+                <input class="form-input"
+                       type="password"
+                       placeholder="@L["Providers.ApiKeyPlaceholder"]"
+                       @oninput="OnApiKeyInput" />
+                @if (EditTarget != null)
+                {
+                    <div class="api-key-hint">@L["Providers.ApiKeyEditHint"]</div>
+                }
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Models</label>
+                <ProviderModelList Models="_models" ModelsChanged="OnModelsChanged" />
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" @onclick="HandleCancel">
+                @GetCancelText()
+            </button>
+            <button class="btn btn-primary"
+                    @onclick="HandleSave"
+                    disabled="@(!IsValid())">
+                @L["Providers.SaveProvider"]
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public LLMProviderRecord? EditTarget { get; set; }
+    [Parameter] public EventCallback<ProviderDialogResult> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string _displayName = "";
+    private string _baseUrl = "";
+    private string _pendingApiKey = "";
+    private string _slug = "";
+    private List<ProviderModelRecord> _models = new();
+    private Dictionary<string, string> _validationErrors = new();
+    private bool _hasInput = false;
+
+    protected override void OnParametersSet()
+    {
+        if (EditTarget != null)
+        {
+            _displayName = EditTarget.DisplayName;
+            _baseUrl = EditTarget.BaseUrl;
+            _slug = EditTarget.Slug;
+            _models = new List<ProviderModelRecord>(EditTarget.Models);
+            _pendingApiKey = ""; // Never pre-populate: write-only
+            _hasInput = true;
+        }
+        else if (!IsVisible)
+        {
+            // Reset on close
+            _displayName = "";
+            _baseUrl = "";
+            _slug = "";
+            _models = new();
+            _pendingApiKey = "";
+            _hasInput = false;
+            _validationErrors.Clear();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        LangSvc.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnDisplayNameInput(ChangeEventArgs e)
+    {
+        _displayName = e.Value?.ToString() ?? "";
+        _hasInput = !string.IsNullOrEmpty(_displayName) || !string.IsNullOrEmpty(_baseUrl) || !string.IsNullOrEmpty(_pendingApiKey);
+
+        // Auto-derive slug in create mode
+        if (EditTarget == null)
+        {
+            _slug = LLMProviderRegistryService.DeriveSlug(_displayName);
+        }
+
+        Validate();
+    }
+
+    private void OnBaseUrlInput(ChangeEventArgs e)
+    {
+        _baseUrl = e.Value?.ToString() ?? "";
+        _hasInput = !string.IsNullOrEmpty(_displayName) || !string.IsNullOrEmpty(_baseUrl) || !string.IsNullOrEmpty(_pendingApiKey);
+        Validate();
+    }
+
+    private void OnApiKeyInput(ChangeEventArgs e)
+    {
+        _pendingApiKey = e.Value?.ToString() ?? "";
+        _hasInput = !string.IsNullOrEmpty(_displayName) || !string.IsNullOrEmpty(_baseUrl) || !string.IsNullOrEmpty(_pendingApiKey);
+    }
+
+    private void OnModelsChanged(List<ProviderModelRecord> models)
+    {
+        _models = models;
+    }
+
+    private void Validate()
+    {
+        _validationErrors.Clear();
+
+        if (string.IsNullOrWhiteSpace(_displayName))
+            _validationErrors["name"] = L["Providers.ValidationNameRequired"];
+
+        if (string.IsNullOrWhiteSpace(_baseUrl))
+            _validationErrors["url"] = L["Providers.ValidationUrlRequired"];
+        else if (!_baseUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                 !_baseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            _validationErrors["url"] = L["Providers.ValidationUrlFormat"];
+    }
+
+    private bool IsValid()
+    {
+        if (string.IsNullOrWhiteSpace(_displayName)) return false;
+        if (string.IsNullOrWhiteSpace(_baseUrl)) return false;
+        if (!_baseUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !_baseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) return false;
+        return true;
+    }
+
+    private string GetCancelText()
+    {
+        if (EditTarget != null)
+            return L["Providers.DiscardChanges"];
+        return _hasInput ? L["Providers.DiscardChanges"] : L["Providers.CloseDialog"];
+    }
+
+    private async Task HandleSave()
+    {
+        Validate();
+        if (!IsValid()) return;
+
+        var result = new ProviderDialogResult(
+            Slug: _slug,
+            DisplayName: _displayName.Trim(),
+            BaseUrl: _baseUrl.Trim(),
+            ApiKey: string.IsNullOrEmpty(_pendingApiKey) ? null : _pendingApiKey,
+            Models: new List<ProviderModelRecord>(_models),
+            IsNew: EditTarget == null
+        );
+
+        await OnSave.InvokeAsync(result);
+    }
+
+    private async Task HandleCancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            await HandleCancel();
+    }
+
+    public void Dispose()
+    {
+        LangSvc.LanguageChanged -= OnLanguageChanged;
+    }
+}

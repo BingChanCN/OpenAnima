@@ -431,4 +431,100 @@
   <data name="RunDetail.LongTimelineBanner" xml:space="preserve">
     <value>Showing all {0} steps. Use filters to narrow the view.</value>
   </data>
+  <data name="Providers.SectionTitle" xml:space="preserve">
+    <value>LLM Providers</value>
+  </data>
+  <data name="Providers.AddProvider" xml:space="preserve">
+    <value>Add Provider</value>
+  </data>
+  <data name="Providers.EmptyHeading" xml:space="preserve">
+    <value>No providers configured</value>
+  </data>
+  <data name="Providers.EmptyBody" xml:space="preserve">
+    <value>Add a provider to start using registry-backed LLM modules.</value>
+  </data>
+  <data name="Providers.ModelCount" xml:space="preserve">
+    <value>{0} model(s)</value>
+  </data>
+  <data name="Providers.DisabledLabel" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="Providers.EditProvider" xml:space="preserve">
+    <value>Edit Provider</value>
+  </data>
+  <data name="Providers.SaveProvider" xml:space="preserve">
+    <value>Save Provider</value>
+  </data>
+  <data name="Providers.DiscardChanges" xml:space="preserve">
+    <value>Discard Changes</value>
+  </data>
+  <data name="Providers.CloseDialog" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Providers.DeleteProvider" xml:space="preserve">
+    <value>Delete Provider</value>
+  </data>
+  <data name="Providers.Disable" xml:space="preserve">
+    <value>Disable</value>
+  </data>
+  <data name="Providers.Enable" xml:space="preserve">
+    <value>Enable</value>
+  </data>
+  <data name="Providers.TestConnection" xml:space="preserve">
+    <value>Test Connection</value>
+  </data>
+  <data name="Providers.TestSuccess" xml:space="preserve">
+    <value>Connection successful</value>
+  </data>
+  <data name="Providers.TestFailed" xml:space="preserve">
+    <value>Connection failed: {0}</value>
+  </data>
+  <data name="Providers.ApiKeyPlaceholder" xml:space="preserve">
+    <value>Paste API key...</value>
+  </data>
+  <data name="Providers.ApiKeyEditHint" xml:space="preserve">
+    <value>Clear and re-enter to replace key</value>
+  </data>
+  <data name="Providers.ModelId" xml:space="preserve">
+    <value>Model ID</value>
+  </data>
+  <data name="Providers.ModelAlias" xml:space="preserve">
+    <value>Display alias (optional)</value>
+  </data>
+  <data name="Providers.AddModel" xml:space="preserve">
+    <value>Add Model</value>
+  </data>
+  <data name="Providers.RemoveModel" xml:space="preserve">
+    <value>Remove Model</value>
+  </data>
+  <data name="Providers.DisableConfirmTitle" xml:space="preserve">
+    <value>Disable Provider?</value>
+  </data>
+  <data name="Providers.DisableConfirmMessage" xml:space="preserve">
+    <value>This will mark {0} LLM module(s) as unavailable. They will retain their selections but will not run until the provider is re-enabled.</value>
+  </data>
+  <data name="Providers.DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete Provider?</value>
+  </data>
+  <data name="Providers.DeleteConfirmMessage" xml:space="preserve">
+    <value>This will permanently delete this provider and {0} model(s). {1} LLM module(s) will show their selections as unavailable.</value>
+  </data>
+  <data name="Providers.DeleteConfirmAction" xml:space="preserve">
+    <value>Delete Provider</value>
+  </data>
+  <data name="Providers.ValidationNameRequired" xml:space="preserve">
+    <value>Provider name is required.</value>
+  </data>
+  <data name="Providers.ValidationUrlRequired" xml:space="preserve">
+    <value>Base URL is required.</value>
+  </data>
+  <data name="Providers.ValidationUrlFormat" xml:space="preserve">
+    <value>Enter a valid URL (e.g. https://api.openai.com).</value>
+  </data>
+  <data name="Providers.ValidationModelIdRequired" xml:space="preserve">
+    <value>Model ID is required.</value>
+  </data>
+  <data name="Providers.ValidationModelIdDuplicate" xml:space="preserve">
+    <value>A model with this ID already exists.</value>
+  </data>
 </root>
