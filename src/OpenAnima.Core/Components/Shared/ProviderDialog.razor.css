@@ -107,3 +107,26 @@
 .btn-secondary:hover:not(:disabled) {
     background: var(--hover-bg);
 }
+
+.test-connection-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.test-connection-btn {
+    min-height: 44px;
+}
+
+.test-result {
+    font-size: 13px;
+}
+
+.test-success {
+    color: var(--success-color, #4ade80);
+}
+
+.test-failure {
+    color: var(--error-color, #f87171);
+}
