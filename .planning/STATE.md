@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 53 context gathered
-last_updated: "2026-03-22T12:27:28.855Z"
+stopped_at: Phase 53 UI-SPEC approved
+last_updated: "2026-03-22T12:32:28.798Z"
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State: OpenAnima
@@ -27,7 +27,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-22)
 ## Current Position
 
 Phase: 51 (llm-module-configuration) — EXECUTING
-Plan: 1 of 2
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Plan: 1 of 2
 | Phase 50 P01 | 6m | 2 tasks | 9 files |
 | Phase 50 P02 | 8m | 2 tasks | 14 files |
 | Phase 50 P03 | 3m | 2 tasks | 2 files |
+| Phase 51 P01 | 23 | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,9 @@ Recent decisions affecting current work:
 - [Phase 50]: API key field enforces write-only contract via @oninput exclusively, never @bind
 - [Phase 50]: Test button only visible in edit mode (EditTarget != null) — no slug exists to test in create mode
 - [Phase 50]: CTS cancelled in Dispose() before disposal to prevent ObjectDisposedException in background Task.Run auto-clear
+- [Phase 51]: LLMModule constructor upgraded from IModuleConfig to IAnimaModuleConfigService to enable SetConfigAsync(dict) for auto-clear logic
+- [Phase 51]: ClearModelSelectionAsync retains llmProviderSlug to preserve user's provider choice — only the stale model binding is cleared
+- [Phase 51]: NullRegistryServiceFactory uses Lazy<T> singleton with shared temp dir for integration test isolation of LLMModule constructor
 
 ### Pending Todos
 
@@ -86,6 +90,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T12:27:28.853Z
-Stopped at: Phase 53 context gathered
-Resume file: .planning/phases/53-tool-aware-memory-operations/53-CONTEXT.md
+Last session: 2026-03-22T12:32:28.795Z
+Stopped at: Phase 53 UI-SPEC approved
+Resume file: .planning/phases/53-tool-aware-memory-operations/53-UI-SPEC.md

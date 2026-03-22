@@ -22,11 +22,11 @@ Requirements for milestone v2.0.1. Each maps to roadmap phases.
 
 ### LLM Node Configuration
 
-- [ ] **LLMN-01**: User can configure an LLM module by selecting a registered provider from a dropdown in the editor sidebar
-- [ ] **LLMN-02**: User can configure an LLM module by selecting a model scoped to the chosen provider
-- [ ] **LLMN-03**: User can keep an existing provider/model selection visible as unavailable when the referenced provider or model is later disabled or removed
-- [ ] **LLMN-04**: User can fall back to manual API URL, API key, and model configuration for advanced or migration scenarios
-- [ ] **LLMN-05**: LLM module resolves provider-backed, manual, and legacy global configuration through a single deterministic precedence order
+- [x] **LLMN-01**: User can configure an LLM module by selecting a registered provider from a dropdown in the editor sidebar
+- [x] **LLMN-02**: User can configure an LLM module by selecting a model scoped to the chosen provider
+- [x] **LLMN-03**: User can keep an existing provider/model selection visible as unavailable when the referenced provider or model is later disabled or removed
+- [x] **LLMN-04**: User can fall back to manual API URL, API key, and model configuration for advanced or migration scenarios
+- [x] **LLMN-05**: LLM module resolves provider-backed, manual, and legacy global configuration through a single deterministic precedence order
 
 ### Memory Recall
 
@@ -99,11 +99,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROV-08 | Phase 50 | Complete |
 | PROV-09 | Phase 50 | Complete |
 | PROV-10 | Phase 50 | Complete |
-| LLMN-01 | Phase 51 | Pending |
-| LLMN-02 | Phase 51 | Pending |
-| LLMN-03 | Phase 51 | Pending |
-| LLMN-04 | Phase 51 | Pending |
-| LLMN-05 | Phase 51 | Pending |
+| LLMN-01 | Phase 51 | Complete |
+| LLMN-02 | Phase 51 | Complete |
+| LLMN-03 | Phase 51 | Complete |
+| LLMN-04 | Phase 51 | Complete |
+| LLMN-05 | Phase 51 | Complete |
 | MEMR-01 | Phase 52 | Pending |
 | MEMR-02 | Phase 52 | Pending |
 | MEMR-03 | Phase 52 | Pending |
