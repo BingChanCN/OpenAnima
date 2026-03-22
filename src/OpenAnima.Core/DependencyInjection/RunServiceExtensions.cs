@@ -55,6 +55,8 @@ public static class RunServiceExtensions
         services.AddSingleton<IWorkspaceTool, MemoryQueryTool>();
         services.AddSingleton<IWorkspaceTool, MemoryWriteTool>();
         services.AddSingleton<IWorkspaceTool, MemoryDeleteTool>();
+        services.AddSingleton<IWorkspaceTool, MemoryRecallTool>();
+        services.AddSingleton<IWorkspaceTool, MemoryLinkTool>();
 
         // Workflow preset discovery
         var presetsDir = Path.Combine(AppContext.BaseDirectory, "wiring-configs", "presets");
