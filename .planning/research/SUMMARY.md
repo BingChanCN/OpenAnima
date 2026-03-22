@@ -1,159 +1,178 @@
 # Project Research Summary
 
 **Project:** OpenAnima
-**Domain:** Local-first, graph-native developer agent platform with long-running structured cognition workflows
+**Domain:** Local-first, graph-native developer agent platform for long-running structured cognition workflows
 **Researched:** 2026-03-20
 **Confidence:** HIGH
 
 ## Executive Summary
 
-OpenAnima v2.0 should not be planned as "more modules" or "a smarter prompt." Research points to a clearer milestone identity: turn the existing event-driven graph runtime into a basically usable developer-agent product that can take a workspace, run for a long time, generate artifacts, reinject relevant memory, and remain inspectable while it does so. The critical insight is that the platform already has strong graph primitives (`WiringEngine`, `ActivityChannelHost`, Cross-Anima routing, per-module storage). What it lacks is durable task state, workspace tooling, observability, and provenance-backed memory.
+OpenAnima v2.0 should be treated as a runtime-product milestone, not a model-upgrade milestone. The research converges on a clear product identity: a developer-oriented, long-running, graph-native agent system where cognition emerges from visible structure, routing, tools, and artifacts rather than from one oversized prompt loop. Experts would build this by extending the existing event-driven graph runtime into a durable run system that can survive refresh/restart, inspect real repositories, generate persistent artifacts, reinject relevant prior context, and explain what happened at every step.
 
-The recommended approach is evolutionary, not architectural replacement. Keep the .NET 8 + Blazor Server + event-driven runtime foundation, then add a run-centric layer over it: SQLite-backed run persistence, workspace-aware tool adapters (`rg`, `git`, bounded commands), artifact storage, memory retrieval over those artifacts, and a run inspector UI. This directly supports the user's stated目标：结构驱动的深度思考、长程任务、并行节点、代码库分析。
+The recommended approach is evolutionary and opinionated. Keep the current .NET 8, Blazor Server, WiringEngine, and ActivityChannelHost foundation. Add a run-centric layer on top: SQLite-backed run persistence, explicit workspace binding, safe tool adapters for `rg`/`git`/bounded commands, artifact storage, FTS-backed provenance-first memory, and a run inspector with real telemetry. That sequence matters because memory, observability, and structured cognition are only trustworthy after durable runs and workspace-grounded execution exist.
 
-The main risk is mistaking "cycles enabled" for "cognition solved." Without convergence control, provenance, and timeline inspection, v2.0 would become harder to trust than v1.9. The roadmap should therefore build control surfaces and recovery semantics before chasing more autonomy.
+The main risks are also consistent across the research: cyclic graphs can churn forever, long-running work can disappear without persistence, tools can act on the wrong repo, and “memory” can become opaque and untrustworthy. The mitigation is to front-load control surfaces: budgets, lifecycle semantics, append-only step logging, workspace-root enforcement, provenance-backed retrieval, and timeline inspection before expanding autonomy.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack decision is conservative on purpose. OpenAnima already has the right runtime base; v2.0 should add only the missing product primitives:
+The stack recommendation is intentionally conservative because the product risk is orchestration quality, not framework novelty. The existing .NET 8 and Blazor Server host already fit the problem well. The missing capabilities are durable execution state, better runtime observability, safe workspace tooling, and inspectable retrieval. SQLite plus file artifacts is the right local-first persistence model, OpenTelemetry is the right visibility layer, and external developer tools (`rg`, `git`, `dotnet build/test`) are the right first-class primitives for a useful developer agent.
 
-- `.NET 8 LTS` + existing Blazor Server host remain the correct platform
-- `Microsoft.Data.Sqlite` adds durable run/step/artifact metadata with minimal operational cost
-- `OpenTelemetry` adds traceable multi-node execution and run forensics
-- `ripgrep` + `git` provide the shortest path to a useful developer-agent tool surface
-- SQLite FTS5 provides a strong first memory layer without jumping straight to vector infrastructure
+Critical version alignment matters. .NET 8 should remain the platform baseline, SignalR major versions should stay aligned with .NET 8, Microsoft.Data.Sqlite 10.0.5 is the recommended embedded store, and OpenTelemetry packages should stay on the 1.15.x line used in the stack research. ripgrep and git should be capability-detected at runtime rather than treated as guaranteed embedded dependencies.
 
 **Core technologies:**
-- **.NET 8 / existing runtime:** stable host and concurrency foundation — already validated in shipped milestones
-- **SQLite:** durable run state and memory metadata — best fit for local-first single-user workflows
-- **OpenTelemetry:** execution visibility — needed once graph cognition becomes long-running and parallel
-- **ripgrep + git:** developer task primitives — essential for codebase analysis usefulness
+- **.NET 8 LTS**: core runtime and hosting — already validated across prior milestones and avoids platform churn while core agent behavior is still stabilizing.
+- **Blazor Server + SignalR 8.0.x**: local-first control plane and live runtime UI — deepens the existing shell instead of replacing it.
+- **System.Threading.Channels + SemaphoreSlim**: in-process scheduling and backpressure — proven in `ActivityChannelHost` and suitable for run-aware execution lanes.
+- **Microsoft.Data.Sqlite 10.0.5**: durable run, step, event, artifact, and memory metadata — best fit for single-user local-first resumable workflows.
+- **OpenTelemetry.Extensions.Hosting 1.15.x**: tracing and correlated runtime diagnostics — needed to explain multi-node execution paths.
+- **ripgrep 15.1.0 + git 2.53.0**: developer workspace primitives — fastest path to a repo-grounded agent that can inspect and verify work.
+- **SQLite FTS5**: provenance-first retrieval foundation — gives inspectable lexical memory before vector infrastructure is justified.
 
 ### Expected Features
 
-The research strongly suggests that v2.0 MVP is defined by product usefulness, not ecosystem breadth.
+The feature research makes the MVP boundary unusually clear. v2.0 is not about breadth, personas, or ecosystem growth. It is about reaching the minimum bar for a trustworthy long-running developer agent. That means durable runs, workspace-aware tools, artifact generation, execution inspection, convergence control, provenance-backed memory, and one compelling end-to-end workflow: codebase analysis.
+
+The strongest differentiator is structure-driven cognition. OpenAnima should win by making graph topology, routing, fan-out, and multi-Anima collaboration visible and inspectable. It should not imitate competitors by hiding orchestration in an opaque loop. The anti-features are equally important: do not ship prompt-only “deep think,” unrestricted autonomous mutation, vector-first memory, or marketplace ambitions before the runtime proves itself.
 
 **Must have (table stakes):**
-- Durable task runs with resume/cancel/history
-- Workspace-aware tool surface for repo-grounded actions
-- Artifact output pipeline for reports and intermediate findings
-- Execution inspection UI for multi-node runs
-- Basic retrieval memory foundation with provenance
-- Convergence control for cyclic cognition loops
-- End-to-end codebase analysis workflow proving the product is usable
+- Durable task runs with stable run identity, persistence, resume, cancel, and history.
+- Workspace-aware tool surface for file read/search, `rg`, `git`, and bounded command execution.
+- Artifact output pipeline for reports, notes, intermediate findings, and final deliverables.
+- Execution inspection UI with run timeline and per-step visibility.
+- Convergence control for cyclic graphs using budgets, stop conditions, and explicit completion semantics.
+- Basic retrieval memory foundation based on artifacts, summaries, and provenance.
+- End-to-end codebase analysis workflow proving the system is genuinely usable.
 
 **Should have (competitive):**
-- Structure-driven cognition via visible graph topology
-- Multi-node parallel cognition and fan-out
-- Cross-Anima collaboration in long-running workflows
-- Explainable memory injection and run reasoning
+- Structure-driven cognition where reasoning emerges from graph topology and routing.
+- Multi-node parallel cognition built on existing event-driven fan-out.
+- Multi-Anima collaboration in longer workflows.
+- Provenance-backed memory retrieval that users can inspect and trust.
+- Explainable developer-agent runs with clear cause-and-effect inspection.
 
-**Defer (v2.x+ / later):**
-- Vector-first memory stack
-- Remote/distributed workers
-- Marketplace and ecosystem expansion
+**Defer (v2+):**
+- Semantic code intelligence via Roslyn/LSP until lexical search shows clear limits.
+- Novel-writing presets and higher-level templates until developer workflows are stable.
+- Vector or embedding retrieval until provenance-first memory shows recall gaps.
+- Remote workers or distributed execution until local-first workflows saturate.
+- Marketplace and ecosystem expansion until the core product is proven useful.
 
 ### Architecture Approach
 
-The architecture should remain graph-native. Instead of building a second hidden orchestration engine, v2.0 should attach run lifecycle, persistence, workspace tools, artifacts, and memory to the existing runtime. The system becomes run-centric: every long-running objective gets a run ID, persisted steps, tool outputs, artifacts, and a replayable timeline.
+The architecture recommendation is to stay graph-native and make the run, not the chat session, the primary execution unit. Every long-running objective should become a durable run with identity, workspace root, budgets, step history, artifacts, telemetry, and replayable inspection. The Task Orchestrator should add lifecycle and persistence over the existing WiringEngine rather than bypass it. Workspace service boundaries should isolate OS and repo operations. Artifacts should be file-backed with SQLite metadata. Memory should index durable outputs, not hidden prompt state. The UI should consume timeline projections over persisted state instead of raw execution internals.
 
 **Major components:**
-1. **Task Orchestrator / Run Manager** — creates, resumes, cancels, and budgets long-running runs
-2. **Workspace Service** — owns repo/file search, git access, and bounded command execution
-3. **Artifact Store + Memory Index** — turns intermediate work into durable, retrievable context
-4. **Run Inspector UI** — makes parallel graph execution understandable
-5. **Existing graph runtime** — WiringEngine, ActivityChannelHost, CrossAnimaRouter remain the execution substrate
+1. **Task Orchestrator / Run Manager** — owns run lifecycle, objectives, cancellation, resume, budgets, and status transitions.
+2. **Existing graph runtime (WiringEngine + ActivityChannelHost + CrossAnimaRouter)** — remains the execution substrate for routing, fan-out, and per-lane serialization.
+3. **Workspace Service** — owns repo root binding, file access, search, git operations, and bounded command execution.
+4. **Artifact Store** — owns durable reports, notes, summaries, and intermediate outputs with stable run/step ownership.
+5. **Memory Index** — owns retrieval over artifacts and summaries using provenance metadata and FTS.
+6. **Run Inspector / Timeline Projection** — owns user-facing replay, debugging, route visibility, and failure analysis.
 
 ### Critical Pitfalls
 
-1. **Unbounded cyclic execution** — solve with budgets, cooldowns, and explicit stop semantics before shipping complex loop workflows
-2. **Ephemeral task state** — solve with SQLite-backed run persistence from the foundation phase
-3. **Wrong-workspace tool execution** — solve with explicit workspace binding on every run and tool step
-4. **Opaque memory injection** — solve with provenance-backed retrieval over artifacts rather than hidden memory blobs
-5. **Weak observability** — solve with per-run timelines, route visibility, and correlated telemetry rather than status-only UI
+The pitfall research is highly actionable because the risks map directly to the proposed phases. Most of the failure modes are not theoretical; they are what naturally happens when you enable cycles, long-running work, tools, and memory without adding durable control and inspection.
+
+1. **Cyclic graphs never converge** — prevent with run-level step/token/time budgets, explicit stop conditions, cooldowns, and repeated-pattern detection.
+2. **Long-running tasks disappear on refresh or restart** — prevent with SQLite-backed run/step persistence, append-only step logging, and explicit resume/cancel/recover lifecycle operations.
+3. **Tools act on the wrong workspace** — prevent with mandatory workspace-root binding on every run and every tool request/result.
+4. **Memory becomes opaque and untrustworthy** — prevent with provenance-linked memory records tied to artifacts, step IDs, timestamps, and visible retrieval reasons.
+5. **Observability stops at running/error** — prevent with per-step start/end/failure events, queue depth and latency metrics, route visibility, and correlated logs/traces.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on the combined research, the roadmap should follow the dependency chain of trustworthiness: durable execution first, grounded repo interaction second, explainability third, retrieval fourth, and advanced cognition last. This is the shortest path to a usable product and the safest way to avoid building impressive-looking but untrustworthy autonomy.
 
-### Phase 45: Durable Task Runtime Foundation
-**Rationale:** Everything else depends on stable run identity and lifecycle.
-**Delivers:** Run model, SQLite persistence, resume/cancel/restart semantics, step budgets.
-**Addresses:** Durable task runs, convergence-control foundation.
-**Avoids:** Lost long-running work, invisible run state, uncontrolled loops.
+### Phase 1: Durable Task Runtime Foundation
+**Rationale:** Every downstream capability depends on stable run identity and persistent lifecycle state. Without this, artifacts orphan, inspection breaks, memory loses ownership, and restart/recovery are impossible.
+**Delivers:** SQLite-backed run model (`task_runs`, `task_steps`, `task_events`, `task_artifacts`, `memory_records`), append-only step logging, run creation/resume/cancel/completion, and initial run budgets.
+**Addresses:** Durable task runs, convergence-control foundation, lifecycle semantics.
+**Uses:** .NET 8, Channels/SemaphoreSlim, Microsoft.Data.Sqlite 10.0.5.
+**Implements:** Run-centric orchestration and append-only timeline pattern.
+**Avoids:** Lost in-memory work, invisible run state, and uncontrolled loops.
 
-### Phase 46: Workspace Tool Surface
-**Rationale:** Product usefulness for developers starts when the graph can actually inspect and act on a repo.
-**Delivers:** Workspace binding, file/repo tool modules, bounded command execution, structured tool results.
-**Uses:** `rg`, `git`, filesystem, existing runtime channels.
-**Implements:** Workspace service boundary.
+### Phase 2: Workspace Tool Surface
+**Rationale:** OpenAnima does not become a developer agent until it can inspect and verify work in a real repository. Tooling must come early so later cognition phases operate on grounded evidence.
+**Delivers:** Explicit workspace-root model, file IO/search adapters, `rg` integration, `git` integration, bounded command execution, structured tool results, and read-first safety defaults.
+**Addresses:** Workspace-aware tool surface, end-to-end repo grounding.
+**Uses:** ripgrep, git, filesystem/process adapters, existing runtime channels.
+**Implements:** Tool adapter boundary and workspace service layer.
+**Avoids:** Wrong-repo execution, nondeterministic behavior, and unsafe early mutation.
 
-### Phase 47: Observability and Run Inspection
-**Rationale:** Once real tool-driven runs exist, users need to understand them before autonomy expands.
-**Delivers:** Run timeline UI, per-step inputs/outputs, queue depth visibility, telemetry correlation.
-**Uses:** OpenTelemetry + SignalR + persisted step projections.
+### Phase 3: Observability and Run Inspection
+**Rationale:** Once long-running tool-driven runs exist, explainability becomes a product requirement. Users must be able to answer what happened, why it happened, and where it failed before autonomy expands.
+**Delivers:** Run timeline inspector, step projections, route visibility, per-step inputs/outputs/errors, queue depth and latency surfacing, and correlated tracing/logging.
+**Addresses:** Execution inspection UI, explainable runs.
+**Uses:** Blazor Server, SignalR, OpenTelemetry 1.15.x, persisted step/event projections.
 **Implements:** Run inspector and observability layer.
+**Avoids:** “running/error” black-box UX and log-only debugging.
 
-### Phase 48: Memory and Artifact Retrieval Foundation
-**Rationale:** Memory should build on real artifacts and runs, not precede them.
-**Delivers:** Artifact store, summary extraction, FTS-backed retrieval, provenance-linked memory records.
-**Uses:** SQLite + file storage + existing module storage conventions.
-**Implements:** Memory/artifact subsystem.
+### Phase 4: Artifact and Memory Retrieval Foundation
+**Rationale:** Memory should be built on durable outputs, not introduced as hidden prompt state. This phase turns completed work into inspectable reusable context.
+**Delivers:** File-backed artifact store, SQLite metadata, summary extraction, FTS-backed retrieval, memory records with provenance, and basic lifecycle/retention rules.
+**Addresses:** Artifact output pipeline, basic retrieval memory foundation.
+**Uses:** SQLite, FTS5, file storage, existing module storage conventions.
+**Implements:** Provenance-backed memory and artifact indexing.
+**Avoids:** Opaque memory injection, untrustworthy recall, and uncontrolled storage growth.
 
-### Phase 49: Structured Cognition Workflows
-**Rationale:** The milestone promise is fulfilled only when graph topology can drive useful long-running reasoning over a workspace.
-**Delivers:** Convergence-aware cognition loops, memory injection into workflows, end-to-end codebase analysis output.
-**Addresses:** Structure-driven cognition, long-running multi-node workflows.
-**Avoids:** Prompt-only fake "deep thinking".
+### Phase 5: Structured Cognition Workflows
+**Rationale:** This is where the milestone promise is actually delivered. Only after persistence, grounding, observability, and retrieval are in place should OpenAnima lean into multi-node graph cognition.
+**Delivers:** Convergence-aware multi-node workflows, memory reinjection into runs, cross-Anima collaboration patterns, and a polished end-to-end codebase analysis workflow.
+**Addresses:** Structure-driven cognition, multi-node parallel cognition, explainable developer-agent behavior.
+**Uses:** Existing WiringEngine/CrossAnimaRouter plus all prior foundation phases.
+**Implements:** Workflow presets and bounded cyclic cognition loops.
+**Avoids:** Prompt-only fake “deep thinking” and un-debuggable autonomy.
 
 ### Phase Ordering Rationale
 
-- Phase 45 first because every later feature needs durable run identity and stop/recovery semantics.
-- Phase 46 second because developer usefulness depends on workspace grounding, not more abstract cognition.
-- Phase 47 before advanced loops so failures are diagnosable before autonomy increases.
-- Phase 48 after artifacts exist, because memory should index real outputs rather than imaginary state.
-- Phase 49 last because it integrates all prior layers into the user's target experience.
+- Start with **run durability** because every later concern needs stable ownership, recovery, and history.
+- Put **workspace tooling** before advanced cognition because grounded evidence matters more than abstract reasoning.
+- Add **observability** before memory-heavy or loop-heavy workflows so failures are diagnosable while the system is still understandable.
+- Build **memory on artifacts** so retrieval has provenance and user trust from day one.
+- Leave **structured cognition workflows** for last because they integrate all prior layers and are the easiest place to create fragile complexity if foundations are weak.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 49:** convergence heuristics and evaluation criteria for "deep but controlled" graph cognition
-- **Phase 48:** memory record granularity and pruning strategy if artifact volume grows quickly
+- **Phase 4: Artifact and Memory Retrieval Foundation** — retrieval granularity, summarization policy, retention thresholds, and pruning strategy need tighter implementation choices.
+- **Phase 5: Structured Cognition Workflows** — convergence heuristics, workflow evaluation criteria, and practical success metrics for “deep but controlled” cognition need further definition.
 
 Phases with standard patterns (skip research-phase):
-- **Phase 45:** run persistence and lifecycle are standard local-app patterns
-- **Phase 46:** workspace tool adapters are straightforward engineering work
-- **Phase 47:** timeline/telemetry layering is standard once boundaries are known
+- **Phase 1: Durable Task Runtime Foundation** — local embedded persistence and append-only lifecycle modeling are well-understood patterns.
+- **Phase 2: Workspace Tool Surface** — explicit tool adapters, timeouts, and workspace binding are straightforward engineering patterns.
+- **Phase 3: Observability and Run Inspection** — timeline projection and telemetry layering are standard once run boundaries are defined.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Grounded in official docs plus direct codebase fit |
-| Features | HIGH | Derived directly from user intent and current platform gaps |
-| Architecture | HIGH | Strong continuity with existing runtime; no speculative rewrite required |
-| Pitfalls | HIGH | Most risks are directly implied by current v1.9 capabilities and deferred debt |
+| Stack | HIGH | Strongest area; grounded in official docs, package versions, and direct fit with the current codebase. |
+| Features | HIGH | Clear alignment between user intent, competitor positioning, and the product gaps exposed by the current platform. |
+| Architecture | HIGH | Recommendation extends proven runtime primitives instead of proposing a speculative rewrite. |
+| Pitfalls | HIGH | Risks are concrete, phase-mapped, and directly implied by current capabilities and deferred constraints. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Memory scope line:** v2.0 should define whether memory means retrieval foundation only or includes a named user-facing memory module in the milestone surface.
-- **Success criteria for structured cognition:** planning should define how to verify "deep thinking" without slipping into prompt-only evaluation.
-- **Mutation boundary:** planning should keep developer tooling useful while preserving explicit control over destructive actions.
+- **Memory product boundary:** Decide whether v2.0 exposes memory only as retrieval infrastructure or also as a named end-user feature surface.
+- **Convergence success criteria:** Define how planning will measure “structured cognition works” without collapsing into prompt-quality or anecdotal demos.
+- **Mutation boundary for developer tools:** Decide how far write/mutate operations go in v2.0 versus remaining explicit user-approved actions.
+- **Artifact retention policy:** Define what stays raw, what gets summarized, and when pruning occurs so long runs remain performant.
+- **Codebase analysis acceptance test:** Specify the concrete workflow and output quality bar that proves the milestone is truly usable.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Direct codebase inspection — `WiringEngine`, `ActivityChannelHost`, `ModuleStorageService`, `EditorStateService`
-- `.planning/PROJECT.md` — current architecture, core value, deferred items
-- User milestone discussion — target workflows and product direction
-- Official docs gathered in stack research — OpenTelemetry .NET, Microsoft.Data.Sqlite, SQLite FTS5, ripgrep release/docs
+- Direct codebase inspection — `src/OpenAnima.Core/Wiring/WiringEngine.cs`, `src/OpenAnima.Core/Channels/ActivityChannelHost.cs`, `src/OpenAnima.Core/Services/ModuleStorageService.cs`, `src/OpenAnima.Core/Services/EditorStateService.cs`
+- `.planning/PROJECT.md` and `.planning/STATE.md` — current architecture, deferred constraints, and milestone context
+- Research files synthesized in this summary — `/home/user/OpenAnima/.claude/worktrees/agent-af8f633b/.planning/research/STACK.md`, `/home/user/OpenAnima/.claude/worktrees/agent-af8f633b/.planning/research/FEATURES.md`, `/home/user/OpenAnima/.claude/worktrees/agent-af8f633b/.planning/research/ARCHITECTURE.md`, `/home/user/OpenAnima/.claude/worktrees/agent-af8f633b/.planning/research/PITFALLS.md`
+- Official docs cited in stack research — OpenTelemetry .NET, Microsoft.Data.Sqlite, SQLite FTS5, ripgrep docs/releases, .NET 8 support policy
 
 ### Secondary (MEDIUM confidence)
-- Conceptual comparison against Claude Code, LangGraph, and OpenHands for feature positioning
+- Conceptual comparison against Claude Code, LangGraph, and OpenHands for feature positioning and product framing
 
 ---
 *Research completed: 2026-03-20*
