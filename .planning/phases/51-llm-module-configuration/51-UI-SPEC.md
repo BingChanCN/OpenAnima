@@ -57,15 +57,16 @@ Source: `EditorConfigSidebar.razor.css` measured values.
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
-| Body | 14px (0.875rem) | 400 | 1.5 |
-| Label | 12.8px (0.8rem) | 500 | 1.5 |
-| Section header / field label | 14px (0.875rem) | 600 | 1.5 |
+| Hints / errors / warnings | 12px (0.75rem) | 400 | 1.5 |
+| Body / labels / section headers / field labels | 14px (0.875rem) | 400 (body/labels) or 600 (section headers/field labels) | 1.5 |
 | Sidebar module title (h3) | 20px (1.25rem) | 600 | 1.2 |
 
 Notes:
-- Field hints use 12px (0.75rem) at weight 400, color `var(--text-secondary)` — matches `.field-hint` pattern
-- Field errors use 12px (0.75rem) at weight 400, color `var(--error-color)` — matches `.field-error` pattern
-- Inline warning label (unavailable provider/model) uses 13px (0.8125rem) at weight 400, color `var(--warning-color)` — matches `.provider-disabled-label` in ProviderCard
+- Field hints: 12px at weight 400, color `var(--text-secondary)` — matches `.field-hint` pattern
+- Field errors: 12px at weight 400, color `var(--error-color)` — matches `.field-error` pattern
+- Inline warning text (disabled provider/model banner, incomplete config banner): 12px at weight 400, color `var(--warning-color)`
+- Section headers and field labels: 14px at weight 600 — visually distinct from 14px body at weight 400
+- No 12.8px (0.8rem) or 13px (0.8125rem) sizes — both consolidated into 12px
 
 Source: `app.css` (base 14px body), `EditorConfigSidebar.razor.css` (section/label sizes).
 
@@ -105,6 +106,8 @@ All components are extensions of existing Blazor scoped-CSS patterns. No new des
 
 ### Provider Dropdown (new field type: CascadingDropdown — first tier)
 
+The Provider dropdown is the **primary visual anchor and entry point** for the config form. It is the first and widest interactive element in the sidebar panel; all downstream fields (Model dropdown or manual fields) are gated behind a selection here.
+
 - Rendered as `<select>` inside `.config-field` wrapper
 - Width: 100% of `.config-field` container (sidebar is 380px; field fills content area minus 48px padding = ~332px effective)
 - Option format: `{DisplayName} ({N} models)` — e.g., `OpenAI (3 models)`
@@ -136,10 +139,10 @@ All components are extensions of existing Blazor scoped-CSS patterns. No new des
   - `background-color: rgba(251, 191, 36, 0.1)`
   - `border-left: 3px solid var(--warning-color)`
   - `color: var(--warning-color)`
-  - `font-size: 13px`
-  - `padding: 6px 10px`
+  - `font-size: 12px` (0.75rem — consolidated hint/warning size)
+  - `padding: 4px 8px` (xs / sm tokens)
   - `border-radius: 0 4px 4px 0`
-  - `margin-top: 6px`
+  - `margin-top: 8px` (sm token)
 - Copy: see Copywriting Contract below
 
 ### Incomplete Configuration Warning (inline, non-blocking)
