@@ -222,6 +222,34 @@ public class LLMModuleMemoryTests : IDisposable
         Assert.True(stepRecorder.StepCompleteCalled, "RecordStepCompleteAsync should be called");
     }
 
+    // ── Test: Boot nodes appear in <boot-memory> XML section ──────────────────
+
+    [Fact]
+    public async Task ExecuteWithMessages_BootNodes_AppearInBootMemoryXmlSection()
+    {
+        // Arrange: recall service returns a Boot-type node
+        var recallService = new FakeMemoryRecallService
+        {
+            Result = new RecalledMemoryResult
+            {
+                Nodes = [MakeRecalledNode("core://identity/boot", "I am a developer agent", "boot", "Boot")]
+            }
+        };
+        var (llmService, module, _) = CreateTestSetup(recallService);
+        await module.InitializeAsync();
+
+        // Act
+        await InvokePromptAsync(module, "hello");
+
+        // Assert: system message contains <boot-memory> and the boot node uri, but NOT <recalled-memory>
+        Assert.True(llmService.LastMessages?.Count > 0, "LLM should have been called");
+        var systemMsg = llmService.LastMessages!
+            .First(m => m.Role == "system" && m.Content.Contains("<system-memory>"));
+        Assert.Contains("<boot-memory>", systemMsg.Content);
+        Assert.Contains("uri=\"core://identity/boot\"", systemMsg.Content);
+        Assert.DoesNotContain("<recalled-memory>", systemMsg.Content);
+    }
+
     // ── Test 6: No StepRecord when no nodes recalled ───────────────────────────
 
     [Fact]

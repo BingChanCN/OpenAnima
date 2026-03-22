@@ -27,6 +27,9 @@ public class MemoryRecallService : IMemoryRecallService
         string context,
         CancellationToken ct = default)
     {
+        // Step 0: Query boot nodes (core:// prefix) -- unconditional, highest priority
+        var bootNodes = await _memoryGraph.QueryByPrefixAsync(animaId, "core://", ct);
+
         // 1. Get disclosure nodes and match them against the context.
         var disclosureNodes = await _memoryGraph.GetDisclosureNodesAsync(animaId, ct);
         var matchedDisclosure = DisclosureMatcher.Match(disclosureNodes, context);
@@ -36,18 +39,38 @@ public class MemoryRecallService : IMemoryRecallService
         var glossaryMatches = _memoryGraph.FindGlossaryMatches(animaId, context);
 
         // 3. Build the deduplication dictionary, keyed by URI.
-        //    Disclosure entries are seeded first; glossary entries either merge or add.
+        //    Boot entries are seeded first; disclosure and glossary entries either merge or add.
         var byUri = new Dictionary<string, RecalledNode>(StringComparer.Ordinal);
 
-        foreach (var node in matchedDisclosure)
+        // Seed boot nodes first -- they have highest priority and must not be overwritten
+        foreach (var node in bootNodes)
         {
             byUri[node.Uri] = new RecalledNode
             {
                 Node = node,
-                Reason = "disclosure",
-                RecallType = "Disclosure",
+                Reason = "boot",
+                RecallType = "Boot",
                 TruncatedContent = Truncate(node.Content)
             };
+        }
+
+        foreach (var node in matchedDisclosure)
+        {
+            if (byUri.TryGetValue(node.Uri, out var existingBoot) && existingBoot.RecallType == "Boot")
+            {
+                // Boot node already present -- merge reason, keep Boot priority
+                byUri[node.Uri] = existingBoot with { Reason = $"{existingBoot.Reason} + disclosure" };
+            }
+            else
+            {
+                byUri[node.Uri] = new RecalledNode
+                {
+                    Node = node,
+                    Reason = "disclosure",
+                    RecallType = "Disclosure",
+                    TruncatedContent = Truncate(node.Content)
+                };
+            }
         }
 
         // Group glossary matches by URI so a node matched by multiple keywords produces one entry.
@@ -114,8 +137,9 @@ public class MemoryRecallService : IMemoryRecallService
         }
 
         _logger.LogDebug(
-            "Recalled {Count} nodes for Anima {AnimaId} ({DisclosureCount} disclosure, {GlossaryCount} glossary)",
+            "Recalled {Count} nodes for Anima {AnimaId} ({BootCount} boot, {DisclosureCount} disclosure, {GlossaryCount} glossary)",
             budgetedNodes.Count, animaId,
+            budgetedNodes.Count(n => n.RecallType == "Boot"),
             budgetedNodes.Count(n => n.RecallType == "Disclosure"),
             budgetedNodes.Count(n => n.RecallType == "Glossary"));
 

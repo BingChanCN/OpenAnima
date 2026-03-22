@@ -199,6 +199,61 @@ public class MemoryRecallServiceTests
 
         Assert.All(result.Nodes, n => Assert.False(string.IsNullOrEmpty(n.Reason)));
     }
+
+    // ── boot recall ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RecallAsync_BootNodes_ReturnedWithBootRecallType()
+    {
+        var fake = new FakeMemoryGraph
+        {
+            PrefixNodes = [MakeNode("core://identity/agent", "I am a developer agent")]
+        };
+
+        var result = await BuildService(fake).RecallAsync("test-anima", "any context");
+
+        Assert.True(result.HasAny);
+        Assert.Single(result.Nodes);
+        Assert.Equal("Boot", result.Nodes[0].RecallType);
+        Assert.Equal("boot", result.Nodes[0].Reason);
+        Assert.True(fake.QueryByPrefixCalled);
+    }
+
+    [Fact]
+    public async Task RecallAsync_BootNodeNotOverwrittenByDisclosure()
+    {
+        var node = MakeNode("core://identity/agent", disclosureTrigger: "project X");
+        var fake = new FakeMemoryGraph
+        {
+            PrefixNodes = [node],
+            DisclosureNodes = [node]
+        };
+
+        var result = await BuildService(fake).RecallAsync("test-anima", "project X discussion");
+
+        Assert.Single(result.Nodes);
+        Assert.Equal("Boot", result.Nodes[0].RecallType);
+        Assert.Contains("boot", result.Nodes[0].Reason);
+        Assert.Contains("disclosure", result.Nodes[0].Reason);
+    }
+
+    [Fact]
+    public async Task RecallAsync_BootNodeNotOverwrittenByGlossary()
+    {
+        var node = MakeNode("core://identity/agent");
+        var fake = new FakeMemoryGraph
+        {
+            PrefixNodes = [node],
+            GlossaryMatches = [("architecture", "core://identity/agent")],
+            NodesByUri = { ["core://identity/agent"] = node }
+        };
+
+        var result = await BuildService(fake).RecallAsync("test-anima", "architecture discussion");
+
+        Assert.Single(result.Nodes);
+        Assert.Equal("Boot", result.Nodes[0].RecallType);
+        Assert.Contains("boot", result.Nodes[0].Reason);
+    }
 }
 
 // ── FakeMemoryGraph stub ─────────────────────────────────────────────────────
