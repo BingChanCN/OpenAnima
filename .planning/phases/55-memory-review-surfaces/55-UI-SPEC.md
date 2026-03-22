@@ -151,14 +151,14 @@ Incoming   ───────────────────────
 - Sub-group labels ("Outgoing", "Incoming"): 12px, weight 600, uppercase, color `--text-muted`, margin-bottom 4px
 - Edge row: padding 4px 0, font-size 12px, min-height 32px, border-bottom `1px solid var(--border-color)`
 - Arrow separator `→`: color `--text-muted`
-- Label badge: inline-block, `background: var(--surface-dark)`, border `1px solid var(--border-color)`, border-radius 3px, padding 2px 6px, font-size 12px, color `--text-secondary`
+- Label badge: inline-block, `background: var(--surface-dark)`, border `1px solid var(--border-color)`, border-radius 3px, padding 4px 8px (`xs` and `sm` tokens), font-size 12px, color `--text-secondary`
 - Date: 12px mono, `--text-muted`
 - Counterpart URI (clickable): 12px mono, color `--accent-color`, cursor pointer, no underline unless hovered
 - "This node" text: 12px, color `--text-secondary`, not clickable, no styling
 
 ### 5. Edge Hover Tooltip
 - Trigger: hover on counterpart URI text
-- Popup: `position: absolute`, `background: var(--surface-card)`, `border: 1px solid var(--border-color)`, `border-radius: 4px`, `padding: 8px 12px`, `max-width: 280px`, `z-index: 100`
+- Popup: `position: absolute`, `background: var(--surface-card)`, `border: 1px solid var(--border-color)`, `border-radius: 4px`, `padding: 8px 16px` (`sm` and `md` tokens), `max-width: 280px`, `z-index: 100`
 - Content: first ~100 chars of target/source node content, font-size 12px, color `--text-secondary`, no truncation ellipsis (CSS `white-space: normal`, `word-break: break-word`)
 - Animation: `opacity 0 → 1`, `transition: opacity 0.1s ease`, delay 300ms on show
 - Positioning: below and right-aligned to the URI text; if near right edge, flip left
