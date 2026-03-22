@@ -4,8 +4,8 @@
 
 **Latest shipped:** v2.0 Structured Cognition Foundation (2026-03-21)
 **Milestones complete:** v1.0–v2.0 (11 milestones, 49 phases, 117 plans)
-**Phase 51 complete:** LLM Module Configuration — provider-backed dropdown selection in editor sidebar with three-layer precedence resolution (provider > manual > global), cascading model dropdown, manual fallback mode, auto-clear on deleted providers/models (2026-03-22)
-**Codebase:** ~41,773 LOC (C#, Razor, CSS, JS) | 537 tests green
+**Phase 52 complete:** Automatic Memory Recall — IMemoryRecallService with disclosure + glossary orchestration, URI dedup, priority ranking, budget bounding; wired into RunService (boot injection) and LLMModule (automatic recall with XML system messages) (2026-03-22)
+**Codebase:** ~41,773 LOC (C#, Razor, CSS, JS) | 554 tests green
 
 ## Current Milestone: v2.0.1 Provider Registry & Living Memory
 
@@ -156,9 +156,9 @@ Agents that proactively think and act on their own, while module connections rem
 - [ ] Settings page UI for provider/model CRUD management
 - [ ] Editor LLM module selects provider/model via dropdown (with manual fallback)
 - [ ] ILLMProviderRegistry interface in Contracts for third-party module access
-- [ ] BootMemoryInjector called at run-start path
-- [ ] DisclosureMatcher wired into LLM prompt assembly for context-triggered memory injection
-- [ ] GlossaryIndex keyword matching active during LLM calls
+- [x] BootMemoryInjector called at run-start path — Validated in Phase 52: automatic-memory-recall
+- [x] DisclosureMatcher wired into LLM prompt assembly for context-triggered memory injection — Validated in Phase 52: automatic-memory-recall
+- [x] GlossaryIndex keyword matching active during LLM calls — Validated in Phase 52: automatic-memory-recall
 - [ ] memory_link tool for creating graph edges
 - [ ] memory_recall tool for keyword/glossary-based retrieval
 - [ ] GetToolDescriptors injected into LLM prompt so agent knows available tools
@@ -208,7 +208,7 @@ Agents that proactively think and act on their own, while module connections rem
 
 Shipped v2.0 with ~41,773 LOC across all source files (C#, Razor, CSS, JS).
 Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4, Microsoft.Extensions.Http.Resilience 8.7.0, Microsoft.Data.Sqlite 8.0.12, Dapper 2.1.72.
-Full test suite: 495/495 green.
+Full test suite: 554/554 green.
 
 v2.0 delivered structured cognition developer-agent foundation:
 - Durable task runtime: SQLite persistence, RunService lifecycle engine, ConvergenceGuard step budgets, StepRecorder with hash-based dedup, RunRecoveryService, /runs UI with SignalR real-time
@@ -223,7 +223,7 @@ Known tech debt:
 - ILLMService remains in Core (ChatMessageInput moved to Contracts but ILLMService depends on LLMResult + streaming)
 - Schema mismatch between CLI and Runtime (extended manifest fields)
 - TextJoin fixed 3 input ports — static port system limitation
-- BootMemoryInjector registered in DI but never called from run-start path
+- ~~BootMemoryInjector registered in DI but never called from run-start path~~ (resolved in Phase 52)
 - GetToolDescriptors() declared but never consumed by LLM — no tool schema injection
 - 26+ pre-existing CS0618 deprecation warnings for IAnimaContext/IAnimaModuleConfigService
 
@@ -335,4 +335,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-22 after v2.0.1 milestone start*
+*Last updated: 2026-03-22 after Phase 52 (automatic-memory-recall) completion*
