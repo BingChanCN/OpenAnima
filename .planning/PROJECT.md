@@ -4,7 +4,8 @@
 
 **Latest shipped:** v2.0 Structured Cognition Foundation (2026-03-21)
 **Milestones complete:** v1.0–v2.0 (11 milestones, 49 phases, 117 plans)
-**Codebase:** ~41,773 LOC (C#, Razor, CSS, JS) | 495 tests green
+**Phase 50 complete:** Provider Registry — global provider/model registry with AES-GCM encryption, write-only API keys, 4 Blazor UI components, full CRUD in Settings (2026-03-22)
+**Codebase:** ~41,773 LOC (C#, Razor, CSS, JS) | 523 tests green
 
 ## Current Milestone: v2.0.1 Provider Registry & Living Memory
 
