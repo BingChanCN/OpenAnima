@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 53-02-PLAN.md
-last_updated: "2026-03-22T13:35:23.116Z"
+stopped_at: Completed 54-01-PLAN.md
+last_updated: "2026-03-22T13:46:46.178Z"
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State: OpenAnima
@@ -22,12 +22,12 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-22)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 53 — tool-aware-memory-operations
+**Current focus:** Phase 54 — living-memory-sedimentation
 
 ## Current Position
 
-Phase: 53 (tool-aware-memory-operations) — EXECUTING
-Plan: 1 of 2
+Phase: 54 (living-memory-sedimentation) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Plan: 1 of 2
 | Phase 52 P02 | 10m | 2 tasks | 8 files |
 | Phase 53 P01 | 3m | 2 tasks | 4 files |
 | Phase 53 P02 | 6m | 1 tasks | 3 files |
+| Phase 54 P01 | 5 | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,8 @@ Recent decisions affecting current work:
 - [Phase 53]: MemoryRecallTool deduplicates via HashSet<string> on URIs so nodes matching both glossary and disclosure paths appear once
 - [Phase 53]: MemoryEdge has no SourceStepId -- provenance tracked at WorkspaceToolModule dispatch level via StepRecord, not on the edge
 - [Phase 53]: Tool block appended to existing system message[0] -- memory/routing content comes first, tools last; BuildToolDescriptorBlock returns null for empty lists to prevent empty XML tags
+- [Phase 54]: SedimentationService accepts Func<IReadOnlyList<ChatMessage>, CancellationToken, Task<string>>? llmCallOverride constructor parameter — production builds ChatClient from config, tests inject fake delegate without mocking OpenAI SDK
+- [Phase 54]: Keyword normalization: if value starts with '[', treat as JSON array and keep as-is; otherwise split on comma and serialize to JSON array — matches MemoryWriteTool pattern
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T13:30:46.120Z
-Stopped at: Completed 53-02-PLAN.md
+Last session: 2026-03-22T13:46:46.177Z
+Stopped at: Completed 54-01-PLAN.md
 Resume file: None

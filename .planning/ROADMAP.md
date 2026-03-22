@@ -293,7 +293,7 @@ Plans:
 | 51. LLM Module Configuration | 2/2 | Complete    | 2026-03-22 | - |
 | 52. Automatic Memory Recall | 2/2 | Complete    | 2026-03-22 | - |
 | 53. Tool-Aware Memory Operations | 2/2 | Complete    | 2026-03-22 | - |
-| 54. Living Memory Sedimentation | v2.0.1 | 0/2 | Not started | - |
+| 54. Living Memory Sedimentation | 1/2 | In Progress|  | - |
 | 55. Memory Review Surfaces | v2.0.1 | 0/TBD | Not started | - |
 
 **Total shipped: 49 phases, 117 plans across 11 milestones**

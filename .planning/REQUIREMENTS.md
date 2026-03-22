@@ -45,10 +45,10 @@ Requirements for milestone v2.0.1. Each maps to roadmap phases.
 
 ### Living Memory
 
-- [ ] **LIVM-01**: System can automatically extract stable facts, preferences, entities, or task learnings from completed LLM exchanges into the memory graph
-- [ ] **LIVM-02**: Automatic memory writes create or update memory nodes with provenance linking back to source run, step, or artifact
-- [ ] **LIVM-03**: Automatic memory writes update snapshot history so users can review what changed over time
-- [ ] **LIVM-04**: System avoids storing raw transcript dumps as durable memory when no stable knowledge was extracted
+- [x] **LIVM-01**: System can automatically extract stable facts, preferences, entities, or task learnings from completed LLM exchanges into the memory graph
+- [x] **LIVM-02**: Automatic memory writes create or update memory nodes with provenance linking back to source run, step, or artifact
+- [x] **LIVM-03**: Automatic memory writes update snapshot history so users can review what changed over time
+- [x] **LIVM-04**: System avoids storing raw transcript dumps as durable memory when no stable knowledge was extracted
 
 ### Memory Review UI
 
@@ -113,10 +113,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOOL-02 | Phase 53 | Complete |
 | TOOL-03 | Phase 53 | Complete |
 | TOOL-04 | Phase 53 | Complete |
-| LIVM-01 | Phase 54 | Pending |
-| LIVM-02 | Phase 54 | Pending |
-| LIVM-03 | Phase 54 | Pending |
-| LIVM-04 | Phase 54 | Pending |
+| LIVM-01 | Phase 54 | Complete |
+| LIVM-02 | Phase 54 | Complete |
+| LIVM-03 | Phase 54 | Complete |
+| LIVM-04 | Phase 54 | Complete |
 | MEMUI-01 | Phase 55 | Pending |
 | MEMUI-02 | Phase 55 | Pending |
 | MEMUI-03 | Phase 55 | Pending |
