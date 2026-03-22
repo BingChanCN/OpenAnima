@@ -250,6 +250,10 @@ Plans:
   1. User can select a registered provider and model for sedimentation from the UI.
   2. Selected sedimentation LLM config persists and is read by SedimentationService.CallProductionLlmAsync.
   3. Sedimentation pipeline activates on fresh deployment after configuration instead of silently skipping.
+**Plans**: 1 plan
+
+Plans:
+- [ ] 56-01-PLAN.md — Settings page Living Memory section with cascading provider/model dropdowns, i18n keys, CSS, and integration test
 
 ### Phase 57: Integration Wiring & Metadata Fixes
 **Goal**: Boot memory reaches LLM prompt context, provider disable/delete confirms show actual impact counts, and plan SUMMARY metadata gaps are closed.
@@ -326,10 +330,10 @@ Plans:
 | 53. Tool-Aware Memory Operations | 2/2 | Complete    | 2026-03-22 | - |
 | 54. Living Memory Sedimentation | 2/2 | Complete   | 2026-03-22 | - |
 | 55. Memory Review Surfaces | 2/2 | Complete    | 2026-03-22 | - |
-| 56. Sedimentation LLM Configuration | v2.0.1 | 0/0 | Planned | - |
+| 56. Sedimentation LLM Configuration | v2.0.1 | 0/1 | Planned | - |
 | 57. Integration Wiring & Metadata Fixes | v2.0.1 | 0/2 | Planned | - |
 
 **Total shipped: 49 phases, 117 plans across 11 milestones**
 
 ---
-*Last updated: 2026-03-23 — Phase 57 plans created*
+*Last updated: 2026-03-23 — Phase 56 plans created*
