@@ -1,7 +1,9 @@
 @page "/settings"
+@using OpenAnima.Core.Providers
 @inject LanguageService LanguageService
 @inject IStringLocalizer<SharedResources> L
 @inject IJSRuntime JS
+@inject LLMProviderRegistryService ProviderRegistry
 @implements IDisposable
 
 <div class="settings-container">
@@ -20,16 +22,79 @@
             </select>
         </div>
     </div>
+
+    <div class="settings-section card">
+        <h2 class="section-title">@L["Providers.SectionTitle"]</h2>
+
+        @if (!_providers.Any())
+        {
+            <div class="empty-state">
+                <p class="empty-heading">@L["Providers.EmptyHeading"]</p>
+                <p class="empty-body text-muted">@L["Providers.EmptyBody"]</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var p in _providers)
+            {
+                <ProviderCard Provider="p"
+                              MaskedApiKey="@ProviderRegistry.GetMaskedApiKey(p.Slug)"
+                              OnEdit="OpenEditDialog"
+                              OnDisable="HandleDisable"
+                              OnEnable="HandleEnable"
+                              OnDelete="HandleDelete" />
+            }
+        }
+
+        <button class="btn btn-primary provider-add-btn" @onclick="OpenCreateDialog">
+            @L["Providers.AddProvider"]
+        </button>
+    </div>
 </div>
+
+<ProviderDialog IsVisible="_showProviderDialog"
+                EditTarget="_editingProvider"
+                OnSave="HandleProviderSave"
+                OnCancel="HandleProviderCancel" />
+
+<ConfirmDialog IsVisible="_showConfirmDialog"
+               Title="@_confirmTitle"
+               Message="@_confirmMessage"
+               ConfirmText="@_confirmActionText"
+               ConfirmButtonClass="@_confirmButtonClass"
+               OnConfirm="HandleConfirmed"
+               OnCancel="HandleConfirmCancelled" />
 
 @code {
     private string _selectedCulture = "zh-CN";
+
+    // Provider state
+    private List<LLMProviderRecord> _providers = new();
+    private bool _showProviderDialog;
+    private LLMProviderRecord? _editingProvider;
+
+    // Confirm dialog state
+    private bool _showConfirmDialog;
+    private string _confirmTitle = "";
+    private string _confirmMessage = "";
+    private string _confirmActionText = "";
+    private string _confirmButtonClass = "btn-danger";
+    private Func<Task>? _confirmAction;
+
+    // Pending lifecycle target
+    private string? _pendingLifecycleSlug;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ProviderRegistry.InitializeAsync();
+        _providers = new List<LLMProviderRecord>(ProviderRegistry.GetAllProviderRecords());
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            LanguageService.LanguageChanged += OnLanguageChanged;
+            LanguageService.LanguageChanged += OnLanguageServiceChanged;
             var saved = await JS.InvokeAsync<string?>("localStorage.getItem", "openanima-language");
             if (!string.IsNullOrEmpty(saved))
             {
@@ -52,14 +117,128 @@
         await JS.InvokeVoidAsync("localStorage.setItem", "openanima-language", culture);
     }
 
-    private void OnLanguageChanged()
+    private void OnLanguageServiceChanged()
     {
         _selectedCulture = LanguageService.Current.Name;
         InvokeAsync(StateHasChanged);
     }
 
+    // --- Provider dialog handlers ---
+
+    private void OpenCreateDialog()
+    {
+        _editingProvider = null;
+        _showProviderDialog = true;
+    }
+
+    private void OpenEditDialog(LLMProviderRecord provider)
+    {
+        _editingProvider = provider;
+        _showProviderDialog = true;
+    }
+
+    private async Task HandleProviderSave(ProviderDialogResult result)
+    {
+        if (result.IsNew)
+        {
+            var created = await ProviderRegistry.CreateProviderAsync(
+                result.Slug, result.DisplayName, result.BaseUrl, result.ApiKey);
+
+            foreach (var model in result.Models)
+                await ProviderRegistry.AddModelAsync(result.Slug, model);
+        }
+        else
+        {
+            await ProviderRegistry.UpdateProviderAsync(
+                result.Slug, result.DisplayName, result.BaseUrl, result.ApiKey);
+
+            // Reconcile models: remove all then re-add from dialog result
+            var existing = ProviderRegistry.GetAllProviderRecords()
+                .FirstOrDefault(p => p.Slug == result.Slug);
+            if (existing != null)
+            {
+                foreach (var model in existing.Models.ToList())
+                    await ProviderRegistry.RemoveModelAsync(result.Slug, model.ModelId);
+            }
+            foreach (var model in result.Models)
+                await ProviderRegistry.AddModelAsync(result.Slug, model);
+        }
+
+        _showProviderDialog = false;
+        _editingProvider = null;
+        await RefreshProviders();
+    }
+
+    private void HandleProviderCancel()
+    {
+        _showProviderDialog = false;
+        _editingProvider = null;
+    }
+
+    // --- Lifecycle handlers ---
+
+    private void HandleDisable(LLMProviderRecord provider)
+    {
+        _pendingLifecycleSlug = provider.Slug;
+        _confirmTitle = L["Providers.DisableConfirmTitle"];
+        _confirmMessage = string.Format(L["Providers.DisableConfirmMessage"], 0);
+        _confirmActionText = L["Providers.Disable"];
+        _confirmButtonClass = "btn-secondary";
+        _confirmAction = async () =>
+        {
+            if (_pendingLifecycleSlug != null)
+                await ProviderRegistry.DisableProviderAsync(_pendingLifecycleSlug);
+        };
+        _showConfirmDialog = true;
+    }
+
+    private async Task HandleEnable(LLMProviderRecord provider)
+    {
+        await ProviderRegistry.EnableProviderAsync(provider.Slug);
+        await RefreshProviders();
+    }
+
+    private void HandleDelete(LLMProviderRecord provider)
+    {
+        _pendingLifecycleSlug = provider.Slug;
+        _confirmTitle = L["Providers.DeleteConfirmTitle"];
+        _confirmMessage = string.Format(L["Providers.DeleteConfirmMessage"], provider.Models.Count, 0);
+        _confirmActionText = L["Providers.DeleteConfirmAction"];
+        _confirmButtonClass = "btn-danger";
+        _confirmAction = async () =>
+        {
+            if (_pendingLifecycleSlug != null)
+                await ProviderRegistry.DeleteProviderAsync(_pendingLifecycleSlug);
+        };
+        _showConfirmDialog = true;
+    }
+
+    private async Task HandleConfirmed()
+    {
+        if (_confirmAction != null)
+            await _confirmAction();
+
+        _showConfirmDialog = false;
+        _pendingLifecycleSlug = null;
+        _confirmAction = null;
+        await RefreshProviders();
+    }
+
+    private void HandleConfirmCancelled()
+    {
+        _showConfirmDialog = false;
+        _pendingLifecycleSlug = null;
+        _confirmAction = null;
+    }
+
+    private async Task RefreshProviders()
+    {
+        _providers = new List<LLMProviderRecord>(ProviderRegistry.GetAllProviderRecords());
+        await InvokeAsync(StateHasChanged);
+    }
+
     public void Dispose()
     {
-        LanguageService.LanguageChanged -= OnLanguageChanged;
+        LanguageService.LanguageChanged -= OnLanguageServiceChanged;
     }
 }

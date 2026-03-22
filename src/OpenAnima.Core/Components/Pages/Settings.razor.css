@@ -52,3 +52,23 @@
     outline: none;
     border-color: var(--accent-color, #4a9eff);
 }
+
+.provider-add-btn {
+    margin-top: 16px;
+}
+
+.empty-state {
+    padding: 24px 0;
+    text-align: center;
+}
+
+.empty-heading {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary, #e0e0e0);
+    margin-bottom: 8px;
+}
+
+.empty-body {
+    font-size: 14px;
+}

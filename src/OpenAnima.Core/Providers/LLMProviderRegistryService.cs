@@ -375,6 +375,13 @@ public class LLMProviderRegistryService : ILLMProviderRegistry
             .Select(p => new LLMProviderInfo(p.Slug, p.DisplayName, p.BaseUrl, p.IsEnabled))
             .ToList();
 
+    /// <summary>
+    /// Returns full provider records including model lists.
+    /// For use by the Settings admin page — not exposed on ILLMProviderRegistry (consumer interface).
+    /// </summary>
+    public IReadOnlyList<LLMProviderRecord> GetAllProviderRecords()
+        => _providers.Values.ToList().AsReadOnly();
+
     public LLMProviderInfo? GetProvider(string slug)
         => _providers.TryGetValue(slug, out var p)
             ? new LLMProviderInfo(p.Slug, p.DisplayName, p.BaseUrl, p.IsEnabled)
