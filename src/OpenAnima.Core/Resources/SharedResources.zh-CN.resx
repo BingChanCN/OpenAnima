@@ -563,4 +563,67 @@
   <data name="Editor.LLM.NoProvidersRegistered" xml:space="preserve">
     <value>尚无已注册的提供商，请前往设置添加</value>
   </data>
+  <data name="Memory.SnapshotHistory" xml:space="preserve">
+    <value>快照历史</value>
+  </data>
+  <data name="Memory.Provenance" xml:space="preserve">
+    <value>来源</value>
+  </data>
+  <data name="Memory.Relationships" xml:space="preserve">
+    <value>关联关系</value>
+  </data>
+  <data name="Memory.Outgoing" xml:space="preserve">
+    <value>出边</value>
+  </data>
+  <data name="Memory.Incoming" xml:space="preserve">
+    <value>入边</value>
+  </data>
+  <data name="Memory.ManuallyCreated" xml:space="preserve">
+    <value>手动创建</value>
+  </data>
+  <data name="Memory.RestoreButton" xml:space="preserve">
+    <value>恢复到此版本</value>
+  </data>
+  <data name="Memory.ShowDiff" xml:space="preserve">
+    <value>显示差异</value>
+  </data>
+  <data name="Memory.HideDiff" xml:space="preserve">
+    <value>隐藏差异</value>
+  </data>
+  <data name="Memory.ShowStepDetails" xml:space="preserve">
+    <value>显示详情</value>
+  </data>
+  <data name="Memory.HideStepDetails" xml:space="preserve">
+    <value>隐藏详情</value>
+  </data>
+  <data name="Memory.EmptySnapshots" xml:space="preserve">
+    <value>暂无历史快照。</value>
+  </data>
+  <data name="Memory.EmptyOutgoing" xml:space="preserve">
+    <value>暂无出边关系。</value>
+  </data>
+  <data name="Memory.EmptyIncoming" xml:space="preserve">
+    <value>暂无入边关系。</value>
+  </data>
+  <data name="Memory.RestoreConfirmTitle" xml:space="preserve">
+    <value>恢复到此版本？</value>
+  </data>
+  <data name="Memory.RestoreConfirmBody" xml:space="preserve">
+    <value>当前内容将保存为快照，并被此版本替换。</value>
+  </data>
+  <data name="Memory.RestoreConfirmAction" xml:space="preserve">
+    <value>恢复</value>
+  </data>
+  <data name="Memory.RestoreConfirmCancel" xml:space="preserve">
+    <value>保留当前</value>
+  </data>
+  <data name="Memory.RestoreFlash" xml:space="preserve">
+    <value>已恢复</value>
+  </data>
+  <data name="Memory.ProvenanceStepError" xml:space="preserve">
+    <value>无法加载步骤详情，请尝试选择其他节点后重新查看。</value>
+  </data>
+  <data name="Memory.ProvenanceEdgeError" xml:space="preserve">
+    <value>无法加载关系，请刷新页面重试。</value>
+  </data>
 </root>

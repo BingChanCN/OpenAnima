@@ -563,4 +563,67 @@
   <data name="Editor.LLM.NoProvidersRegistered" xml:space="preserve">
     <value>No providers registered. Go to Settings to add one.</value>
   </data>
+  <data name="Memory.SnapshotHistory" xml:space="preserve">
+    <value>Snapshot History</value>
+  </data>
+  <data name="Memory.Provenance" xml:space="preserve">
+    <value>Provenance</value>
+  </data>
+  <data name="Memory.Relationships" xml:space="preserve">
+    <value>Relationships</value>
+  </data>
+  <data name="Memory.Outgoing" xml:space="preserve">
+    <value>Outgoing</value>
+  </data>
+  <data name="Memory.Incoming" xml:space="preserve">
+    <value>Incoming</value>
+  </data>
+  <data name="Memory.ManuallyCreated" xml:space="preserve">
+    <value>Manually created</value>
+  </data>
+  <data name="Memory.RestoreButton" xml:space="preserve">
+    <value>Restore to this version</value>
+  </data>
+  <data name="Memory.ShowDiff" xml:space="preserve">
+    <value>Show diff</value>
+  </data>
+  <data name="Memory.HideDiff" xml:space="preserve">
+    <value>Hide diff</value>
+  </data>
+  <data name="Memory.ShowStepDetails" xml:space="preserve">
+    <value>Show details</value>
+  </data>
+  <data name="Memory.HideStepDetails" xml:space="preserve">
+    <value>Hide details</value>
+  </data>
+  <data name="Memory.EmptySnapshots" xml:space="preserve">
+    <value>No previous snapshots.</value>
+  </data>
+  <data name="Memory.EmptyOutgoing" xml:space="preserve">
+    <value>No outgoing relationships.</value>
+  </data>
+  <data name="Memory.EmptyIncoming" xml:space="preserve">
+    <value>No incoming relationships.</value>
+  </data>
+  <data name="Memory.RestoreConfirmTitle" xml:space="preserve">
+    <value>Restore to this version?</value>
+  </data>
+  <data name="Memory.RestoreConfirmBody" xml:space="preserve">
+    <value>Current content will be saved as a snapshot. This replaces the current node content.</value>
+  </data>
+  <data name="Memory.RestoreConfirmAction" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="Memory.RestoreConfirmCancel" xml:space="preserve">
+    <value>Keep current</value>
+  </data>
+  <data name="Memory.RestoreFlash" xml:space="preserve">
+    <value>Restored</value>
+  </data>
+  <data name="Memory.ProvenanceStepError" xml:space="preserve">
+    <value>Could not load step details. Try selecting another node, then return to this one.</value>
+  </data>
+  <data name="Memory.ProvenanceEdgeError" xml:space="preserve">
+    <value>Could not load relationships. Refresh the page to retry.</value>
+  </data>
 </root>
