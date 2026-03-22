@@ -69,6 +69,13 @@ public interface IRunRepository
     Task<IReadOnlyList<StepRecord>> GetStepsByRunIdAsync(string runId, CancellationToken ct = default);
 
     /// <summary>
+    /// Returns the step event with the given step ID, or null if not found.
+    /// </summary>
+    /// <param name="stepId">The step ID to look up.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task<StepRecord?> GetStepByIdAsync(string stepId, CancellationToken ct = default);
+
+    /// <summary>
     /// Returns the total number of step events recorded for the given run.
     /// Used by <c>ConvergenceGuard</c> to enforce step-count budgets.
     /// </summary>

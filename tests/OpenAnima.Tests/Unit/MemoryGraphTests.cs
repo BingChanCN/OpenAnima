@@ -203,6 +203,52 @@ public class MemoryGraphTests : IDisposable
         Assert.Contains(matches, m => m.Keyword == "architecture");
     }
 
+    // --- GetIncomingEdgesAsync ---
+
+    [Fact]
+    public async Task GetIncomingEdgesAsync_ReturnsEdgesPointingToUri()
+    {
+        var edge1 = new MemoryEdge
+        {
+            AnimaId = "anima01",
+            FromUri = "core://agent/a",
+            ToUri = "core://agent/target",
+            Label = "related-to",
+            CreatedAt = DateTimeOffset.UtcNow.ToString("O")
+        };
+        var edge2 = new MemoryEdge
+        {
+            AnimaId = "anima01",
+            FromUri = "core://agent/b",
+            ToUri = "core://agent/target",
+            Label = "derived-from",
+            CreatedAt = DateTimeOffset.UtcNow.ToString("O")
+        };
+        var unrelated = new MemoryEdge
+        {
+            AnimaId = "anima01",
+            FromUri = "core://agent/target",
+            ToUri = "core://agent/c",
+            Label = "links-to",
+            CreatedAt = DateTimeOffset.UtcNow.ToString("O")
+        };
+        await _graph.AddEdgeAsync(edge1);
+        await _graph.AddEdgeAsync(edge2);
+        await _graph.AddEdgeAsync(unrelated);
+
+        var results = await _graph.GetIncomingEdgesAsync("anima01", "core://agent/target");
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, e => Assert.Equal("core://agent/target", e.ToUri));
+    }
+
+    [Fact]
+    public async Task GetIncomingEdgesAsync_NoEdges_ReturnsEmpty()
+    {
+        var results = await _graph.GetIncomingEdgesAsync("anima01", "core://no-incoming");
+        Assert.Empty(results);
+    }
+
     // --- Helpers ---
 
     private static MemoryNode MakeNode(

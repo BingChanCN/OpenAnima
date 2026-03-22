@@ -216,6 +216,25 @@ public class MemoryGraph : IMemoryGraph
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<MemoryEdge>> GetIncomingEdgesAsync(string animaId, string toUri, CancellationToken ct = default)
+    {
+        await using var conn = _factory.CreateConnection();
+        await conn.OpenAsync(ct);
+
+        var rows = await conn.QueryAsync<MemoryEdge>(
+            """
+            SELECT id AS Id, anima_id AS AnimaId, from_uri AS FromUri,
+                   to_uri AS ToUri, label AS Label, created_at AS CreatedAt
+            FROM memory_edges
+            WHERE anima_id = @animaId AND to_uri = @toUri
+            ORDER BY id
+            """,
+            new { animaId, toUri });
+
+        return rows.ToList();
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<MemoryNode>> GetDisclosureNodesAsync(string animaId, CancellationToken ct = default)
     {
         await using var conn = _factory.CreateConnection();

@@ -172,5 +172,6 @@ public class StepRecorderPropagationTests
         public Task<IReadOnlyList<RunStateEvent>> GetStateEventsByRunIdAsync(string runId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<RunStateEvent>>(new List<RunStateEvent>());
         public Task<IReadOnlyList<StepRecord>> GetStepsByRunIdAsync(string runId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<StepRecord>>(new List<StepRecord>());
         public Task<int> GetStepCountByRunIdAsync(string runId, CancellationToken ct = default) => Task.FromResult(0);
+        public Task<StepRecord?> GetStepByIdAsync(string stepId, CancellationToken ct = default) => Task.FromResult<StepRecord?>(null);
     }
 }

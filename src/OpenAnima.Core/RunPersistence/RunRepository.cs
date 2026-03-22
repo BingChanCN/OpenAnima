@@ -255,6 +255,31 @@ public class RunRepository : IRunRepository
     }
 
     /// <inheritdoc/>
+    public async Task<StepRecord?> GetStepByIdAsync(string stepId, CancellationToken ct = default)
+    {
+        const string sql = """
+            SELECT step_id        AS StepId,
+                   run_id         AS RunId,
+                   propagation_id AS PropagationId,
+                   module_name    AS ModuleName,
+                   status         AS Status,
+                   input_summary  AS InputSummary,
+                   output_summary AS OutputSummary,
+                   artifact_ref_id AS ArtifactRefId,
+                   error_info     AS ErrorInfo,
+                   duration_ms    AS DurationMs,
+                   occurred_at    AS OccurredAt
+            FROM step_events
+            WHERE step_id = @stepId
+            """;
+
+        await using var conn = _factory.CreateConnection();
+        await conn.OpenAsync(ct);
+
+        return await conn.QueryFirstOrDefaultAsync<StepRecord>(sql, new { stepId });
+    }
+
+    /// <inheritdoc/>
     public async Task<int> GetStepCountByRunIdAsync(string runId, CancellationToken ct = default)
     {
         const string sql = "SELECT COUNT(*) FROM step_events WHERE run_id = @RunId";

@@ -48,6 +48,11 @@ public interface IMemoryGraph
     Task<IReadOnlyList<MemoryEdge>> GetEdgesAsync(string animaId, string fromUri, CancellationToken ct = default);
 
     /// <summary>
+    /// Returns all edges pointing TO <paramref name="toUri"/> for the given Anima.
+    /// </summary>
+    Task<IReadOnlyList<MemoryEdge>> GetIncomingEdgesAsync(string animaId, string toUri, CancellationToken ct = default);
+
+    /// <summary>
     /// Returns all nodes for the given Anima that have a non-null <c>DisclosureTrigger</c>.
     /// These nodes are candidates for context-sensitive injection via <see cref="DisclosureMatcher"/>.
     /// </summary>

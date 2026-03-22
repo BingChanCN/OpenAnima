@@ -248,6 +248,45 @@ public class RunRepositoryTests : IDisposable
         Assert.Null(result!.WorkflowPreset);
     }
 
+    // --- GetStepByIdAsync ---
+
+    [Fact]
+    public async Task GetStepByIdAsync_ExistingStep_ReturnsStep()
+    {
+        var run = MakeDescriptor("run-step-lookup");
+        await _repository.CreateRunAsync(run);
+
+        var step = new StepRecord
+        {
+            StepId = "step0001",
+            RunId = "run-step-lookup",
+            PropagationId = "prop01",
+            ModuleName = "TestModule",
+            Status = "Completed",
+            InputSummary = "test input",
+            OutputSummary = "test output",
+            DurationMs = 42,
+            OccurredAt = DateTimeOffset.UtcNow.ToString("O")
+        };
+        await _repository.AppendStepEventAsync(step);
+
+        var result = await _repository.GetStepByIdAsync("step0001");
+
+        Assert.NotNull(result);
+        Assert.Equal("step0001", result!.StepId);
+        Assert.Equal("run-step-lookup", result.RunId);
+        Assert.Equal("TestModule", result.ModuleName);
+        Assert.Equal("Completed", result.Status);
+        Assert.Equal(42, result.DurationMs);
+    }
+
+    [Fact]
+    public async Task GetStepByIdAsync_NonExistent_ReturnsNull()
+    {
+        var result = await _repository.GetStepByIdAsync("nonexistent-step");
+        Assert.Null(result);
+    }
+
     // --- Helpers ---
 
     private static RunDescriptor MakeDescriptor(string runId) => new()

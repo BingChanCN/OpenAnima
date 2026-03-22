@@ -95,6 +95,7 @@ public class RunDbInitializer
 
         CREATE INDEX IF NOT EXISTS idx_memory_nodes_anima ON memory_nodes(anima_id);
         CREATE INDEX IF NOT EXISTS idx_memory_edges_anima ON memory_edges(anima_id, from_uri);
+        CREATE INDEX IF NOT EXISTS idx_memory_edges_to_uri ON memory_edges(anima_id, to_uri);
         CREATE INDEX IF NOT EXISTS idx_memory_snapshots_uri ON memory_snapshots(uri, anima_id, id DESC);
         """;
 

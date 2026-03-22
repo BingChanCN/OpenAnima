@@ -105,6 +105,9 @@ public class FakeRunRepository : IRunRepository
 
     public Task<int> GetStepCountByRunIdAsync(string runId, CancellationToken ct = default)
         => Task.FromResult(0);
+
+    public Task<StepRecord?> GetStepByIdAsync(string stepId, CancellationToken ct = default)
+        => Task.FromResult<StepRecord?>(null);
 }
 
 // ── FakeStepRecorder ──────────────────────────────────────────────────────────
