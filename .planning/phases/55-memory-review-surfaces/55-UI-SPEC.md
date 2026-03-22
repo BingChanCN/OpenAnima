@@ -37,14 +37,13 @@ Declared values (must be multiples of 4):
 | xs | 4px | Icon gaps, keyword tag padding, inline badge padding |
 | sm | 8px | Row padding, gap between adjacent controls, timeline entry internal padding |
 | md | 16px | Section padding, panel padding, collapsible header padding |
-| lg | 24px | Page-level padding (`.memory-page`), confirm dialog padding |
+| lg | 24px | Page-level padding (`.memory-page`), confirm dialog padding, provenance step detail indent |
 | xl | 32px | Empty state vertical padding |
 | 2xl | 48px | Not used in this phase |
 | 3xl | 64px | Not used in this phase |
 
 Exceptions:
 - Tree node min-height: 44px (existing touch target — preserved, not new)
-- Step detail indent padding-left: 26px (existing StepTimelineRow pattern — preserved when reusing step detail layout for provenance inline expansion)
 - Section collapsible header min-height: 44px (keyboard/touch target parity with tree nodes)
 
 Source: Derived from `MemoryGraph.razor.css`, `MemoryNodeCard.razor.css`, `StepTimelineRow.razor.css`.
@@ -65,6 +64,9 @@ Notes:
 - 14px is the global base (`html, body { font-size: 14px }`); do not use font sizes below 12px.
 - Timestamp values use 12px mono (matching `.step-duration` and `.step-time` patterns).
 - Diff highlight text inherits body size (14px) — no special size for highlighted lines.
+- Sub-group labels ("Outgoing", "Incoming"): 12px weight 600 (consolidated from 11px — below minimum declared size).
+- Label badge text: 12px (consolidated from 11px — below minimum declared size).
+- Chevron symbol (▶/▼): 12px (consolidated from 10px — below minimum declared size).
 
 Source: `app.css` `html, body` declaration; cross-checked against `StepTimelineRow.razor.css` and `MemoryNodeCard.razor.css`.
 
@@ -107,7 +109,7 @@ New elements introduced in this phase, integrated into existing `MemoryNodeCard.
 ```
 [chevron] Section Title        (header row, 44px min-height, cursor: pointer)
 ```
-- Chevron: `▶` (collapsed) / `▼` (expanded) at 10px, color `--text-muted`
+- Chevron: `▶` (collapsed) / `▼` (expanded) at 12px, color `--text-muted`
 - Header text: 12px, weight 600, color `--text-secondary`
 - On expand: chevron rotates 180deg via CSS transition `transform 0.15s ease` (matches StepTimelineRow pattern)
 - Background: none (inherits card background), no border, bottom border `1px solid --border-color` only when expanded
@@ -134,7 +136,7 @@ New elements introduced in this phase, integrated into existing `MemoryNodeCard.
 Source: Step [step-id]  [Artifact artifact-id]        [▶ Show details]
 ```
 - When SourceStepId is present: step ID shown as `--accent-color` text, clickable to expand
-- Expanded step block: matches StepTimelineRow `.step-detail` pattern — `padding: 8px 16px 16px 26px`, `border-left: 3px solid var(--border-color)`
+- Expanded step block: matches StepTimelineRow `.step-detail` pattern — `padding: 8px 16px 16px 24px`, `border-left: 3px solid var(--border-color)`
   - Fields shown: StepType (label+value), StartedAt, CompletedAt, Status (with status color), Output (truncated to ~200 chars, mono 12px in `--surface-dark` block)
 - "Manually created" state: pencil symbol `✎` at 12px `--text-muted` + text "Manually created", color `--text-secondary`
 - SourceArtifactId (when present): rendered inline as `Artifact [id]` in `--text-secondary`, same row as step info
@@ -146,10 +148,10 @@ Outgoing  ───────────────────────�
 Incoming   ─────────────────────────────────────
   [counterpart-uri]  →  This node  [label]  [date]
 ```
-- Sub-group labels ("Outgoing", "Incoming"): 11px, weight 600, uppercase, color `--text-muted`, margin-bottom 4px
+- Sub-group labels ("Outgoing", "Incoming"): 12px, weight 600, uppercase, color `--text-muted`, margin-bottom 4px
 - Edge row: padding 4px 0, font-size 12px, min-height 32px, border-bottom `1px solid var(--border-color)`
 - Arrow separator `→`: color `--text-muted`
-- Label badge: inline-block, `background: var(--surface-dark)`, border `1px solid var(--border-color)`, border-radius 3px, padding 2px 6px, font-size 11px, color `--text-secondary`
+- Label badge: inline-block, `background: var(--surface-dark)`, border `1px solid var(--border-color)`, border-radius 3px, padding 2px 6px, font-size 12px, color `--text-secondary`
 - Date: 12px mono, `--text-muted`
 - Counterpart URI (clickable): 12px mono, color `--accent-color`, cursor pointer, no underline unless hovered
 - "This node" text: 12px, color `--text-secondary`, not clickable, no styling
@@ -209,8 +211,8 @@ Declared order (source: CONTEXT.md `## Implementation Decisions > Page Layout & 
 | Restore confirm cancel | "Keep current" |
 | Restore success flash | "Restored" (same duration and style as "Saved" flash, 1500ms) |
 | Loading state (edge/step fetch) | (no visible spinner — fetch is fast; silent load, then render) |
-| Error state (step fetch fails) | "Could not load step details." (12px, `--error-color`, inline below step ID) |
-| Error state (edge fetch fails) | "Could not load relationships." (12px, `--error-color`, below section header) |
+| Error state (step fetch fails) | "Could not load step details. Try selecting another node, then return to this one." (12px, `--error-color`, inline below step ID) |
+| Error state (edge fetch fails) | "Could not load relationships. Refresh the page to retry." (12px, `--error-color`, below section header) |
 
 Source: CONTEXT.md `## Specific Ideas`; restore copy derived from decisions section; error copy follows existing inline error pattern.
 
