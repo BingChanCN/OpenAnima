@@ -11,14 +11,14 @@ Requirements for milestone v2.0.1. Each maps to roadmap phases.
 
 - [x] **PROV-01**: User can create a global LLM provider with display name, base URL, and API key in Settings
 - [x] **PROV-02**: User can edit provider metadata without losing linked model records
-- [x] **PROV-03**: User can disable a provider without silently breaking existing LLM node selections
-- [x] **PROV-04**: User can delete a provider only when its usage impact is surfaced clearly
+- [ ] **PROV-03**: User can disable a provider without silently breaking existing LLM node selections
+- [ ] **PROV-04**: User can delete a provider only when its usage impact is surfaced clearly
 - [x] **PROV-05**: User can add one or more model records under a provider with stable model IDs and optional display aliases
 - [x] **PROV-06**: User can manually maintain provider model lists even when provider-side model discovery is unavailable
 - [x] **PROV-07**: User API keys are write-only in the UI after save and are never echoed back in plaintext
-- [x] **PROV-08**: User API keys are stored securely and are excluded from logs, provenance, and normal module config rendering
+- [ ] **PROV-08**: User API keys are stored securely and are excluded from logs, provenance, and normal module config rendering
 - [x] **PROV-09**: User can test a provider connection without revealing the stored API key
-- [x] **PROV-10**: Developer can query provider and model metadata through a platform-level `ILLMProviderRegistry` contract
+- [ ] **PROV-10**: Developer can query provider and model metadata through a platform-level `ILLMProviderRegistry` contract
 
 ### LLM Node Configuration
 
@@ -30,10 +30,10 @@ Requirements for milestone v2.0.1. Each maps to roadmap phases.
 
 ### Memory Recall
 
-- [x] **MEMR-01**: Developer-agent run startup injects core boot memory into the run timeline automatically
+- [ ] **MEMR-01**: Developer-agent run startup injects core boot memory into the run timeline automatically
 - [x] **MEMR-02**: LLM calls automatically recall matching memory nodes using disclosure triggers from the active conversation context
 - [x] **MEMR-03**: LLM calls automatically recall matching memory nodes using glossary keyword matches from the active conversation context
-- [x] **MEMR-04**: Memory injected into LLM context is ranked, deduplicated, and bounded so recall does not overwhelm prompt budget
+- [ ] **MEMR-04**: Memory injected into LLM context is ranked, deduplicated, and bounded so recall does not overwhelm prompt budget
 - [x] **MEMR-05**: Recalled memory includes visible provenance showing why it was recalled and where it came from
 
 ### Tool Awareness & Memory Tools
@@ -45,7 +45,7 @@ Requirements for milestone v2.0.1. Each maps to roadmap phases.
 
 ### Living Memory
 
-- [x] **LIVM-01**: System can automatically extract stable facts, preferences, entities, or task learnings from completed LLM exchanges into the memory graph
+- [ ] **LIVM-01**: System can automatically extract stable facts, preferences, entities, or task learnings from completed LLM exchanges into the memory graph
 - [x] **LIVM-02**: Automatic memory writes create or update memory nodes with provenance linking back to source run, step, or artifact
 - [x] **LIVM-03**: Automatic memory writes update snapshot history so users can review what changed over time
 - [x] **LIVM-04**: System avoids storing raw transcript dumps as durable memory when no stable knowledge was extracted
@@ -91,29 +91,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | PROV-01 | Phase 50 | Complete |
 | PROV-02 | Phase 50 | Complete |
-| PROV-03 | Phase 50 | Complete |
-| PROV-04 | Phase 50 | Complete |
+| PROV-03 | Phase 57 (gap closure) | Pending |
+| PROV-04 | Phase 57 (gap closure) | Pending |
 | PROV-05 | Phase 50 | Complete |
 | PROV-06 | Phase 50 | Complete |
 | PROV-07 | Phase 50 | Complete |
-| PROV-08 | Phase 50 | Complete |
+| PROV-08 | Phase 57 (gap closure) | Pending |
 | PROV-09 | Phase 50 | Complete |
-| PROV-10 | Phase 50 | Complete |
+| PROV-10 | Phase 57 (gap closure) | Pending |
 | LLMN-01 | Phase 51 | Complete |
 | LLMN-02 | Phase 51 | Complete |
 | LLMN-03 | Phase 51 | Complete |
 | LLMN-04 | Phase 51 | Complete |
 | LLMN-05 | Phase 51 | Complete |
-| MEMR-01 | Phase 52 | Complete |
+| MEMR-01 | Phase 57 (gap closure) | Pending |
 | MEMR-02 | Phase 52 | Complete |
 | MEMR-03 | Phase 52 | Complete |
-| MEMR-04 | Phase 52 | Complete |
+| MEMR-04 | Phase 57 (gap closure) | Pending |
 | MEMR-05 | Phase 52 | Complete |
 | TOOL-01 | Phase 53 | Complete |
 | TOOL-02 | Phase 53 | Complete |
 | TOOL-03 | Phase 53 | Complete |
 | TOOL-04 | Phase 53 | Complete |
-| LIVM-01 | Phase 54 | Complete |
+| LIVM-01 | Phase 56 (gap closure) | Pending |
 | LIVM-02 | Phase 54 | Complete |
 | LIVM-03 | Phase 54 | Complete |
 | LIVM-04 | Phase 54 | Complete |
@@ -124,6 +124,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 **Coverage:**
 - v1 requirements: 31 total
 - Mapped to phases: 31
+- Complete: 24
+- Pending (gap closure): 7 (LIVM-01, MEMR-01, PROV-03, PROV-04, PROV-08, PROV-10, MEMR-04)
 - Unmapped: 0
 
 ---

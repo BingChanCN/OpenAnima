@@ -143,6 +143,8 @@
 - [x] **Phase 53: Tool-Aware Memory Operations** - LLM sees only context-available tools and can retrieve or link memory safely through dedicated tools. (completed 2026-03-22)
 - [x] **Phase 54: Living Memory Sedimentation** - Completed exchanges automatically create durable, provenance-backed memory without transcript spam. (completed 2026-03-22)
 - [x] **Phase 55: Memory Review Surfaces** - Users can inspect memory history, provenance, and graph relationships from supported review surfaces. (completed 2026-03-22)
+- [ ] **Phase 56: Sedimentation LLM Configuration** - Users can configure which LLM provider/model powers living memory sedimentation so the pipeline activates on fresh deployments. (planned)
+- [ ] **Phase 57: Integration Wiring & Metadata Fixes** - Boot memory reaches LLM prompt context, provider impact counts reflect reality, and plan metadata gaps are closed. (planned)
 
 ## Phase Details
 
@@ -239,6 +241,26 @@ Plans:
 - [ ] 55-01-PLAN.md — Backend query methods (GetIncomingEdgesAsync, GetStepByIdAsync), LineDiff helper, i18n keys, and unit tests
 - [ ] 55-02-PLAN.md — MemoryNodeCard three collapsible sections (Provenance, Snapshot History, Relationships), CSS, and visual verification
 
+### Phase 56: Sedimentation LLM Configuration
+**Goal**: Users can configure which LLM provider/model powers living memory sedimentation so the pipeline activates on fresh deployments.
+**Depends on**: Phase 54, Phase 50
+**Requirements**: LIVM-01
+**Gap Closure**: Closes gaps from v2.0.1 audit — sedimentation LLM config integration gap, sedimentation pipeline flow gap
+**Success Criteria** (what must be TRUE):
+  1. User can select a registered provider and model for sedimentation from the UI.
+  2. Selected sedimentation LLM config persists and is read by SedimentationService.CallProductionLlmAsync.
+  3. Sedimentation pipeline activates on fresh deployment after configuration instead of silently skipping.
+
+### Phase 57: Integration Wiring & Metadata Fixes
+**Goal**: Boot memory reaches LLM prompt context, provider disable/delete confirms show actual impact counts, and plan SUMMARY metadata gaps are closed.
+**Depends on**: Phase 52, Phase 50
+**Requirements**: MEMR-01, PROV-03, PROV-04, PROV-08, PROV-10, MEMR-04
+**Gap Closure**: Closes gaps from v2.0.1 audit — boot-memory dead code, provider impact count hardcoded, SUMMARY metadata gaps
+**Success Criteria** (what must be TRUE):
+  1. MemoryRecallService produces Boot recall nodes so `<boot-memory>` XML section in BuildMemorySystemMessage is populated.
+  2. Settings.razor disable/delete confirms pass actual affected-module counts instead of hardcoded 0.
+  3. PROV-08, PROV-10, and MEMR-04 appear in their respective plan SUMMARY `requirements_completed` metadata.
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -299,6 +321,8 @@ Plans:
 | 53. Tool-Aware Memory Operations | 2/2 | Complete    | 2026-03-22 | - |
 | 54. Living Memory Sedimentation | 2/2 | Complete   | 2026-03-22 | - |
 | 55. Memory Review Surfaces | 2/2 | Complete    | 2026-03-22 | - |
+| 56. Sedimentation LLM Configuration | v2.0.1 | 0/0 | Planned | - |
+| 57. Integration Wiring & Metadata Fixes | v2.0.1 | 0/0 | Planned | - |
 
 **Total shipped: 49 phases, 117 plans across 11 milestones**
 
