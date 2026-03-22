@@ -287,7 +287,7 @@ Plans:
 | 49. Structured Cognition Workflows | v2.0 | 3/3 | Complete | 2026-03-21 |
 | 50. Provider Registry | 3/3 | Complete    | 2026-03-22 | - |
 | 51. LLM Module Configuration | 2/2 | Complete    | 2026-03-22 | - |
-| 52. Automatic Memory Recall | 2/2 | Complete   | 2026-03-22 | - |
+| 52. Automatic Memory Recall | 2/2 | Complete    | 2026-03-22 | - |
 | 53. Tool-Aware Memory Operations | v2.0.1 | 0/2 | Not started | - |
 | 54. Living Memory Sedimentation | v2.0.1 | 0/TBD | Not started | - |
 | 55. Memory Review Surfaces | v2.0.1 | 0/TBD | Not started | - |
