@@ -166,3 +166,370 @@
     font-size: 12px;
     text-align: center;
 }
+
+/* ═══ Collapsible Section Shared ═══ */
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    cursor: pointer;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+    user-select: none;
+}
+
+.section-chevron {
+    font-size: 12px;
+    color: var(--text-muted);
+    transition: transform 0.15s ease;
+    display: inline-block;
+}
+
+.section-header.expanded .section-chevron {
+    transform: rotate(90deg);
+    color: var(--accent-color);
+}
+
+.section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.section-content {
+    padding: 8px 0;
+}
+
+.section-empty {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 4px 0;
+}
+
+.section-error {
+    font-size: 12px;
+    color: var(--error-color);
+    padding: 4px 0;
+}
+
+/* ═══ Provenance Section ═══ */
+
+.provenance-row {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.provenance-separator {
+    margin: 0 4px;
+}
+
+.provenance-manual {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.provenance-manual-icon {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.btn-text-link {
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.btn-text-link:hover {
+    text-decoration: underline;
+}
+
+.step-detail-block {
+    padding: 8px 16px 16px 24px;
+    border-left: 3px solid var(--border-color);
+    margin: 4px 0;
+}
+
+.step-detail-row {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.step-label {
+    color: var(--text-muted);
+    margin-right: 4px;
+}
+
+.step-status {
+    font-weight: 600;
+}
+
+.step-status-completed {
+    color: var(--success-color);
+}
+
+.step-status-failed {
+    color: var(--error-color);
+}
+
+.step-output {
+    background: var(--surface-dark);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-top: 4px;
+}
+
+/* ═══ Snapshot History Section ═══ */
+
+.snapshot-entry {
+    border-bottom: 1px solid var(--border-color);
+    padding: 8px 0;
+}
+
+.snapshot-entry:last-child {
+    border-bottom: none;
+}
+
+.snapshot-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.snapshot-timestamp {
+    font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    min-width: 160px;
+}
+
+.snapshot-preview {
+    font-size: 14px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.diff-block {
+    background: var(--surface-dark);
+    padding: 8px;
+    border-radius: 4px;
+    margin-top: 8px;
+    overflow-x: auto;
+}
+
+.diff-line {
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 0 4px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.diff-line-added {
+    background: rgba(74, 222, 128, 0.15);
+    border-left: 2px solid var(--success-color);
+}
+
+.diff-line-removed {
+    background: rgba(248, 113, 113, 0.15);
+    border-left: 2px solid var(--error-color);
+}
+
+.diff-line-unchanged {
+    color: var(--text-secondary);
+}
+
+.btn-restore {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.btn-restore:hover {
+    border-color: var(--text-secondary);
+}
+
+/* ═══ Relationships Section ═══ */
+
+.edge-subgroup-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.edge-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 12px;
+    min-height: 32px;
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+}
+
+.edge-row:last-child {
+    border-bottom: none;
+}
+
+.edge-this-node {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.edge-arrow {
+    color: var(--text-muted);
+}
+
+.edge-uri-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.edge-uri-link {
+    background: none;
+    border: none;
+    font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 12px;
+    color: var(--accent-color);
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+}
+
+.edge-uri-link:hover {
+    text-decoration: underline;
+}
+
+.edge-label-badge {
+    display: inline-block;
+    background: var(--surface-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.edge-date {
+    font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.edge-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 8px 16px;
+    max-width: 280px;
+    z-index: 100;
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: normal;
+    word-break: break-word;
+    opacity: 1;
+    transition: opacity 0.1s ease;
+    pointer-events: none;
+}
+
+/* ═══ Restore Confirm Overlay ═══ */
+
+.confirm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.confirm-dialog {
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+}
+
+.confirm-dialog h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.confirm-dialog p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0 0 16px;
+    line-height: 1.5;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.btn-restore-confirm {
+    background: none;
+    border: 1px solid var(--error-color);
+    color: var(--error-color);
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.btn-restore-confirm:hover {
+    background: rgba(248, 113, 113, 0.1);
+}
+
+.btn-cancel {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.btn-cancel:hover {
+    border-color: var(--text-secondary);
+}
