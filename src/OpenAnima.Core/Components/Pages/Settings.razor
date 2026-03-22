@@ -10,6 +10,7 @@
 @inject IAnimaContext AnimaContext
 @inject IAnimaModuleConfigService ConfigService
 @inject ILLMProviderRegistry LlmRegistry
+@inject IAnimaRuntimeManager AnimaManager
 @implements IDisposable
 
 <div class="settings-container">
@@ -249,7 +250,7 @@
     {
         _pendingLifecycleSlug = provider.Slug;
         _confirmTitle = L["Providers.DisableConfirmTitle"];
-        _confirmMessage = string.Format(L["Providers.DisableConfirmMessage"], 0);
+        _confirmMessage = string.Format(L["Providers.DisableConfirmMessage"], CountAffectedModules(provider.Slug));
         _confirmActionText = L["Providers.Disable"];
         _confirmButtonClass = "btn-secondary";
         _confirmAction = async () =>
@@ -270,7 +271,7 @@
     {
         _pendingLifecycleSlug = provider.Slug;
         _confirmTitle = L["Providers.DeleteConfirmTitle"];
-        _confirmMessage = string.Format(L["Providers.DeleteConfirmMessage"], provider.Models.Count, 0);
+        _confirmMessage = string.Format(L["Providers.DeleteConfirmMessage"], provider.Models.Count, CountAffectedModules(provider.Slug));
         _confirmActionText = L["Providers.DeleteConfirmAction"];
         _confirmButtonClass = "btn-danger";
         _confirmAction = async () =>
@@ -370,6 +371,18 @@
             await InvokeAsync(StateHasChanged);
         }
         catch (TaskCanceledException) { }
+    }
+
+    private int CountAffectedModules(string providerSlug)
+    {
+        int count = 0;
+        foreach (var anima in AnimaManager.GetAll())
+        {
+            var cfg = ConfigService.GetConfig(anima.Id, "LLMModule");
+            if (cfg.TryGetValue("llmProviderSlug", out var slug) && slug == providerSlug)
+                count++;
+        }
+        return count;
     }
 
     public void Dispose()
