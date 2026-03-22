@@ -46,6 +46,7 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
     private readonly IMemoryRecallService? _memoryRecallService;
     private readonly IStepRecorder? _stepRecorder;
     private readonly WorkspaceToolModule? _workspaceToolModule;
+    private readonly ISedimentationService? _sedimentationService;
     private readonly FormatDetector _formatDetector = new();
     private readonly List<IDisposable> _subscriptions = new();
 
@@ -63,7 +64,8 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
         ICrossAnimaRouter? router = null,
         IMemoryRecallService? memoryRecallService = null,
         IStepRecorder? stepRecorder = null,
-        WorkspaceToolModule? workspaceToolModule = null)
+        WorkspaceToolModule? workspaceToolModule = null,
+        ISedimentationService? sedimentationService = null)
     {
         _llmService = llmService;
         _eventBus = eventBus;
@@ -76,6 +78,7 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
         _memoryRecallService = memoryRecallService;
         _stepRecorder = stepRecorder;
         _workspaceToolModule = workspaceToolModule;
+        _sedimentationService = sedimentationService;
     }
 
     // -----------------------------------------------------------------------
@@ -330,6 +333,7 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
         if (!useFormatDetection)
         {
             await PublishResponseAsync(result.Content, ct);
+            TriggerSedimentation(animaId, messages, result.Content);
             _state = ModuleExecutionState.Completed;
             _logger.LogDebug("LLMModule execution completed (no format detection)");
             return;
@@ -347,6 +351,7 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
             if (detection.MalformedMarkerError == null)
             {
                 await PublishResponseAsync(detection.PassthroughText, ct);
+                TriggerSedimentation(animaId, messages, detection.PassthroughText);
                 await DispatchRoutesAsync(detection.Routes, ct);
                 _state = ModuleExecutionState.Completed;
                 _logger.LogDebug("LLMModule execution completed with format detection ({RouteCount} routes dispatched)",
@@ -715,6 +720,37 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
 
     private static string EscapeXmlContent(string value)
         => value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
+
+    /// <summary>
+    /// Fires sedimentation as a background Task.Run after every successful response publication.
+    /// Snapshots values before Task.Run to avoid closure over mutable state (Pitfall 2).
+    /// Uses CancellationToken.None so sedimentation outlives the caller's request (Pitfall 1).
+    /// Exceptions are caught and logged — sedimentation must never affect the main LLM pipeline.
+    /// </summary>
+    private void TriggerSedimentation(string animaId, List<ChatMessageInput> messages, string response)
+    {
+        if (_sedimentationService == null) return;
+
+        // Snapshot values to avoid closure over mutable state
+        var capturedAnimaId = animaId;
+        var capturedMessages = new List<ChatMessageInput>(messages);
+        var capturedResponse = response;
+
+        // Fire-and-forget with CancellationToken.None
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _sedimentationService.SedimentAsync(
+                    capturedAnimaId, capturedMessages, capturedResponse,
+                    null, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Background sedimentation failed for Anima {AnimaId}", capturedAnimaId);
+            }
+        }, CancellationToken.None);
+    }
 
     public Task ShutdownAsync(CancellationToken cancellationToken = default)
     {

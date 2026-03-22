@@ -58,6 +58,9 @@ public static class RunServiceExtensions
         services.AddSingleton<IWorkspaceTool, MemoryRecallTool>();
         services.AddSingleton<IWorkspaceTool, MemoryLinkTool>();
 
+        // Living memory sedimentation (Phase 54)
+        services.AddSingleton<ISedimentationService, SedimentationService>();
+
         // Workflow preset discovery
         var presetsDir = Path.Combine(AppContext.BaseDirectory, "wiring-configs", "presets");
         Directory.CreateDirectory(presetsDir);
