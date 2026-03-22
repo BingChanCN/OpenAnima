@@ -13,6 +13,7 @@
 - ✅ **v1.8 SDK Runtime Parity** — Phases 38-41 (shipped 2026-03-18)
 - ✅ **v1.9 Event-Driven Propagation Engine** — Phases 42-44 (shipped 2026-03-20)
 - ✅ **v2.0 Structured Cognition Foundation** — Phases 45-49 (shipped 2026-03-21)
+- 📋 **v2.0.1 Provider Registry & Living Memory** — Phases 50-55 (planned)
 
 ## Phases
 
@@ -132,6 +133,87 @@
 
 </details>
 
+### 📋 v2.0.1 Provider Registry & Living Memory (Planned)
+
+**Milestone Goal:** Make LLM configuration UI-driven with a global provider/model registry, and activate automatic recall, memory tools, living memory sedimentation, and review surfaces so agents can accumulate and reuse knowledge safely.
+
+- [ ] **Phase 50: Provider Registry** - Users can manage global providers, models, and secure credentials without breaking downstream references.
+- [ ] **Phase 51: LLM Module Configuration** - Users can configure LLM modules from the registry while preserving manual and legacy fallback behavior.
+- [ ] **Phase 52: Automatic Memory Recall** - Runs and LLM calls automatically inject relevant, bounded, explainable memory.
+- [ ] **Phase 53: Tool-Aware Memory Operations** - LLM sees only context-available tools and can retrieve or link memory safely through dedicated tools.
+- [ ] **Phase 54: Living Memory Sedimentation** - Completed exchanges automatically create durable, provenance-backed memory without transcript spam.
+- [ ] **Phase 55: Memory Review Surfaces** - Users can inspect memory history, provenance, and graph relationships from supported review surfaces.
+
+## Phase Details
+
+### Phase 50: Provider Registry
+**Goal**: Users can manage a global provider and model registry with secure secret handling and safe lifecycle controls.
+**Depends on**: Phase 49
+**Requirements**: PROV-01, PROV-02, PROV-03, PROV-04, PROV-05, PROV-06, PROV-07, PROV-08, PROV-09, PROV-10
+**Success Criteria** (what must be TRUE):
+  1. User can create a provider in Settings with display name, base URL, and API key, then add one or more models with stable model IDs and optional display aliases.
+  2. User can edit provider metadata and manually maintain provider model lists without losing linked model records.
+  3. User can disable or delete a provider only after the UI clearly surfaces which models or existing selections would be affected.
+  4. Saved API keys remain write-only after save, never appear in plaintext UI/log/provenance surfaces, and provider connection tests work without exposing the stored secret.
+  5. Platform consumers can query provider and model metadata through a deterministic `ILLMProviderRegistry` contract.
+**Plans**: TBD
+
+### Phase 51: LLM Module Configuration
+**Goal**: Users can configure LLM modules through provider-backed selections while preserving manual and legacy compatibility.
+**Depends on**: Phase 50
+**Requirements**: LLMN-01, LLMN-02, LLMN-03, LLMN-04, LLMN-05
+**Success Criteria** (what must be TRUE):
+  1. User can open an LLM module in the editor sidebar and choose a registered provider from a dropdown.
+  2. User can choose a model scoped to the selected provider and save that configuration on the module.
+  3. If a saved provider or model later becomes disabled or removed, the module still shows the prior selection as unavailable instead of silently clearing it.
+  4. Advanced users can switch to manual API URL, API key, and model inputs for migration or non-registry scenarios.
+  5. When provider-backed, manual, and legacy global settings all exist, the module resolves them in one deterministic precedence order on every run.
+**Plans**: TBD
+
+### Phase 52: Automatic Memory Recall
+**Goal**: Developer-agent runs and LLM calls automatically recall relevant memory without overwhelming prompt context.
+**Depends on**: Phase 49
+**Requirements**: MEMR-01, MEMR-02, MEMR-03, MEMR-04, MEMR-05
+**Success Criteria** (what must be TRUE):
+  1. Starting a developer-agent run automatically injects boot memory and makes that injection visible in the run timeline.
+  2. LLM calls automatically recall relevant memories when disclosure triggers in the active conversation context match stored memory rules.
+  3. LLM calls automatically recall relevant memories when glossary keywords in the active conversation context match stored memory terms.
+  4. Recalled memory is ranked, deduplicated, and capped so prompt context stays bounded instead of flooding the model.
+  5. Each recalled memory item visibly explains where it came from and why it was selected.
+**Plans**: TBD
+
+### Phase 53: Tool-Aware Memory Operations
+**Goal**: LLM execution stays aware of its real tool surface and can manipulate memory relationships through explicit, provenance-safe tools.
+**Depends on**: Phase 52
+**Requirements**: TOOL-01, TOOL-02, TOOL-03, TOOL-04
+**Success Criteria** (what must be TRUE):
+  1. Each LLM call receives descriptors only for the tools actually available in the current execution context.
+  2. Developer-agent can explicitly retrieve relevant memories for the current task through a `memory_recall` tool.
+  3. Developer-agent can create typed memory graph relationships through a `memory_link` tool.
+  4. Memory tool operations preserve existing provenance rules instead of allowing untraceable graph changes.
+**Plans**: TBD
+
+### Phase 54: Living Memory Sedimentation
+**Goal**: Completed LLM exchanges automatically turn stable learnings into durable memory updates with provenance and change history.
+**Depends on**: Phase 52
+**Requirements**: LIVM-01, LIVM-02, LIVM-03, LIVM-04
+**Success Criteria** (what must be TRUE):
+  1. After a completed LLM exchange produces stable facts, preferences, entities, or task learnings, the system automatically creates or updates memory nodes.
+  2. Automatically created or updated memories retain provenance back to the source run, step, or artifact.
+  3. When the same memory changes over time, the system records a new snapshot instead of silently overwriting prior state.
+  4. Exchanges that do not yield stable knowledge do not create raw transcript-dump memories.
+**Plans**: TBD
+
+### Phase 55: Memory Review Surfaces
+**Goal**: Users can inspect how memory changed, why it exists, and how it connects to other memory.
+**Depends on**: Phase 53, Phase 54
+**Requirements**: MEMUI-01, MEMUI-02, MEMUI-03
+**Success Criteria** (what must be TRUE):
+  1. User can open a memory node on `/memory` and browse its snapshot history over time.
+  2. User can inspect provenance for a memory node or a recalled memory directly from `/memory`.
+  3. User can inspect memory graph edges from supported UI-backed review surfaces.
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -186,8 +268,14 @@
 | 47. Run Inspection & Observability | v2.0 | 3/3 | Complete | 2026-03-21 |
 | 48. Artifact & Memory Foundation | v2.0 | 5/5 | Complete | 2026-03-21 |
 | 49. Structured Cognition Workflows | v2.0 | 3/3 | Complete | 2026-03-21 |
+| 50. Provider Registry | v2.0.1 | 0/TBD | Not started | - |
+| 51. LLM Module Configuration | v2.0.1 | 0/TBD | Not started | - |
+| 52. Automatic Memory Recall | v2.0.1 | 0/TBD | Not started | - |
+| 53. Tool-Aware Memory Operations | v2.0.1 | 0/TBD | Not started | - |
+| 54. Living Memory Sedimentation | v2.0.1 | 0/TBD | Not started | - |
+| 55. Memory Review Surfaces | v2.0.1 | 0/TBD | Not started | - |
 
 **Total shipped: 49 phases, 117 plans across 11 milestones**
 
 ---
-*Last updated: 2026-03-21 — v2.0 Structured Cognition Foundation shipped*
+*Last updated: 2026-03-22 — v2.0.1 roadmap created*

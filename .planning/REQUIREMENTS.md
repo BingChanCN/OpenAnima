@@ -89,43 +89,43 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROV-01 | Phase [TBD] | Pending |
-| PROV-02 | Phase [TBD] | Pending |
-| PROV-03 | Phase [TBD] | Pending |
-| PROV-04 | Phase [TBD] | Pending |
-| PROV-05 | Phase [TBD] | Pending |
-| PROV-06 | Phase [TBD] | Pending |
-| PROV-07 | Phase [TBD] | Pending |
-| PROV-08 | Phase [TBD] | Pending |
-| PROV-09 | Phase [TBD] | Pending |
-| PROV-10 | Phase [TBD] | Pending |
-| LLMN-01 | Phase [TBD] | Pending |
-| LLMN-02 | Phase [TBD] | Pending |
-| LLMN-03 | Phase [TBD] | Pending |
-| LLMN-04 | Phase [TBD] | Pending |
-| LLMN-05 | Phase [TBD] | Pending |
-| MEMR-01 | Phase [TBD] | Pending |
-| MEMR-02 | Phase [TBD] | Pending |
-| MEMR-03 | Phase [TBD] | Pending |
-| MEMR-04 | Phase [TBD] | Pending |
-| MEMR-05 | Phase [TBD] | Pending |
-| TOOL-01 | Phase [TBD] | Pending |
-| TOOL-02 | Phase [TBD] | Pending |
-| TOOL-03 | Phase [TBD] | Pending |
-| TOOL-04 | Phase [TBD] | Pending |
-| LIVM-01 | Phase [TBD] | Pending |
-| LIVM-02 | Phase [TBD] | Pending |
-| LIVM-03 | Phase [TBD] | Pending |
-| LIVM-04 | Phase [TBD] | Pending |
-| MEMUI-01 | Phase [TBD] | Pending |
-| MEMUI-02 | Phase [TBD] | Pending |
-| MEMUI-03 | Phase [TBD] | Pending |
+| PROV-01 | Phase 50 | Pending |
+| PROV-02 | Phase 50 | Pending |
+| PROV-03 | Phase 50 | Pending |
+| PROV-04 | Phase 50 | Pending |
+| PROV-05 | Phase 50 | Pending |
+| PROV-06 | Phase 50 | Pending |
+| PROV-07 | Phase 50 | Pending |
+| PROV-08 | Phase 50 | Pending |
+| PROV-09 | Phase 50 | Pending |
+| PROV-10 | Phase 50 | Pending |
+| LLMN-01 | Phase 51 | Pending |
+| LLMN-02 | Phase 51 | Pending |
+| LLMN-03 | Phase 51 | Pending |
+| LLMN-04 | Phase 51 | Pending |
+| LLMN-05 | Phase 51 | Pending |
+| MEMR-01 | Phase 52 | Pending |
+| MEMR-02 | Phase 52 | Pending |
+| MEMR-03 | Phase 52 | Pending |
+| MEMR-04 | Phase 52 | Pending |
+| MEMR-05 | Phase 52 | Pending |
+| TOOL-01 | Phase 53 | Pending |
+| TOOL-02 | Phase 53 | Pending |
+| TOOL-03 | Phase 53 | Pending |
+| TOOL-04 | Phase 53 | Pending |
+| LIVM-01 | Phase 54 | Pending |
+| LIVM-02 | Phase 54 | Pending |
+| LIVM-03 | Phase 54 | Pending |
+| LIVM-04 | Phase 54 | Pending |
+| MEMUI-01 | Phase 55 | Pending |
+| MEMUI-02 | Phase 55 | Pending |
+| MEMUI-03 | Phase 55 | Pending |
 
 **Coverage:**
 - v1 requirements: 31 total
-- Mapped to phases: 0
-- Unmapped: 31 ⚠️
+- Mapped to phases: 31
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-22 after initial definition*
+*Last updated: 2026-03-22 after roadmap creation*
