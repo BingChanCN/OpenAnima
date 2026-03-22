@@ -298,7 +298,7 @@ Plans:
 | 52. Automatic Memory Recall | 2/2 | Complete    | 2026-03-22 | - |
 | 53. Tool-Aware Memory Operations | 2/2 | Complete    | 2026-03-22 | - |
 | 54. Living Memory Sedimentation | 2/2 | Complete   | 2026-03-22 | - |
-| 55. Memory Review Surfaces | v2.0.1 | 0/TBD | Not started | - |
+| 55. Memory Review Surfaces | 1/2 | In Progress|  | - |
 
 **Total shipped: 49 phases, 117 plans across 11 milestones**
 
