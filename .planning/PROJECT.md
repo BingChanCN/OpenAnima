@@ -4,8 +4,8 @@
 
 **Latest shipped:** v2.0 Structured Cognition Foundation (2026-03-21)
 **Milestones complete:** v1.0–v2.0 (11 milestones, 49 phases, 117 plans)
-**Phase 55 complete:** Memory Review Surfaces — collapsible Provenance, Snapshot History, and Relationships sections in MemoryNodeCard with GetIncomingEdgesAsync, GetStepByIdAsync, LineDiff helper, and 21 i18n keys (2026-03-22)
-**Codebase:** ~42,500 LOC (C#, Razor, CSS, JS) | 596 tests green
+**Phase 56 complete:** Sedimentation LLM Configuration — Living Memory config section on Settings page with cascading provider/model dropdowns writing sedimentProviderSlug/sedimentModelId to AnimaModuleConfigService, activating SedimentationService pipeline (2026-03-23)
+**Codebase:** ~42,700 LOC (C#, Razor, CSS, JS) | 615 tests green
 
 ## Current Milestone: v2.0.1 Provider Registry & Living Memory
 
@@ -164,6 +164,7 @@ Agents that proactively think and act on their own, while module connections rem
 - [x] GetToolDescriptors injected into LLM prompt so agent knows available tools — Validated in Phase 53: tool-aware-memory-operations
 - [x] Conversation auto-sedimentation into memory graph — Validated in Phase 54: living-memory-sedimentation
 - [x] Snapshot history viewer in /memory UI — Validated in Phase 55: memory-review-surfaces
+- [x] Sedimentation LLM config UI-driven selection — Validated in Phase 56: sedimentation-llm-configuration
 - [ ] Edge management tools for LLM agent
 
 ### Deferred
@@ -335,4 +336,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-22 after Phase 55 (memory-review-surfaces) completion*
+*Last updated: 2026-03-23 after Phase 56 (sedimentation-llm-configuration) completion*
