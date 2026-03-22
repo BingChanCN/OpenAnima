@@ -142,7 +142,7 @@
 - [x] **Phase 52: Automatic Memory Recall** - Runs and LLM calls automatically inject relevant, bounded, explainable memory. (completed 2026-03-22)
 - [x] **Phase 53: Tool-Aware Memory Operations** - LLM sees only context-available tools and can retrieve or link memory safely through dedicated tools. (completed 2026-03-22)
 - [x] **Phase 54: Living Memory Sedimentation** - Completed exchanges automatically create durable, provenance-backed memory without transcript spam. (completed 2026-03-22)
-- [ ] **Phase 55: Memory Review Surfaces** - Users can inspect memory history, provenance, and graph relationships from supported review surfaces.
+- [x] **Phase 55: Memory Review Surfaces** - Users can inspect memory history, provenance, and graph relationships from supported review surfaces. (completed 2026-03-22)
 
 ## Phase Details
 
@@ -298,7 +298,7 @@ Plans:
 | 52. Automatic Memory Recall | 2/2 | Complete    | 2026-03-22 | - |
 | 53. Tool-Aware Memory Operations | 2/2 | Complete    | 2026-03-22 | - |
 | 54. Living Memory Sedimentation | 2/2 | Complete   | 2026-03-22 | - |
-| 55. Memory Review Surfaces | 1/2 | In Progress|  | - |
+| 55. Memory Review Surfaces | 2/2 | Complete   | 2026-03-22 | - |
 
 **Total shipped: 49 phases, 117 plans across 11 milestones**
 

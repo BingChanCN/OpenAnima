@@ -52,9 +52,9 @@ Requirements for milestone v2.0.1. Each maps to roadmap phases.
 
 ### Memory Review UI
 
-- [ ] **MEMUI-01**: User can view snapshot history for a memory node from the `/memory` page
-- [ ] **MEMUI-02**: User can inspect the provenance of a memory node or recalled memory from the `/memory` page
-- [ ] **MEMUI-03**: User can inspect memory graph edges through supported tools or UI-backed data surfaces
+- [x] **MEMUI-01**: User can view snapshot history for a memory node from the `/memory` page
+- [x] **MEMUI-02**: User can inspect the provenance of a memory node or recalled memory from the `/memory` page
+- [x] **MEMUI-03**: User can inspect memory graph edges through supported tools or UI-backed data surfaces
 
 ## v2 Requirements
 
@@ -117,9 +117,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LIVM-02 | Phase 54 | Complete |
 | LIVM-03 | Phase 54 | Complete |
 | LIVM-04 | Phase 54 | Complete |
-| MEMUI-01 | Phase 55 | Pending |
-| MEMUI-02 | Phase 55 | Pending |
-| MEMUI-03 | Phase 55 | Pending |
+| MEMUI-01 | Phase 55 | Complete |
+| MEMUI-02 | Phase 55 | Complete |
+| MEMUI-03 | Phase 55 | Complete |
 
 **Coverage:**
 - v1 requirements: 31 total

@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 55 UI-SPEC approved
-last_updated: "2026-03-22T14:36:39.811Z"
+stopped_at: Completed 55-02-PLAN.md (Phase 55 complete)
+last_updated: "2026-03-22T15:00:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 5
@@ -26,8 +26,8 @@ See: `.planning/PROJECT.md` (updated 2026-03-22)
 
 ## Current Position
 
-Phase: 55 (memory-review-surfaces) — EXECUTING
-Plan: 1 of 2
+Phase: 55 (memory-review-surfaces) — COMPLETE
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -64,6 +64,8 @@ Plan: 1 of 2
 | Phase 53 P02 | 6m | 1 tasks | 3 files |
 | Phase 54 P01 | 5 | 1 tasks | 3 files |
 | Phase 54 P02 | 10m | 2 tasks | 3 files |
+| Phase 55 P01 | 4m | 2 tasks | 11 files |
+| Phase 55 P02 | ~30m | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -99,6 +101,9 @@ Recent decisions affecting current work:
 - [Phase 54]: Keyword normalization: if value starts with '[', treat as JSON array and keep as-is; otherwise split on comma and serialize to JSON array — matches MemoryWriteTool pattern
 - [Phase 54]: TriggerSedimentation fires on both non-routing and routing paths using fire-and-forget Task.Run with CancellationToken.None and snapshot-captured message values
 - [Phase 54]: ISedimentationService injected as optional constructor parameter (= null) in LLMModule for backward compatibility with existing callers
+- [Phase 55]: Provenance section expanded by default in MemoryNodeCard — most relevant context on node selection; Snapshot History and Relationships collapsed to reduce initial visual noise
+- [Phase 55]: Restore confirmation rendered as inline overlay in MemoryGraph.razor — avoids a new component for a single-use case
+- [Phase 55]: Lazy<IStepRecorder> used in BootMemoryInjector to break pre-existing DI circular dependency surfaced during visual verification
 
 ### Pending Todos
 
@@ -111,6 +116,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-22T14:12:19.925Z
-Stopped at: Phase 55 UI-SPEC approved
-Resume file: .planning/phases/55-memory-review-surfaces/55-UI-SPEC.md
+Last session: 2026-03-22T15:00:00.000Z
+Stopped at: Completed 55-02-PLAN.md (Phase 55 complete)
+Resume file: .planning/phases/55-memory-review-surfaces/55-02-SUMMARY.md
