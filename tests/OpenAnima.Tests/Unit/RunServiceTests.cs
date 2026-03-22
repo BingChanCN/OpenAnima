@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
+using OpenAnima.Core.Memory;
 using OpenAnima.Core.Runs;
 using OpenAnima.Core.RunPersistence;
 
@@ -27,9 +28,15 @@ public class RunServiceTests : IAsyncDisposable
         _factory = new RunDbConnectionFactory(DbConnectionString, isRaw: true);
         _initializer = new RunDbInitializer(_factory);
         _repository = new RunRepository(_factory);
+
+        var fakeGraph = new FakeMemoryGraph();
+        var fakeStepRecorder = new FakeStepRecorder();
+        var bootMemoryInjector = new BootMemoryInjector(fakeGraph, fakeStepRecorder, NullLogger<BootMemoryInjector>.Instance);
+
         _service = new RunService(
             _repository,
             NullLogger<RunService>.Instance,
+            bootMemoryInjector,
             hubContext: null);
 
         _initializer.EnsureCreatedAsync().GetAwaiter().GetResult();

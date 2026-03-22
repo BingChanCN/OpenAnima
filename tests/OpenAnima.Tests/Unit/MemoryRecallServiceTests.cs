@@ -216,6 +216,9 @@ public class FakeMemoryGraph : IMemoryGraph
     /// <summary>Set to true when <see cref="RebuildGlossaryAsync"/> is called.</summary>
     public bool RebuildGlossaryCalled { get; private set; }
 
+    /// <summary>Set to true when <see cref="QueryByPrefixAsync"/> is called.</summary>
+    public bool QueryByPrefixCalled { get; private set; }
+
     public Task<IReadOnlyList<MemoryNode>> GetDisclosureNodesAsync(string animaId, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<MemoryNode>>(DisclosureNodes);
 
@@ -231,8 +234,11 @@ public class FakeMemoryGraph : IMemoryGraph
     public Task<MemoryNode?> GetNodeAsync(string animaId, string uri, CancellationToken ct = default) =>
         Task.FromResult(NodesByUri.TryGetValue(uri, out var node) ? node : null);
 
-    public Task<IReadOnlyList<MemoryNode>> QueryByPrefixAsync(string animaId, string uriPrefix, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<MemoryNode>>(PrefixNodes);
+    public Task<IReadOnlyList<MemoryNode>> QueryByPrefixAsync(string animaId, string uriPrefix, CancellationToken ct = default)
+    {
+        QueryByPrefixCalled = true;
+        return Task.FromResult<IReadOnlyList<MemoryNode>>(PrefixNodes);
+    }
 
     // ── no-op / empty implementations ─────────────────────────────────────
 
