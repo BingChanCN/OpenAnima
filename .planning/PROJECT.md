@@ -4,8 +4,8 @@
 
 **Latest shipped:** v2.0 Structured Cognition Foundation (2026-03-21)
 **Milestones complete:** v1.0–v2.0 (11 milestones, 49 phases, 117 plans)
-**Phase 56 complete:** Sedimentation LLM Configuration — Living Memory config section on Settings page with cascading provider/model dropdowns writing sedimentProviderSlug/sedimentModelId to AnimaModuleConfigService, activating SedimentationService pipeline (2026-03-23)
-**Codebase:** ~42,700 LOC (C#, Razor, CSS, JS) | 615 tests green
+**Phase 57 complete:** Integration Wiring & Metadata Fixes — Boot memory reaches LLM prompt context via MemoryRecallService boot node query, provider disable/delete confirms show actual affected-module counts, SUMMARY metadata gaps for PROV-08/PROV-10/MEMR-04 closed (2026-03-23)
+**Codebase:** ~42,700 LOC (C#, Razor, CSS, JS) | 603 tests green
 
 ## Current Milestone: v2.0.1 Provider Registry & Living Memory
 
@@ -336,4 +336,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-23 after Phase 56 (sedimentation-llm-configuration) completion*
+*Last updated: 2026-03-23 after Phase 57 (integration-wiring-metadata-fixes) completion*
