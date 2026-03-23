@@ -264,7 +264,7 @@ Plans:
 | 55. Memory Review Surfaces | v2.0.1 | 2/2 | Complete | 2026-03-22 |
 | 56. Sedimentation LLM Configuration | v2.0.1 | 1/1 | Complete | 2026-03-22 |
 | 57. Integration Wiring & Metadata Fixes | v2.0.1 | 2/2 | Complete | 2026-03-22 |
-| 58. Agent Loop Core | 2/2 | Complete   | 2026-03-23 | - |
+| 58. Agent Loop Core | 2/2 | Complete    | 2026-03-23 | - |
 | 59. Tool Call Display and UI Wiring | v2.0.2 | 0/2 | Not started | - |
 | 60. Hardening and Memory Integration | v2.0.2 | 0/1 | Not started | - |
 
