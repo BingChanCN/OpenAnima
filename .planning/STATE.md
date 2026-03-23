@@ -1,32 +1,35 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0.2
-milestone_name: Chat Agent Loop
-status: complete
-stopped_at: Milestone v2.0.2 archived
-last_updated: "2026-03-23T16:00:00.000Z"
+milestone: v2.0.3
+milestone_name: Editor Experience
+status: active
+stopped_at: null
+last_updated: "2026-03-23T18:00:00.000Z"
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State: OpenAnima
 
 **Last updated:** 2026-03-23
-**Current milestone:** v2.0.2 Chat Agent Loop — SHIPPED
+**Current milestone:** v2.0.3 Editor Experience
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-23)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements
 
 ## Current Position
 
-Milestone v2.0.2 complete. All 3 phases (58-60), 5 plans shipped.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-23 — Milestone v2.0.3 started
 
 ## Accumulated Context
 
@@ -45,7 +48,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-23
-Stopped at: Milestone v2.0.2 archived
+Stopped at: Milestone v2.0.3 started
 Resume file: None
 
 ### Quick Tasks Completed

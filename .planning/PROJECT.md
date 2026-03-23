@@ -3,6 +3,7 @@
 ## Current State
 
 **Latest shipped:** v2.0.2 Chat Agent Loop (2026-03-23)
+**Current milestone:** v2.0.3 Editor Experience
 **Milestones complete:** v1.0–v2.0.2 (13 milestones, 60 phases, 138 plans)
 **Codebase:** ~52,000 LOC (C#, Razor, CSS, JS) | 654 tests green
 
@@ -147,7 +148,10 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Active
 
-(None — planning next milestone)
+- [ ] Module names display in Chinese when language is zh-CN (EDUX-01)
+- [ ] Each module shows a brief description in the editor module list (EDUX-02)
+- [ ] User can delete connections via click-select + Delete key and right-click menu (EDUX-03)
+- [ ] Ports show Chinese tooltip on hover explaining their purpose (EDUX-04)
 
 ### Deferred
 
@@ -345,4 +349,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-23 after v2.0.2 milestone*
+*Last updated: 2026-03-23 after v2.0.3 milestone start*
