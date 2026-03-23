@@ -16,13 +16,13 @@
     border-radius: 8px;
     padding: 0;
     z-index: 2001;
-    min-width: 360px;
-    max-width: 480px;
+    width: 440px;
+    max-width: 90vw;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .modal-header {
-    padding: 1.25rem 1.5rem;
+    padding: 1.5rem;
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -33,7 +33,7 @@
 }
 
 .modal-body {
-    padding: 1.25rem 1.5rem;
+    padding: 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
