@@ -21,7 +21,7 @@ Requirements for Chat Agent Loop milestone. Each maps to roadmap phases.
 
 - [x] **TCUI-01**: Chat UI displays collapsible tool call cards inside conversation bubbles in real-time (tool name, parameters, result, status)
 - [x] **TCUI-02**: Assistant message shows tool call count badge ("Used N tools")
-- [x] **TCUI-03**: ChatPanel generation timeout extends from 30s to 300s in agent mode
+- [x] **TCUI-03**: ChatPanel generation timeout uses per-event resettable 60s timer in agent mode (resets on each tool call event)
 - [x] **TCUI-04**: Message sending is disabled while agent loop is running, preventing race conditions
 
 ### Hardening
