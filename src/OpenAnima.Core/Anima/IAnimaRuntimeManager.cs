@@ -34,4 +34,10 @@ public interface IAnimaRuntimeManager : IAsyncDisposable, IDisposable
 
     /// <summary>Fires when any Anima is created, deleted, renamed, or cloned.</summary>
     event Action? StateChanged;
+
+    /// <summary>Fires when the wiring configuration for an Anima is updated in-session (e.g., via editor auto-save).</summary>
+    event Action? WiringConfigurationChanged;
+
+    /// <summary>Raises WiringConfigurationChanged to notify subscribers that the active Anima's wiring config was updated.</summary>
+    void NotifyWiringConfigurationChanged();
 }

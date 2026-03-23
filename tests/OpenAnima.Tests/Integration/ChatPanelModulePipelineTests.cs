@@ -54,6 +54,41 @@ public class ChatPanelModulePipelineTests
 
     [Fact]
     [Trait("Category", "Integration")]
+    public void ChatPipelineConfigurationValidator_ReturnsTrue_WhenInputConnectedToMessagesPort()
+    {
+        var config = new WiringConfiguration
+        {
+            Name = "chat-valid-messages",
+            Nodes = new List<ModuleNode>
+            {
+                new() { ModuleId = "node-input", ModuleName = "ChatInputModule" },
+                new() { ModuleId = "node-llm", ModuleName = "LLMModule" },
+                new() { ModuleId = "node-output", ModuleName = "ChatOutputModule" }
+            },
+            Connections = new List<PortConnection>
+            {
+                new()
+                {
+                    SourceModuleId = "node-input",
+                    SourcePortName = "userMessage",
+                    TargetModuleId = "node-llm",
+                    TargetPortName = "messages"
+                },
+                new()
+                {
+                    SourceModuleId = "node-llm",
+                    SourcePortName = "response",
+                    TargetModuleId = "node-output",
+                    TargetPortName = "displayText"
+                }
+            }
+        };
+
+        Assert.True(ChatPipelineConfigurationValidator.IsConfigured(config));
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
     public void ChatPipelineConfigurationValidator_ReturnsFalse_WhenRequiredLinkMissing()
     {
         var config = new WiringConfiguration

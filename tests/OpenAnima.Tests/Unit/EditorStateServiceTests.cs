@@ -1,5 +1,6 @@
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
+using OpenAnima.Core.Anima;
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Services;
 using OpenAnima.Core.Wiring;
@@ -12,18 +13,17 @@ public class EditorStateServiceTests
     private readonly EditorStateService _service;
     private readonly TestPortRegistry _portRegistry;
     private readonly TestConfigurationLoader _configLoader;
-    private readonly TestWiringEngine _wiringEngine;
 
     public EditorStateServiceTests()
     {
         _portRegistry = new TestPortRegistry();
         _configLoader = new TestConfigurationLoader();
-        _wiringEngine = new TestWiringEngine();
         _service = new EditorStateService(
             _portRegistry,
             _configLoader,
-            NullLogger<EditorStateService>.Instance,
-            _wiringEngine
+            new TestAnimaRuntimeManager(),
+            new TestAnimaContext(),
+            NullLogger<EditorStateService>.Instance
         );
     }
 
@@ -306,12 +306,28 @@ public class EditorStateServiceTests
         public Task DeleteAsync(string configName, CancellationToken ct = default) => Task.CompletedTask;
     }
 
-    private class TestWiringEngine : IWiringEngine
+    private class TestAnimaRuntimeManager : IAnimaRuntimeManager
     {
-        public bool IsLoaded => false;
-        public WiringConfiguration? GetCurrentConfiguration() => null;
-        public void LoadConfiguration(WiringConfiguration config) { }
-        public Task ExecuteAsync(CancellationToken ct = default, ISet<string>? skipModuleIds = null) => Task.CompletedTask;
-        public void UnloadConfiguration() { }
+        public event Action? StateChanged;
+        public event Action? WiringConfigurationChanged;
+        public IReadOnlyList<AnimaDescriptor> GetAll() => new List<AnimaDescriptor>();
+        public AnimaDescriptor? GetById(string id) => null;
+        public Task<AnimaDescriptor> CreateAsync(string name, CancellationToken ct = default) => Task.FromResult(new AnimaDescriptor());
+        public Task DeleteAsync(string id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task RenameAsync(string id, string newName, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<AnimaDescriptor> CloneAsync(string id, CancellationToken ct = default) => Task.FromResult(new AnimaDescriptor());
+        public Task InitializeAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public AnimaRuntime? GetRuntime(string animaId) => null;
+        public AnimaRuntime GetOrCreateRuntime(string animaId) => throw new NotSupportedException();
+        public void NotifyWiringConfigurationChanged() { }
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        public void Dispose() { }
+    }
+
+    private class TestAnimaContext : IAnimaContext
+    {
+        public string ActiveAnimaId => "test-anima";
+        public event Action? ActiveAnimaChanged;
+        public void SetActive(string animaId) { }
     }
 }

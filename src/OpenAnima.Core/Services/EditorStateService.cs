@@ -2,6 +2,7 @@ using OpenAnima.Core.Ports;
 using OpenAnima.Core.Wiring;
 using OpenAnima.Contracts.Ports;
 using OpenAnima.Contracts;
+using OpenAnima.Core.Anima;
 using Microsoft.Extensions.Logging;
 
 namespace OpenAnima.Core.Services;
@@ -18,19 +19,22 @@ public class EditorStateService
 
     private readonly IPortRegistry _portRegistry;
     private readonly IConfigurationLoader _configLoader;
-    private readonly IWiringEngine? _wiringEngine;
+    private readonly IAnimaRuntimeManager _animaRuntimeManager;
+    private readonly IAnimaContext _animaContext;
     private readonly ILogger<EditorStateService> _logger;
     private CancellationTokenSource? _autoSaveDebounce;
 
     public EditorStateService(
         IPortRegistry portRegistry,
         IConfigurationLoader configLoader,
-        ILogger<EditorStateService> logger,
-        IWiringEngine? wiringEngine = null)
+        IAnimaRuntimeManager animaRuntimeManager,
+        IAnimaContext animaContext,
+        ILogger<EditorStateService> logger)
     {
         _portRegistry = portRegistry;
         _configLoader = configLoader;
-        _wiringEngine = wiringEngine;
+        _animaRuntimeManager = animaRuntimeManager;
+        _animaContext = animaContext;
         _logger = logger;
     }
     // Canvas transform
@@ -507,6 +511,8 @@ public class EditorStateService
 
     /// <summary>
     /// Triggers auto-save with 500ms debounce to avoid excessive saves during rapid changes.
+    /// Also updates the active Anima's WiringEngine in-memory so re-navigation to the editor
+    /// restores the current configuration (not just the startup snapshot).
     /// </summary>
     private async void TriggerAutoSave()
     {
@@ -526,11 +532,23 @@ public class EditorStateService
                 Configuration = Configuration with { Name = "default" };
             }
 
-            // Save configuration
+            // Save configuration to disk
             await _configLoader.SaveAsync(Configuration, _autoSaveDebounce.Token);
 
-            // Reload into wiring engine to keep it in sync (optional — per-Anima engine may not be available)
-            _wiringEngine?.LoadConfiguration(Configuration);
+            // Keep the active Anima's WiringEngine in sync so Editor.razor reads the
+            // current configuration on re-navigation (not the stale startup snapshot).
+            var activeId = _animaContext.ActiveAnimaId;
+            if (activeId != null)
+            {
+                var runtime = _animaRuntimeManager.GetRuntime(activeId);
+                if (runtime != null)
+                {
+                    runtime.WiringEngine.LoadConfiguration(Configuration);
+                    // Notify subscribers (e.g. ChatPanel) that the wiring config changed
+                    // so they can re-evaluate IsPipelineConfigured() without requiring a restart.
+                    _animaRuntimeManager.NotifyWiringConfigurationChanged();
+                }
+            }
 
             _logger.LogDebug("Auto-saved configuration: {ConfigName}", Configuration.Name);
         }

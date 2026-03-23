@@ -34,7 +34,8 @@ public sealed class AnimaRuntime : IAsyncDisposable
         string animaId,
         ILoggerFactory loggerFactory,
         IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null,
-        IStepRecorder? stepRecorder = null)
+        IStepRecorder? stepRecorder = null,
+        IPortRegistry? portRegistry = null)
     {
         AnimaId = animaId;
 
@@ -51,7 +52,7 @@ public sealed class AnimaRuntime : IAsyncDisposable
 
         WiringEngine = new WiringEngine(
             EventBus,
-            new PortRegistry(),
+            portRegistry ?? new PortRegistry(),
             animaId: animaId,
             logger: loggerFactory.CreateLogger<WiringEngine>(),
             hubContext: hubContext,

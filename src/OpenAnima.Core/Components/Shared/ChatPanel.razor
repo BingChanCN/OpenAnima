@@ -69,6 +69,7 @@
         _chatOutputModule.OnMessageReceived += HandleChatOutputReceived;
         LangSvc.LanguageChanged += OnLanguageChanged;
         _animaContext.ActiveAnimaChanged += OnAnimaChanged;
+        _animaRuntimeManager.WiringConfigurationChanged += OnWiringConfigurationChanged;
     }
 
     private void HandleContextManagerChanged()
@@ -81,6 +82,14 @@
     private void OnAnimaChanged()
     {
         _chatSessionState.Messages.Clear();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnWiringConfigurationChanged()
+    {
+        // Re-evaluate IsPipelineConfigured() after editor auto-save updates the WiringEngine.
+        // Without this, ChatPanel would remain in "not configured" state even after a valid
+        // pipeline is saved, because the render only happens when explicitly triggered.
         InvokeAsync(StateHasChanged);
     }
 
@@ -310,6 +319,7 @@
         _contextManager.OnStateChanged -= HandleContextManagerChanged;
         LangSvc.LanguageChanged -= OnLanguageChanged;
         _animaContext.ActiveAnimaChanged -= OnAnimaChanged;
+        _animaRuntimeManager.WiringConfigurationChanged -= OnWiringConfigurationChanged;
 
         _generationCts.Cancel();
         _generationCts.Dispose();

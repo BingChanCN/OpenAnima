@@ -174,6 +174,8 @@ public class CrossAnimaRoutingE2ETests
             => throw new NotImplementedException();
         public Task InitializeAsync(CancellationToken ct = default) => Task.CompletedTask;
         public event Action? StateChanged;
+        public event Action? WiringConfigurationChanged;
+        public void NotifyWiringConfigurationChanged() { }
 
         public AnimaRuntime? GetRuntime(string animaId) =>
             animaId == "anima-a" ? RuntimeA : animaId == "anima-b" ? RuntimeB : null;

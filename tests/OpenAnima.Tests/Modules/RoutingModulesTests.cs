@@ -887,6 +887,8 @@ public class RoutingModulesTests
         public Task InitializeAsync(CancellationToken ct = default)
             => Task.CompletedTask;
         public event Action? StateChanged;
+        public event Action? WiringConfigurationChanged;
+        public void NotifyWiringConfigurationChanged() { }
 
         public AnimaRuntime? GetRuntime(string animaId) => _runtime;
         public AnimaRuntime GetOrCreateRuntime(string animaId) => _runtime;
