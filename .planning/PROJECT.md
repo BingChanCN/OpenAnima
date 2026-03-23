@@ -2,27 +2,13 @@
 
 ## Current State
 
-**Latest shipped:** v2.0 Structured Cognition Foundation (2026-03-21)
-**Milestones complete:** v1.0–v2.0 (11 milestones, 49 phases, 117 plans)
-**Phase 57 complete:** Integration Wiring & Metadata Fixes — Boot memory reaches LLM prompt context via MemoryRecallService boot node query, provider disable/delete confirms show actual affected-module counts, SUMMARY metadata gaps for PROV-08/PROV-10/MEMR-04 closed (2026-03-23)
-**Codebase:** ~42,700 LOC (C#, Razor, CSS, JS) | 603 tests green
-
-## Current Milestone: v2.0.1 Provider Registry & Living Memory
-
-**Goal:** Make LLM configuration UI-driven with a global provider/model registry, and activate the memory system so agents can automatically recall, accumulate, and link knowledge during execution.
-
-**Target features:**
-- Global LLM Provider registry (Settings page) with two-layer Provider > Model hierarchy
-- Editor LLM module dropdown selection from registered providers/models
-- BootMemoryInjector wired into run-start path
-- DisclosureMatcher and GlossaryIndex wired into LLM call path for automatic memory recall
-- New memory tools (memory_link, memory_recall) and GetToolDescriptors injection
-- Conversation auto-sedimentation into memory graph
-- Snapshot history UI and edge management tools
+**Latest shipped:** v2.0.1 Provider Registry & Living Memory (2026-03-23)
+**Milestones complete:** v1.0–v2.0.1 (12 milestones, 57 phases, 133 plans)
+**Codebase:** ~44,700 LOC (C#, Razor, CSS, JS) | 603 tests green
 
 ## What This Is
 
-A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Users create multiple independent Anima instances — each with its own heartbeat, module wiring, chat interface, and configuration. Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based dashboard, visual drag-and-drop wiring editor, LLM-powered chat, durable task runtime with workspace tools, run inspection with propagation chain visualization, provenance-backed memory graph, graph-native workflow presets, and full Chinese/English internationalization.
+A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Users create multiple independent Anima instances — each with its own heartbeat, module wiring, chat interface, and configuration. Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based dashboard, visual drag-and-drop wiring editor, LLM-powered chat with UI-driven provider/model registry, durable task runtime with workspace tools, run inspection with propagation chain visualization, provenance-backed memory graph with automatic recall and living memory sedimentation, graph-native workflow presets, and full Chinese/English internationalization.
 
 ## Core Value
 
@@ -149,23 +135,16 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ Run inspector with per-step timeline, inputs/outputs, errors, propagation chain visualization, and log correlation (OBS-01~04) — v2.0
 - ✓ Artifact store and provenance-backed memory graph with GlossaryIndex, DisclosureMatcher, and /memory UI (ART-01~02, MEM-01~03) — v2.0
 - ✓ Structured cognition workflows: JoinBarrier fan-in, PropagationId tracking, workflow presets, codebase analysis E2E (COG-01~04) — v2.0
+- ✓ Global LLM Provider registry with AES-GCM encrypted credentials, two-layer Provider > Model hierarchy, CRUD UI on Settings page (PROV-01~10) — v2.0.1
+- ✓ LLM module cascading provider/model dropdown selection with three-layer config precedence and manual fallback (LLMN-01~05) — v2.0.1
+- ✓ Automatic memory recall: boot injection, disclosure triggers, glossary keywords with ranked/deduped/bounded prompt injection (MEMR-01~05) — v2.0.1
+- ✓ Tool-aware memory: memory_recall and memory_link tools with XML descriptor injection (TOOL-01~04) — v2.0.1
+- ✓ Living memory sedimentation: auto-extraction from LLM exchanges into provenance-backed memory nodes with snapshot history (LIVM-01~04) — v2.0.1
+- ✓ Memory review surfaces: snapshot diff viewer, provenance inspection, relationship edge browsing on /memory (MEMUI-01~03) — v2.0.1
 
 ### Active
 
-- [ ] Global LLM Provider registry with two-layer Provider > Model hierarchy
-- [ ] Settings page UI for provider/model CRUD management
-- [ ] Editor LLM module selects provider/model via dropdown (with manual fallback)
-- [ ] ILLMProviderRegistry interface in Contracts for third-party module access
-- [x] BootMemoryInjector called at run-start path — Validated in Phase 52: automatic-memory-recall
-- [x] DisclosureMatcher wired into LLM prompt assembly for context-triggered memory injection — Validated in Phase 52: automatic-memory-recall
-- [x] GlossaryIndex keyword matching active during LLM calls — Validated in Phase 52: automatic-memory-recall
-- [x] memory_link tool for creating graph edges — Validated in Phase 53: tool-aware-memory-operations
-- [x] memory_recall tool for keyword/glossary-based retrieval — Validated in Phase 53: tool-aware-memory-operations
-- [x] GetToolDescriptors injected into LLM prompt so agent knows available tools — Validated in Phase 53: tool-aware-memory-operations
-- [x] Conversation auto-sedimentation into memory graph — Validated in Phase 54: living-memory-sedimentation
-- [x] Snapshot history viewer in /memory UI — Validated in Phase 55: memory-review-surfaces
-- [x] Sedimentation LLM config UI-driven selection — Validated in Phase 56: sedimentation-llm-configuration
-- [ ] Edge management tools for LLM agent
+(None — planning next milestone)
 
 ### Deferred
 
@@ -176,6 +155,9 @@ Agents that proactively think and act on their own, while module connections rem
 - [ ] User can search and filter modules by name (MODMGMT-06)
 - [ ] Propagation convergence control (TTL, energy decay, content-based dampening)
 - [ ] Dynamic port count (TextJoin fixed 3 ports limitation)
+- [ ] LLMProviderRegistryService.InitializeAsync at startup (currently self-heals on /settings visit)
+- [ ] LLMModelInfo.IsEnabled for model-level disabled rendering (provider-level disable covers primary case)
+- [ ] Edge management tools for LLM agent (memory_link tool exists but no UI-driven edge management)
 
 ### Future
 
@@ -207,16 +189,17 @@ Agents that proactively think and act on their own, while module connections rem
 
 ## Context
 
-Shipped v2.0 with ~41,773 LOC across all source files (C#, Razor, CSS, JS).
+Shipped v2.0.1 with ~44,700 LOC across all source files (C#, Razor, CSS, JS).
 Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4, Microsoft.Extensions.Http.Resilience 8.7.0, Microsoft.Data.Sqlite 8.0.12, Dapper 2.1.72.
-Full test suite: 569/569 green.
+Full test suite: 603/603 green.
 
-v2.0 delivered structured cognition developer-agent foundation:
-- Durable task runtime: SQLite persistence, RunService lifecycle engine, ConvergenceGuard step budgets, StepRecorder with hash-based dedup, RunRecoveryService, /runs UI with SignalR real-time
-- Workspace tool surface: 12 file/git/shell tools + IWorkspaceTool interface + CommandBlacklistGuard safety + WorkspaceToolModule orchestrator
-- Run inspector: RunDetail page with mixed timeline, step accordion, PropagationColorAssigner chain visualization, TimelineFilterBar, ILogger.BeginScope correlation
-- Artifact & memory: ArtifactStore + ArtifactFileWriter + MemoryGraph with GlossaryIndex (Aho-Corasick) + DisclosureMatcher + snapshot versioning + 3 memory tools + /memory UI
-- Structured cognition: JoinBarrierModule fan-in + PropagationId carry-through + LLMModule WaitAsync serialization + WorkflowPresetService + codebase analysis preset + WorkflowProgressBar/PresetSelector UI
+v2.0.1 delivered provider registry and living memory:
+- Provider registry: LLMProviderRegistryService with AES-GCM ApiKeyProtector, ILLMProviderRegistry contract in Contracts, full CRUD Settings UI (ProviderCard/ProviderDialog/ProviderModelList/ProviderImpactList), connection testing with 30s timeout
+- LLM module configuration: IModuleConfigSchema with cascading provider/model dropdowns, three-layer precedence (provider-backed > manual > global), auto-clear on deleted provider/model, EditorConfigSidebar LLM-specific rendering
+- Memory recall: IMemoryRecallService with boot injection (core:// prefix), DisclosureMatcher trigger matching, GlossaryIndex keyword matching, ranked/deduped/bounded RecalledMemoryResult, XML system message injection in LLMModule
+- Memory tools: MemoryRecallTool + MemoryLinkTool as IWorkspaceTools, XML tool descriptor injection via BuildToolDescriptorBlock in LLMModule system message
+- Living memory sedimentation: ISedimentationService with fire-and-forget LLM extraction, JSON keyword normalization, provenance-backed MemoryNode writing with snapshot versioning, configurable LLM provider/model selection on Settings page
+- Memory review surfaces: Three collapsible MemoryNodeCard sections (Provenance with StepRecord expansion, Snapshot History with LineDiff line-level diff, Relationships with edge navigation), GetIncomingEdgesAsync reverse lookup, restore confirmation overlay
 
 Known tech debt:
 - ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred
@@ -224,8 +207,8 @@ Known tech debt:
 - ILLMService remains in Core (ChatMessageInput moved to Contracts but ILLMService depends on LLMResult + streaming)
 - Schema mismatch between CLI and Runtime (extended manifest fields)
 - TextJoin fixed 3 input ports — static port system limitation
-- ~~BootMemoryInjector registered in DI but never called from run-start path~~ (resolved in Phase 52)
-- ~~GetToolDescriptors() declared but never consumed by LLM — no tool schema injection~~ (resolved in Phase 53)
+- LLMProviderRegistryService.InitializeAsync not called at startup (self-heals on /settings visit)
+- LLMModelInfo has no IsEnabled field — model-level disabled rendering deferred
 - 26+ pre-existing CS0618 deprecation warnings for IAnimaContext/IAnimaModuleConfigService
 
 ## Key Decisions
@@ -326,6 +309,19 @@ Known tech debt:
 | LLMModule WaitAsync for workflow branches | Serializes concurrent calls instead of Wait(0) drop — correctness for workflow fan-out | ✓ Good — v2.0 |
 | WorkflowPresetService presetsDir constructor arg | Testable preset loading with pragma_table_info migration check | ✓ Good — v2.0 |
 | Preset JSON as Content Include in csproj | No manual copy step at runtime — CopyToOutputDirectory Always | ✓ Good — v2.0 |
+| AES-GCM + PBKDF2 for API key encryption | Machine-fingerprint derived key; authenticated encryption prevents tampering | ✓ Good — v2.0.1 |
+| Write-only API key field via @oninput | Never @bind — prevents stored key from leaking to DOM | ✓ Good — v2.0.1 |
+| Three-layer LLM config precedence | Provider-backed > manual > global — deterministic resolution, manual fallback preserved | ✓ Good — v2.0.1 |
+| CascadingDropdown ConfigFieldType | Two-tier provider/model rendering in EditorConfigSidebar without new component | ✓ Good — v2.0.1 |
+| __manual__ sentinel for manual LLM config | Explicit bypass marker instead of null/empty ambiguity | ✓ Good — v2.0.1 |
+| Dictionary dedup by URI for recall | Single RecalledNode per memory URI; glossary keywords joined in reason string | ✓ Good — v2.0.1 |
+| Boot recall seeded before Disclosure | byUri dictionary starts with Boot entries so type/priority preserved through merge | ✓ Good — v2.0.1 |
+| XML system message for memory injection | <system-memory> block at message[0]; routing before memory before conversation | ✓ Good — v2.0.1 |
+| SedimentationService llmCallOverride constructor param | Tests inject fake delegate without mocking OpenAI SDK internals | ✓ Good — v2.0.1 |
+| Fire-and-forget sedimentation with CancellationToken.None | Snapshot capture + background Task.Run; isolated from LLM call lifecycle | ✓ Good — v2.0.1 |
+| Lazy<IStepRecorder> in BootMemoryInjector | Breaks DI circular dependency surfaced during visual verification | ✓ Good — v2.0.1 |
+| Provenance section expanded by default | Most relevant context on node selection; History/Relationships collapsed | ✓ Good — v2.0.1 |
+| CountAffectedModules for provider impact | Scans all Anima module configs by provider slug for real impact counts | ✓ Good — v2.0.1 |
 
 ## Constraints
 
@@ -336,4 +332,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-23 after Phase 57 (integration-wiring-metadata-fixes) completion*
+*Last updated: 2026-03-23 after v2.0.1 milestone*

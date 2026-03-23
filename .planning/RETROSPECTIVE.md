@@ -255,15 +255,66 @@
 
 ---
 
+## Milestone: v2.0.1 — Provider Registry & Living Memory
+
+**Shipped:** 2026-03-23
+**Phases:** 8 | **Plans:** 16 | **Commits:** 115
+
+### What Was Built
+- Global LLM Provider Registry: ILLMProviderRegistry contract, LLMProviderRegistryService with AES-GCM encrypted credentials, full CRUD Settings UI (ProviderCard/ProviderDialog/ProviderModelList/ProviderImpactList), connection testing with 30s timeout
+- LLM module configuration: IModuleConfigSchema with CascadingDropdown field type, three-layer config precedence, auto-clear on deleted provider/model, EditorConfigSidebar LLM-specific cascading dropdown rendering
+- Automatic memory recall: IMemoryRecallService with boot injection (core:// prefix), DisclosureMatcher trigger matching, GlossaryIndex keyword matching, ranked/deduped/bounded RecalledMemoryResult, XML <system-memory> injection in LLMModule
+- Memory tools: MemoryRecallTool + MemoryLinkTool as IWorkspaceTools with XML tool descriptor injection via BuildToolDescriptorBlock
+- Living memory sedimentation: ISedimentationService with fire-and-forget LLM extraction, JSON keyword normalization, provenance-backed MemoryNode writing with snapshot versioning
+- Sedimentation LLM config: Settings page Living Memory section with cascading provider/model dropdowns for sedimentation pipeline activation
+- Memory review surfaces: Three collapsible MemoryNodeCard sections (Provenance, Snapshot History, Relationships) with LineDiff, restore confirmation, edge navigation
+- Integration wiring: Boot recall in RecallAsync, CountAffectedModules for real impact counts, SUMMARY metadata gap closure
+
+### What Worked
+- Tight phasing: 6 initial phases (50-55) designed at roadmap creation, 2 gap closure phases (56-57) added after audit — clean gap identification and resolution
+- Audit-driven gap closure: First audit found 3/31 unsatisfied requirements + 3 integration gaps; Phases 56-57 closed all gaps before milestone completion
+- Consistent DI patterns: ILLMProviderRegistry, IMemoryRecallService, ISedimentationService all followed established singleton + optional constructor param patterns
+- Fire-and-forget sedimentation: Task.Run with CancellationToken.None and snapshot-captured values — clean isolation from LLM call lifecycle
+- 603/603 tests green with zero regressions across 8 phases — 34 new tests added during milestone
+
+### What Was Inefficient
+- SUMMARY frontmatter one_liner field null for all 16 summaries — summary-extract tool returned null for all, required manual accomplishment extraction
+- LLMProviderRegistryService.InitializeAsync ordering dependency — providers empty until user visits /settings (self-heals but bad UX on first launch)
+- Nyquist compliance partial: 5/8 phases have draft VALIDATION.md (all non-compliant), 3 phases missing entirely — systemic gap continues
+- Phase 56 and 57 planned without discuss-phase — directly created after audit gap identification, but could have benefited from targeted questioning
+- Two-day milestone execution compressed 8 phases into very dense sessions — higher context pressure than spreading over 3+ days
+
+### Patterns Established
+- AES-GCM + PBKDF2 machine-fingerprint key derivation for local secret encryption — reusable for any future credential storage
+- CascadingDropdown ConfigFieldType: Two-tier select rendering in EditorConfigSidebar driven by IModuleConfigSchema field metadata
+- __manual__ sentinel: Explicit bypass marker for manual LLM config path — avoids null/empty ambiguity
+- Boot recall seeded before Disclosure/Glossary: byUri dictionary starts with Boot entries, merge preserves type/priority
+- Fire-and-forget sedimentation: snapshot + Task.Run + CancellationToken.None — pattern for background work after LLM calls
+
+### Key Lessons
+1. Audit-driven gap closure (audit → identify gaps → add phases → re-audit) is the most effective way to ensure milestone completeness — v2.0.1 went from 28/31 to 31/31 requirements
+2. LLMProviderRegistryService.InitializeAsync ordering should have been wired into IHostedService from the start — deferred startup initialization creates subtle UX gaps
+3. SUMMARY one_liner frontmatter needs to be populated during execution — automated extraction fails when the field is missing
+4. Provider registry CRUD pattern (card list → dialog → impact check → confirm) is reusable for any entity management UI
+5. Three-layer config precedence (registry-backed > manual > global) is a clean pattern for gradual migration from legacy config
+
+### Cost Observations
+- Model mix: ~60% sonnet (executor), ~30% haiku (research), ~10% opus (planning/audit)
+- Sessions: ~4 sessions across 2 days
+- Notable: 8 phases / 16 plans in 2 days — 8 plans/day matches v2.0's record pace; gap closure phases (56-57) took <30min combined
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Commits | Phases | Notable Patterns |
 |-----------|---------|--------|------------------|
+| v2.0.1 | 115 | 8 | Provider registry, memory recall pipeline, sedimentation, review surfaces |
+| v2.0 | 48 | 5 | Durable runs, workspace tools, run inspector, memory graph, workflow presets |
 | v1.9 | ~15 | 3 | Event-driven propagation, cycle support, schema-first config |
 | v1.8 | 45 | 4 | PluginLoader DI, ChatMessageInput migration, IModuleStorage, ContextModule |
 | v1.7 | ~40 | 6 | ActivityChannelHost, Contracts expansion, module decoupling |
 | v1.6 | 25 | 4 | Cross-Anima routing, format detection, HTTP module |
-| v2.0 | 48 | 5 | Durable runs, workspace tools, run inspector, memory graph, workflow presets |
 | v1.5 | 55 | 5 | Multi-instance architecture, i18n, module config |
 | v1.4 | ~20 | 3 | CLI tool, .oamod packaging |
 | v1.3 | ~40 | 10 | SVG editor, port system, verification backfill |
@@ -285,6 +336,7 @@
 | v1.8 | ~25,015 | ContractsTypeMap DI, bound service injection, semaphore priority | 7 |
 | v1.9 | ~27,500 | Event-driven propagation, ITickable removal, schema-first sidebar | 6 |
 | v2.0 | ~41,773 | SQLite WAL stores, IWorkspaceTool, JoinBarrier, Aho-Corasick glossary, workflow presets | 11 |
+| v2.0.1 | ~44,700 | AES-GCM encryption, CascadingDropdown, memory recall pipeline, sedimentation, review surfaces | 6 |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -298,3 +350,5 @@
 8. Gap closure plans are healthy — catching issues in verification and fixing in a dedicated plan is better than ignoring (v1.8 lesson)
 9. Linear phase dependency chains deliver faster than broad parallel phases — each builds directly on previous with minimal context switching (v2.0 lesson)
 10. SQLite WAL + per-operation connections is the reliable embedded persistence pattern — zero connection bugs across 3 independent stores (v2.0 lesson)
+11. Audit-driven gap closure (audit → gaps → add phases → re-audit) is the most effective milestone completeness strategy — v2.0.1 went from 28/31 to 31/31 requirements (v2.0.1 lesson)
+12. Fire-and-forget background work after LLM calls should use snapshot-captured values + CancellationToken.None — isolates background work from caller lifecycle (v2.0.1 lesson)

@@ -1,5 +1,28 @@
 # Milestones
 
+## v2.0.1 Provider Registry & Living Memory (Shipped: 2026-03-23)
+
+**Phases:** 50-57 | **Plans:** 16 | **Tasks:** ~30 | **LOC:** ~2,000 C# added (+26,600 insertions)
+**Git range:** feat(50-01)..docs(phase-57) | **Timeline:** 2026-03-22 → 2026-03-23 (2 days)
+
+**Delivered:** UI-driven LLM provider registry with encrypted credentials, automatic memory recall pipeline with bounded prompt injection, tool-aware memory operations, living memory sedimentation with provenance-backed snapshot history, and memory review surfaces — enabling agents to accumulate and reuse knowledge safely.
+
+**Key accomplishments:**
+
+- Global LLM Provider Registry with AES-GCM encrypted API key storage, full CRUD UI on Settings page, connection testing, and safe disable/delete with impact surfacing
+- LLM module cascading provider/model dropdown selection with three-layer config precedence (provider-backed > manual > global) and manual fallback
+- Automatic memory recall pipeline: boot injection at run start, disclosure trigger matching, glossary keyword matching (Aho-Corasick) — ranked, deduplicated, bounded XML prompt injection
+- Tool-aware memory operations: memory_recall and memory_link IWorkspaceTools with XML descriptor injection into LLM system messages
+- Living memory sedimentation: fire-and-forget LLM extraction of stable knowledge into provenance-backed memory nodes with snapshot versioning
+- Memory review surfaces on /memory: snapshot history diff viewer (LCS line-level), provenance StepRecord expansion, relationship edge browsing with clickable navigation
+- Full test suite: 603/603 green, zero regressions across all 8 phases
+
+**Tech debt (accepted):** 6 items — LLMProviderRegistryService.InitializeAsync not called at startup (self-heals on /settings visit), LLMModelInfo lacks IsEnabled field (provider-level disable covers primary case), 4 sets of human UI verification pending. See v2.0.1-MILESTONE-AUDIT.md.
+
+**Archive:** [milestones/v2.0.1-ROADMAP.md](milestones/v2.0.1-ROADMAP.md) | [milestones/v2.0.1-REQUIREMENTS.md](milestones/v2.0.1-REQUIREMENTS.md) | [milestones/v2.0.1-MILESTONE-AUDIT.md](milestones/v2.0.1-MILESTONE-AUDIT.md)
+
+---
+
 ## v2.0 Structured Cognition Foundation (Shipped: 2026-03-21)
 
 **Phases:** 45-49 | **Plans:** 18 | **Tasks:** ~40 | **LOC:** ~11,234 C# added (+11,234 insertions)
