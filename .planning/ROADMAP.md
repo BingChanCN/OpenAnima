@@ -183,11 +183,11 @@ Plans:
   2. After the agent finishes, the assistant bubble shows a "Used N tools" badge reflecting the total number of tool calls in that response
   3. The send button is disabled for the full duration of the agent loop and re-enables only after the final response is delivered
   4. An agent conversation that runs 10 iterations does not time out — the generation timeout covers the full loop duration
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 59-01: ChatSessionMessage tool_call variant and ChatMessage.razor tool call bubble
-- [ ] 59-02: ChatPanel event subscriptions, timeout extension, and send lock
+- [ ] 59-01-PLAN.md — ToolCallInfo data model, event payloads, LLMModule event publishing, ChatMessage tool card rendering and badge
+- [ ] 59-02-PLAN.md — ChatPanel event subscriptions, per-event timeout reset, cancel button transformation, and send lock
 
 ### Phase 60: Hardening and Memory Integration
 **Goal**: Agent loop interactions are durably observable in the Run inspector and the memory graph receives clean, useful content from agent exchanges rather than raw tool output JSON
@@ -272,4 +272,4 @@ Plans:
 **In progress: 3 phases, ~5 plans — v2.0.2**
 
 ---
-*Last updated: 2026-03-23 — Phase 58 plans created*
+*Last updated: 2026-03-23 — Phase 59 plans created*
