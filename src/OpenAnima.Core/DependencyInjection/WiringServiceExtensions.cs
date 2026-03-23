@@ -48,6 +48,7 @@ public static class WiringServiceExtensions
 
         // Register concrete modules as singletons (shared across scopes)
         // Note: module instances are shared across Animas (known limitation — see ANIMA-08)
+        services.AddSingleton<AgentToolDispatcher>();
         services.AddSingleton<LLMModule>();
         services.AddSingleton<ChatInputModule>();
         services.AddSingleton<ChatOutputModule>();
