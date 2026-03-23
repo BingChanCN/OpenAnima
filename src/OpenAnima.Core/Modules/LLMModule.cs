@@ -7,6 +7,7 @@ using OpenAnima.Contracts.Routing;
 using OpenAnima.Core.LLM;
 using OpenAnima.Core.Memory;
 using OpenAnima.Core.Providers;
+using OpenAnima.Core.Events;
 using OpenAnima.Core.Tools;
 using OpenAnima.Core.Runs;
 using OpenAnima.Core.Services;
@@ -891,8 +892,27 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
             foreach (var toolCall in parsed.ToolCalls)
             {
                 ct.ThrowIfCancellationRequested();
+
+                // Publish ToolCallStarted BEFORE execution
+                await _eventBus.PublishAsync(new ModuleEvent<ToolCallStartedPayload>
+                {
+                    EventName = "LLMModule.tool_call.started",
+                    SourceModuleId = Metadata.Name,
+                    Payload = new ToolCallStartedPayload(toolCall.ToolName, toolCall.Parameters)
+                }, ct);
+
                 var toolResult = await _agentToolDispatcher!.DispatchAsync(animaId, toolCall, ct);
                 toolResultSb.AppendLine(toolResult);
+
+                // Publish ToolCallCompleted AFTER execution
+                var isSuccess = toolResult.Contains("success=\"true\"");
+                var summary = ExtractResultSummary(toolResult);
+                await _eventBus.PublishAsync(new ModuleEvent<ToolCallCompletedPayload>
+                {
+                    EventName = "LLMModule.tool_call.completed",
+                    SourceModuleId = Metadata.Name,
+                    Payload = new ToolCallCompletedPayload(toolCall.ToolName, summary, isSuccess)
+                }, ct);
             }
 
             // Add tool results to history as tool role message
@@ -935,6 +955,24 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
 
     private static string EscapeXmlContent(string value)
         => value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
+
+    /// <summary>
+    /// Extracts content text from the XML tool_result envelope and truncates for event transport.
+    /// Input format: &lt;tool_result name="..." success="..."&gt;content&lt;/tool_result&gt;
+    /// </summary>
+    private static string ExtractResultSummary(string toolResultXml)
+    {
+        // Strip XML envelope: find content between > and </tool_result>
+        var startTag = toolResultXml.IndexOf('>');
+        var endTag = toolResultXml.LastIndexOf("</tool_result>", StringComparison.OrdinalIgnoreCase);
+        if (startTag >= 0 && endTag > startTag)
+        {
+            var content = toolResultXml[(startTag + 1)..endTag].Trim();
+            return content.Length > 500 ? content[..500] + "..." : content;
+        }
+        // Fallback: return full string truncated
+        return toolResultXml.Length > 500 ? toolResultXml[..500] + "..." : toolResultXml;
+    }
 
     /// <summary>
     /// Fires sedimentation as a background Task.Run after every successful response publication.
