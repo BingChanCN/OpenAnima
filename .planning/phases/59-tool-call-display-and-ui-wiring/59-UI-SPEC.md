@@ -13,13 +13,13 @@ status: draft
 *(Source: Codebase detection - Blazor project, no `components.json` or React detected).*
 
 ## 2. Layout & Spacing
-- **Scale:** 4-point scale (4, 8, 12, 16, 24).
+- **Scale:** 8-point scale (4, 8, 16, 24, 32, 48, 64).
 - **Container Paddings:**
-  - Tool Card internal padding: `12px` (`0.75rem`) — matches existing `.message-content`.
+  - Tool Card internal padding: `16px` (`1rem`) — modified from `.message-content`.
   - Tool Badge padding: `4px 8px` (`0.25rem 0.5rem`).
 - **Gaps:** 
   - Between tool cards: `8px` (`0.5rem`).
-  - Between tool cards and final text: `12px` (`0.75rem`).
+  - Between tool cards and final text: `16px` (`1rem`).
 - **Border Radius:** `8px` for main cards, `4px` for badges/inner blocks.
 - **Exceptions:** None.
 
@@ -53,11 +53,11 @@ status: draft
 *(Source: Pre-populated from `59-CONTEXT.md` icon color requirements and codebase standard colors).*
 
 ## 5. Copywriting
-- **Primary CTA:** Cancel action (Red button replacing send button during execution).
+- **Primary CTA:** "Cancel Execution" (Red button replacing send button during execution).
 - **Textarea Placeholder (Running):** "Agent 正在运行..." / "Agent is running..."
 - **Tool Count Badge:** "🛠 已使用 N 个工具" / "🛠 Used N tools"
 - **Empty State:** N/A (Tools section remains completely hidden if count is 0).
-- **Error State Copy:** Failure shows `✗` next to tool name, with actual failure summary dumped in the result block. Destructive actions prompt skipped for this phase.
+- **Error State Copy:** Failure shows `✗` next to tool name, with the failure summary in the result block. Solution path text is included: "Execution failed. Please modify your request and try again." Destructive actions prompt skipped for this phase.
 
 *(Source: Explicitly defined in `59-CONTEXT.md` decisions).*
 
