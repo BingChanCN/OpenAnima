@@ -145,6 +145,8 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Active
 
+- ✓ Agent loop hardening: StepRecorder bracket steps (AgentLoop/AgentIteration), token budget management (70% of agentContextWindowSize), full-history sedimentation wiring with tool message truncation (HARD-01~03) — v2.0.2
+
 ## Current Milestone: v2.0.2 Chat Agent Loop
 
 **Goal:** Enable agents to autonomously call tools during conversation, closing the think→act→observe loop so users can build task-completing agents through the chat pipeline.
@@ -341,4 +343,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-23 after v2.0.2 milestone started*
+*Last updated: 2026-03-23 after Phase 60 (hardening-and-memory-integration) complete*
