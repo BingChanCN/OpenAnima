@@ -6,6 +6,45 @@ namespace OpenAnima.Tests.Unit;
 public class ChatSessionStateTests
 {
     [Fact]
+    public void ToolCallInfo_DefaultStatus_IsRunning()
+    {
+        var info = new ToolCallInfo();
+        Assert.Equal(ToolCallStatus.Running, info.Status);
+    }
+
+    [Fact]
+    public void ToolCallInfo_IsExpanded_DefaultsFalse()
+    {
+        var info = new ToolCallInfo();
+        Assert.False(info.IsExpanded);
+    }
+
+    [Fact]
+    public void ToolCallInfo_Parameters_DefaultsToEmptyDictionary()
+    {
+        var info = new ToolCallInfo();
+        Assert.Empty(info.Parameters);
+    }
+
+    [Fact]
+    public void ChatSessionMessage_ToolCalls_StartsEmpty()
+    {
+        var msg = new ChatSessionMessage();
+        Assert.NotNull(msg.ToolCalls);
+        Assert.Empty(msg.ToolCalls);
+    }
+
+    [Fact]
+    public void ChatSessionMessage_ToolCalls_IsMutable()
+    {
+        var msg = new ChatSessionMessage();
+        msg.ToolCalls.Add(new ToolCallInfo { ToolName = "read_file" });
+        Assert.Single(msg.ToolCalls);
+        Assert.Equal("read_file", msg.ToolCalls[0].ToolName);
+    }
+
+
+    [Fact]
     public void ScopedService_PersistsMessagesWithinSameScope()
     {
         var services = new ServiceCollection();
