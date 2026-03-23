@@ -56,3 +56,9 @@ None.
 Last session: 2026-03-23
 Stopped at: Milestone started
 Resume file: None
+
+### Quick Tasks Completed
+| Task | Date | Description |
+|---|---|---|
+| `260323-of9` | 2026-03-23 | UI review and fix editor layout overlap |
+| `260323-ox4` | 2026-03-23 | Redesign dialogs to rectangular and fix sidebar overlap |
