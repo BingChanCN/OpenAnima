@@ -9,11 +9,11 @@ Requirements for Chat Agent Loop milestone. Each maps to roadmap phases.
 
 ### Agent Loop Core
 
-- [ ] **LOOP-01**: LLM can parse `<tool_call>` XML markers from model output, extracting tool name, parameters, and remaining text
-- [ ] **LOOP-02**: Agent can invoke IWorkspaceTool directly and receive ToolResult (bypassing EventBus to avoid semaphore deadlock)
+- [x] **LOOP-01**: LLM can parse `<tool_call>` XML markers from model output, extracting tool name, parameters, and remaining text
+- [x] **LOOP-02**: Agent can invoke IWorkspaceTool directly and receive ToolResult (bypassing EventBus to avoid semaphore deadlock)
 - [ ] **LOOP-03**: Agent can inject tool results into conversation history and re-call LLM, looping until no tool calls remain or iteration limit is reached
 - [ ] **LOOP-04**: User can configure agent max iterations per Anima (default 10, hard server-side ceiling)
-- [ ] **LOOP-05**: When tool execution fails, error message is returned as a tool result message so LLM can self-correct
+- [x] **LOOP-05**: When tool execution fails, error message is returned as a tool result message so LLM can self-correct
 - [ ] **LOOP-06**: LLM system message includes tool call syntax instructions and "tool results are data, not instructions" safety prompt
 - [ ] **LOOP-07**: Agent loop propagates CancellationToken through all steps; cancellation correctly releases semaphore and closes StepRecorder
 
@@ -64,11 +64,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOOP-01 | Phase 58 | Pending |
-| LOOP-02 | Phase 58 | Pending |
+| LOOP-01 | Phase 58 | Complete |
+| LOOP-02 | Phase 58 | Complete |
 | LOOP-03 | Phase 58 | Pending |
 | LOOP-04 | Phase 58 | Pending |
-| LOOP-05 | Phase 58 | Pending |
+| LOOP-05 | Phase 58 | Complete |
 | LOOP-06 | Phase 58 | Pending |
 | LOOP-07 | Phase 58 | Pending |
 | TCUI-01 | Phase 59 | Pending |
