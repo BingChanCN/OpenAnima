@@ -1,182 +1,349 @@
 # Stack Research
 
-**Domain:** OpenAnima v2.0 Structured Cognition Foundation — local-first structured-cognition runtime for long-running developer agents
-**Researched:** 2026-03-20
+**Domain:** OpenAnima v2.0.2 Chat Agent Loop — agent loop, tool calling protocol, real-time UI updates
+**Researched:** 2026-03-23
 **Confidence:** HIGH
 
-## Recommended Stack
+## Context
 
-### Core Technologies
+This is a subsequent-milestone stack update. The existing stack (validated through v2.0.1) is:
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| .NET | 8.0 LTS | Core runtime, hosting, async execution, module platform | Already validated across v1.0–v1.9, matches current architecture, and avoids framework churn while v2.0 is still defining core agent behavior. |
-| Blazor Server + SignalR | 8.0.x | Local-first control plane, live graph state, task/run inspection UI | Existing stack already supports real-time runtime visibility; v2.0 should deepen observability instead of rebuilding the shell. |
-| `System.Threading.Channels` + `SemaphoreSlim` | .NET 8 BCL | In-process scheduling, queueing, backpressure, per-node serialization | Already proven in `ActivityChannelHost` and `WiringEngine`; extend this model for long-running task lanes rather than introducing a new orchestration framework. |
-| Microsoft.Data.Sqlite | 10.0.5 | Persistent task/run/event/artifact metadata store | Best fit for single-user, local-first, developer workstation product: transactional, embedded, zero-ops, easy backup, and enough structure for resumable tasks. |
-| OpenTelemetry.Extensions.Hosting | 1.15.0 | Unified tracing/metrics/log correlation | Standard path to make multi-node execution understandable without inventing a custom telemetry system. |
-| ripgrep + Git | 15.1.0 / 2.53.0 | Codebase search, repo history, diff grounding, developer-task primitives | Fastest path to a genuinely useful developer agent. Reuse mature external tools instead of building a custom file-analysis engine first. |
+- .NET 8.0, Blazor Server, SignalR 8.0.x
+- OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3
+- Microsoft.Data.Sqlite 8.0.12, Dapper 2.1.72
+- Microsoft.Extensions.Http.Resilience 8.7.0
+- System.CommandLine 2.0.0-beta4 (CLI only)
 
-### Supporting Libraries
+**The question is not "what stack to use" — it is "what, if anything, to add or change."**
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| OpenTelemetry.Instrumentation.AspNetCore | 1.15.1 | Host-level request and server instrumentation | Use when correlating UI actions, runtime API calls, and background execution into one trace. |
-| OpenTelemetry.Exporter.Console | 1.15.0 | Local trace inspection during development | Use first while designing spans/events; add an OTLP exporter later only if the local debug surface becomes insufficient. |
-| SQLite FTS5 | bundled via SQLite native bundle | Lexical retrieval over notes, artifacts, summaries, and memory records | Use for v2.0 memory/search foundation before adding embeddings or a vector database. |
-| System.Text.Json | .NET 8 BCL | Persisting task snapshots, artifacts, summaries, and lightweight indices | Use for append-only event payloads and structured artifact manifests on disk. |
-| Microsoft.Extensions.Logging | existing | Structured logs during rollout of tracing | Use as the bridge layer while OpenTelemetry coverage grows; keep logs correlated to task/run IDs. |
+---
 
-### Development Tools
+## Recommended Stack Additions
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| `rg` / ripgrep | Fast codebase and file-content search | Shell out with explicit timeouts; capture plain-text output; do not rely on colored or interactive output. |
-| `git` | Repo state, diff, blame, commit-range grounding | Use read-oriented commands for autonomous analysis loops; mutating commands should remain explicit user actions. |
-| `dotnet build` / `dotnet test` | Verification for developer-agent tasks | Treat as first-class tool modules with structured result capture, duration, exit code, and artifact output. |
+### No New NuGet Packages Required
 
-## Baseline to Keep
+The v2.0.2 milestone can be fully implemented using the existing OpenAI SDK 2.8.0 and the existing Blazor Server + SignalR infrastructure. Every new capability maps cleanly to existing SDK primitives.
 
-v2.0 should extend the runtime primitives already validated in the codebase, not replace them.
+---
 
-| Existing Primitive | Evidence | Why It Should Stay |
-|--------------------|----------|--------------------|
-| Event-driven fan-out routing | `src/OpenAnima.Core/Wiring/WiringEngine.cs` | Already supports cyclic topologies, payload isolation, and per-target serialization — this is the correct base for structure-driven cognition. |
-| Per-Anima named activity channels | `src/OpenAnima.Core/Channels/ActivityChannelHost.cs` | Already provides serial execution lanes, queue depth warning, and tick coalescing — ideal base for task/run scheduling and backpressure telemetry. |
-| Per-module / per-Anima file storage | `src/OpenAnima.Core/Services/ModuleStorageService.cs` | v2.0 does not need to invent persistence from scratch; it needs indexing, metadata, and lifecycle semantics on top of existing storage. |
-| Editor runtime state surface | `src/OpenAnima.Core/Services/EditorStateService.cs` | Existing per-node running/error display is a good seed for richer run inspection, failure forensics, and timeline UI. |
+## OpenAI SDK 2.8.0: Tool Calling API Surface
 
-## Recommended Runtime Additions
+All required types are confirmed present in the standalone `OpenAI` 2.8.0 NuGet package via assembly inspection:
 
-### 1. SQLite-backed run model
+| Type | Namespace | Purpose |
+|------|-----------|---------|
+| `ChatTool` | `OpenAI.Chat` | Defines a function tool via `CreateFunctionTool(name, description, parameters)` |
+| `ChatCompletionOptions` | `OpenAI.Chat` | Carries `Tools` list, `ToolChoice`, `AllowParallelToolCalls` |
+| `ChatToolChoice` | `OpenAI.Chat` | `CreateAutoChoice()`, `CreateFunctionChoice(name)` — controls model behavior |
+| `ChatFinishReason.ToolCalls` | `OpenAI.Chat` | Signals the model wants to invoke tools before completing |
+| `ChatFinishReason.Stop` | `OpenAI.Chat` | Normal completion — add assistant message and exit loop |
+| `ChatToolCall` | `OpenAI.Chat` | Single tool call: `Id`, `FunctionName`, `FunctionArguments` (BinaryData) |
+| `ToolChatMessage` | `OpenAI.Chat` | Returns tool result back to the model: `new ToolChatMessage(toolCall.Id, resultJson)` |
+| `AssistantChatMessage` | `OpenAI.Chat` | Wraps assistant response including tool calls: `new AssistantChatMessage(completion)` |
+| `StreamingChatToolCallUpdate` | `OpenAI.Chat` | Streaming fragment for a tool call: `ToolCallId`, `FunctionName`, `FunctionArgumentsUpdate`, `Index` |
 
-Add a small embedded relational layer for durable execution state:
+**Important:** `StreamingChatToolCallsBuilder` does NOT exist in the standalone `OpenAI` 2.8.0 package. It is available in `Azure.AI.OpenAI` (a separate package built on top of the standalone SDK). Manual accumulation is required for streaming tool calls — this is straightforward (see implementation pattern below).
 
-- `task_runs` — long-running user task instances
-- `task_steps` — module/tool/route execution steps
-- `task_artifacts` — generated files, summaries, intermediate outputs
-- `task_events` — append-only timeline for replay/debugging
-- `memory_records` — indexed notes/summaries/chunks for retrieval
+### Tool Definition Pattern (2.8.0)
 
-Why SQLite first:
-- single-user local app
-- crash recovery and resumability matter more than distributed scale
-- supports transactions for “step started / step finished / artifact written” state changes
-- can drive timeline UI and postmortem debugging without additional infrastructure
-
-### 2. Observability as product surface, not just logging
-
-Instrument these span/event boundaries first:
-
-- user request accepted
-- task run created / resumed / cancelled / completed
-- module execution start / end / failure
-- route fan-out from one node to N downstream nodes
-- tool invocation start / end / exit code / timeout
-- memory lookup start / end / hit count
-- artifact write / read
-
-This turns the graph from “nodes that ran” into “why the system made this decision.”
-
-### 3. Tool-first developer workflow primitives
-
-For v2.0, the minimum useful developer-agent surface should be:
-
-- repo-aware file search via `rg`
-- repo state awareness via `git status`, `git diff`, `git log`
-- file read/write artifact pipeline
-- command execution with timeout, exit code, stdout/stderr capture
-- explicit workspace root abstraction per task run
-
-This is more important than adding new model tricks. A developer agent becomes useful when it can inspect, reason, act, and verify in a persistent loop.
-
-### 4. Memory foundation: lexical + artifact-based first
-
-Do **not** make vector memory the first dependency. For v2.0 foundation, memory should be:
-
-- persisted to local files + SQLite metadata
-- searchable by FTS5
-- attached to runs/tasks/artifacts with provenance
-- summarizable into stable notes
-- inspectable by the user
-
-This keeps memory deterministic and debuggable while the retrieval model is still evolving.
-
-## Installation
-
-```bash
-# Persistence + observability
- dotnet add "src/OpenAnima.Core/OpenAnima.Core.csproj" package Microsoft.Data.Sqlite --version 10.0.5
- dotnet add "src/OpenAnima.Core/OpenAnima.Core.csproj" package OpenTelemetry.Extensions.Hosting --version 1.15.0
- dotnet add "src/OpenAnima.Core/OpenAnima.Core.csproj" package OpenTelemetry.Instrumentation.AspNetCore --version 1.15.1
- dotnet add "src/OpenAnima.Core/OpenAnima.Core.csproj" package OpenTelemetry.Exporter.Console --version 1.15.0
-
-# External developer tools (example for Debian/Ubuntu; use OS equivalent elsewhere)
- sudo apt-get install ripgrep git
+```csharp
+var tool = ChatTool.CreateFunctionTool(
+    functionName: "file_read",
+    functionDescription: "Read the contents of a file in the workspace.",
+    functionParameters: BinaryData.FromBytes("""
+    {
+        "type": "object",
+        "properties": {
+            "path": { "type": "string", "description": "Relative path to the file" },
+            "offset": { "type": "integer", "description": "Line to start reading from (optional)" }
+        },
+        "required": ["path"]
+    }
+    """u8.ToArray())
+);
 ```
 
-## Alternatives Considered
+**Note:** Use `BinaryData.FromBytes(...u8.ToArray())` (UTF-8 byte literal, stable API in 2.x stable) not `BinaryData.FromString(...)` (beta-era pattern).
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| Microsoft.Data.Sqlite | PostgreSQL | Use PostgreSQL only if OpenAnima later becomes multi-user, remote-worker, or network-synchronized. That is not v2.0’s foundation problem. |
-| OpenTelemetry | Custom ad-hoc logs only | Use logs-only for tiny local debugging spikes, but not as the milestone observability foundation. Logs alone will not explain multi-node execution paths. |
-| ripgrep + git | Custom in-process code indexer | Use a custom indexer only after real evidence that external CLI tooling is the bottleneck. For v2.0 it is faster and safer to reuse mature tools. |
-| Channels + `SemaphoreSlim` | Temporal / Orleans / actor frameworks | Use a workflow/actor framework only when execution crosses process or machine boundaries. v2.0 is still single-machine, local-first, and graph-native. |
-| SQLite FTS5 memory foundation | Vector database | Use vector retrieval later if lexical/artifact retrieval proves insufficient. v2.0 first needs inspectable, deterministic memory records with provenance. |
+### Non-Streaming Agent Loop Pattern (2.8.0)
 
-## What NOT to Use
+The correct loop for the in-process agent execution in `LLMModule`:
+
+```csharp
+var options = new ChatCompletionOptions();
+foreach (var tool in tools)
+    options.Tools.Add(tool);
+
+int iterations = 0;
+while (iterations < maxIterations)
+{
+    var completion = await chatClient.CompleteChatAsync(messages, options, ct);
+
+    if (completion.Value.FinishReason == ChatFinishReason.Stop)
+    {
+        // Done — publish final response
+        messages.Add(new AssistantChatMessage(completion.Value));
+        break;
+    }
+
+    if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
+    {
+        messages.Add(new AssistantChatMessage(completion.Value));
+
+        foreach (var toolCall in completion.Value.ToolCalls)
+        {
+            // Dispatch to IWorkspaceTool, get JSON result
+            var result = await DispatchToolCallAsync(toolCall, ct);
+            messages.Add(new ToolChatMessage(toolCall.Id, result));
+        }
+
+        iterations++;
+        continue;
+    }
+
+    // FinishReason.Length, ContentFilter, etc. — treat as terminal
+    break;
+}
+```
+
+**Known issue in SDK 2.x (GitHub Issue #218):** Passing `options` in `CompleteChatAsync` after `ToolChatMessage` entries are in the message list can cause a `400 Bad Request` from some providers. Mitigation: pass options only on the first call, or pass `null` for options after tool results are appended. Alternatively, reconstruct `options` each loop iteration.
+
+### Streaming Agent Loop — Manual Accumulation
+
+Because `StreamingChatToolCallsBuilder` is absent from the standalone SDK 2.8.0, streaming tool call fragments must be accumulated manually:
+
+```csharp
+var contentBuilder = new StringBuilder();
+var toolCallAccumulator = new Dictionary<int, (string Id, string Name, StringBuilder Args)>();
+
+await foreach (var update in chatClient.CompleteChatStreamingAsync(messages, options, ct))
+{
+    // Accumulate content tokens (for real-time display)
+    foreach (var part in update.ContentUpdate)
+        contentBuilder.Append(part.Text);
+
+    // Accumulate tool call fragments by index
+    foreach (var tcUpdate in update.ToolCallUpdates)
+    {
+        var idx = tcUpdate.Index;
+        if (!toolCallAccumulator.TryGetValue(idx, out var entry))
+        {
+            entry = (tcUpdate.ToolCallId ?? "", tcUpdate.FunctionName ?? "", new StringBuilder());
+            toolCallAccumulator[idx] = entry;
+        }
+        entry.Args.Append(tcUpdate.FunctionArgumentsUpdate?.ToString() ?? "");
+    }
+
+    // Yield content tokens to UI (streaming display)
+    if (update.ContentUpdate.Count > 0)
+        await YieldTokenAsync(update.ContentUpdate[0].Text);
+}
+
+// Build AssistantChatMessage from accumulated tool calls
+var toolCalls = toolCallAccumulator.Values
+    .Select(e => ChatToolCall.CreateFunctionToolCall(e.Id, e.Name, BinaryData.FromString(e.Args.ToString())))
+    .ToList();
+```
+
+**However:** For the agent loop use case, the non-streaming `CompleteChatAsync` is simpler and preferred. Streaming adds complexity to the accumulation logic without meaningful benefit during tool-calling iterations. Use streaming only for the final "stop" response that is delivered to the chat UI.
+
+**Recommended approach:** Non-streaming for tool-calling iterations inside the agent loop. Streaming for the final response when `FinishReason == Stop` and no tool calls are pending.
+
+---
+
+## Integration with Existing `LLMModule`
+
+The agent loop runs entirely inside `LLMModule.ExecuteWithMessagesListAsync`. No new module is needed — this is an extension of the existing `CompleteWithCustomClientAsync` method.
+
+### What Changes in `LLMModule`
+
+| Existing | Required Change |
+|---------|----------------|
+| `CompleteWithCustomClientAsync` calls `CompleteChatAsync` once, returns `LLMResult` | Extend to loop on `FinishReason.ToolCalls`, dispatching to `WorkspaceToolModule._tools` directly or via a new `IAgentToolDispatcher` |
+| `BuildToolDescriptorBlock` builds XML for prompt injection | Replace with `ChatTool.CreateFunctionTool` construction from `IWorkspaceTool.Descriptor` — the LLM no longer parses XML, it gets native `tool_calls` from the API |
+| `LLMResult(success, content, error)` — single response record | Add `ToolCallsExecuted` count or iteration tracking for observability |
+| No iteration limit config | Add `agentMaxIterations` config key (default: 5) — follows `llmMaxRetries` pattern already in `GetSchema()` |
+
+### What Does NOT Change
+
+- `CallLlmAsync` three-layer provider resolution (provider-backed → manual → global) — preserved, just the inner call becomes an agent loop
+- Memory recall injection (`BuildMemorySystemMessage`) — still prepended before the loop starts
+- Format detection and self-correction loop — preserved for routing use cases (non-tool-call path)
+- `TriggerSedimentation` — fires after the final response, unchanged
+- `EventBus.PublishAsync` for response/error ports — unchanged
+- `_executionGuard` semaphore — unchanged
+
+### Tool Argument Format Change
+
+**Current (v2.0.1):** LLMModule injects XML descriptors into the system message. The LLM produces a JSON `{"tool": "name", "parameters": {...}}` payload in its text response. `WorkspaceToolModule` receives this via the `invoke` port (event bus).
+
+**New (v2.0.2):** LLMModule passes native `ChatTool` objects in `ChatCompletionOptions.Tools`. The LLM returns `FinishReason.ToolCalls` with `ChatToolCall` objects. LLMModule parses `toolCall.FunctionArguments` JSON directly and dispatches to tools — **bypassing the EventBus invoke port entirely during the agent loop**.
+
+The `WorkspaceToolModule` invoke port continues to work for heartbeat-driven tool invocations and external module wiring. The agent loop uses a direct dispatch path inside `LLMModule`.
+
+### Tool Argument Parsing
+
+`toolCall.FunctionArguments` is `BinaryData`. Parse with `JsonDocument`:
+
+```csharp
+using var doc = JsonDocument.Parse(toolCall.FunctionArguments);
+var parameters = doc.RootElement.EnumerateObject()
+    .ToDictionary(p => p.Name, p => p.Value.GetString() ?? "");
+```
+
+**Validate arguments before dispatching** — models can hallucinate parameters. Check required fields are present before calling `IWorkspaceTool.ExecuteAsync`.
+
+### `ChatTool` Construction from `ToolDescriptor`
+
+Build the JSON schema from `IWorkspaceTool.Descriptor` at call time:
+
+```csharp
+private static ChatTool BuildChatTool(ToolDescriptor descriptor)
+{
+    var required = descriptor.Parameters
+        .Where(p => p.Required)
+        .Select(p => $"\"{p.Name}\"");
+
+    var props = descriptor.Parameters
+        .Select(p => $"\"{p.Name}\": {{\"type\": \"{p.Type}\", \"description\": \"{p.Description}\"}}");
+
+    var schema = $$"""
+    {
+        "type": "object",
+        "properties": { {{string.Join(", ", props)}} },
+        "required": [{{string.Join(", ", required)}}]
+    }
+    """;
+
+    return ChatTool.CreateFunctionTool(
+        functionName: descriptor.Name,
+        functionDescription: descriptor.Description,
+        functionParameters: BinaryData.FromBytes(Encoding.UTF8.GetBytes(schema))
+    );
+}
+```
+
+---
+
+## Real-Time UI Updates During Agent Loop
+
+### Existing Infrastructure is Sufficient
+
+Blazor Server already has SignalR built-in. `ChatPanel.razor` uses the existing `ChatSessionMessage` / `_pendingAssistantResponse` TaskCompletionSource pattern. The chat UI needs to display tool call progress, but the underlying push mechanism is already in place.
+
+### What Changes in the UI
+
+| Current | Required Change |
+|---------|----------------|
+| `ChatSessionMessage { Role, Content, IsStreaming }` | Add `ToolCallsInProgress` (list of in-flight tool call names) or a `ToolCallLog` list |
+| Single assistant message — content fills in as response arrives | Agent loop: intermediate "thinking" state + tool call badges + final response |
+| `_pendingAssistantResponse` TaskCompletionSource resolved by `ChatOutputModule.OnMessageReceived` | Extend to handle tool-call progress events: `LLMModule.port.tool_start`, `LLMModule.port.tool_result` (new EventBus events) |
+
+**Recommendation:** Add new EventBus events `LLMModule.port.tool_start` and `LLMModule.port.tool_result` that `ChatPanel` subscribes to. For each `tool_start`, append a status line to the current assistant message (e.g., `[Running: file_read]`). For `tool_result`, update to `[Done: file_read (150ms)]`. This requires no new component — append to the streaming content string.
+
+**Alternative (simpler):** No streaming UI for tool calls. LLMModule publishes a single response with all tool call summaries embedded after all iterations complete. Trade-off: user sees no progress during multi-step execution. Not recommended for production.
+
+### `ChatPanel` Timeout Change Required
+
+`ChatPanel.razor` currently uses a 30-second timeout (`TimeSpan.FromSeconds(30)`) for assistant response. Multi-step agent loops can take 60-120+ seconds (each tool call + LLM re-call can take 10-30s). This timeout must be configurable per-Anima or set to a higher default (e.g., 300 seconds) with per-iteration progress resets.
+
+```csharp
+// Current — 30s hard timeout
+using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+// New — extend to 5 minutes, or use a per-step keepalive pattern
+using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(300));
+```
+
+---
+
+## What NOT to Add
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| Kafka / RabbitMQ / Redis Streams | Adds distributed-systems complexity to a single-user local product and obscures debugging early in the product lifecycle. | Existing in-process channels + SQLite durability |
-| Neo4j / graph database for cognition graph | The live cognition graph already exists in wiring/configuration. Adding a second graph persistence model now would duplicate concepts before execution semantics stabilize. | Current wiring model + SQLite run/event tables |
-| Vector DB as the first memory layer | Premature for a foundation milestone; makes retrieval less transparent and harder to debug before memory semantics are locked. | File artifacts + SQLite metadata + FTS5 |
-| Bespoke code-search engine | Reinvents functionality that `rg` and `git` already provide extremely well. | External CLI tools wrapped by safe tool modules |
-| Prompt-only “reflect harder” loops as the main cognition mechanism | Conflicts with the user goal of structure-driven cognition emerging from graph topology and module interaction. | Observable multi-node task loops driven by wiring, state, and tools |
+| `Azure.AI.OpenAI` package | Brings `StreamingChatToolCallsBuilder` but adds a separate Azure SDK dependency. Manual accumulation is 10 lines of code. The standalone `OpenAI` SDK is already in the project. | Manual accumulation with `StreamingChatToolCallUpdate.Index` |
+| Upgrade to OpenAI SDK 2.9.1 | 2.9.0/2.9.1 adds the Responses API and web search but also changes `MessageRole` to a regular enum and renames `ToolChoice` in `ResponseCreationOptions`. The streaming/ChatTool surface is unchanged between 2.8.0 and 2.9.1. No feature in v2.0.2 requires the Responses API. | Stay on 2.8.0 — stable, tested, no breaking changes needed |
+| Separate `AgentLoopModule` | The agent loop is a behavioral change to `LLMModule` internal execution, not a new module type. A separate module would require new wiring between LLMModule and AgentLoopModule, adding complexity without value. | Extend `LLMModule.CompleteWithCustomClientAsync` |
+| Microsoft.Extensions.AI | Higher-level AI abstraction layer. Adds abstraction over the OpenAI SDK. This codebase has a deliberate `ILLMService` abstraction already. Adding another layer would create two abstraction stacks. | Use `OpenAI.Chat.ChatClient` directly (existing pattern) |
+| Semantic Kernel | Full orchestration framework. Heavy dependency, different programming model. The existing WiringEngine is the orchestration layer. | Existing WiringEngine + LLMModule agent loop |
+| New SignalR Hub for agent progress | The existing `RuntimeHub` and `IHubContext` injection pattern already handles real-time push. A new Hub adds routing complexity with no benefit. | Existing EventBus → `ChatPanel` event subscription |
+| JSON schema library (NJsonSchema, etc.) | Schema construction from `ToolDescriptor` is ~10 lines of string interpolation. A schema library adds a dependency for a trivial task. | Manual JSON string construction from `ToolDescriptor.Parameters` |
 
-## Stack Patterns by Variant
+---
 
-**If v2.0 remains single-user, local-first, and developer-oriented:**
-- Use SQLite + file artifacts + FTS5 + OpenTelemetry + `rg`/`git`
-- Because this yields the shortest path to a usable product with durable task state and transparent debugging
+## Alternatives Considered
 
-**If semantic code understanding becomes critical for C# repositories later in v2.x:**
-- Add Roslyn/LSP-based semantic indexing beside the `rg` baseline
-- Because lexical search is the right default, but semantic symbol graphs become valuable for refactoring-quality analysis
+| Recommended | Alternative | Why Not |
+|-------------|-------------|---------|
+| Non-streaming for tool-calling iterations, streaming for final response | Streaming throughout with manual accumulation | Accumulation adds ~50 lines of state management per loop. The tool-calling iterations are already async server-side — streaming doesn't improve UX because the LLM waits for all tool results before generating the next token. |
+| Direct dispatch from `LLMModule` to `IWorkspaceTool` implementations | Dispatch via EventBus `WorkspaceToolModule.port.invoke` | EventBus dispatch would require waiting for result on a separate subscription, creating a request-response pattern on top of a pub/sub bus — complexity without benefit. |
+| `agentMaxIterations` as a module config key | `ConvergenceGuard` (existing per-run step budget) | `ConvergenceGuard` is per-run across all steps. Agent loop iterations are per-LLM-call and need a much tighter bound (5-10 iterations vs 1000 steps). Both limits can coexist. |
+| Inline tool result in message history (standard OpenAI pattern) | Store tool results as artifacts in `IMemoryGraph` | Memory writes add latency and are for long-term recall. Tool results within an agent loop are ephemeral context — inline history is the standard pattern. |
+| Stay on OpenAI 2.8.0 | Upgrade to 2.9.1 | No v2.0.2 feature requires 2.9.x. The `MessageRole` enum change in 2.9.x would require touching every `switch` statement on message role. Risk without reward for this milestone. |
 
-**If future milestones introduce remote workers or multi-machine execution:**
-- Promote persistence to PostgreSQL and export telemetry through OTLP to a collector/backend
-- Because process boundaries then become a real systems problem; they are not yet a v2.0 requirement
+---
 
 ## Version Compatibility
 
-| Package A | Compatible With | Notes |
-|-----------|-----------------|-------|
-| `.NET 8.0` | `SignalR 8.0.x` | Keep major versions aligned; do not repeat the earlier SignalR major-version mismatch problem. |
-| `OpenTelemetry.Extensions.Hosting 1.15.0` | `net8.0` host apps | Recommended host integration package for runtime telemetry in the current stack. |
-| `OpenTelemetry.Instrumentation.AspNetCore 1.15.1` | ASP.NET Core / Blazor Server host on .NET 8 | Use with the existing web host to correlate UI actions and server-side execution. |
-| `Microsoft.Data.Sqlite 10.0.5` | `net8.0` | Official package supports .NET 8; default native bundle includes FTS5/JSON1 support. |
-| `ripgrep 15.1.0` | external CLI on developer workstation | Treat as an optional system capability checked at runtime, not a hard NuGet dependency. |
-| `git 2.53.0` | external CLI on developer workstation | Same pattern as ripgrep: capability-detected tool module, not embedded library dependency. |
+| Package | Version | Notes |
+|---------|---------|-------|
+| OpenAI | 2.8.0 (existing) | `ChatTool`, `ChatCompletionOptions.Tools`, `ChatFinishReason.ToolCalls`, `ToolChatMessage` all confirmed present via assembly inspection. No upgrade needed. |
+| OpenAI | 2.9.1 (available) | `MessageRole` enum change is the only relevant breaking change. Skip unless forced by a provider compatibility issue. |
+| Blazor Server / SignalR | 8.0.x (existing) | No change. Existing event subscription pattern in `ChatPanel.razor` handles new agent progress events via the same `EventBus.Subscribe<string>` mechanism. |
+| Microsoft.Data.Sqlite | 8.0.12 (existing) | No change. Agent loop state is in-memory within `LLMModule` execution. |
+| SharpToken | 2.0.4 (existing) | Token counting for context management still applies. Tool results injected as `ToolChatMessage` objects count against the context window. |
+
+---
+
+## Installation
+
+No new packages required. All features implemented using the existing stack.
+
+```bash
+# No new dotnet add package commands needed.
+# All required types (ChatTool, ChatCompletionOptions, ChatFinishReason, ToolChatMessage)
+# are in OpenAI 2.8.0 — already a project dependency.
+```
+
+---
+
+## Key SDK Facts (Verified via Assembly Inspection)
+
+Confirmed in `/home/user/.nuget/packages/openai/2.8.0/lib/net8.0/OpenAI.dll`:
+
+| Fact | Confidence |
+|------|------------|
+| `ChatTool.CreateFunctionTool(name, description, BinaryData)` exists | HIGH — direct assembly inspection |
+| `ChatCompletionOptions.Tools: IList<ChatTool>` exists | HIGH — direct assembly inspection |
+| `ChatCompletionOptions.ToolChoice: ChatToolChoice` exists | HIGH — direct assembly inspection |
+| `ChatCompletionOptions.AllowParallelToolCalls: bool?` exists | HIGH — direct assembly inspection |
+| `ChatFinishReason.ToolCalls` enum value exists | HIGH — direct assembly inspection |
+| `ChatToolCall.Id: string` exists | HIGH — direct assembly inspection |
+| `ChatToolCall.FunctionName: string` exists | HIGH — direct assembly inspection |
+| `ChatToolCall.FunctionArguments: BinaryData` exists | HIGH — direct assembly inspection |
+| `ToolChatMessage(string toolCallId, string content)` exists | HIGH — direct assembly inspection |
+| `StreamingChatToolCallUpdate.ToolCallId: string` exists | HIGH — direct assembly inspection |
+| `StreamingChatToolCallUpdate.FunctionArgumentsUpdate: BinaryData` exists | HIGH — direct assembly inspection |
+| `StreamingChatToolCallUpdate.Index: int` exists | HIGH — direct assembly inspection |
+| `StreamingChatToolCallsBuilder` does NOT exist in standalone 2.8.0 | HIGH — confirmed absent via assembly inspection |
+
+---
 
 ## Sources
 
-- Direct codebase inspection — `src/OpenAnima.Core/Wiring/WiringEngine.cs`, `src/OpenAnima.Core/Channels/ActivityChannelHost.cs`, `src/OpenAnima.Core/Services/ModuleStorageService.cs`, `src/OpenAnima.Core/Services/EditorStateService.cs`
-- `https://opentelemetry.io/docs/languages/dotnet/` — OpenTelemetry .NET overview and current guidance
-- `https://opentelemetry.io/docs/languages/dotnet/getting-started/` — starter package recommendations
-- `https://www.nuget.org/packages/OpenTelemetry.Extensions.Hosting` — current stable package version
-- `https://www.nuget.org/packages/OpenTelemetry.Instrumentation.AspNetCore` — current stable package version
-- `https://www.nuget.org/packages/OpenTelemetry.Exporter.Console` — current stable package version
-- `https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/` — official Microsoft.Data.Sqlite overview
-- `https://www.nuget.org/packages/Microsoft.Data.Sqlite` — current stable package version and target framework compatibility
-- `https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/custom-versions` — bundled SQLite features including FTS5
-- `https://www.sqlite.org/fts5.html` — official FTS5 reference
-- `https://github.com/BurntSushi/ripgrep` — official ripgrep docs and usage model
-- `https://github.com/BurntSushi/ripgrep/releases` — latest stable ripgrep release reference
-- `https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core` — .NET 8 support policy and lifecycle
+- Direct assembly inspection: `/home/user/.nuget/packages/openai/2.8.0/lib/net8.0/OpenAI.dll` — authoritative type verification for all SDK claims
+- Codebase inspection: `src/OpenAnima.Core/Modules/LLMModule.cs` — existing `CompleteWithCustomClientAsync`, `BuildToolDescriptorBlock`, `ExecuteWithMessagesListAsync`
+- Codebase inspection: `src/OpenAnima.Core/Modules/WorkspaceToolModule.cs` — `_tools` dictionary, `GetToolDescriptors()`, `HandleInvocationAsync`
+- Codebase inspection: `src/OpenAnima.Core/Tools/IWorkspaceTool.cs`, `ToolDescriptor.cs`, `ToolParameterSchema.cs`, `ToolResult.cs`
+- Codebase inspection: `src/OpenAnima.Core/Components/Shared/ChatPanel.razor` — existing `_pendingAssistantResponse` pattern, 30s timeout
+- Codebase inspection: `src/OpenAnima.Core/Services/ChatSessionState.cs` — `ChatSessionMessage` shape
+- WebSearch (MEDIUM): OpenAI .NET SDK tool calling patterns — https://github.com/openai/openai-dotnet
+- WebSearch (MEDIUM): `StreamingChatToolCallsBuilder` missing from standalone 2.1.0 NuGet — https://community.openai.com/t/streamingchattoolcallsbuilder-missing-in-openai-2-1-0-nuget/1104918
+- WebSearch (MEDIUM): Known issue with `CompleteChatAsync` + options after `ToolChatMessage` — https://github.com/openai/openai-dotnet/issues/218
+- WebSearch (MEDIUM): SDK 2.8.0 vs 2.9.1 changes — confirmed streaming/ChatTool surface unchanged — https://github.com/openai/openai-dotnet/blob/main/CHANGELOG.md
+- WebSearch (MEDIUM): `ChatFinishReason.ToolCalls` do-while agent loop pattern — https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/chatgpt
 
 ---
-*Stack research for: OpenAnima v2.0 Structured Cognition Foundation*
-*Researched: 2026-03-20*
+*Stack research for: OpenAnima v2.0.2 Chat Agent Loop*
+*Researched: 2026-03-23*
 *Confidence: HIGH*
