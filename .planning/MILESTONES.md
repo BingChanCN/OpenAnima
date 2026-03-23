@@ -1,5 +1,28 @@
 # Milestones
 
+## v2.0.2 Chat Agent Loop (Shipped: 2026-03-23)
+
+**Phases:** 58-60 | **Plans:** 5 | **Tasks:** 11 | **LOC:** +7,385 lines across 46 files
+**Git range:** feat(58-01)..docs(60-01) | **Timeline:** 2026-03-22 → 2026-03-23 (1 day)
+
+**Delivered:** Agent loop closing the think-act-observe cycle — LLMModule autonomously parses tool calls, dispatches to workspace tools, injects results, and re-calls the LLM until completion, with real-time tool call cards in chat, token budget management, bracket step recording in Run inspector, and full-history sedimentation to memory.
+
+**Key accomplishments:**
+
+- Agent loop core: ToolCallParser (compiled regex XML marker extraction), AgentToolDispatcher (direct dispatch bypassing EventBus), bounded iteration loop in LLMModule with configurable limit (max 50), cancellation safety, and system prompt tool-call syntax injection
+- Tool call display: real-time collapsible tool cards in assistant chat bubbles with three-state status icons (spinner/check/X), "Used N tools" badge, localized strings (en-US/zh-CN)
+- Agent UI controls: per-event resettable 60s timeout, send locking during agent execution, cancel button transformation in ChatInput
+- Token budget management: 70% of agentContextWindowSize guard with oldest assistant+tool pair dropping, truncation notice insertion, configurable context window size (default 128K)
+- Bracket step recording: AgentLoop/AgentIteration bracket steps in StepRecorder with PropagationId chaining, visible in Run inspector with CSS semantic classes
+- Full-history sedimentation: memory graph receives complete tool call reasoning chains with 500-char tool content truncation in BuildExtractionMessages
+- Test suite: 654/654 green (61 new agent/hardening tests), zero regressions
+
+**Tech debt (accepted):** 8 items — HARD-03 cancel iteration step leak (low severity), silent fallback when _workspaceToolModule=null, multi-Anima event cross-contamination risk (pre-existing ANIMA-08), human verification pending for 3 UI items. See v2.0.2-MILESTONE-AUDIT.md.
+
+**Archive:** [milestones/v2.0.2-ROADMAP.md](milestones/v2.0.2-ROADMAP.md) | [milestones/v2.0.2-REQUIREMENTS.md](milestones/v2.0.2-REQUIREMENTS.md) | [milestones/v2.0.2-MILESTONE-AUDIT.md](milestones/v2.0.2-MILESTONE-AUDIT.md)
+
+---
+
 ## v2.0.1 Provider Registry & Living Memory (Shipped: 2026-03-23)
 
 **Phases:** 50-57 | **Plans:** 16 | **Tasks:** ~30 | **LOC:** ~2,000 C# added (+26,600 insertions)

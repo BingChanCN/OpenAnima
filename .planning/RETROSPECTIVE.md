@@ -2,6 +2,52 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v2.0.2 — Chat Agent Loop
+
+**Shipped:** 2026-03-23
+**Phases:** 3 | **Plans:** 5 | **Commits:** ~18
+
+### What Was Built
+- ToolCallParser: compiled regex XML marker extraction from LLM output, handles unclosed tags, multiline params, multiple calls
+- AgentToolDispatcher: direct IWorkspaceTool dispatch (bypassing EventBus to prevent semaphore deadlock), output truncation at 8000 chars
+- LLMModule agent loop: RunAgentLoopAsync with bounded iteration (default 10, max 50), system prompt tool-call syntax block, CancellationToken propagation
+- Tool call display: ToolCallInfo model with three-state status, EventBus event publishing, collapsible tool cards in ChatMessage.razor, "Used N tools" badge
+- Agent UI controls: per-event resettable 60s timeout, send locking, ChatInput cancel button transformation
+- Token budget management: 70% of agentContextWindowSize guard, oldest pair dropping, truncation notice anchoring
+- Bracket step recording: AgentLoop/AgentIteration steps in StepRecorder with PropagationId chaining
+- Full-history sedimentation: tool role messages included with 500-char content truncation
+
+### What Worked
+- Tight 3-phase linear dependency chain (58→59→60) shipped in a single day with zero regressions
+- TDD approach for ToolCallParser and AgentToolDispatcher — tests written first, implementation driven by failing tests
+- Direct tool dispatch decision (locked in STATE.md before Phase 58) eliminated entire class of semaphore deadlock bugs
+- FormatDetector pattern reuse — ToolCallParser mirrors existing static compiled-regex approach, reducing design time
+- Auto-fix pattern for cascading test failures (schema count, DI container resolution) kept momentum without manual debugging
+
+### What Was Inefficient
+- Token budget tests required discovering that repeated-character strings (new string('A', 500)) tokenize to very few BPE tokens — needed diverse vocabulary content for realistic counts
+- FakeRunService added to hardeningTests because NullRunService returns "No active run" short strings — test infrastructure gap
+- 59-02-SUMMARY.md missing requirements_completed frontmatter for TCUI-03/04 — SUMMARY metadata discipline still inconsistent
+
+### Patterns Established
+- Agent loop as internal module concern: RunAgentLoopAsync is private to LLMModule; external consumers see only final response
+- CancellationTokenSource replacement pattern: dispose old CTS, create new CTS on each event — used for per-event resettable timeouts
+- SpyStepRecorder with incrementing stepId strings: enables PropagationId chain assertion without a real IRunService
+- Bracket step pattern: outer step + per-iteration inner steps + RecordStepCompleteAsync on all exit paths (success, cancel, error)
+
+### Key Lessons
+1. Direct dispatch (bypassing EventBus) is the right pattern for agent tool execution — prevents semaphore re-entrance that would deadlock the module execution model
+2. Token budget tests need realistic content (diverse vocabulary) — artificial repeated characters compress to minimal BPE tokens and don't trigger budget thresholds
+3. Single-day milestone delivery is achievable for 3-phase scopes with locked decisions and linear dependencies — total elapsed ~40 minutes of agent execution
+4. CSS semantic classes (agent-loop-bracket, agent-iteration) from RowClass computed property is cleaner than JavaScript class injection for timeline visual hierarchy
+
+### Cost Observations
+- Model mix: ~80% sonnet (executor), ~10% haiku (research), ~10% opus (planning/audit)
+- Sessions: 1 session, ~1 day
+- Notable: Fastest milestone by wall clock — 3 phases / 5 plans / 11 tasks in a single day; locked decisions from STATE.md eliminated planning overhead
+
+---
+
 ## Milestone: v1.9 — Event-Driven Propagation Engine
 
 **Shipped:** 2026-03-20
@@ -309,6 +355,7 @@
 
 | Milestone | Commits | Phases | Notable Patterns |
 |-----------|---------|--------|------------------|
+| v2.0.2 | ~18 | 3 | Agent loop, tool call display, token budget, bracket steps, full-history sedimentation |
 | v2.0.1 | 115 | 8 | Provider registry, memory recall pipeline, sedimentation, review surfaces |
 | v2.0 | 48 | 5 | Durable runs, workspace tools, run inspector, memory graph, workflow presets |
 | v1.9 | ~15 | 3 | Event-driven propagation, cycle support, schema-first config |
@@ -337,6 +384,7 @@
 | v1.9 | ~27,500 | Event-driven propagation, ITickable removal, schema-first sidebar | 6 |
 | v2.0 | ~41,773 | SQLite WAL stores, IWorkspaceTool, JoinBarrier, Aho-Corasick glossary, workflow presets | 11 |
 | v2.0.1 | ~44,700 | AES-GCM encryption, CascadingDropdown, memory recall pipeline, sedimentation, review surfaces | 6 |
+| v2.0.2 | ~52,000 | XML tool call markers, direct tool dispatch, bounded iteration, bracket steps, CTS replacement | 8 |
 
 ### Top Lessons (Verified Across Milestones)
 

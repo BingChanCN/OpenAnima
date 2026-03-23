@@ -2,14 +2,13 @@
 
 ## Current State
 
-**Latest shipped:** v2.0.1 Provider Registry & Living Memory (2026-03-23)
-**Current milestone:** v2.0.2 Chat Agent Loop
-**Milestones complete:** v1.0–v2.0.1 (12 milestones, 57 phases, 133 plans)
-**Codebase:** ~44,700 LOC (C#, Razor, CSS, JS) | 603 tests green
+**Latest shipped:** v2.0.2 Chat Agent Loop (2026-03-23)
+**Milestones complete:** v1.0–v2.0.2 (13 milestones, 60 phases, 138 plans)
+**Codebase:** ~52,000 LOC (C#, Razor, CSS, JS) | 654 tests green
 
 ## What This Is
 
-A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Users create multiple independent Anima instances — each with its own heartbeat, module wiring, chat interface, and configuration. Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based dashboard, visual drag-and-drop wiring editor, LLM-powered chat with UI-driven provider/model registry, durable task runtime with workspace tools, run inspection with propagation chain visualization, provenance-backed memory graph with automatic recall and living memory sedimentation, graph-native workflow presets, and full Chinese/English internationalization.
+A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Users create multiple independent Anima instances — each with its own heartbeat, module wiring, chat interface, and configuration. Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based dashboard, visual drag-and-drop wiring editor, LLM-powered chat with UI-driven provider/model registry, autonomous agent loop (tool calling with think-act-observe cycle), durable task runtime with workspace tools, run inspection with propagation chain visualization, provenance-backed memory graph with automatic recall and living memory sedimentation, graph-native workflow presets, and full Chinese/English internationalization.
 
 ## Core Value
 
@@ -142,20 +141,13 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ Tool-aware memory: memory_recall and memory_link tools with XML descriptor injection (TOOL-01~04) — v2.0.1
 - ✓ Living memory sedimentation: auto-extraction from LLM exchanges into provenance-backed memory nodes with snapshot history (LIVM-01~04) — v2.0.1
 - ✓ Memory review surfaces: snapshot diff viewer, provenance inspection, relationship edge browsing on /memory (MEMUI-01~03) — v2.0.1
+- ✓ Agent loop core: ToolCallParser XML marker extraction, AgentToolDispatcher direct dispatch, bounded iteration loop with configurable limit (max 50), system prompt tool-call syntax injection, cancellation safety (LOOP-01~07) — v2.0.2
+- ✓ Tool call display: real-time collapsible tool cards in chat bubbles, "Used N tools" badge, per-event resettable timeout, send locking, cancel button (TCUI-01~04) — v2.0.2
+- ✓ Agent loop hardening: StepRecorder bracket steps (AgentLoop/AgentIteration), token budget management (70% of agentContextWindowSize), full-history sedimentation wiring with tool message truncation (HARD-01~03) — v2.0.2
 
 ### Active
 
-- ✓ Agent loop hardening: StepRecorder bracket steps (AgentLoop/AgentIteration), token budget management (70% of agentContextWindowSize), full-history sedimentation wiring with tool message truncation (HARD-01~03) — v2.0.2
-
-## Current Milestone: v2.0.2 Chat Agent Loop
-
-**Goal:** Enable agents to autonomously call tools during conversation, closing the think→act→observe loop so users can build task-completing agents through the chat pipeline.
-
-**Target features:**
-- Agent loop in LLMModule (tool call parsing → execution → result injection → re-call)
-- Tool calling protocol integration (all 15 workspace + memory tools)
-- Real-time tool call display in Chat UI
-- Configurable iteration limit per Anima
+(None — planning next milestone)
 
 ### Deferred
 
@@ -200,17 +192,17 @@ Agents that proactively think and act on their own, while module connections rem
 
 ## Context
 
-Shipped v2.0.1 with ~44,700 LOC across all source files (C#, Razor, CSS, JS).
+Shipped v2.0.2 with ~52,000 LOC across all source files (C#, Razor, CSS, JS).
 Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4, Microsoft.Extensions.Http.Resilience 8.7.0, Microsoft.Data.Sqlite 8.0.12, Dapper 2.1.72.
-Full test suite: 603/603 green.
+Full test suite: 654/654 green.
 
-v2.0.1 delivered provider registry and living memory:
-- Provider registry: LLMProviderRegistryService with AES-GCM ApiKeyProtector, ILLMProviderRegistry contract in Contracts, full CRUD Settings UI (ProviderCard/ProviderDialog/ProviderModelList/ProviderImpactList), connection testing with 30s timeout
-- LLM module configuration: IModuleConfigSchema with cascading provider/model dropdowns, three-layer precedence (provider-backed > manual > global), auto-clear on deleted provider/model, EditorConfigSidebar LLM-specific rendering
-- Memory recall: IMemoryRecallService with boot injection (core:// prefix), DisclosureMatcher trigger matching, GlossaryIndex keyword matching, ranked/deduped/bounded RecalledMemoryResult, XML system message injection in LLMModule
-- Memory tools: MemoryRecallTool + MemoryLinkTool as IWorkspaceTools, XML tool descriptor injection via BuildToolDescriptorBlock in LLMModule system message
-- Living memory sedimentation: ISedimentationService with fire-and-forget LLM extraction, JSON keyword normalization, provenance-backed MemoryNode writing with snapshot versioning, configurable LLM provider/model selection on Settings page
-- Memory review surfaces: Three collapsible MemoryNodeCard sections (Provenance with StepRecord expansion, Snapshot History with LineDiff line-level diff, Relationships with edge navigation), GetIncomingEdgesAsync reverse lookup, restore confirmation overlay
+v2.0.2 delivered the chat agent loop:
+- Agent loop core: ToolCallParser (compiled regex XML marker extraction), AgentToolDispatcher (direct IWorkspaceTool dispatch bypassing EventBus), RunAgentLoopAsync bounded iteration in LLMModule, configurable agentMaxIterations (default 10, max 50), system prompt tool-call syntax block, CancellationToken propagation through all steps
+- Tool call display: ToolCallInfo data model with three-state status (Running/Success/Failed), EventBus event publishing (tool_call.started/completed), ChatMessage.razor collapsible tool cards with spinner/check/X icons, "Used N tools" badge, localized strings
+- Agent UI controls: ChatPanel per-event resettable 60s timeout (_agentTimeoutCts replacement pattern), send locking during agent execution, ChatInput cancel button transformation
+- Token budget management: agentContextWindowSize config field (default 128K), 70% budget floor with SharpToken cl100k_base counting, oldest assistant+tool pair dropping, truncation notice insertion
+- Bracket step recording: AgentLoop/AgentIteration bracket steps in StepRecorder with PropagationId chaining, StepTimelineRow CSS semantic classes
+- Full-history sedimentation: BuildExtractionMessages includes tool role messages with 500-char content truncation
 
 Known tech debt:
 - ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred
@@ -221,6 +213,9 @@ Known tech debt:
 - LLMProviderRegistryService.InitializeAsync not called at startup (self-heals on /settings visit)
 - LLMModelInfo has no IsEnabled field — model-level disabled rendering deferred
 - 26+ pre-existing CS0618 deprecation warnings for IAnimaContext/IAnimaModuleConfigService
+- HARD-03 cancel iteration step leak: in-flight AgentIteration bracket step not closed on cancellation (low severity)
+- Silent fallback when agentEnabled=true but _workspaceToolModule=null — no log warning
+- Multi-Anima agent event cross-contamination risk (pre-existing ANIMA-08 limitation)
 
 ## Key Decisions
 
@@ -333,6 +328,13 @@ Known tech debt:
 | Lazy<IStepRecorder> in BootMemoryInjector | Breaks DI circular dependency surfaced during visual verification | ✓ Good — v2.0.1 |
 | Provenance section expanded by default | Most relevant context on node selection; History/Relationships collapsed | ✓ Good — v2.0.1 |
 | CountAffectedModules for provider impact | Scans all Anima module configs by provider slug for real impact counts | ✓ Good — v2.0.1 |
+| XML text markers for tool calls | `<tool_call>` / `<param>` — consistent with existing `<route>` convention, provider-agnostic | ✓ Good — v2.0.2 |
+| Direct tool dispatch (no EventBus) | AgentToolDispatcher calls IWorkspaceTool.ExecuteAsync directly — prevents semaphore deadlock | ✓ Good — v2.0.2 |
+| Agent loop as LLMModule internal concern | RunAgentLoopAsync is private; WiringEngine/ChatOutputModule receive only final clean response | ✓ Good — v2.0.2 |
+| Hard iteration ceiling (max 50) | Never configurable to 0 or unbounded — default 10, server-side Math.Min clamp | ✓ Good — v2.0.2 |
+| Per-event resettable 60s timeout | _agentTimeoutCts replaced (not extended) on each tool call event — 60s from last activity | ✓ Good — v2.0.2 |
+| Token budget 70% of agentContextWindowSize | Oldest assistant+tool pairs dropped; truncation notice inserted before removal to stay anchored | ✓ Good — v2.0.2 |
+| agentContextWindowSize floor clamped to 1000 | Math.Max prevents zero-budget pathology from misconfigured small values | ✓ Good — v2.0.2 |
 
 ## Constraints
 
@@ -343,4 +345,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-23 after Phase 60 (hardening-and-memory-integration) complete*
+*Last updated: 2026-03-23 after v2.0.2 milestone*
