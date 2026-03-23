@@ -32,7 +32,6 @@ status: draft
   - Tool Name / Titles: `1.1rem` (~18px)
 - **Font Weights:**
   - Regular: `400` (Used for parameters, results, body text)
-  - Medium: `500` (Used for badge text)
   - Semibold: `600` (Used for tool names and headers)
 - **Line Heights:**
   - Body: `1.5`
