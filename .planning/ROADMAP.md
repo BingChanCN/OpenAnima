@@ -148,7 +148,7 @@
 
 </details>
 
-### 🚧 v2.0.2 Chat Agent Loop (In Progress)
+### v2.0.2 Chat Agent Loop (In Progress)
 
 **Milestone Goal:** Enable agents to autonomously call tools during conversation, closing the think-act-observe loop so users can build task-completing agents through the chat pipeline.
 
@@ -168,11 +168,11 @@
   3. When a tool call fails, the error message appears in the conversation history and the agent attempts to self-correct on the next iteration rather than crashing
   4. Pressing Cancel during agent execution stops the loop, releases the execution semaphore, and closes the StepRecorder cleanly — no deadlock or orphaned step
   5. The agent does not call tools via the EventBus; the semaphore is never re-entered from within the loop
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 58-01: ToolCallParser and AgentToolDispatcher
-- [ ] 58-02: LLMModule agent loop, config key, system prompt, and DI wiring
+- [ ] 58-01-PLAN.md — ToolCallParser and AgentToolDispatcher (Wave 1)
+- [ ] 58-02-PLAN.md — LLMModule agent loop, config, system prompt, and DI wiring (Wave 2)
 
 ### Phase 59: Tool Call Display and UI Wiring
 **Goal**: Users can see which tools the agent invoked, their status, and results directly inside the conversation — and cannot accidentally send a new message while the loop is running
@@ -272,4 +272,4 @@ Plans:
 **In progress: 3 phases, ~5 plans — v2.0.2**
 
 ---
-*Last updated: 2026-03-23 — v2.0.2 roadmap created*
+*Last updated: 2026-03-23 — Phase 58 plans created*
