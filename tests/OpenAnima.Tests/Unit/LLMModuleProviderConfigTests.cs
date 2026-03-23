@@ -264,13 +264,16 @@ public class LLMModuleProviderConfigTests : IDisposable
     {
         var (_, module) = CreateTestPair();
         var schema = ((IModuleConfigSchema)module).GetSchema();
-        Assert.Equal(5, schema.Count);
+        // Phase 58: 5 original fields + 2 agent fields (agentEnabled, agentMaxIterations) = 7 total
+        Assert.Equal(7, schema.Count);
         var keys = schema.Select(f => f.Key).ToHashSet();
         Assert.Contains("llmProviderSlug", keys);
         Assert.Contains("llmModelId", keys);
         Assert.Contains("apiUrl", keys);
         Assert.Contains("apiKey", keys);
         Assert.Contains("modelName", keys);
+        Assert.Contains("agentEnabled", keys);
+        Assert.Contains("agentMaxIterations", keys);
     }
 
     [Fact]

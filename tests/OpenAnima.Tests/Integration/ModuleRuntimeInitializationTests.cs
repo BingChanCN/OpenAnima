@@ -14,7 +14,9 @@ using OpenAnima.Core.Modules;
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Providers;
 using OpenAnima.Core.Routing;
+using OpenAnima.Core.Runs;
 using OpenAnima.Core.Services;
+using OpenAnima.Core.Tools;
 
 namespace OpenAnima.Tests.Integration;
 
@@ -105,6 +107,11 @@ public class ModuleRuntimeInitializationTests : IDisposable
             sp.GetRequiredService<LLMProviderRegistryService>());
 
         services.AddHttpClient("HttpRequest");
+
+        // Register fake IRunService and empty IWorkspaceTool collection for AgentToolDispatcher
+        // (Phase 58: AgentToolDispatcher is registered in AddWiringServices and requires these)
+        services.AddSingleton<IRunService>(new FakeRunService());
+        services.AddSingleton<IEnumerable<IWorkspaceTool>>(Array.Empty<IWorkspaceTool>());
 
         services.AddWiringServices(_tempConfigDir);
 
@@ -250,6 +257,32 @@ public class ModuleRuntimeInitializationTests : IDisposable
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
+    }
+
+    /// <summary>Fake run service — AgentToolDispatcher requires it in DI (Phase 58) but tests don't exercise runs.</summary>
+    private class FakeRunService : IRunService
+    {
+        public RunContext? GetActiveRun(string animaId) => null;
+
+        public Task<RunResult> StartRunAsync(string animaId, string objective, string workspaceRoot,
+            int? maxSteps = null, int? maxWallSeconds = null, string? workflowPreset = null,
+            CancellationToken ct = default)
+            => Task.FromResult(RunResult.Ok("fake-run"));
+
+        public Task<RunResult> PauseRunAsync(string runId, string reason, CancellationToken ct = default)
+            => Task.FromResult(RunResult.Ok(runId));
+
+        public Task<RunResult> ResumeRunAsync(string runId, CancellationToken ct = default)
+            => Task.FromResult(RunResult.Ok(runId));
+
+        public Task<RunResult> CancelRunAsync(string runId, CancellationToken ct = default)
+            => Task.FromResult(RunResult.Ok(runId));
+
+        public Task<IReadOnlyList<RunDescriptor>> GetAllRunsAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<RunDescriptor>>(Array.Empty<RunDescriptor>());
+
+        public Task<RunDescriptor?> GetRunByIdAsync(string runId, CancellationToken ct = default)
+            => Task.FromResult<RunDescriptor?>(null);
     }
 
     /// <summary>Fake LLM service — LLMModule requires it in DI but tests don't exercise LLM calls.</summary>
