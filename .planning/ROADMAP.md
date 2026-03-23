@@ -152,7 +152,7 @@
 
 **Milestone Goal:** Enable agents to autonomously call tools during conversation, closing the think-act-observe loop so users can build task-completing agents through the chat pipeline.
 
-- [ ] **Phase 58: Agent Loop Core** - Bounded iteration loop with ToolCallParser, AgentToolDispatcher, system prompt, error propagation, token budget guard, and cancellation safety
+- [x] **Phase 58: Agent Loop Core** - Bounded iteration loop with ToolCallParser, AgentToolDispatcher, system prompt, error propagation, token budget guard, and cancellation safety (completed 2026-03-23)
 - [ ] **Phase 59: Tool Call Display and UI Wiring** - Real-time tool call cards in chat bubbles, count badge, timeout extension, and send locking during loop execution
 - [ ] **Phase 60: Hardening and Memory Integration** - Sedimentation of full tool turn history, StepRecorder iteration brackets visible in Run inspector
 
@@ -264,7 +264,7 @@ Plans:
 | 55. Memory Review Surfaces | v2.0.1 | 2/2 | Complete | 2026-03-22 |
 | 56. Sedimentation LLM Configuration | v2.0.1 | 1/1 | Complete | 2026-03-22 |
 | 57. Integration Wiring & Metadata Fixes | v2.0.1 | 2/2 | Complete | 2026-03-22 |
-| 58. Agent Loop Core | 1/2 | In Progress|  | - |
+| 58. Agent Loop Core | 2/2 | Complete   | 2026-03-23 | - |
 | 59. Tool Call Display and UI Wiring | v2.0.2 | 0/2 | Not started | - |
 | 60. Hardening and Memory Integration | v2.0.2 | 0/1 | Not started | - |
 
