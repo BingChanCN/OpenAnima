@@ -197,10 +197,10 @@ Plans:
   1. After an agent loop completes, the Run inspector timeline shows one bracketed step per iteration, each containing the tool calls made in that iteration
   2. When the accumulated tool result messages approach 70% of the context window, the oldest tool result pairs are dropped before the next LLM re-call — the loop does not send an oversized request
   3. The sedimentation service receives the full expanded message list including all tool call turns, so memory nodes reflect the agent's reasoning chain and not just the final response
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 60-01: StepRecorder iteration brackets and sedimentation full-history pass
+- [ ] 60-01-PLAN.md — StepRecorder iteration brackets, token budget management, sedimentation full-history pass, and bracket step CSS
 
 ## Progress
 
@@ -272,4 +272,4 @@ Plans:
 **In progress: 3 phases, ~5 plans — v2.0.2**
 
 ---
-*Last updated: 2026-03-23 — Phase 59 plans created*
+*Last updated: 2026-03-23 — Phase 60 plans created*
