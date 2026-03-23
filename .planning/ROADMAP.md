@@ -154,7 +154,7 @@
 
 - [x] **Phase 58: Agent Loop Core** - Bounded iteration loop with ToolCallParser, AgentToolDispatcher, system prompt, error propagation, token budget guard, and cancellation safety (completed 2026-03-23)
 - [x] **Phase 59: Tool Call Display and UI Wiring** - Real-time tool call cards in chat bubbles, count badge, timeout extension, and send locking during loop execution (completed 2026-03-23)
-- [ ] **Phase 60: Hardening and Memory Integration** - Sedimentation of full tool turn history, StepRecorder iteration brackets visible in Run inspector
+- [x] **Phase 60: Hardening and Memory Integration** - Sedimentation of full tool turn history, StepRecorder iteration brackets visible in Run inspector (completed 2026-03-23)
 
 ## Phase Details
 
@@ -266,7 +266,7 @@ Plans:
 | 57. Integration Wiring & Metadata Fixes | v2.0.1 | 2/2 | Complete | 2026-03-22 |
 | 58. Agent Loop Core | 2/2 | Complete    | 2026-03-23 | - |
 | 59. Tool Call Display and UI Wiring | 2/2 | Complete    | 2026-03-23 | - |
-| 60. Hardening and Memory Integration | v2.0.2 | 0/1 | Not started | - |
+| 60. Hardening and Memory Integration | 1/1 | Complete   | 2026-03-23 | - |
 
 **Total shipped: 57 phases, 133 plans across 12 milestones**
 **In progress: 3 phases, ~5 plans — v2.0.2**

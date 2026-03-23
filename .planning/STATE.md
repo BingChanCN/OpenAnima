@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 59-02-PLAN.md
-last_updated: "2026-03-23T13:46:50.799Z"
+stopped_at: Completed 60-01-PLAN.md
+last_updated: "2026-03-23T14:12:00.423Z"
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State: OpenAnima
@@ -22,12 +22,12 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-23)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 59 — tool-call-display-and-ui-wiring
+**Current focus:** Phase 60 — hardening-and-memory-integration
 
 ## Current Position
 
-Phase: 59 (tool-call-display-and-ui-wiring) — EXECUTING
-Plan: 2 of 2
+Phase: 60 (hardening-and-memory-integration) — EXECUTING
+Plan: 1 of 1
 
 ## Accumulated Context
 
@@ -47,6 +47,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 59]: Tool cards render BEFORE reply text in assistant bubble — visible during streaming tool execution
 - [Phase 59]: IAnimaModuleConfigService injected into ChatPanel for agent mode detection — reads agentEnabled from LLMModule config
 - [Phase 59]: _agentTimeoutCts replaced (not extended) on each tool call event — 60s from last activity, not from start
+- [Phase 60]: agentContextWindowSize floor clamped to 1000 to prevent zero-budget pathology; truncation notice inserted before pair removal so it stays anchored in preserved zone
 
 ### Pending Todos
 
@@ -58,8 +59,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-23T13:24:16.622Z
-Stopped at: Completed 59-02-PLAN.md
+Last session: 2026-03-23T14:12:00.422Z
+Stopped at: Completed 60-01-PLAN.md
 Resume file: None
 
 ### Quick Tasks Completed

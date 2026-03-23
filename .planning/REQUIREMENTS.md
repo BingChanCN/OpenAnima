@@ -26,9 +26,9 @@ Requirements for Chat Agent Loop milestone. Each maps to roadmap phases.
 
 ### Hardening
 
-- [ ] **HARD-01**: Sedimentation service receives full conversation history including all tool call turns
-- [ ] **HARD-02**: Token budget check before each LLM re-call; truncates oldest tool results when exceeding 70% of context window
-- [ ] **HARD-03**: Agent loop records bracket steps per iteration in StepRecorder, visible in Run inspector
+- [x] **HARD-01**: Sedimentation service receives full conversation history including all tool call turns
+- [x] **HARD-02**: Token budget check before each LLM re-call; truncates oldest tool results when exceeding 70% of context window
+- [x] **HARD-03**: Agent loop records bracket steps per iteration in StepRecorder, visible in Run inspector
 
 ## Future Requirements
 
@@ -75,9 +75,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TCUI-02 | Phase 59 | Complete |
 | TCUI-03 | Phase 59 | Complete |
 | TCUI-04 | Phase 59 | Complete |
-| HARD-01 | Phase 60 | Pending |
-| HARD-02 | Phase 60 | Pending |
-| HARD-03 | Phase 60 | Pending |
+| HARD-01 | Phase 60 | Complete |
+| HARD-02 | Phase 60 | Complete |
+| HARD-03 | Phase 60 | Complete |
 
 **Coverage:**
 - v2.0.2 requirements: 14 total
