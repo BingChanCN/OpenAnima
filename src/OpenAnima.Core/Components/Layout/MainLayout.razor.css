@@ -22,7 +22,6 @@
     width: 72px; /* Slightly wider for the collapsed state to accommodate better icons */
 }
 
-/* Header */
 .sidebar-header {
     display: flex;
     align-items: center;
@@ -30,6 +29,7 @@
     padding: 24px 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     min-height: 72px;
+    overflow: hidden;
 }
 
 .sidebar.collapsed .sidebar-header {
@@ -42,6 +42,7 @@
     align-items: center;
     gap: 12px;
     overflow: hidden;
+    flex: 1;
 }
 
 .logo-icon {
@@ -64,6 +65,13 @@
     color: var(--text-primary);
     letter-spacing: 0.5px;
     white-space: nowrap;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar.collapsed .logo-text {
+    opacity: 0;
+    transform: translateX(-10px);
+    pointer-events: none;
 }
 
 /* Toggle Button */
@@ -89,15 +97,18 @@
 }
 
 .sidebar.collapsed .sidebar-toggle {
-    display: none;
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
 }
 
 /* Anima List Section */
 .anima-list-section {
     padding: 16px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    max-height: 30vh;
+    flex: 0 1 auto;
     overflow-y: auto;
+    min-height: 0;
 }
 
 .sidebar.collapsed .anima-list-section {
@@ -110,6 +121,7 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    min-height: 0;
 }
 
 .nav-list-header {
@@ -117,6 +129,12 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 20px 4px 20px;
+    transition: opacity 0.2s ease;
+}
+
+.sidebar.collapsed .nav-list-header {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .nav-list-title {
@@ -125,6 +143,7 @@
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    white-space: nowrap;
 }
 
 .nav-cards {
@@ -148,7 +167,7 @@
     border-radius: 8px;
     color: var(--text-primary);
     text-decoration: none;
-    transition: background-color 0.15s;
+    transition: background-color 0.15s, padding 0.3s ease;
     user-select: none;
     white-space: nowrap;
     overflow: hidden;
@@ -157,10 +176,10 @@
 
 .sidebar.collapsed .nav-item {
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    margin: 0 auto;
+    margin: 4px auto;
     padding: 0;
 }
 
@@ -198,8 +217,8 @@
 }
 
 .sidebar.collapsed .nav-icon {
-    width: auto;
-    height: auto;
+    width: 20px;
+    height: 20px;
 }
 
 .nav-item:hover .nav-icon,
@@ -218,6 +237,13 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     flex: 1;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar.collapsed .nav-label {
+    opacity: 0;
+    transform: translateX(-10px);
+    pointer-events: none;
 }
 
 /* Main content */
