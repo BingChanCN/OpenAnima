@@ -64,26 +64,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOOP-01 | — | Pending |
-| LOOP-02 | — | Pending |
-| LOOP-03 | — | Pending |
-| LOOP-04 | — | Pending |
-| LOOP-05 | — | Pending |
-| LOOP-06 | — | Pending |
-| LOOP-07 | — | Pending |
-| TCUI-01 | — | Pending |
-| TCUI-02 | — | Pending |
-| TCUI-03 | — | Pending |
-| TCUI-04 | — | Pending |
-| HARD-01 | — | Pending |
-| HARD-02 | — | Pending |
-| HARD-03 | — | Pending |
+| LOOP-01 | Phase 58 | Pending |
+| LOOP-02 | Phase 58 | Pending |
+| LOOP-03 | Phase 58 | Pending |
+| LOOP-04 | Phase 58 | Pending |
+| LOOP-05 | Phase 58 | Pending |
+| LOOP-06 | Phase 58 | Pending |
+| LOOP-07 | Phase 58 | Pending |
+| TCUI-01 | Phase 59 | Pending |
+| TCUI-02 | Phase 59 | Pending |
+| TCUI-03 | Phase 59 | Pending |
+| TCUI-04 | Phase 59 | Pending |
+| HARD-01 | Phase 60 | Pending |
+| HARD-02 | Phase 60 | Pending |
+| HARD-03 | Phase 60 | Pending |
 
 **Coverage:**
 - v2.0.2 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-23*
-*Last updated: 2026-03-23 after initial definition*
+*Last updated: 2026-03-23 — traceability mapped after roadmap creation*

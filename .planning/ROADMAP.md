@@ -14,6 +14,7 @@
 - ✅ **v1.9 Event-Driven Propagation Engine** — Phases 42-44 (shipped 2026-03-20)
 - ✅ **v2.0 Structured Cognition Foundation** — Phases 45-49 (shipped 2026-03-21)
 - ✅ **v2.0.1 Provider Registry & Living Memory** — Phases 50-57 (shipped 2026-03-23)
+- 🚧 **v2.0.2 Chat Agent Loop** — Phases 58-60 (in progress)
 
 ## Phases
 
@@ -147,6 +148,60 @@
 
 </details>
 
+### 🚧 v2.0.2 Chat Agent Loop (In Progress)
+
+**Milestone Goal:** Enable agents to autonomously call tools during conversation, closing the think-act-observe loop so users can build task-completing agents through the chat pipeline.
+
+- [ ] **Phase 58: Agent Loop Core** - Bounded iteration loop with ToolCallParser, AgentToolDispatcher, system prompt, error propagation, token budget guard, and cancellation safety
+- [ ] **Phase 59: Tool Call Display and UI Wiring** - Real-time tool call cards in chat bubbles, count badge, timeout extension, and send locking during loop execution
+- [ ] **Phase 60: Hardening and Memory Integration** - Sedimentation of full tool turn history, StepRecorder iteration brackets visible in Run inspector
+
+## Phase Details
+
+### Phase 58: Agent Loop Core
+**Goal**: Users can send a message and the agent autonomously calls tools, observes results, and produces a final response — all within a single bounded, concurrency-safe loop
+**Depends on**: Phase 57 (v2.0.1 complete)
+**Requirements**: LOOP-01, LOOP-02, LOOP-03, LOOP-04, LOOP-05, LOOP-06, LOOP-07
+**Success Criteria** (what must be TRUE):
+  1. User sends a message that requires a file read; the agent calls the tool, receives the content, and includes it in the reply — without any user interaction between tool call and final response
+  2. If the agent calls more tools than the configured iteration limit, the loop stops and returns whatever partial answer it has accumulated
+  3. When a tool call fails, the error message appears in the conversation history and the agent attempts to self-correct on the next iteration rather than crashing
+  4. Pressing Cancel during agent execution stops the loop, releases the execution semaphore, and closes the StepRecorder cleanly — no deadlock or orphaned step
+  5. The agent does not call tools via the EventBus; the semaphore is never re-entered from within the loop
+**Plans**: TBD
+
+Plans:
+- [ ] 58-01: ToolCallParser and AgentToolDispatcher
+- [ ] 58-02: LLMModule agent loop, config key, system prompt, and DI wiring
+
+### Phase 59: Tool Call Display and UI Wiring
+**Goal**: Users can see which tools the agent invoked, their status, and results directly inside the conversation — and cannot accidentally send a new message while the loop is running
+**Depends on**: Phase 58
+**Requirements**: TCUI-01, TCUI-02, TCUI-03, TCUI-04
+**Success Criteria** (what must be TRUE):
+  1. Each tool call the agent makes appears as a collapsible card inside the assistant message bubble, showing tool name, parameters, result summary, and success/error status in real time
+  2. After the agent finishes, the assistant bubble shows a "Used N tools" badge reflecting the total number of tool calls in that response
+  3. The send button is disabled for the full duration of the agent loop and re-enables only after the final response is delivered
+  4. An agent conversation that runs 10 iterations does not time out — the generation timeout covers the full loop duration
+**Plans**: TBD
+
+Plans:
+- [ ] 59-01: ChatSessionMessage tool_call variant and ChatMessage.razor tool call bubble
+- [ ] 59-02: ChatPanel event subscriptions, timeout extension, and send lock
+
+### Phase 60: Hardening and Memory Integration
+**Goal**: Agent loop interactions are durably observable in the Run inspector and the memory graph receives clean, useful content from agent exchanges rather than raw tool output JSON
+**Depends on**: Phase 59
+**Requirements**: HARD-01, HARD-02, HARD-03
+**Success Criteria** (what must be TRUE):
+  1. After an agent loop completes, the Run inspector timeline shows one bracketed step per iteration, each containing the tool calls made in that iteration
+  2. When the accumulated tool result messages approach 70% of the context window, the oldest tool result pairs are dropped before the next LLM re-call — the loop does not send an oversized request
+  3. The sedimentation service receives the full expanded message list including all tool call turns, so memory nodes reflect the agent's reasoning chain and not just the final response
+**Plans**: TBD
+
+Plans:
+- [ ] 60-01: StepRecorder iteration brackets and sedimentation full-history pass
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -209,8 +264,12 @@
 | 55. Memory Review Surfaces | v2.0.1 | 2/2 | Complete | 2026-03-22 |
 | 56. Sedimentation LLM Configuration | v2.0.1 | 1/1 | Complete | 2026-03-22 |
 | 57. Integration Wiring & Metadata Fixes | v2.0.1 | 2/2 | Complete | 2026-03-22 |
+| 58. Agent Loop Core | v2.0.2 | 0/2 | Not started | - |
+| 59. Tool Call Display and UI Wiring | v2.0.2 | 0/2 | Not started | - |
+| 60. Hardening and Memory Integration | v2.0.2 | 0/1 | Not started | - |
 
 **Total shipped: 57 phases, 133 plans across 12 milestones**
+**In progress: 3 phases, ~5 plans — v2.0.2**
 
 ---
-*Last updated: 2026-03-23 — v2.0.1 milestone shipped*
+*Last updated: 2026-03-23 — v2.0.2 roadmap created*
