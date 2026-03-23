@@ -653,4 +653,10 @@
   <data name="Sedimentation.NoProviders" xml:space="preserve">
     <value>No providers registered. Add a provider above first.</value>
   </data>
+  <data name="Chat.ToolCountBadge" xml:space="preserve">
+    <value>Used {0} tools</value>
+  </data>
+  <data name="Chat.AgentRunning" xml:space="preserve">
+    <value>Agent is running...</value>
+  </data>
 </root>

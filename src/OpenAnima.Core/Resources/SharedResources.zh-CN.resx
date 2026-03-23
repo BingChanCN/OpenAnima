@@ -653,4 +653,10 @@
   <data name="Sedimentation.NoProviders" xml:space="preserve">
     <value>尚未注册提供商，请先在上方添加。</value>
   </data>
+  <data name="Chat.ToolCountBadge" xml:space="preserve">
+    <value>已使用 {0} 个工具</value>
+  </data>
+  <data name="Chat.AgentRunning" xml:space="preserve">
+    <value>Agent 正在运行...</value>
+  </data>
 </root>

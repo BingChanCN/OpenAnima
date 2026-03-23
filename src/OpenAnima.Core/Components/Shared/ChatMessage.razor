@@ -1,6 +1,8 @@
 @using Markdig
 @using Markdown.ColorCode
+@using OpenAnima.Core.Services
 @inject IJSRuntime JS
+@inject IStringLocalizer<SharedResources> L
 
 @if (Role == "user")
 {
@@ -15,11 +17,11 @@
         <button class="copy-btn" @onclick="CopyToClipboard" title="Copy to clipboard">
             @if (_copied)
             {
-                <span class="copied-feedback">✓</span>
+                <span class="copied-feedback">&#10003;</span>
             }
             else
             {
-                <span>📋</span>
+                <span>&#128203;</span>
             }
         </button>
     </div>
@@ -27,22 +29,64 @@
 else
 {
     <div class="message assistant">
-        <span class="ai-icon">◆</span>
+        <span class="ai-icon">&#9670;</span>
         <div class="message-content">
+            @if (ToolCalls.Count > 0)
+            {
+                <div class="tool-cards">
+                    @foreach (var tool in ToolCalls)
+                    {
+                        <div class="tool-card @(tool.IsExpanded ? "expanded" : "")">
+                            <button class="tool-card-header" @onclick="() => tool.IsExpanded = !tool.IsExpanded">
+                                <span class="tool-status-icon @GetStatusClass(tool.Status)">
+                                    @GetStatusIcon(tool.Status)
+                                </span>
+                                <span class="tool-name">@tool.ToolName</span>
+                                <span class="tool-expand-chevron">@(tool.IsExpanded ? "\u25B2" : "\u25BC")</span>
+                            </button>
+                            @if (tool.IsExpanded)
+                            {
+                                <div class="tool-card-body">
+                                    @if (tool.Parameters.Count > 0)
+                                    {
+                                        <div class="tool-params">
+                                            @foreach (var param in tool.Parameters)
+                                            {
+                                                <div class="tool-param-row">
+                                                    <span class="param-key">@param.Key</span>
+                                                    <span class="param-value">@param.Value</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(tool.ResultSummary))
+                                    {
+                                        <div class="tool-result">@tool.ResultSummary</div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
             @RenderContent()
             @if (IsStreaming)
             {
                 <span class="typing-cursor">|</span>
             }
+            @if (!IsStreaming && ToolCalls.Count > 0)
+            {
+                <div class="tool-badge">@string.Format(L["Chat.ToolCountBadge"], ToolCalls.Count)</div>
+            }
         </div>
         <button class="copy-btn" @onclick="CopyToClipboard" title="Copy to clipboard">
             @if (_copied)
             {
-                <span class="copied-feedback">✓</span>
+                <span class="copied-feedback">&#10003;</span>
             }
             else
             {
-                <span>📋</span>
+                <span>&#128203;</span>
             }
         </button>
     </div>
@@ -66,6 +110,9 @@ else
     [Parameter]
     public bool IsStreaming { get; set; }
 
+    [Parameter]
+    public List<ToolCallInfo> ToolCalls { get; set; } = new();
+
     private MarkupString RenderContent()
     {
         if (Role == "assistant")
@@ -75,6 +122,22 @@ else
         }
         return (MarkupString)Content;
     }
+
+    private static string GetStatusClass(ToolCallStatus status) => status switch
+    {
+        ToolCallStatus.Running => "tool-status-running",
+        ToolCallStatus.Success => "tool-status-success",
+        ToolCallStatus.Failed => "tool-status-failed",
+        _ => ""
+    };
+
+    private static MarkupString GetStatusIcon(ToolCallStatus status) => status switch
+    {
+        ToolCallStatus.Running => (MarkupString)"<span class=\"spinner\"></span>",
+        ToolCallStatus.Success => (MarkupString)"<span class=\"status-check\">\u2713</span>",
+        ToolCallStatus.Failed => (MarkupString)"<span class=\"status-x\">\u2717</span>",
+        _ => (MarkupString)""
+    };
 
     private async Task CopyToClipboard()
     {
@@ -89,4 +152,3 @@ else
         }
     }
 }
-

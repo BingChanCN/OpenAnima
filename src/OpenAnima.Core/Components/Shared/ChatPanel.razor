@@ -8,6 +8,7 @@
 @implements IAsyncDisposable
 @inject ChatInputModule _chatInputModule
 @inject ChatOutputModule _chatOutputModule
+@inject IEventBus EventBus
 @inject ChatContextManager _contextManager
 @inject ChatSessionState _chatSessionState
 @inject IAnimaRuntimeManager _animaRuntimeManager
@@ -39,7 +40,7 @@
         {
             @foreach (var message in Messages)
             {
-                <ChatMessage Role="@message.Role" Content="@message.Content" IsStreaming="@message.IsStreaming" />
+                <ChatMessage Role="@message.Role" Content="@message.Content" IsStreaming="@message.IsStreaming" ToolCalls="@message.ToolCalls" />
             }
             @if (!_isGenerating && Messages.Count > 0 && Messages.Last().Role == "assistant")
             {
@@ -61,12 +62,14 @@
     private bool _isGenerating;
     private CancellationTokenSource _generationCts = new();
     private TaskCompletionSource<string>? _pendingAssistantResponse;
+    private IDisposable? _llmErrorSubscription;
     private List<ChatSessionMessage> Messages => _chatSessionState.Messages;
 
     protected override void OnInitialized()
     {
         _contextManager.OnStateChanged += HandleContextManagerChanged;
         _chatOutputModule.OnMessageReceived += HandleChatOutputReceived;
+        _llmErrorSubscription = EventBus.Subscribe<string>("LLMModule.port.error", HandleLlmErrorAsync);
         LangSvc.LanguageChanged += OnLanguageChanged;
         _animaContext.ActiveAnimaChanged += OnAnimaChanged;
         _animaRuntimeManager.WiringConfigurationChanged += OnWiringConfigurationChanged;
@@ -96,6 +99,16 @@
     private void HandleChatOutputReceived(string assistantText)
     {
         _pendingAssistantResponse?.TrySetResult(assistantText);
+    }
+
+    private Task HandleLlmErrorAsync(ModuleEvent<string> evt, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(evt.Payload))
+        {
+            _pendingAssistantResponse?.TrySetResult($"LLM error: {evt.Payload}");
+        }
+
+        return Task.CompletedTask;
     }
 
     private bool IsContextLimitReached()
@@ -316,6 +329,7 @@
     public ValueTask DisposeAsync()
     {
         _chatOutputModule.OnMessageReceived -= HandleChatOutputReceived;
+        _llmErrorSubscription?.Dispose();
         _contextManager.OnStateChanged -= HandleContextManagerChanged;
         LangSvc.LanguageChanged -= OnLanguageChanged;
         _animaContext.ActiveAnimaChanged -= OnAnimaChanged;
