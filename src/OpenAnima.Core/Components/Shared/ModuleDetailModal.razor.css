@@ -2,7 +2,7 @@
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.7);
-    z-index: 999;
+    z-index: 2000;
 }
 
 .modal-dialog {
@@ -10,7 +10,8 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 1000;
+    margin: 0;
+    z-index: 2001;
     background: var(--surface-card);
     border: 1px solid var(--border-color);
     border-radius: 12px;
