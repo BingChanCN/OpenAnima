@@ -174,6 +174,17 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
             Order: 21,
             Required: false,
             ValidationPattern: null),
+        new ConfigFieldDescriptor(
+            Key: "agentContextWindowSize",
+            Type: ConfigFieldType.Int,
+            DisplayName: "Agent Context Window Size",
+            DefaultValue: "128000",
+            Description: "Maximum tokens for agent loop history. Tool results are trimmed when usage exceeds 70% of this limit.",
+            EnumValues: null,
+            Group: "agent",
+            Order: 22,
+            Required: false,
+            ValidationPattern: null),
     ];
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
@@ -808,6 +819,19 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
     }
 
     /// <summary>
+    /// Reads the agentContextWindowSize config key. Returns 128000 if missing or non-parseable.
+    /// Clamps to a floor of 1000 tokens so budget math never produces zero.
+    /// </summary>
+    private int ReadAgentContextWindowSize(string animaId)
+    {
+        var config = _configService.GetConfig(animaId, Metadata.Name);
+        if (config.TryGetValue("agentContextWindowSize", out var sizeStr) &&
+            int.TryParse(sizeStr, out var sizeVal) && sizeVal > 0)
+            return Math.Max(sizeVal, 1000);
+        return 128000;
+    }
+
+    /// <summary>
     /// Builds the tool call syntax instruction block appended to the system message when agent mode is enabled.
     /// Includes agent role description, call format, and safety prompt per CONTEXT.md decision.
     /// </summary>
@@ -833,6 +857,13 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
     /// <summary>
     /// Executes the bounded agent loop: call LLM, parse tool_call markers, dispatch tools,
     /// inject results into history, re-call LLM — until no tool calls remain or max iterations reached.
+    ///
+    /// HARD-03: Records AgentLoop outer bracket step and per-iteration AgentIteration bracket steps
+    ///          into IStepRecorder with PropagationId chaining from loop step to iteration steps.
+    /// HARD-02: Enforces token budget (70% of agentContextWindowSize). Drops oldest assistant+tool
+    ///          pairs before each LLM re-call when budget is exceeded. Inserts truncation notice once.
+    /// HARD-01: Passes full accumulated history (not just original messages) to TriggerSedimentation
+    ///          so memory receives the complete reasoning chain including tool calls and results.
     /// </summary>
     private async Task RunAgentLoopAsync(
         List<ChatMessageInput> messages,
@@ -845,89 +876,173 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
         string? finalText = null;
         var useFormatDetection = _router != null && knownServiceNames.Count > 0;
 
-        for (int iteration = 0; iteration < maxIterations; iteration++)
+        // HARD-03: Record outer AgentLoop bracket step
+        var loopStepId = _stepRecorder != null
+            ? await _stepRecorder.RecordStepStartAsync(
+                animaId, "AgentLoop",
+                $"Starting agent loop (max {maxIterations} iterations)",
+                null, ct)
+            : null;
+        var completedIterations = 0;
+        var loopStopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        // HARD-02: Initialize token counter and compute budget
+        var tokenCounter = new TokenCounter("cl100k_base");
+        var contextWindowSize = ReadAgentContextWindowSize(animaId);
+        var budget = (int)(contextWindowSize * 0.70);
+        // preserveCount: how many messages from the original list to always keep (system + user)
+        var preserveCount = messages.Count;
+        var truncationNoticeInserted = false;
+
+        try
         {
-            ct.ThrowIfCancellationRequested();
-
-            // Call LLM
-            var result = await CallLlmAsync(animaId, history, ct);
-
-            if (!result.Success || result.Content == null)
-            {
-                // Retry once after 2s delay, then publish error
-                try
-                {
-                    await Task.Delay(2000, ct);
-                }
-                catch (OperationCanceledException)
-                {
-                    // Cancellation during delay — propagate
-                    throw;
-                }
-
-                result = await CallLlmAsync(animaId, history, ct);
-                if (!result.Success || result.Content == null)
-                {
-                    await PublishErrorAsync(result.Error ?? "Agent LLM call failed after retry.", ct);
-                    _state = ModuleExecutionState.Completed;
-                    return;
-                }
-            }
-
-            // Parse tool calls from response
-            var parsed = ToolCallParser.Parse(result.Content);
-
-            if (parsed.ToolCalls.Count == 0)
-            {
-                // No more tool calls — this is the final response
-                finalText = parsed.PassthroughText;
-                break;
-            }
-
-            // Add assistant message with tool calls to history
-            history.Add(new ChatMessageInput("assistant", result.Content));
-
-            // Execute all tool calls in document order, collect results
-            var toolResultSb = new System.Text.StringBuilder();
-            foreach (var toolCall in parsed.ToolCalls)
+            for (int iteration = 0; iteration < maxIterations; iteration++)
             {
                 ct.ThrowIfCancellationRequested();
 
-                // Publish ToolCallStarted BEFORE execution
-                await _eventBus.PublishAsync(new ModuleEvent<ToolCallStartedPayload>
+                // HARD-02: Token budget check — drop oldest assistant+tool pairs when over budget
+                var currentTokens = tokenCounter.CountMessages(history);
+                if (currentTokens > budget)
                 {
-                    EventName = "LLMModule.tool_call.started",
-                    SourceModuleId = Metadata.Name,
-                    Payload = new ToolCallStartedPayload(toolCall.ToolName, toolCall.Parameters)
-                }, ct);
+                    // Insert truncation notice FIRST (before removing) so it appears in the preserved zone.
+                    // The notice sits at index = preserveCount (right after original preserved messages).
+                    // After insertion the effective "pairs start" index is preserveCount + 1.
+                    if (!truncationNoticeInserted)
+                    {
+                        truncationNoticeInserted = true;
+                        history.Insert(preserveCount,
+                            new ChatMessageInput("system",
+                                "[Earlier tool results were trimmed to fit context window]"));
+                    }
 
-                var toolResult = await _agentToolDispatcher!.DispatchAsync(animaId, toolCall, ct);
-                toolResultSb.AppendLine(toolResult);
+                    // Now drop oldest assistant+tool pairs that live after the truncation notice.
+                    // Pairs start at index preserveCount + 1 (notice occupies preserveCount).
+                    var pairsStartIndex = preserveCount + 1;
+                    while (tokenCounter.CountMessages(history) > budget && history.Count > pairsStartIndex + 1)
+                    {
+                        // Remove the oldest assistant+tool pair
+                        if (pairsStartIndex < history.Count) history.RemoveAt(pairsStartIndex); // assistant
+                        if (pairsStartIndex < history.Count) history.RemoveAt(pairsStartIndex); // tool
+                    }
+                }
 
-                // Publish ToolCallCompleted AFTER execution
-                var isSuccess = toolResult.Contains("success=\"true\"");
-                var summary = ExtractResultSummary(toolResult);
-                await _eventBus.PublishAsync(new ModuleEvent<ToolCallCompletedPayload>
+                // Call LLM
+                var result = await CallLlmAsync(animaId, history, ct);
+
+                if (!result.Success || result.Content == null)
                 {
-                    EventName = "LLMModule.tool_call.completed",
-                    SourceModuleId = Metadata.Name,
-                    Payload = new ToolCallCompletedPayload(toolCall.ToolName, summary, isSuccess)
-                }, ct);
-            }
+                    // Retry once after 2s delay, then publish error
+                    try
+                    {
+                        await Task.Delay(2000, ct);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Cancellation during delay — propagate
+                        throw;
+                    }
 
-            // Add tool results to history as tool role message
-            history.Add(new ChatMessageInput("tool", toolResultSb.ToString().Trim()));
+                    result = await CallLlmAsync(animaId, history, ct);
+                    if (!result.Success || result.Content == null)
+                    {
+                        await PublishErrorAsync(result.Error ?? "Agent LLM call failed after retry.", ct);
+                        _state = ModuleExecutionState.Completed;
+                        // Close outer loop bracket as failed
+                        if (_stepRecorder != null && loopStepId != null)
+                            await _stepRecorder.RecordStepFailedAsync(
+                                loopStepId, "AgentLoop",
+                                new InvalidOperationException("Agent LLM call failed after retry."), ct);
+                        return;
+                    }
+                }
 
-            // If this was the last iteration and we still have tool calls,
-            // use last text portion with limit notice
-            if (iteration == maxIterations - 1)
-            {
-                var textPortion = string.IsNullOrWhiteSpace(parsed.PassthroughText)
-                    ? result.Content
-                    : parsed.PassthroughText;
-                finalText = textPortion + "\n[Agent reached maximum iteration limit]";
+                // Parse tool calls from response
+                var parsed = ToolCallParser.Parse(result.Content);
+
+                if (parsed.ToolCalls.Count == 0)
+                {
+                    // No more tool calls — this is the final response
+                    finalText = parsed.PassthroughText;
+                    break;
+                }
+
+                // HARD-03: Record per-iteration bracket step (only iterations that have tool calls)
+                completedIterations++;
+                string? iterStepId = null;
+                iterStepId = _stepRecorder != null
+                    ? await _stepRecorder.RecordStepStartAsync(
+                        animaId, $"AgentIteration #{completedIterations}",
+                        result.Content.Length > 200 ? result.Content[..200] : result.Content,
+                        loopStepId, ct)
+                    : null;
+
+                // Add assistant message with tool calls to history
+                history.Add(new ChatMessageInput("assistant", result.Content));
+
+                // Execute all tool calls in document order, collect results
+                var toolResultSb = new System.Text.StringBuilder();
+                foreach (var toolCall in parsed.ToolCalls)
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    // Publish ToolCallStarted BEFORE execution
+                    await _eventBus.PublishAsync(new ModuleEvent<ToolCallStartedPayload>
+                    {
+                        EventName = "LLMModule.tool_call.started",
+                        SourceModuleId = Metadata.Name,
+                        Payload = new ToolCallStartedPayload(toolCall.ToolName, toolCall.Parameters)
+                    }, ct);
+
+                    var toolResult = await _agentToolDispatcher!.DispatchAsync(animaId, toolCall, ct);
+                    toolResultSb.AppendLine(toolResult);
+
+                    // Publish ToolCallCompleted AFTER execution
+                    var isSuccess = toolResult.Contains("success=\"true\"");
+                    var summary = ExtractResultSummary(toolResult);
+                    await _eventBus.PublishAsync(new ModuleEvent<ToolCallCompletedPayload>
+                    {
+                        EventName = "LLMModule.tool_call.completed",
+                        SourceModuleId = Metadata.Name,
+                        Payload = new ToolCallCompletedPayload(toolCall.ToolName, summary, isSuccess)
+                    }, ct);
+                }
+
+                // Add tool results to history as tool role message
+                history.Add(new ChatMessageInput("tool", toolResultSb.ToString().Trim()));
+
+                // HARD-03: Close iteration bracket step
+                if (_stepRecorder != null && iterStepId != null)
+                    await _stepRecorder.RecordStepCompleteAsync(
+                        iterStepId, $"AgentIteration #{completedIterations}",
+                        $"{parsed.ToolCalls.Count} tool calls dispatched", ct);
+
+                // If this was the last iteration and we still have tool calls,
+                // use last text portion with limit notice
+                if (iteration == maxIterations - 1)
+                {
+                    var textPortion = string.IsNullOrWhiteSpace(parsed.PassthroughText)
+                        ? result.Content
+                        : parsed.PassthroughText;
+                    finalText = textPortion + "\n[Agent reached maximum iteration limit]";
+                }
             }
         }
+        catch (OperationCanceledException)
+        {
+            // Close outer AgentLoop bracket on cancellation
+            if (_stepRecorder != null && loopStepId != null)
+                await _stepRecorder.RecordStepFailedAsync(
+                    loopStepId, "AgentLoop",
+                    new OperationCanceledException("Agent loop cancelled"), CancellationToken.None);
+            throw;
+        }
+
+        // HARD-03: Close outer AgentLoop bracket step
+        loopStopwatch.Stop();
+        if (_stepRecorder != null && loopStepId != null)
+            await _stepRecorder.RecordStepCompleteAsync(
+                loopStepId, "AgentLoop",
+                $"{completedIterations} iterations completed in {loopStopwatch.ElapsedMilliseconds}ms", ct);
 
         // Publish final response
         var responseText = finalText ?? "";
@@ -937,13 +1052,15 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
             // Run FormatDetector on final clean response only (not intermediate tool-call responses)
             var detection = _formatDetector.Detect(responseText, knownServiceNames);
             await PublishResponseAsync(detection.PassthroughText, ct);
-            TriggerSedimentation(animaId, messages, detection.PassthroughText);
+            // HARD-01: Pass full history (not original messages) so sedimentation sees tool calls + results
+            TriggerSedimentation(animaId, history, detection.PassthroughText);
             await DispatchRoutesAsync(detection.Routes, ct);
         }
         else
         {
             await PublishResponseAsync(responseText, ct);
-            TriggerSedimentation(animaId, messages, responseText);
+            // HARD-01: Pass full history (not original messages) so sedimentation sees tool calls + results
+            TriggerSedimentation(animaId, history, responseText);
         }
 
         _state = ModuleExecutionState.Completed;

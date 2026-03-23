@@ -205,7 +205,13 @@ public class SedimentationService : ISedimentationService
         var conversationSb = new StringBuilder();
         conversationSb.AppendLine("<conversation>");
         foreach (var msg in messages)
-            conversationSb.AppendLine($"{msg.Role}: {msg.Content}");
+        {
+            // HARD-01: Truncate tool role message content to 500 characters to keep extraction prompt lean
+            var content = msg.Role == "tool" && msg.Content.Length > 500
+                ? msg.Content[..500] + "..."
+                : msg.Content;
+            conversationSb.AppendLine($"{msg.Role}: {content}");
+        }
         conversationSb.AppendLine($"assistant: {llmResponse}");
         conversationSb.AppendLine("</conversation>");
 

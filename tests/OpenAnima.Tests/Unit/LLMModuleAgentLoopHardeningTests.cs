@@ -187,11 +187,57 @@ public class LLMModuleAgentLoopHardeningTests
             string workspaceRoot,
             IReadOnlyDictionary<string, string> parameters,
             CancellationToken ct = default)
-            => Task.FromResult(ToolResult.Ok(_resultData, null, new ToolResultMetadata()));
+            // Pass resultData as the Data field (not tool name) for AgentToolDispatcher to extract
+            => Task.FromResult(ToolResult.Ok(Descriptor.Name, _resultData, new ToolResultMetadata()));
     }
 
     /// <summary>
-    /// Minimal no-op IRunService.
+    /// Fake IRunService that provides a real active RunContext so AgentToolDispatcher
+    /// can look up the workspace root and actually execute tools.
+    /// </summary>
+    private class FakeRunService : IRunService
+    {
+        private readonly RunContext _activeRun;
+
+        public FakeRunService(string workspaceRoot = "/tmp/test-workspace")
+        {
+            var descriptor = new RunDescriptor
+            {
+                RunId = "test-run",
+                AnimaId = TestAnimaId,
+                Objective = "Test run",
+                WorkspaceRoot = workspaceRoot,
+                CurrentState = RunState.Running,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            _activeRun = new RunContext(descriptor);
+        }
+
+        public RunContext? GetActiveRun(string animaId) => _activeRun;
+
+        public Task<RunResult> StartRunAsync(string animaId, string objective, string workspaceRoot,
+            int? maxSteps = null, int? maxWallSeconds = null, string? workflowPreset = null,
+            CancellationToken ct = default)
+            => Task.FromResult(RunResult.Ok("test-run"));
+
+        public Task<RunResult> PauseRunAsync(string runId, string reason, CancellationToken ct = default)
+            => Task.FromResult(RunResult.Ok(runId));
+
+        public Task<RunResult> ResumeRunAsync(string runId, CancellationToken ct = default)
+            => Task.FromResult(RunResult.Ok(runId));
+
+        public Task<RunResult> CancelRunAsync(string runId, CancellationToken ct = default)
+            => Task.FromResult(RunResult.Ok(runId));
+
+        public Task<IReadOnlyList<RunDescriptor>> GetAllRunsAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<RunDescriptor>>(Array.Empty<RunDescriptor>());
+
+        public Task<RunDescriptor?> GetRunByIdAsync(string runId, CancellationToken ct = default)
+            => Task.FromResult<RunDescriptor?>(null);
+    }
+
+    /// <summary>
+    /// Minimal no-op IRunService (for tests that don't need tool execution).
     /// </summary>
     private class NullRunService : IRunService
     {
@@ -251,12 +297,15 @@ public class LLMModuleAgentLoopHardeningTests
             IAnimaModuleConfigService configService,
             SpyStepRecorder? stepRecorder = null,
             SpySedimentationService? sedimentationService = null,
-            IWorkspaceTool[]? tools = null)
+            IWorkspaceTool[]? tools = null,
+            IRunService? runService = null)
     {
         tools ??= new IWorkspaceTool[]
         {
             new FakeWorkspaceTool("file_read", "Read file contents from workspace")
         };
+
+        runService ??= new NullRunService();
 
         var spy = stepRecorder ?? new SpyStepRecorder();
         var sed = sedimentationService ?? new SpySedimentationService();
@@ -266,14 +315,14 @@ public class LLMModuleAgentLoopHardeningTests
         var workspaceToolModule = new WorkspaceToolModule(
             eventBus,
             new FakeModuleContext(TestAnimaId),
-            new NullRunService(),
+            runService,
             new NullStepRecorder(),
             tools,
             NullLogger<WorkspaceToolModule>.Instance);
 
         var agentToolDispatcher = new AgentToolDispatcher(
             tools,
-            new NullRunService(),
+            runService,
             NullLogger<AgentToolDispatcher>.Instance);
 
         var module = new LLMModule(
@@ -435,48 +484,97 @@ public class LLMModuleAgentLoopHardeningTests
 
     // ── HARD-02 token budget ──────────────────────────────────────────────────
 
+    /// <summary>
+    /// Generates a large tool result string (~2000 chars) to push history over the token budget.
+    /// The tool call syntax system message takes ~150 tokens. Two large tool results (~500 tokens each)
+    /// bring total history to ~1200+ tokens, exceeding 70% of a 1000-token context window (700 tokens).
+    /// On the third LLM call, the oldest assistant+tool pair is removed to stay within budget.
+    /// </summary>
+    private static string LargeToolCallResponse(string toolName = "file_read", string paramValue = "/test.txt")
+        => $"<tool_call name=\"{toolName}\"><param name=\"path\">{paramValue}</param></tool_call>";
+
+    private static FakeWorkspaceTool LargeFakeTool()
+    {
+        // Generate diverse text content that doesn't compress well with BPE tokenization.
+        // Each word is unique to prevent run-length compression. ~800 distinct words ≈ 800-1200 tokens.
+        // This ensures the tool result message generates enough tokens to exceed a 700-token budget
+        // when combined with system message (~100 tokens) + user + two assistant messages.
+        var sb = new System.Text.StringBuilder();
+        var words = new[]
+        {
+            "function", "variable", "parameter", "constant", "interface", "abstract", "override",
+            "readonly", "namespace", "assembly", "component", "directive", "attribute", "property",
+            "constructor", "destructor", "initialize", "serialize", "deserialize", "validate",
+            "authenticate", "authorize", "permission", "certificate", "encryption", "decryption",
+            "transaction", "commit", "rollback", "migration", "schema", "column", "constraint",
+            "aggregation", "composition", "inheritance", "polymorphism", "encapsulation", "abstraction",
+            "concurrency", "synchronize", "asynchronous", "parallelism", "threading", "mutex",
+            "semaphore", "deadlock", "livelock", "starvation", "priority", "scheduling", "dispatch",
+            "allocation", "deallocation", "garbage", "collection", "reference", "pointer", "address",
+            "memory", "stack", "heap", "register", "processor", "instruction", "pipeline", "cache",
+            "network", "protocol", "socket", "connection", "request", "response", "header", "payload",
+            "endpoint", "middleware", "interceptor", "decorator", "observer", "strategy", "factory",
+            "singleton", "repository", "dependency", "injection", "inversion", "control", "container",
+            "pipeline", "builder", "fluent", "expression", "predicate", "lambda", "closure", "delegate",
+            "generic", "covariant", "contravariant", "invariant", "constraint", "bounded", "wildcard",
+            "reflection", "metadata", "attribute", "convention", "configuration", "environment",
+            "deployment", "container", "orchestration", "kubernetes", "service", "discovery",
+        };
+        // Repeat words to generate enough content (~1000+ tokens)
+        for (int i = 0; i < 20; i++)
+            foreach (var word in words)
+                sb.Append(word).Append(' ');
+        return new FakeWorkspaceTool("file_read", "Read file contents from workspace",
+            resultData: sb.ToString());
+    }
+
     [Fact]
     public async Task AgentLoop_TruncatesOldestPairsWhenOverBudget()
     {
-        // Arrange: very small context window (500 tokens) — forces truncation
-        // Queue 2 tool-call responses then a clean response
+        // Arrange: context window that will be exceeded after 2 tool iterations.
+        // Large tool results (~1500 chars each ≈ 375 tokens) mean history after 2 iterations is ~1200 tokens.
+        // Budget = 70% of 1000 (floored minimum) = 700 tokens → exceeds budget on 3rd LLM call.
+        // FakeRunService provides an active run so AgentToolDispatcher actually executes tools.
         var llm = new SequenceLlmService(
-            new LLMResult(true, ToolCallResponse("file_read", "/a.txt"), null),
-            new LLMResult(true, ToolCallResponse("file_read", "/b.txt"), null),
+            new LLMResult(true, LargeToolCallResponse("file_read", "/a.txt"), null),
+            new LLMResult(true, LargeToolCallResponse("file_read", "/b.txt"), null),
             new LLMResult(true, "Done reading files", null));
 
-        var config = new AgentConfigService(enabled: true, maxIter: 10, contextWindowSize: 500);
-        var (module, _, eventBus, _, _) = CreateHardeningModule(llm, config);
+        // contextWindowSize=1000 → minimum floor (Math.Max(1000, 1000)=1000) → budget=700
+        var config = new AgentConfigService(enabled: true, maxIter: 10, contextWindowSize: 1000);
+        var tools = new IWorkspaceTool[] { LargeFakeTool() };
+        var runService = new FakeRunService();
+        var (module, _, eventBus, _, _) = CreateHardeningModule(llm, config, tools: tools, runService: runService);
 
         // Act
         await TriggerMessagesAsync(module, eventBus, UserMessagesJson());
 
-        // Assert: third LLM call has fewer messages than second (pairs were dropped)
+        // Assert: 3 LLM calls were made, third call had truncation applied.
+        // Without truncation: 3rd call would have [sys, user, asst1, tool1, asst2, tool2] = 6 messages.
+        // With truncation: [sys, user, notice, asst2, tool2] = 5 messages (removed asst1+tool1, added notice).
         Assert.Equal(3, llm.CapturedCalls.Count);
-        var secondCallCount = llm.CapturedCalls[1].Count;
-        var thirdCallCount = llm.CapturedCalls[2].Count;
-
-        // The third call should have <= messages compared to second (truncation happened)
-        // and must still contain the system message (index 0) and the user message
-        Assert.True(thirdCallCount <= secondCallCount,
-            $"Expected third call ({thirdCallCount} msgs) to have <= msgs than second ({secondCallCount} msgs) due to truncation");
-
         var thirdCallMessages = llm.CapturedCalls[2];
-        // Must have user message
+
+        Assert.True(thirdCallMessages.Count < 6,
+            $"Expected third call to have fewer than 6 messages (truncation should have removed oldest pair). Got {thirdCallMessages.Count} messages.");
+
+        // Must still contain the user message
         Assert.Contains(thirdCallMessages, m => m.Role == "user");
     }
 
     [Fact]
     public async Task AgentLoop_InsertsSystemTruncationNotice()
     {
-        // Arrange: very small context window (500 tokens) — forces truncation
+        // Arrange: same large-content setup as TruncatesOldestPairsWhenOverBudget
         var llm = new SequenceLlmService(
-            new LLMResult(true, ToolCallResponse("file_read", "/a.txt"), null),
-            new LLMResult(true, ToolCallResponse("file_read", "/b.txt"), null),
+            new LLMResult(true, LargeToolCallResponse("file_read", "/a.txt"), null),
+            new LLMResult(true, LargeToolCallResponse("file_read", "/b.txt"), null),
             new LLMResult(true, "Done", null));
 
-        var config = new AgentConfigService(enabled: true, maxIter: 10, contextWindowSize: 500);
-        var (module, _, eventBus, _, _) = CreateHardeningModule(llm, config);
+        var config = new AgentConfigService(enabled: true, maxIter: 10, contextWindowSize: 1000);
+        var tools = new IWorkspaceTool[] { LargeFakeTool() };
+        var runService = new FakeRunService();
+        var (module, _, eventBus, _, _) = CreateHardeningModule(llm, config, tools: tools, runService: runService);
 
         // Act
         await TriggerMessagesAsync(module, eventBus, UserMessagesJson());
