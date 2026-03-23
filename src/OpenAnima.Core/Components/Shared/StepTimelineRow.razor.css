@@ -150,3 +150,22 @@
 .step-propagation a:hover {
     text-decoration: underline;
 }
+
+/* Phase 60: Agent loop bracket step rows */
+
+.step-row.agent-loop-bracket {
+    background: var(--surface-dark);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.step-row.agent-iteration {
+    padding-left: 24px;
+    background: var(--surface-card);
+    border-left-style: dashed;
+}
+
+.step-row.agent-tool-call {
+    padding-left: 40px;
+    background: var(--bg-primary);
+}

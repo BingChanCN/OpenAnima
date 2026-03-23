@@ -80,7 +80,16 @@
     [Parameter] public EventCallback OnChainFilterShortcut { get; set; }
 
     private string ChainColor => PropagationColorAssigner.GetColor(Step.PropagationId);
-    private string RowClass => $"step-row {(IsExpanded ? "expanded" : "")} {(IsHighlighted ? "highlighted" : "")} {(IsDimmed ? "dimmed" : "")}".Trim();
+    private string RowClass
+    {
+        get
+        {
+            var bracket = Step.ModuleName == "AgentLoop" ? "agent-loop-bracket"
+                : Step.ModuleName.StartsWith("AgentIteration") ? "agent-iteration"
+                : "";
+            return $"step-row {bracket} {(IsExpanded ? "expanded" : "")} {(IsHighlighted ? "highlighted" : "")} {(IsDimmed ? "dimmed" : "")}".Trim();
+        }
+    }
     private string StatusIcon => Step.Status switch
     {
         "Completed" => "✓",
