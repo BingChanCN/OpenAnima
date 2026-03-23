@@ -55,9 +55,11 @@ Declared values (multiples of 4):
 | 3xl | 64px | Page-level spacing |
 
 Exceptions:
-- Config field padding: 8px 12px (0.5rem 0.75rem) — established in EditorConfigSidebar.razor.css
-- Warning inline: 4px 8px with 3px left border — established in EditorConfigSidebar.razor.css
 - Touch target minimum: 32px for icon-only action buttons (established .action-btn 32x32)
+
+Pre-existing legacy values outside Phase 58 scope (not declared as Phase 58 exceptions):
+- Config field padding `8px 12px` (0.5rem 0.75rem) — pre-existing value in EditorConfigSidebar.razor.css; 12px is not a multiple of 4. Phase 58 does not introduce or modify this value.
+- Warning inline `3px left border` — pre-existing value in EditorConfigSidebar.razor.css. Phase 58 does not introduce or modify this value.
 
 ---
 
@@ -66,11 +68,13 @@ Exceptions:
 | Role | Size | Weight | Line Height | Source |
 |------|------|--------|-------------|--------|
 | Body | 14px (1rem base) | 400 (regular) | 1.5 | `app.css` html/body |
-| Label / Config field label | 12.25px (0.875rem) | 500 (medium) | 1.4 | EditorConfigSidebar.razor.css |
+| Label / Config field label | 12.25px (0.875rem) | 400 (regular) | 1.4 | EditorConfigSidebar.razor.css |
 | Section header / Sidebar heading | 20px (1.25rem) | 600 (semibold) | 1.2 | EditorConfigSidebar.razor.css sidebar-header h3 |
 | Field hint / Warning inline | 10.5px (0.75rem) | 400 (regular) | 1.4 | EditorConfigSidebar.razor.css field-hint |
 
-Weights used: 400 (regular) and 600 (semibold). Weight 500 used only for config field labels — acceptable as it is a pre-existing established pattern.
+Weights declared for Phase 58: 400 (regular) and 600 (semibold).
+
+Note: existing EditorConfigSidebar.razor.css uses weight 500 for config field labels as a pre-existing pattern. Phase 58 introduces no new weight-500 usage. The label row above reflects Phase 58's declared contract (400); the pre-existing 500 rule is not modified by this phase.
 
 ---
 
@@ -107,15 +111,15 @@ Two new fields rendered by the existing config schema system:
 
 **agentEnabled** (bool)
 - Rendered as: existing `<input type="checkbox">` pattern within `.config-field`
-- Label: "Agent Mode" — 0.875rem, weight 500, color `--text-secondary`
+- Label: "Agent Mode" — 0.875rem, weight 400, color `--text-secondary`
 - Hint: "When enabled, the LLM will parse tool calls and loop until the task is complete." — 0.75rem, color `--text-secondary`, margin-top 4px
 - No destructive action. No confirmation required.
 
 **agentMaxIterations** (int)
 - Rendered as: existing `<input type="number">` pattern within `.config-field`
-- Label: "Max Iterations" — 0.875rem, weight 500, color `--text-secondary`
+- Label: "Max Iterations" — 0.875rem, weight 400, color `--text-secondary`
 - Hint: "Maximum tool call iterations per response (default 10, server ceiling 50)." — 0.75rem, color `--text-secondary`
-- Warning inline when value > 20: "Large iteration counts may produce long response times." — `warning-inline` class, `--warning-color` styling, 3px left border
+- Warning inline when value > 20: "Large iteration counts may produce long response times." — `warning-inline` class, `--warning-color` styling (pre-existing CSS rule)
 - Validation error when value < 1 or > 50: "Must be between 1 and 50." — `.field-error` class, `--error-color`
 
 ---
