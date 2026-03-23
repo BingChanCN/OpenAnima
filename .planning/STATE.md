@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 60 context gathered
-last_updated: "2026-03-23T12:16:14.001Z"
+stopped_at: Completed 59-01-PLAN.md
+last_updated: "2026-03-23T13:16:49.864Z"
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
 ---
 
 # Project State: OpenAnima
@@ -22,11 +22,11 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-23)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 58 — agent-loop-core
+**Current focus:** Phase 59 — tool-call-display-and-ui-wiring
 
 ## Current Position
 
-Phase: 58 (agent-loop-core) — EXECUTING
+Phase: 59 (tool-call-display-and-ui-wiring) — EXECUTING
 Plan: 2 of 2
 
 ## Accumulated Context
@@ -43,6 +43,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 - [Phase 58]: agentEnabled and agentMaxIterations added to 'agent' group in GetSchema() — separate group from provider/manual
 - [Phase 58]: RunAgentLoopAsync is a private instance method on LLMModule — loop is an implementation detail, not a separate class
+- [Phase 59]: OpenAnima.Core.Events added to LLMModule allowed imports — documented as Phase 59 exception in BuiltInModuleDecouplingTests
+- [Phase 59]: Tool cards render BEFORE reply text in assistant bubble — visible during streaming tool execution
 
 ### Pending Todos
 
@@ -54,9 +56,9 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-23T12:16:13.999Z
-Stopped at: Phase 60 context gathered
-Resume file: .planning/phases/60-hardening-and-memory-integration/60-CONTEXT.md
+Last session: 2026-03-23T13:16:49.862Z
+Stopped at: Completed 59-01-PLAN.md
+Resume file: None
 
 ### Quick Tasks Completed
 
