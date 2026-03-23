@@ -6,13 +6,22 @@
     <textarea
         id="chat-input"
         rows="1"
-        placeholder="@L["Chat.Placeholder"]"
+        placeholder="@(IsAgentRunning ? L["Chat.AgentRunning"] : L["Chat.Placeholder"])"
         @oninput="OnInput"
         disabled="@IsDisabled">
     </textarea>
-    <button class="send-btn" @onclick="OnClickSend" disabled="@(_isEmpty || IsDisabled)">
-        ▶
-    </button>
+    @if (IsAgentRunning)
+    {
+        <button class="cancel-btn" @onclick="OnClickCancel" title="@L["Chat.CancelExecution"]">
+            &#9632;
+        </button>
+    }
+    else
+    {
+        <button class="send-btn" @onclick="OnClickSend" disabled="@(_isEmpty || IsDisabled)">
+            ▶
+        </button>
+    }
 </div>
 
 @code {
@@ -24,6 +33,12 @@
 
     [Parameter]
     public bool IsDisabled { get; set; }
+
+    [Parameter]
+    public bool IsAgentRunning { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
 
     private bool _isEmpty = true;
     private DotNetObjectReference<ChatInput>? _dotNetRef;
@@ -54,6 +69,11 @@
     private async Task OnClickSend()
     {
         await DoSend();
+    }
+
+    private async Task OnClickCancel()
+    {
+        await OnCancel.InvokeAsync();
     }
 
     private async Task DoSend()

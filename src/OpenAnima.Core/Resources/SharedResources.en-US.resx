@@ -659,4 +659,7 @@
   <data name="Chat.AgentRunning" xml:space="preserve">
     <value>Agent is running...</value>
   </data>
+  <data name="Chat.CancelExecution" xml:space="preserve">
+    <value>Cancel execution</value>
+  </data>
 </root>
