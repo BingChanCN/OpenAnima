@@ -3,6 +3,7 @@
 ## Current State
 
 **Latest shipped:** v2.0.1 Provider Registry & Living Memory (2026-03-23)
+**Current milestone:** v2.0.2 Chat Agent Loop
 **Milestones complete:** v1.0–v2.0.1 (12 milestones, 57 phases, 133 plans)
 **Codebase:** ~44,700 LOC (C#, Razor, CSS, JS) | 603 tests green
 
@@ -144,7 +145,15 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Active
 
-(None — planning next milestone)
+## Current Milestone: v2.0.2 Chat Agent Loop
+
+**Goal:** Enable agents to autonomously call tools during conversation, closing the think→act→observe loop so users can build task-completing agents through the chat pipeline.
+
+**Target features:**
+- Agent loop in LLMModule (tool call parsing → execution → result injection → re-call)
+- Tool calling protocol integration (all 15 workspace + memory tools)
+- Real-time tool call display in Chat UI
+- Configurable iteration limit per Anima
 
 ### Deferred
 
@@ -332,4 +341,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-23 after v2.0.1 milestone*
+*Last updated: 2026-03-23 after v2.0.2 milestone started*

@@ -1,36 +1,45 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-stopped_at: Completed UI Review 260323-of9
-last_updated: "2026-03-23T09:43:10.105Z"
+milestone: v2.0.2
+milestone_name: Chat Agent Loop
+status: defining_requirements
+stopped_at: Milestone started
+last_updated: "2026-03-23"
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 14
-  completed_plans: 14
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State: OpenAnima
 
 **Last updated:** 2026-03-23
-**Current milestone:** v2.0.1 shipped — planning next milestone
+**Current milestone:** v2.0.2 Chat Agent Loop
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-23)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v2.0.2
 
 ## Current Position
 
-Milestone v2.0.1 shipped. No active phase.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-23 — Milestone v2.0.2 started
 
 ## Accumulated Context
 
 ### Decisions
+
+- Agent loop runs in Chat pipeline (LLMModule), not through Run system
+- LLM autonomous tool execution, no user confirmation required
+- All 15 tools (12 workspace + 3 memory) available in chat
+- Configurable iteration limit per Anima
+- Real-time tool call display in Chat UI
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
@@ -40,10 +49,10 @@ None.
 
 ### Blockers/Concerns
 
-None — milestone shipped cleanly.
+None.
 
 ## Session Continuity
 
-Last session: 2026-03-23T09:43:10.099Z
-Stopped at: Completed UI Review 260323-of9
+Last session: 2026-03-23
+Stopped at: Milestone started
 Resume file: None
