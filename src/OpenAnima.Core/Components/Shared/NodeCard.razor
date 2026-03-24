@@ -3,7 +3,7 @@
 @using OpenAnima.Core.Ports
 @using OpenAnima.Contracts.Ports
 @using Microsoft.Extensions.Localization
-@using OpenAnima.Core.Resources
+@using OpenAnima.Core
 @implements IDisposable
 @inject IPortRegistry _portRegistry
 @inject EditorStateService _editorState
@@ -65,7 +65,9 @@
         <circle cx="0" cy="@portY" r="6"
                 fill="@PortColors.GetHex(port.Type)"
                 @onmouseup="@(() => HandlePortMouseUp(port))"
-                class="cursor-crosshair" />
+                class="cursor-crosshair">
+            <title>@GetPortTooltip(port)</title>
+        </circle>
 
         @((MarkupString)$"<text x=\"14\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\" style=\"pointer-events: none\">{port.Name}</text>")
     }
@@ -79,7 +81,9 @@
                 fill="@PortColors.GetHex(port.Type)"
                 @onmousedown="@(() => HandlePortMouseDown(port))"
                 @onmousedown:preventDefault
-                class="cursor-crosshair" />
+                class="cursor-crosshair">
+            <title>@GetPortTooltip(port)</title>
+        </circle>
 
         @((MarkupString)$"<text x=\"{_nodeWidth - 14}\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\" text-anchor=\"end\" style=\"pointer-events: none\">{port.Name}</text>")
     }
@@ -202,6 +206,17 @@
         var key = $"Module.DisplayName.{moduleName}";
         var localized = L[key];
         return localized.ResourceNotFound ? moduleName : localized.Value;
+    }
+
+    private string GetPortTooltip(PortMetadata port)
+    {
+        var portKey = (port.ModuleName == "HttpRequestModule" && port.Name == "body")
+            ? $"Port.Description.{port.ModuleName}.{port.Name}.{port.Direction}"
+            : $"Port.Description.{port.ModuleName}.{port.Name}";
+        var localized = L[portKey];
+        if (localized.ResourceNotFound)
+            return $"{port.Name} ({port.Type})";
+        return $"{port.Name}: {localized.Value} ({port.Type})";
     }
 
     private void OnLanguageChanged() => InvokeAsync(() => { LangSvc.EnsureThreadCulture(); StateHasChanged(); });
