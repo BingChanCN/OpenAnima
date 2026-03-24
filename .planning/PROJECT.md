@@ -152,6 +152,7 @@ Agents that proactively think and act on their own, while module connections rem
 - [ ] Each module shows a brief description in the editor module list (EDUX-02)
 - [ ] User can delete connections via click-select + Delete key and right-click menu (EDUX-03)
 - [ ] Ports show Chinese tooltip on hover explaining their purpose (EDUX-04)
+- [ ] Module palette items show description tooltip on hover (EDUX-05)
 
 ### Deferred
 
