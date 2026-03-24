@@ -18,7 +18,7 @@ Requirements for Editor Experience milestone. Each maps to roadmap phases.
 ### Module Information
 
 - [x] **EDUX-02**: Editor config sidebar shows module description below module header
-- [ ] **EDUX-04**: Port circles show Chinese tooltip on hover explaining their purpose
+- [x] **EDUX-04**: Port circles show Chinese tooltip on hover explaining their purpose
 - [x] **EDUX-05**: Module palette items show description tooltip on hover
 
 ## Future Requirements
@@ -49,7 +49,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EDUX-01 | Phase 61 | Complete |
 | EDUX-02 | Phase 63 | Complete |
 | EDUX-03 | Phase 62 | Complete |
-| EDUX-04 | Phase 64 | Pending |
+| EDUX-04 | Phase 64 | Complete |
 | EDUX-05 | Phase 63 | Complete |
 
 **Coverage:**
