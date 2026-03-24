@@ -13,7 +13,7 @@ Requirements for Editor Experience milestone. Each maps to roadmap phases.
 
 ### Editor Interaction
 
-- [ ] **EDUX-03**: User can delete connections via click-select + Delete key and right-click context menu
+- [x] **EDUX-03**: User can delete connections via click-select + Delete key and right-click context menu
 
 ### Module Information
 
@@ -48,7 +48,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | EDUX-01 | Phase 61 | Complete |
 | EDUX-02 | Phase 63 | Pending |
-| EDUX-03 | Phase 62 | Pending |
+| EDUX-03 | Phase 62 | Complete |
 | EDUX-04 | Phase 64 | Pending |
 | EDUX-05 | Phase 63 | Pending |
 
