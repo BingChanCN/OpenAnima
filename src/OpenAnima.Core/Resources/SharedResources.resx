@@ -707,6 +707,51 @@
   <data name="Module.DisplayName.WorkspaceToolModule" xml:space="preserve">
     <value>Workspace Tool</value>
   </data>
+  <data name="Module.Description.LLMModule" xml:space="preserve">
+    <value>Connects to LLM APIs for streaming text generation and multi-turn conversations</value>
+  </data>
+  <data name="Module.Description.ChatInputModule" xml:space="preserve">
+    <value>Receives user messages from the chat interface</value>
+  </data>
+  <data name="Module.Description.ChatOutputModule" xml:space="preserve">
+    <value>Sends processed results to the chat interface for display</value>
+  </data>
+  <data name="Module.Description.HeartbeatModule" xml:space="preserve">
+    <value>Sends periodic heartbeat signals at a configured interval</value>
+  </data>
+  <data name="Module.Description.FixedTextModule" xml:space="preserve">
+    <value>Outputs pre-configured fixed text content</value>
+  </data>
+  <data name="Module.Description.TextJoinModule" xml:space="preserve">
+    <value>Concatenates multiple text inputs into a single string</value>
+  </data>
+  <data name="Module.Description.TextSplitModule" xml:space="preserve">
+    <value>Splits text into parts using a configured delimiter</value>
+  </data>
+  <data name="Module.Description.ConditionalBranchModule" xml:space="preserve">
+    <value>Routes data to different output ports based on a condition expression</value>
+  </data>
+  <data name="Module.Description.AnimaInputPortModule" xml:space="preserve">
+    <value>Receives cross-Anima routed input data from other Animas</value>
+  </data>
+  <data name="Module.Description.AnimaOutputPortModule" xml:space="preserve">
+    <value>Sends cross-Anima routed output data to other Animas</value>
+  </data>
+  <data name="Module.Description.AnimaRouteModule" xml:space="preserve">
+    <value>Routes messages to a target port on a specified Anima</value>
+  </data>
+  <data name="Module.Description.HttpRequestModule" xml:space="preserve">
+    <value>Sends HTTP requests and returns the response content</value>
+  </data>
+  <data name="Module.Description.JoinBarrierModule" xml:space="preserve">
+    <value>Waits for all input ports to receive data before triggering output</value>
+  </data>
+  <data name="Module.Description.MemoryModule" xml:space="preserve">
+    <value>Provides long-term memory storage, retrieval, and sedimentation for LLMs</value>
+  </data>
+  <data name="Module.Description.WorkspaceToolModule" xml:space="preserve">
+    <value>Provides tool-calling capabilities for LLM Agents such as file read/write and search</value>
+  </data>
   <data name="Run.StopReasonPrefix" xml:space="preserve">
     <value>Run paused:</value>
   </data>

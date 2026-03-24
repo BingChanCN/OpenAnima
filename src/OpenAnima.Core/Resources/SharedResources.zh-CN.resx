@@ -707,6 +707,51 @@
   <data name="Module.DisplayName.WorkspaceToolModule" xml:space="preserve">
     <value>工作区工具</value>
   </data>
+  <data name="Module.Description.LLMModule" xml:space="preserve">
+    <value>连接大语言模型 API，支持流式文本生成和多轮对话</value>
+  </data>
+  <data name="Module.Description.ChatInputModule" xml:space="preserve">
+    <value>接收用户在聊天界面输入的消息</value>
+  </data>
+  <data name="Module.Description.ChatOutputModule" xml:space="preserve">
+    <value>将处理结果输出到聊天界面显示给用户</value>
+  </data>
+  <data name="Module.Description.HeartbeatModule" xml:space="preserve">
+    <value>按设定的时间间隔周期性地发送心跳信号</value>
+  </data>
+  <data name="Module.Description.FixedTextModule" xml:space="preserve">
+    <value>输出预先配置的固定文本内容</value>
+  </data>
+  <data name="Module.Description.TextJoinModule" xml:space="preserve">
+    <value>将多个文本输入拼接为一个字符串</value>
+  </data>
+  <data name="Module.Description.TextSplitModule" xml:space="preserve">
+    <value>按分隔符将文本拆分为多个部分</value>
+  </data>
+  <data name="Module.Description.ConditionalBranchModule" xml:space="preserve">
+    <value>根据条件表达式将数据路由到不同的输出端口</value>
+  </data>
+  <data name="Module.Description.AnimaInputPortModule" xml:space="preserve">
+    <value>从其他 Anima 接收跨 Anima 路由的输入数据</value>
+  </data>
+  <data name="Module.Description.AnimaOutputPortModule" xml:space="preserve">
+    <value>向其他 Anima 发送跨 Anima 路由的输出数据</value>
+  </data>
+  <data name="Module.Description.AnimaRouteModule" xml:space="preserve">
+    <value>将消息路由到目标 Anima 的指定端口</value>
+  </data>
+  <data name="Module.Description.HttpRequestModule" xml:space="preserve">
+    <value>发送 HTTP 请求并返回响应内容</value>
+  </data>
+  <data name="Module.Description.JoinBarrierModule" xml:space="preserve">
+    <value>等待所有输入端口都收到数据后再触发输出</value>
+  </data>
+  <data name="Module.Description.MemoryModule" xml:space="preserve">
+    <value>为 LLM 提供长期记忆的存储、检索和沉淀功能</value>
+  </data>
+  <data name="Module.Description.WorkspaceToolModule" xml:space="preserve">
+    <value>为 LLM Agent 提供工具调用能力，如文件读写和搜索</value>
+  </data>
   <data name="Run.StopReasonPrefix" xml:space="preserve">
     <value>运行已暂停：</value>
   </data>
