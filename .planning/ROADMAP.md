@@ -295,7 +295,7 @@ Plans:
 | 61. Module i18n Foundation | v2.0.3 | 2/2 | Complete | 2026-03-24 |
 | 62. Connection Deletion UX | v2.0.3 | 2/2 | Complete | 2026-03-24 |
 | 63. Module Descriptions | v2.0.3 | 1/1 | Complete | 2026-03-24 |
-| 64. Port Hover Tooltips | 1/1 | Complete   | 2026-03-24 | - |
+| 64. Port Hover Tooltips | 1/1 | Complete    | 2026-03-24 | - |
 
 **Total shipped: 63 phases, 145 plans across 13 milestones**
 **Active: 1 phase (64) in v2.0.3**
