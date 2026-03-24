@@ -161,7 +161,7 @@
 <details open>
 <summary>🔄 v2.0.3 Editor Experience (Phases 61-64) — ACTIVE</summary>
 
-- [ ] **Phase 61: Module i18n Foundation** - Localized module display names in palette, node cards, and config sidebar
+- [x] **Phase 61: Module i18n Foundation** - Localized module display names in palette, node cards, and config sidebar — completed 2026-03-24
 - [ ] **Phase 62: Connection Deletion UX** - Right-click context menu and Delete key for connection removal
 - [ ] **Phase 63: Module Descriptions** - Module descriptions wired into config sidebar and palette tooltips
 - [ ] **Phase 64: Port Hover Tooltips** - SVG port tooltips with Chinese descriptions on hover
@@ -182,8 +182,8 @@
   5. Saved wiring configurations continue to load correctly after the display-name split (invariant name never written to storage)
 **Plans**: 2 plans
 Plans:
-- [ ] 61-01-PLAN.md -- Add .resx display name keys and wire ModulePalette i18n
-- [ ] 61-02-PLAN.md -- Wire NodeCard and EditorConfigSidebar i18n + human verify
+- [x] 61-01-PLAN.md -- Add .resx display name keys and wire ModulePalette i18n
+- [x] 61-02-PLAN.md -- Wire NodeCard and EditorConfigSidebar i18n + human verify
 
 ### Phase 62: Connection Deletion UX
 **Goal**: Users can delete connections via right-click context menu and Delete key
@@ -195,7 +195,10 @@ Plans:
   3. Selecting a connection and pressing Delete removes it from the canvas
   4. The context menu closes when clicking outside it or pressing Escape
   5. The Delete key does not fire on sidebar text inputs when the user is typing in a config field
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 62-01-PLAN.md -- Fix DeleteSelected() parsing bug, add focus guard JS interop, and unit tests
+- [ ] 62-02-PLAN.md -- ConnectionContextMenu component, ConnectionLine right-click, EditorCanvas wiring + human verify
 
 ### Phase 63: Module Descriptions
 **Goal**: Users can read a brief description of each module in the config sidebar and palette
@@ -285,13 +288,13 @@ Plans:
 | 58. Agent Loop Core | v2.0.2 | 2/2 | Complete | 2026-03-23 |
 | 59. Tool Call Display and UI Wiring | v2.0.2 | 2/2 | Complete | 2026-03-23 |
 | 60. Hardening and Memory Integration | v2.0.2 | 1/1 | Complete | 2026-03-23 |
-| 61. Module i18n Foundation | 2/2 | Complete   | 2026-03-24 | - |
-| 62. Connection Deletion UX | v2.0.3 | 0/? | Not started | - |
+| 61. Module i18n Foundation | v2.0.3 | 2/2 | Complete | 2026-03-24 |
+| 62. Connection Deletion UX | v2.0.3 | 0/2 | Not started | - |
 | 63. Module Descriptions | v2.0.3 | 0/? | Not started | - |
 | 64. Port Hover Tooltips | v2.0.3 | 0/? | Not started | - |
 
-**Total shipped: 60 phases, 138 plans across 13 milestones**
-**Active: 4 phases (61-64) in v2.0.3**
+**Total shipped: 61 phases, 140 plans across 13 milestones**
+**Active: 3 phases (62-64) in v2.0.3**
 
 ---
-*Last updated: 2026-03-24 — v2.0.3 Editor Experience roadmap created*
+*Last updated: 2026-03-24 — Phase 62 planned (2 plans); v2.0.3 Editor Experience in progress*
