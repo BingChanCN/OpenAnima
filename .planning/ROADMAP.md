@@ -209,7 +209,9 @@ Plans:
   2. The description is in Chinese for built-in modules when language is zh-CN
   3. Hovering over a module item in the palette shows a tooltip with the module description
   4. Descriptions display correctly when the Anima runtime is stopped (no live module instance required)
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 63-01-PLAN.md -- Add module description .resx keys and wire sidebar + palette tooltip
 
 ### Phase 64: Port Hover Tooltips
 **Goal**: Users can hover over port circles to see a Chinese description of what each port does
@@ -221,7 +223,9 @@ Plans:
   3. The tooltip format includes both port name and description (e.g., "prompt: 系统提示词 (Text)")
   4. Ports without descriptions fall back gracefully showing only port name and type
   5. Port tooltips do not interfere with drag-to-connect interaction on port circles
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 63-01-PLAN.md -- Add module description .resx keys and wire sidebar + palette tooltip
 
 ## Progress
 
@@ -290,11 +294,11 @@ Plans:
 | 60. Hardening and Memory Integration | v2.0.2 | 1/1 | Complete | 2026-03-23 |
 | 61. Module i18n Foundation | v2.0.3 | 2/2 | Complete | 2026-03-24 |
 | 62. Connection Deletion UX | 2/2 | Complete    | 2026-03-24 | - |
-| 63. Module Descriptions | v2.0.3 | 0/? | Not started | - |
+| 63. Module Descriptions | v2.0.3 | 0/1 | Planned | - |
 | 64. Port Hover Tooltips | v2.0.3 | 0/? | Not started | - |
 
 **Total shipped: 61 phases, 140 plans across 13 milestones**
 **Active: 3 phases (62-64) in v2.0.3**
 
 ---
-*Last updated: 2026-03-24 — Phase 62 planned (2 plans); v2.0.3 Editor Experience in progress*
+*Last updated: 2026-03-24 -- Phase 63 planned (1 plan); v2.0.3 Editor Experience in progress*
