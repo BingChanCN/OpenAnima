@@ -5,13 +5,15 @@
 @using OpenAnima.Core.Anima
 @using OpenAnima.Contracts
 @using OpenAnima.Contracts.Ports
+@using Microsoft.JSInterop
 @inject EditorStateService _state
 @inject IPortRegistry _portRegistry
 @inject IConfigurationLoader _configLoader
 @inject IAnimaRuntimeManager _animaRuntimeManager
-@inject IAnimaContext _animaContext
+@inject IModuleContext _animaContext
 @inject IStringLocalizer<SharedResources> L
 @inject LanguageService LangSvc
+@inject IJSRuntime JS
 @implements IDisposable
 
 <div class="editor-container" tabindex="0" @onkeydown="HandleKeyDown">
@@ -56,11 +58,15 @@
 
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
-    private void HandleKeyDown(KeyboardEventArgs e)
+    private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Delete" || e.Key == "Backspace")
         {
-            _state.DeleteSelected();
+            var isEditing = await JS.InvokeAsync<bool>("editorCanvas.isActiveElementEditable");
+            if (!isEditing)
+            {
+                _state.DeleteSelected();
+            }
         }
         else if (e.Key == "Escape")
         {
