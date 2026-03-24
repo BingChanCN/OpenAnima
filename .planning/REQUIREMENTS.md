@@ -46,17 +46,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EDUX-01 | — | Pending |
-| EDUX-02 | — | Pending |
-| EDUX-03 | — | Pending |
-| EDUX-04 | — | Pending |
-| EDUX-05 | — | Pending |
+| EDUX-01 | Phase 61 | Pending |
+| EDUX-02 | Phase 63 | Pending |
+| EDUX-03 | Phase 62 | Pending |
+| EDUX-04 | Phase 64 | Pending |
+| EDUX-05 | Phase 63 | Pending |
 
 **Coverage:**
 - v2.0.3 requirements: 5 total
-- Mapped to phases: 0
-- Unmapped: 5
+- Mapped to phases: 5
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-03-24 after initial definition*
+*Last updated: 2026-03-24 — traceability table completed (5/5 mapped)*

@@ -15,6 +15,7 @@
 - ✅ **v2.0 Structured Cognition Foundation** — Phases 45-49 (shipped 2026-03-21)
 - ✅ **v2.0.1 Provider Registry & Living Memory** — Phases 50-57 (shipped 2026-03-23)
 - ✅ **v2.0.2 Chat Agent Loop** — Phases 58-60 (shipped 2026-03-23)
+- 🔄 **v2.0.3 Editor Experience** — Phases 61-64 (active)
 
 ## Phases
 
@@ -157,6 +158,65 @@
 
 </details>
 
+<details open>
+<summary>🔄 v2.0.3 Editor Experience (Phases 61-64) — ACTIVE</summary>
+
+- [ ] **Phase 61: Module i18n Foundation** - Localized module display names in palette, node cards, and config sidebar
+- [ ] **Phase 62: Connection Deletion UX** - Right-click context menu and Delete key for connection removal
+- [ ] **Phase 63: Module Descriptions** - Module descriptions wired into config sidebar and palette tooltips
+- [ ] **Phase 64: Port Hover Tooltips** - SVG port tooltips with Chinese descriptions on hover
+
+</details>
+
+## Phase Details
+
+### Phase 61: Module i18n Foundation
+**Goal**: Users see localized module display names everywhere in the editor when language is zh-CN
+**Depends on**: Nothing (first phase of v2.0.3)
+**Requirements**: EDUX-01
+**Success Criteria** (what must be TRUE):
+  1. Module palette shows Chinese display names (e.g., "LLM 模块" not "LLMModule") when language is zh-CN
+  2. Node card title bars in the editor canvas show the localized display name, not the C# class name
+  3. EditorConfigSidebar header shows the localized display name when a node is selected
+  4. Switching language live updates all three surfaces without page reload
+  5. Saved wiring configurations continue to load correctly after the display-name split (invariant name never written to storage)
+**Plans**: TBD
+
+### Phase 62: Connection Deletion UX
+**Goal**: Users can delete connections via right-click context menu and Delete key
+**Depends on**: Nothing (independent of Phase 61)
+**Requirements**: EDUX-03
+**Success Criteria** (what must be TRUE):
+  1. Right-clicking a connection bezier path opens a context menu with a "Delete Connection" action
+  2. Clicking "Delete Connection" in the context menu removes the connection from the canvas
+  3. Selecting a connection and pressing Delete removes it from the canvas
+  4. The context menu closes when clicking outside it or pressing Escape
+  5. The Delete key does not fire on sidebar text inputs when the user is typing in a config field
+**Plans**: TBD
+
+### Phase 63: Module Descriptions
+**Goal**: Users can read a brief description of each module in the config sidebar and palette
+**Depends on**: Phase 61 (ModuleSchemaService description infrastructure and .resx keys established)
+**Requirements**: EDUX-02, EDUX-05
+**Success Criteria** (what must be TRUE):
+  1. EditorConfigSidebar shows a module description below the module header when a node is selected
+  2. The description is in Chinese for built-in modules when language is zh-CN
+  3. Hovering over a module item in the palette shows a tooltip with the module description
+  4. Descriptions display correctly when the Anima runtime is stopped (no live module instance required)
+**Plans**: TBD
+
+### Phase 64: Port Hover Tooltips
+**Goal**: Users can hover over port circles to see a Chinese description of what each port does
+**Depends on**: Phase 61 (NodeCard localization work complete), Phase 63 (editor UX stable)
+**Requirements**: EDUX-04
+**Success Criteria** (what must be TRUE):
+  1. Hovering over an input or output port circle on a node card shows a tooltip with the port's Chinese description
+  2. All built-in module ports have Chinese description text visible on hover
+  3. The tooltip format includes both port name and description (e.g., "prompt: 系统提示词 (Text)")
+  4. Ports without descriptions fall back gracefully showing only port name and type
+  5. Port tooltips do not interfere with drag-to-connect interaction on port circles
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -222,8 +282,13 @@
 | 58. Agent Loop Core | v2.0.2 | 2/2 | Complete | 2026-03-23 |
 | 59. Tool Call Display and UI Wiring | v2.0.2 | 2/2 | Complete | 2026-03-23 |
 | 60. Hardening and Memory Integration | v2.0.2 | 1/1 | Complete | 2026-03-23 |
+| 61. Module i18n Foundation | v2.0.3 | 0/? | Not started | - |
+| 62. Connection Deletion UX | v2.0.3 | 0/? | Not started | - |
+| 63. Module Descriptions | v2.0.3 | 0/? | Not started | - |
+| 64. Port Hover Tooltips | v2.0.3 | 0/? | Not started | - |
 
 **Total shipped: 60 phases, 138 plans across 13 milestones**
+**Active: 4 phases (61-64) in v2.0.3**
 
 ---
-*Last updated: 2026-03-23 — v2.0.2 Chat Agent Loop shipped*
+*Last updated: 2026-03-24 — v2.0.3 Editor Experience roadmap created*
