@@ -20,7 +20,7 @@ public class EditorStateService
     private readonly IPortRegistry _portRegistry;
     private readonly IConfigurationLoader _configLoader;
     private readonly IAnimaRuntimeManager _animaRuntimeManager;
-    private readonly IAnimaContext _animaContext;
+    private readonly IModuleContext _animaContext;
     private readonly ILogger<EditorStateService> _logger;
     private CancellationTokenSource? _autoSaveDebounce;
 
@@ -28,7 +28,7 @@ public class EditorStateService
         IPortRegistry portRegistry,
         IConfigurationLoader configLoader,
         IAnimaRuntimeManager animaRuntimeManager,
-        IAnimaContext animaContext,
+        IModuleContext animaContext,
         ILogger<EditorStateService> logger)
     {
         _portRegistry = portRegistry;
@@ -302,13 +302,18 @@ public class EditorStateService
         // Remove explicitly selected connections
         foreach (var connId in SelectedConnectionIds)
         {
-            var parts = connId.Split(new[] { ":", "->", ":" }, StringSplitOptions.None);
-            if (parts.Length == 4)
+            var halves = connId.Split("->");
+            if (halves.Length == 2)
             {
-                connections = connections
-                    .Where(c => !(c.SourceModuleId == parts[0] && c.SourcePortName == parts[1] &&
-                                 c.TargetModuleId == parts[2] && c.TargetPortName == parts[3]))
-                    .ToList();
+                var sourceParts = halves[0].Split(':');
+                var targetParts = halves[1].Split(':');
+                if (sourceParts.Length == 2 && targetParts.Length == 2)
+                {
+                    connections = connections
+                        .Where(c => !(c.SourceModuleId == sourceParts[0] && c.SourcePortName == sourceParts[1] &&
+                                     c.TargetModuleId == targetParts[0] && c.TargetPortName == targetParts[1]))
+                        .ToList();
+                }
             }
         }
 
