@@ -180,7 +180,10 @@
   3. EditorConfigSidebar header shows the localized display name when a node is selected
   4. Switching language live updates all three surfaces without page reload
   5. Saved wiring configurations continue to load correctly after the display-name split (invariant name never written to storage)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 61-01-PLAN.md -- Add .resx display name keys and wire ModulePalette i18n
+- [ ] 61-02-PLAN.md -- Wire NodeCard and EditorConfigSidebar i18n + human verify
 
 ### Phase 62: Connection Deletion UX
 **Goal**: Users can delete connections via right-click context menu and Delete key
@@ -282,7 +285,7 @@
 | 58. Agent Loop Core | v2.0.2 | 2/2 | Complete | 2026-03-23 |
 | 59. Tool Call Display and UI Wiring | v2.0.2 | 2/2 | Complete | 2026-03-23 |
 | 60. Hardening and Memory Integration | v2.0.2 | 1/1 | Complete | 2026-03-23 |
-| 61. Module i18n Foundation | v2.0.3 | 0/? | Not started | - |
+| 61. Module i18n Foundation | v2.0.3 | 0/2 | Planned | - |
 | 62. Connection Deletion UX | v2.0.3 | 0/? | Not started | - |
 | 63. Module Descriptions | v2.0.3 | 0/? | Not started | - |
 | 64. Port Hover Tooltips | v2.0.3 | 0/? | Not started | - |
