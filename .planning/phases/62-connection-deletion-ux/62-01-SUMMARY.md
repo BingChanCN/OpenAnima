@@ -71,7 +71,7 @@ Each task was committed atomically:
 1. **Task 1: Fix DeleteSelected() connection ID parsing and add unit tests** - `4a20958` (fix/test)
 2. **Task 2: Add JS interop focus guard and wire into Editor.razor HandleKeyDown** - `d81803a` (feat)
 
-**Plan metadata:** (pending docs commit)
+**Plan metadata:** `8ab57c2` (docs: complete plan)
 
 _Note: Task 1 used TDD approach — tests were written before the parsing fix was applied._
 
