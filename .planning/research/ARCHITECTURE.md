@@ -1,545 +1,434 @@
 # Architecture Research
 
-**Domain:** OpenAnima v2.0.2 Chat Agent Loop — Tool Calling Integration
-**Researched:** 2026-03-23
-**Confidence:** HIGH (based on direct codebase inspection)
+**Domain:** Blazor Server visual wiring editor — UX improvement integration
+**Researched:** 2026-03-24
+**Confidence:** HIGH (all findings from direct codebase inspection)
 
-## Standard Architecture
+## Scope
 
-### System Overview
+This document answers one question: how do the four v2.0.3 editor UX features integrate
+into the existing Blazor Server + SVG architecture? It covers integration points, which
+files are new vs modified, data flow changes, and the recommended build order.
 
-```text
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                         Chat UI Layer                                        │
-├──────────────────────────────────────────────────────────────────────────────┤
-│  ChatPanel.razor                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────────┐ │
-│  │ SendMessage → ChatInputModule.SendMessageAsync                          │ │
-│  │ TCS _pendingAssistantResponse awaits ChatOutputModule.OnMessageReceived │ │
-│  │ 30s timeout; _isGenerating flag gates send button                       │ │
-│  │                                                                         │ │
-│  │ NEW: also listen for ToolCallEvent events to show tool call bubbles     │ │
-│  └─────────────────────────────────────────────────────────────────────────┘ │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                   Module Pipeline (EventBus routing)                         │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  [ChatInputModule]                                                           │
-│      ↓  port.userMessage                                                     │
-│  [WiringEngine subscriptions → LLMModule.port.messages (or .prompt)]         │
-│      ↓                                                                       │
-│  [LLMModule.ExecuteWithMessagesListAsync]  ← AGENT LOOP LIVES HERE          │
-│      │                                                                       │
-│      │  1. memory recall injection (existing)                                │
-│      │  2. tool descriptor injection (existing)                              │
-│      │  3. CallLlmAsync → returns full text                                  │
-│      │  4. NEW: parse tool calls from response                               │
-│      │  5. NEW: foreach tool call → dispatch + await result                  │
-│      │  6. NEW: append assistant + tool result to messages                   │
-│      │  7. NEW: loop back to step 3 (bounded by max iterations)              │
-│      │  8. final response → PublishResponseAsync                             │
-│      │                                                                       │
-│      ↓  port.response                                                        │
-│  [WiringEngine subscriptions → ChatOutputModule.port.displayText]            │
-│      ↓                                                                       │
-│  [ChatOutputModule.OnMessageReceived event]                                  │
-│      ↓                                                                       │
-│  [ChatPanel TCS.TrySetResult → _pendingAssistantResponse completes]          │
-│                                                                              │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                         Tool Execution                                       │
-├──────────────────────────────────────────────────────────────────────────────┤
-│  WorkspaceToolModule (existing — separate IWorkspaceTool dispatch path)      │
-│  NEW: AgentToolDispatcher — called directly from LLMModule agent loop        │
-│       bypasses the EventBus/port wiring entirely for the inner loop          │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘
+The four features:
+1. EDUX-01 — Module names in Chinese when language is zh-CN
+2. EDUX-02 — Module descriptions in the editor module list (palette)
+3. EDUX-03 — Connection deletion via click-select + Delete key and right-click context menu
+4. EDUX-04 — Port hover tooltips with Chinese descriptions
+
+---
+
+## System Overview
+
+```
+Editor page (Editor.razor)
+  |-- EditorCanvas.razor          SVG canvas, pan/zoom, mouse events
+  |     |-- ConnectionLine.razor  Bezier path per connection (two paths: hit + visible)
+  |     |-- NodeCard.razor        SVG <g> node with ports
+  |-- EditorConfigSidebar.razor   Right panel, shown on node click
+  |-- ModulePalette.razor         Left panel, draggable module list
+
+EditorStateService (scoped singleton)
+  |  owns: Configuration (nodes + connections), selection sets, drag state
+  |  event: OnStateChanged -> all components re-render
+  |  calls: IPortRegistry, IConfigurationLoader, IAnimaRuntimeManager
+
+IPortRegistry (PortRegistry.cs)
+  |  keyed by ModuleName -> List<PortMetadata>
+  |  PortMetadata record: Name, Type, Direction, ModuleName
+  |  (no Description field currently)
+
+LanguageService (singleton)
+  |  Current: CultureInfo (default zh-CN)
+  |  event: LanguageChanged -> components that inject it re-render
+  |  used via IStringLocalizer<SharedResources> + .resx files
+
+IModuleMetadata / ModuleMetadataRecord
+  |  Name, Version, Description
+  |  Implemented by every IModuleExecutor via Metadata property
+  |  NOT currently used in editor display; ModulePalette uses IPortRegistry only
+
+PortDiscovery (reflection)
+  |  reads InputPortAttribute / OutputPortAttribute from module class
+  |  produces PortMetadata records
+  |  attributes carry: Name, Type
+  |  (no Description field on attributes currently)
 ```
 
-### The Central Design Question: In-Process vs EventBus Tool Dispatch
+---
 
-The existing tool path (WorkspaceToolModule) routes tool invocations through the EventBus:
+## Component Responsibilities
+
+| Component | Responsibility | Relevant to Feature |
+|-----------|----------------|---------------------|
+| `Editor.razor` | Page shell, keyboard handler (Delete/Escape), layout | EDUX-03 (Delete key already wired) |
+| `EditorCanvas.razor` | SVG surface, mouse events, connection rendering, SignalR | EDUX-03 (right-click on connection), EDUX-04 (tooltip layer) |
+| `ConnectionLine.razor` | Single bezier connection (hit path + visible path) | EDUX-03 (right-click handler) |
+| `NodeCard.razor` | SVG node with title, status dot, port circles | EDUX-01 (display name), EDUX-04 (port tooltip trigger) |
+| `ModulePalette.razor` | Module list, search, drag source | EDUX-01 (display name), EDUX-02 (description) |
+| `EditorConfigSidebar.razor` | Config panel for selected node | EDUX-02 (description display already stubbed), EDUX-01 (header name) |
+| `EditorStateService.cs` | State machine for editor | EDUX-03 (DeleteSelected already deletes connections) |
+| `IPortRegistry / PortMetadata` | Port discovery and lookup | EDUX-04 (needs Description field) |
+| `InputPortAttribute / OutputPortAttribute` | Compile-time port declaration | EDUX-04 (needs Description parameter) |
+| `LanguageService + .resx files` | i18n strings | EDUX-01, EDUX-02, EDUX-04 (new resource keys) |
+| `IModuleMetadata` | Module description source | EDUX-02 (already has Description; not yet surfaced in editor) |
+
+---
+
+## Feature Integration Analysis
+
+### EDUX-01: Module Chinese Names
+
+**Current state:** `NodeCard.razor` line 36 renders `Node.ModuleName` raw (the C# class
+name, e.g. "LLMModule"). `ModulePalette.razor` line 30 renders `module.Name` which is also
+the raw class name from `IPortRegistry`. `EditorConfigSidebar.razor` line 24 renders
+`_selectedNode.ModuleName` as the header.
+
+**Integration approach:** Add a lookup helper that maps module names to localized display
+names. The simplest path is to add resource keys in both .resx files following the existing
+convention:
+
 ```
-LLMModule publishes text → WiringEngine subscription → WorkspaceToolModule.port.invoke
-WorkspaceToolModule publishes JSON → WiringEngine subscription → next module
-```
-
-For the agent loop, this EventBus round-trip through WiringEngine is a **fundamental mismatch**:
-- The loop must suspend LLMModule, wait for a tool result, then continue inside the same `ExecuteWithMessagesListAsync` stack frame.
-- Publishing to EventBus and awaiting a reply requires a second TCS rendezvous — exactly the fragile pattern ChatPanel already uses and that we want to keep minimal.
-- The WiringEngine per-module SemaphoreSlim would deadlock: LLMModule holds `_executionGuard`, fires an event to WorkspaceToolModule via EventBus, but if WorkspaceToolModule's wiring result port feeds back through LLMModule, the semaphore would block indefinitely.
-
-**Recommendation: Agent loop calls `IWorkspaceTool.ExecuteAsync` directly**, not through EventBus. This is architecturally correct because the loop is an internal LLMModule concern, not a wiring concern. The wiring path remains available for non-chat module flows.
-
-### Component Responsibilities
-
-| Component | Responsibility | Modified/New |
-|-----------|---------------|--------------|
-| `LLMModule` | Owns the agent loop: parse tool calls, dispatch, inject results, re-call LLM | Modified — add loop inside `ExecuteWithMessagesListAsync` |
-| `AgentToolDispatcher` | Translates tool call text into `IWorkspaceTool.ExecuteAsync` calls, formats results as `ChatMessageInput` | New service |
-| `ToolCallParser` | Parses the XML `<tool_call>` marker from LLM text response into structured `ToolCallRequest` records | New (static or lightweight class) |
-| `ChatSessionMessage` | Existing per-message UI record; needs `ToolCall`/`ToolResult` variants for display | Modified — new message kind discriminator |
-| `IToolCallNotifier` | Pushes tool call progress events to UI via EventBus or direct event | New interface (optional — can use EventBus directly) |
-| `LLMModule schema` | Add `agentMaxIterations` config field (default 10) | Modified |
-| `ChatPanel` | Subscribe to tool call events and render tool call bubbles | Modified |
-
-## Recommended Architecture
-
-### Agent Loop Integration Point
-
-**Where the loop lives:** `ExecuteWithMessagesListAsync` in `LLMModule`, after prompt assembly but replacing the single `CallLlmAsync` + `PublishResponseAsync` call.
-
-The existing method structure is:
-```
-1. assemble messages (memory recall, routing, tool descriptors)  ← unchanged
-2. CallLlmAsync → one-shot response                              ← becomes loop entry
-3. PublishResponseAsync                                           ← becomes loop exit
-4. TriggerSedimentation                                           ← unchanged, fires on final response
+Module.DisplayName.LLMModule = "LLM 模块"  (zh-CN)
+Module.DisplayName.LLMModule = "LLM Module" (en-US)
 ```
 
-The new structure becomes:
+A helper method `GetModuleDisplayName(string moduleName)` reads
+`L["Module.DisplayName.{moduleName}"]` and falls back to `moduleName` if the key is absent
+(consistent with existing i18n fallback behavior per requirement I18N-04). This helper can
+be a static extension on `IStringLocalizer<SharedResources>` or an inline expression at
+call sites.
+
+**Files modified:**
+- `SharedResources.zh-CN.resx` — add `Module.DisplayName.*` keys for all built-in modules
+- `SharedResources.en-US.resx` — add matching English keys
+- `NodeCard.razor` — replace `Node.ModuleName` text with display name lookup; inject `IStringLocalizer`
+- `ModulePalette.razor` — replace `module.Name` with display name lookup; inject `IStringLocalizer`
+- `EditorConfigSidebar.razor` — replace `_selectedNode.ModuleName` in header (already has `IStringLocalizer`)
+
+**No new files required.** The fallback to raw name ensures external modules without a
+.resx key still display correctly.
+
+**Language reactivity:** `NodeCard.razor` and `ModulePalette.razor` do not currently inject
+`LanguageService`. They must subscribe to `LanguageChanged` and call `StateHasChanged` on
+language switch, or inject `IStringLocalizer<SharedResources>` (which is re-scoped per
+Blazor render cycle) and also subscribe to `LanguageChanged` to force a re-render when the
+user switches language without navigating away from the editor.
+
+---
+
+### EDUX-02: Module Descriptions in Editor Module List
+
+**Current state:** `ModulePalette.razor` shows only `module.Name` and port counts.
+`EditorConfigSidebar.razor` shows a hardcoded `@L["Editor.Config.NoDescription"]` — the
+actual module `Description` from `IModuleMetadata` is never used in the editor.
+
+`IModuleMetadata` already has a `Description` property. Every built-in module sets it via
+`ModuleMetadataRecord`. The information exists but is not surfaced.
+
+**Integration approach:** Extend `ModuleSchemaService` (which already has a static type map
+of all built-in modules) with a `GetDescription(string moduleName)` method. This avoids
+creating a new service. For the palette, show the description as an HTML `title` attribute
+on the `.module-item` div (native browser tooltip — no custom component needed, no JS
+required).
+
+For the sidebar, replace the hardcoded `@L["Editor.Config.NoDescription"]` with the actual
+description from `ModuleSchemaService.GetDescription(_selectedNode.ModuleName)`. Fall back
+to `@L["Editor.Config.NoDescription"]` if empty.
+
+**Files modified:**
+- `ModulePalette.razor` — add `title="@GetDescription(module.Name)"` to `.module-item` div; inject `ModuleSchemaService`
+- `EditorConfigSidebar.razor` — replace hardcoded no-description string with real description
+- `Services/ModuleSchemaService.cs` — add `GetDescription(string moduleName)` method
+
+**New files:** None required.
+
+---
+
+### EDUX-03: Connection Deletion
+
+**Current state — what already works:**
+- `Editor.razor` `HandleKeyDown` already calls `_state.DeleteSelected()` on Delete/Backspace
+- `EditorStateService.DeleteSelected()` already removes explicitly selected connections
+  by iterating `SelectedConnectionIds`
+- `ConnectionLine.razor` already has `IsSelected` parameter and `OnClick` EventCallback
+- `EditorCanvas.razor` already has `HandleConnectionClick` that calls `_state.SelectConnection`
+
+**Click-to-select + Delete key is architecturally complete.** The only missing piece is the
+right-click context menu for connections.
+
+**Missing piece — right-click context menu:**
+
+`EditorCanvas.razor` has `@oncontextmenu:preventDefault` on the SVG element. Connection
+right-click must be caught at the `ConnectionLine` level before bubbling to the SVG.
+
+**Recommended approach:** Add a new `ConnectionContextMenu.razor` component (mirrors the
+existing `ModuleContextMenu.razor` pattern exactly — backdrop div, absolute-positioned menu
+div, `IsVisible`/`X`/`Y` parameters, `EventCallback` for actions).
+
+`ConnectionLine.razor` adds an `OnContextMenu` EventCallback with screen coordinates and
+connection identity. `EditorCanvas.razor` owns the context menu state and renders the
+component.
+
+**Files new:**
+- `Components/Shared/ConnectionContextMenu.razor`
+- `Components/Shared/ConnectionContextMenu.razor.css`
+
+**Files modified:**
+- `Components/Shared/ConnectionLine.razor` — add `OnContextMenu` EventCallback parameter and `@oncontextmenu` handler on the hit-detection path element
+- `Components/Shared/EditorCanvas.razor` — receive context menu event from `ConnectionLine`, manage context menu state (position, target connection identity), render `<ConnectionContextMenu>`
+- `Resources/SharedResources.zh-CN.resx` — add `Editor.Connection.Delete` key
+- `Resources/SharedResources.en-US.resx` — add matching English key
+
+**Data flow for right-click delete:**
+
 ```
-1. assemble messages (memory recall, routing, tool descriptors)  ← unchanged
-2. AGENT LOOP (bounded by agentMaxIterations config):
-   a. CallLlmAsync → response text
-   b. ToolCallParser.TryParse(response) → ToolCallRequest[]?
-   c. if no tool calls → break loop (final response)
-   d. foreach tool call:
-      - publish ToolCallStarted event (UI notification)
-      - await AgentToolDispatcher.DispatchAsync(toolCall)
-      - publish ToolCallCompleted event (UI notification)
-   e. append assistant message + tool results to messages list
-   f. loop back to step a
-3. PublishResponseAsync(finalResponse)                            ← unchanged
-4. TriggerSedimentation                                           ← unchanged
+User right-clicks connection bezier path
+  -> ConnectionLine.razor transparent hit-path @oncontextmenu fires
+  -> OnContextMenu EventCallback invoked with (screenX, screenY, PortConnection)
+  -> EditorCanvas.razor stores (_contextMenuConnection, _contextMenuX, _contextMenuY)
+  -> ConnectionContextMenu.razor renders at (x, y) with IsVisible=true
+  -> User clicks "Delete"
+  -> EditorStateService.RemoveConnection() called
+  -> OnStateChanged fires
+  -> EditorCanvas re-renders, _contextMenuConnection set to null, menu hidden
 ```
 
-### Tool Call Protocol
+**Note on coordinate handling:** The context menu is an HTML `<div>` overlay, not an SVG
+element. Screen coordinates from `MouseEventArgs.ClientX/ClientY` are used directly. The
+same offset correction used in `ModuleContextMenu` applies here.
 
-The existing tool descriptor XML (BuildToolDescriptorBlock) instructs the LLM about available tools but does not specify a call protocol. The agent loop needs a call protocol:
+---
 
-**Recommended XML call format** (consistent with existing XML conventions in this codebase):
+### EDUX-04: Port Hover Tooltips with Chinese Descriptions
+
+**Current state:** Port circles in `NodeCard.razor` are SVG `<circle>` elements inside an
+SVG `<g>` transform. The node-level `<title>` (line 11) provides a status tooltip for the
+whole card. Individual port circles have no tooltip. `PortMetadata` has no `Description`
+field. `InputPortAttribute`/`OutputPortAttribute` have no `Description` parameter.
+
+**Integration — two sub-tasks:**
+
+**Sub-task A: Add Description to port metadata (Contracts layer)**
+
+Add optional `Description` string parameter to both port attributes:
+
+```csharp
+// InputPortAttribute.cs
+public InputPortAttribute(string name, PortType type, string description = "")
+{
+    Name = name; Type = type; Description = description;
+}
+public string Description { get; }
+```
+
+Add `Description` property to `PortMetadata` record:
+
+```csharp
+public record PortMetadata(string Name, PortType Type, PortDirection Direction,
+    string ModuleName, string Description = "")
+```
+
+Update `PortDiscovery.cs` to read `attr.Description` and pass it to `PortMetadata`.
+Update all built-in module port declarations to include Chinese descriptions.
+
+**Sub-task B: Render tooltip in SVG NodeCard**
+
+Wrap each port circle in a `<g>` with an SVG `<title>` child element. SVG `<title>` on
+a `<g>` provides a native browser tooltip on hover. No JavaScript interop required, no
+new Razor component required.
+
 ```xml
-<tool_call name="file_read">
-  <param name="path">src/main.cs</param>
-</tool_call>
+<g>
+    <title>messages: 接受对话消息列表 (Text)</title>
+    <circle cx="0" cy="@portY" r="6" .../>
+    @((MarkupString)$"<text ...>{port.Name}</text>")
+</g>
 ```
 
-The LLM can include multiple `<tool_call>` blocks in one response. Text outside the blocks is suppressed during the tool loop (only the final clean response is published to ChatOutputModule). This matches the existing `<route>` marker pattern from `FormatDetector`.
+Tooltip text composition: `"{port.Name}: {port.Description} ({port.Type})"` — falls back
+to `"{port.Name} ({port.Type})"` when description is empty.
 
-The system prompt addition needed in `BuildToolDescriptorBlock`:
+**Files modified:**
+- `OpenAnima.Contracts/Ports/InputPortAttribute.cs` — add `Description` parameter
+- `OpenAnima.Contracts/Ports/OutputPortAttribute.cs` — add `Description` parameter
+- `OpenAnima.Contracts/Ports/PortMetadata.cs` — add `Description` property
+- `OpenAnima.Core/Ports/PortDiscovery.cs` — read description from attribute, pass to PortMetadata
+- All built-in module `.cs` files (LLMModule, ChatInputModule, ChatOutputModule, HeartbeatModule, FixedTextModule, TextSplitModule, TextJoinModule, ConditionalBranchModule, AnimaInputPortModule, AnimaOutputPortModule, AnimaRouteModule, HttpRequestModule, JoinBarrierModule, WorkspaceToolModule, MemoryModule) — add Chinese description strings to port attribute declarations
+- `Components/Shared/NodeCard.razor` — wrap port circles in `<g><title>` elements
+
+**No new services or components needed.** The change is additive and backward-compatible:
+`Description = ""` default means existing external modules that do not add descriptions
+still compile and render without a tooltip.
+
+---
+
+## Data Flow Changes Summary
+
+### EDUX-01 and EDUX-02 (i18n + descriptions)
+
+No new data flows. Both features read existing data and render it through existing paths.
+The only addition is the localized display name lookup and description lookup at render time.
+
+### EDUX-03 (connection deletion)
+
+Delete key path has no data flow change. New data flow for right-click path only:
+
 ```
-To call a tool, include one or more tool_call blocks in your response:
-<tool_call name="tool_name">
-  <param name="param_name">value</param>
-</tool_call>
-After all tool calls complete, provide your final response without any tool_call blocks.
-```
-
-### Data Flow for Agent Loop
-
-```text
-[User message arrives via messages port]
-    ↓
-[LLMModule._executionGuard.WaitAsync]  ← serialization unchanged
-    ↓
-[memory recall injection]               ← unchanged
-[routing system message]                ← unchanged
-[tool descriptor injection]             ← extended with call protocol instructions
-    ↓
-AGENT LOOP (max N iterations from config "agentMaxIterations"):
-    ┌─────────────────────────────────────────────────────────┐
-    │ [CallLlmAsync] → response text                          │
-    │ [ToolCallParser.TryParse] → ToolCallRequest[]?          │
-    │                                                         │
-    │ if no tool calls: EXIT LOOP                             │
-    │                                                         │
-    │ foreach ToolCallRequest:                                │
-    │   [EventBus.PublishAsync ToolCallStarted]               │ ← UI notification
-    │   [AgentToolDispatcher.DispatchAsync]                   │ ← direct IWorkspaceTool call
-    │   [EventBus.PublishAsync ToolCallCompleted]             │ ← UI notification
-    │                                                         │
-    │ messages.Add(assistant: response_with_tool_calls)       │
-    │ foreach result: messages.Add(tool_result: json)         │
-    │ iteration++                                             │
-    └─────────────────────────────────────────────────────────┘
-    ↓
-[PublishResponseAsync(finalCleanResponse)]
-    ↓
-[WiringEngine: LLMModule.port.response → ChatOutputModule.port.displayText]
-    ↓
-[ChatOutputModule.OnMessageReceived]
-    ↓
-[ChatPanel TCS.TrySetResult]
-    ↓
-[TriggerSedimentation(finalMessages, finalResponse)]  ← unchanged
+ConnectionLine.razor (new @oncontextmenu)
+  -> EventCallback<ContextMenuArgs> OnContextMenu
+    -> EditorCanvas.razor (_contextMenuState field, renders ConnectionContextMenu)
+      -> ConnectionContextMenu.razor (new component)
+        -> EventCallback OnDelete
+          -> EditorStateService.RemoveConnection()
+            -> NotifyStateChanged()
+              -> EditorCanvas re-renders, menu hidden
 ```
 
-### Tool Result Message Format
+### EDUX-04 (port tooltips)
 
-Tool results are injected back as `ChatMessageInput` records. The role convention for tool results in OpenAI-compatible APIs is `"tool"`, but since `ChatMessageInput` currently maps unknown roles to `UserChatMessage`, there are two options:
+No new service calls. Description flows from attribute declaration at compile time through
+`PortDiscovery` into `PortMetadata`, stored in `IPortRegistry`. `NodeCard.razor` reads
+from `_inputPorts` / `_outputPorts` (already loaded in `OnParametersSet`) and emits
+`<title>` text inline. No runtime overhead beyond one string concatenation per port.
 
-**Option A (recommended):** Use role `"tool"` and update the `ChatMessage` switch in `CompleteWithCustomClientAsync` and `LLMService.MapMessages` to handle it:
-```csharp
-"tool" => new ToolChatMessage(toolCallId, content),
-```
+---
 
-**Option B (simpler, no SDK changes):** Use role `"user"` with a structured format prefix:
-```
-[Tool Result: file_read]\n{"success":true,"data":...}
-```
+## Architectural Patterns to Follow
 
-Option A is preferable because it is semantically correct for OpenAI-compatible APIs and future-proofs the context history. The OpenAI SDK `ChatClient.CompleteChatAsync` accepts `IEnumerable<ChatMessage>` so adding a `ToolChatMessage` case is a small, contained change.
+### Pattern 1: SVG Title for Native Tooltips
 
-However, native function calling via the OpenAI SDK (sending `ChatTool` objects and receiving `ToolCallUpdate` finish reason) is a different path. The existing architecture uses plain text XML markers, so **the agent loop should use the XML text approach** (consistent with how `<route>` markers work) rather than native function calling, to avoid a major SDK API change.
+**What:** Wrap an SVG element in a `<g>` and add `<title>` as first child.
+**When to use:** Simple informational hover text in SVG context, no interaction needed.
+**Trade-offs:** Browser-default tooltip styling (gray box, small delay). Not customizable
+but zero implementation cost. Acceptable for port labels.
 
-With XML text markers and role `"user"`:
-```csharp
-// After dispatching all tool calls for one iteration:
-messages.Add(new ChatMessageInput("assistant", responseWithToolCalls));
-foreach (var (request, result) in toolResults)
-{
-    var resultText = $"[Tool Result: {request.ToolName}]\n{JsonSerializer.Serialize(result)}";
-    messages.Add(new ChatMessageInput("user", resultText));
-}
-```
+### Pattern 2: HTML Overlay Context Menu
 
-This is simpler, avoids SDK model changes, and works with all OpenAI-compatible providers. The LLM is conditioned by the system prompt to understand the `[Tool Result: ...]` format.
+**What:** Absolute-positioned `<div>` rendered over the SVG at screen coordinates from
+right-click `MouseEventArgs`.
+**When to use:** Any context menu in the editor — consistent with existing `ModuleContextMenu.razor`.
+**Trade-offs:** Requires a backdrop `<div>` for outside-click dismissal. Already proven in
+`ModuleContextMenu`.
 
-### Streaming Across Multiple LLM Calls
+### Pattern 3: IStringLocalizer Fallback for Module Names
 
-**Current state:** `CompleteWithCustomClientAsync` and `ILLMService.CompleteAsync` use non-streaming `CompleteChatAsync`. Streaming (`StreamAsync`, `StreamWithUsageAsync`) exists on `ILLMService` but `LLMModule` uses `CompleteAsync` (full response, not streaming).
+**What:** `L[$"Module.DisplayName.{moduleName}"]` with fallback to raw name when key absent.
+**When to use:** Localizing names that exist in code but need a UI-friendly label.
+**Trade-offs:** Requires maintaining .resx entries for each built-in module. External modules
+without entries fall back gracefully to their C# class name.
 
-**For the agent loop:** The tool call loop requires reading the complete response before parsing tool calls. Streaming per-call is possible but adds complexity: stream tokens, accumulate full text, then parse. The simpler approach is to keep `CompleteAsync` (non-streaming) for the inner loop iterations.
+---
 
-**Streaming for the final response only** is an optional enhancement but not required for v2.0.2. The current ChatPanel receives the final response all at once via `HandleChatOutputReceived` and renders it — this works fine for agent loop final responses too.
+## Anti-Patterns to Avoid
 
-If streaming is desired for the final response, it requires a different delivery mechanism: the streaming tokens must reach ChatPanel before `_pendingAssistantResponse` is set. This is an orthogonal concern from the agent loop and should be deferred.
+### Anti-Pattern 1: SVG foreignObject for Tooltips
 
-**Decision for v2.0.2:** Keep `CompleteAsync` for all agent loop calls. The UI will show a "thinking" state while the loop runs. Each tool call dispatches a `ToolCallStarted`/`ToolCallCompleted` event pair so the UI can show intermediate progress without full streaming.
+**What people do:** Embed an HTML `<div>` tooltip inside SVG using `<foreignObject>`.
+**Why it's wrong:** Cross-browser inconsistency, z-index issues inside SVG transform groups,
+harder to position relative to the pan/zoom transform matrix.
+**Do this instead:** SVG `<title>` for native tooltips, or an HTML `<div>` at `ClientX/ClientY`
+(the context menu pattern) if custom styling is required.
 
-### Semaphore Interaction
+### Anti-Pattern 2: Port Descriptions Only in .resx
 
-The existing `_executionGuard` SemaphoreSlim(1,1) in LLMModule serializes all invocations. The agent loop runs entirely within a single `_executionGuard.WaitAsync` / `Release` pair — the loop holds the guard for its entire duration.
+**What people do:** Put port descriptions in resource files and not on the attribute.
+**Why it's wrong:** Separates port declaration from its documentation. External module authors
+cannot provide descriptions without shipping .resx files matching OpenAnima's resource namespace.
+**Do this instead:** Description on the attribute, which is the single authoritative source.
+.resx is for UI labels (button text, section headers), not for programmatic metadata.
 
-This is correct behavior: the guard prevents a new user message from interrupting a running agent loop. The guard is `WaitAsync`-acquired at the top of `ExecuteFromMessagesAsync` and `ExecuteInternalAsync`, so the agent loop is simply an extended critical section.
+### Anti-Pattern 3: New ModuleDisplayNameService Singleton
 
-**No deadlock risk for in-process tool dispatch:** since `AgentToolDispatcher` calls `IWorkspaceTool.ExecuteAsync` directly (no EventBus round-trip), there is no re-entrant EventBus subscription that could block on a semaphore held by the agent loop.
+**What people do:** Create a new DI-registered service just for display name lookup.
+**Why it's wrong:** Adds DI graph complexity for a simple string lookup. The entire job fits
+in a one-line expression at call sites.
+**Do this instead:** Static helper or inline expression using existing
+`IStringLocalizer<SharedResources>` with fallback.
 
-**Caveat:** If tool calls take a long time (e.g., ShellExecTool), the ChatPanel's 30-second timeout will fire before the agent loop completes. This timeout must be extended for agent loop mode:
-- Detect agent mode (WorkspaceToolModule != null and agentMaxIterations > 0) and use a longer timeout (5-10 minutes).
-- Or make the timeout configurable per Anima.
+---
 
-### Tool Call UI Display
+## Build Order Recommendation
 
-ChatPanel currently knows only two message kinds: `user` (plain text) and `assistant` (Markdown). Tool calls need a third display kind.
+| Step | Feature | Rationale |
+|------|---------|-----------|
+| 1 | EDUX-03: Connection deletion | Independent of all others. Delete key path already works; only the context menu component is new. Highest user friction to resolve. |
+| 2 | EDUX-01: Module Chinese names | Pure .resx + render-layer change. No Contracts layer changes. Validates the .resx lookup pattern before EDUX-02 extends it. |
+| 3 | EDUX-02: Module descriptions | Builds on EDUX-01's .resx infrastructure. Requires `ModuleSchemaService` extension — slightly more backend work but contained. |
+| 4 | EDUX-04: Port hover tooltips | Last because it requires Contracts layer changes (PortMetadata, port attributes) plus updates to all 15+ built-in module files. Widest diff; should be done when other features are stable. |
 
-**Recommended approach:** Add `ToolCall` and `ToolResult` to `ChatSessionMessage`, rendered as a distinct collapsible bubble. The LLM's intermediate "thinking" responses (those containing `<tool_call>` blocks) are suppressed from the `Messages` list — only tool call cards and the final response are shown.
+---
 
-EventBus events from the agent loop drive the UI:
-- `AgentToolCallStarted` event (payload: tool name + args) → ChatPanel adds a `ToolCall` bubble with `IsStreaming=true`
-- `AgentToolCallCompleted` event (payload: tool name + result summary) → ChatPanel updates the bubble to `IsStreaming=false`
+## Integration Points Summary
 
-The ChatPanel subscribes to these events on `OnInitialized`, just like it subscribes to `LLMModule.port.error`.
+### New Files
 
-### ChatOutputModule Interaction
+| File | Purpose |
+|------|---------|
+| `Components/Shared/ConnectionContextMenu.razor` | Right-click context menu for connections (EDUX-03) |
+| `Components/Shared/ConnectionContextMenu.razor.css` | Styles matching ModuleContextMenu pattern (EDUX-03) |
 
-ChatOutputModule currently fires `OnMessageReceived` which ChatPanel uses to resolve `_pendingAssistantResponse`. This mechanism remains unchanged. The agent loop suppresses intermediate responses (those containing tool calls) and only publishes the final clean response to `LLMModule.port.response`, which WiringEngine routes to `ChatOutputModule.port.displayText`.
+### Modified Files
 
-ChatOutputModule itself requires **no changes**.
+| File | Change | Feature |
+|------|--------|---------|
+| `Resources/SharedResources.zh-CN.resx` | Add `Module.DisplayName.*`, `Editor.Connection.Delete` keys | EDUX-01, EDUX-03 |
+| `Resources/SharedResources.en-US.resx` | Same keys in English | EDUX-01, EDUX-03 |
+| `Components/Shared/NodeCard.razor` | Localized display name; wrap port circles in `<g><title>` | EDUX-01, EDUX-04 |
+| `Components/Shared/ModulePalette.razor` | Localized display name; description `title` attribute; inject `IStringLocalizer` and `ModuleSchemaService` | EDUX-01, EDUX-02 |
+| `Components/Shared/EditorConfigSidebar.razor` | Localized display name in header; real description from service | EDUX-01, EDUX-02 |
+| `Components/Shared/ConnectionLine.razor` | Add `OnContextMenu` EventCallback, `@oncontextmenu` on hit path | EDUX-03 |
+| `Components/Shared/EditorCanvas.razor` | Receive context menu event, render `ConnectionContextMenu` | EDUX-03 |
+| `Services/ModuleSchemaService.cs` | Add `GetDescription(string moduleName)` method | EDUX-02 |
+| `Contracts/Ports/InputPortAttribute.cs` | Add optional `Description` parameter | EDUX-04 |
+| `Contracts/Ports/OutputPortAttribute.cs` | Add optional `Description` parameter | EDUX-04 |
+| `Contracts/Ports/PortMetadata.cs` | Add `Description` property with default `""` | EDUX-04 |
+| `Core/Ports/PortDiscovery.cs` | Read `attr.Description`, pass to `PortMetadata` constructor | EDUX-04 |
+| All built-in module `.cs` files (~15 files) | Add Chinese `description` strings to `[InputPort]`/`[OutputPort]` attribute declarations | EDUX-04 |
 
-## New Components
-
-### AgentToolDispatcher
-
-```csharp
-public interface IAgentToolDispatcher
-{
-    Task<ToolResult> DispatchAsync(
-        ToolCallRequest request,
-        string animaId,
-        CancellationToken ct = default);
-}
-
-public record ToolCallRequest(string ToolName, IReadOnlyDictionary<string, string> Parameters);
-```
-
-Implementation:
-- Resolves `IWorkspaceTool` by name from injected `IReadOnlyDictionary<string, IWorkspaceTool>`.
-- Resolves workspace root from `IRunService.GetActiveRun(animaId)?.Descriptor.WorkspaceRoot`.
-- Executes and returns `ToolResult`.
-- Records step via `IStepRecorder` (consistent with WorkspaceToolModule pattern).
-- If no active run, returns `ToolResult.Failed("No active run — start a run first")`.
-- Memory tools (MemoryRecallTool, MemoryLinkTool) need `animaId` context; they already accept it via parameters or `IModuleContext` injection.
-
-### ToolCallParser
-
-```csharp
-public static class ToolCallParser
-{
-    public static (bool hasToolCalls, IReadOnlyList<ToolCallRequest> calls, string textWithoutCalls)
-        TryParse(string responseText);
-}
-```
-
-- Parses `<tool_call name="...">` blocks via regex (consistent with `FormatDetector` approach).
-- Extracts `<param name="...">value</param>` children.
-- Returns the clean text (outside tool call blocks) separately — this is the final response if no tool calls exist, or intermediate thinking text (discarded) if tool calls exist.
-- Self-correction loop: if malformed `<tool_call>` tags are detected, apply the same retry pattern as `FormatDetector` (up to `maxRetries`).
-
-### IAgentLoopNotifier (EventBus events)
-
-Rather than a new interface, use EventBus events with well-known event names:
-
-```csharp
-// Published before dispatching a tool call
-EventName = "AgentLoop.ToolCallStarted"
-Payload = new AgentToolCallEvent(ToolName, Parameters, IterationIndex)
-
-// Published after tool call completes
-EventName = "AgentLoop.ToolCallCompleted"
-Payload = new AgentToolCallEvent(ToolName, ResultSummary, IterationIndex, DurationMs)
-```
-
-ChatPanel subscribes to both on initialization, same pattern as the existing `LLMModule.port.error` subscription.
-
-## Modified Components
-
-### LLMModule
-
-Changes:
-1. Add `agentMaxIterations` to `GetSchema()` (integer, group "agent", default "10").
-2. Replace the single `CallLlmAsync` + publish in `ExecuteWithMessagesListAsync` with the agent loop.
-3. Read `agentMaxIterations` from config (same pattern as existing `llmMaxRetries`).
-4. Inject `IAgentToolDispatcher` as optional constructor parameter (null = agent loop disabled, behaves as today).
-5. Publish `AgentLoop.ToolCallStarted`/`Completed` events via `_eventBus`.
-
-The existing `DefaultMaxRetries` / self-correction loop for format detection remains separate from the new agent iteration limit.
-
-### LLMModule constructor signature addition
-
-```csharp
-public LLMModule(
-    ...,
-    IAgentToolDispatcher? agentToolDispatcher = null)
-```
-
-### ChatPanel
-
-Changes:
-1. Add `IDisposable?` subscriptions for `AgentLoop.ToolCallStarted` and `AgentLoop.ToolCallCompleted`.
-2. Add `ToolCall` and `ToolResult` variants to `ChatSessionMessage`.
-3. On `ToolCallStarted`: add a tool call bubble to `Messages`, call `StateHasChanged`.
-4. On `ToolCallCompleted`: update the bubble, call `StateHasChanged`.
-5. Extend the generation timeout from 30s to a configurable value (or at least 5 minutes) when agent loop is active.
-
-### ChatSessionMessage
-
-```csharp
-public class ChatSessionMessage
-{
-    public string Role { get; set; } = "";   // "user" | "assistant" | "tool_call"
-    public string Content { get; set; } = "";
-    public bool IsStreaming { get; set; }
-    public string? ToolName { get; set; }    // set when Role == "tool_call"
-    public bool ToolCallSuccess { get; set; } // set after completion
-}
-```
-
-### ChatMessage.razor
-
-Extend the role switch to render `tool_call` bubbles:
-```razor
-else if (Role == "tool_call")
-{
-    <div class="message tool-call @(IsStreaming ? "running" : (ToolCallSuccess ? "success" : "error"))">
-        <span class="tool-icon">⚙</span>
-        <div class="tool-call-name">@ToolName</div>
-        <div class="tool-call-content">@Content</div>
-    </div>
-}
-```
-
-## Data Flow Summary
-
-### Happy Path: Single Tool Call
-
-```text
-User: "What files are in src/?"
-    ↓
-LLMModule receives via messages port
-    ↓
-CallLlmAsync → "<tool_call name=\"directory_list\"><param name=\"path\">src/</param></tool_call>"
-    ↓
-ToolCallParser.TryParse → ToolCallRequest(directory_list, {path: src/})
-    ↓
-EventBus: AgentLoop.ToolCallStarted → ChatPanel renders ⚙ bubble
-    ↓
-AgentToolDispatcher.DispatchAsync → IWorkspaceTool(directory_list).ExecuteAsync
-    ↓
-EventBus: AgentLoop.ToolCallCompleted → ChatPanel updates bubble
-    ↓
-messages += [assistant: <tool_call...>, user: [Tool Result: directory_list]{...}]
-    ↓
-CallLlmAsync → "The src/ directory contains: ..."
-    ↓
-ToolCallParser.TryParse → no tool calls → EXIT LOOP
-    ↓
-PublishResponseAsync("The src/ directory contains: ...")
-    ↓
-WiringEngine → ChatOutputModule → ChatPanel TCS resolves
-```
-
-### Iteration Limit Reached
-
-```text
-LLMModule: attempt >= agentMaxIterations
-    ↓
-Publish error: "Agent loop exceeded maximum iterations (10)"
-    ↓
-LLMModule.port.error → ChatPanel HandleLlmErrorAsync → TCS resolves with error text
-```
-
-## Architectural Constraints
-
-| Constraint | Implication |
-|------------|-------------|
-| LLMModule is a singleton | Agent loop runs per-call, not per-instance; no shared loop state across calls |
-| `_executionGuard` SemaphoreSlim(1,1) | One active agent loop per Anima; concurrent messages queue and wait |
-| WorkspaceToolModule uses per-call workspace root from IRunService | AgentToolDispatcher uses same IRunService pattern |
-| ChatPanel 30s timeout | Must be extended for agent loops that run many tool calls |
-| XML marker convention | Tool call format follows existing `<route>` XML marker convention |
-| No native function calling | Stick with XML text protocol — works with all OpenAI-compatible providers |
-| Fire-and-forget sedimentation | Sedimentation fires on final response only, receives full message history including tool turns |
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Routing Tool Calls Through EventBus/WiringEngine
-
-**What goes wrong:** LLMModule publishes to `WorkspaceToolModule.port.invoke` and subscribes to `WorkspaceToolModule.port.result`, waiting for the round-trip inside `_executionGuard`.
-**Why it's wrong:** The `_executionGuard` is held while waiting for EventBus delivery. WiringEngine's per-module SemaphoreSlim for LLMModule cannot be released until the event loop processes the response. This creates a deadlock if result routes back through WiringEngine to LLMModule.
-**Do this instead:** Call `IWorkspaceTool.ExecuteAsync` directly from `AgentToolDispatcher`. The existing `WorkspaceToolModule` eventbus path remains for explicit wiring scenarios outside the agent loop.
-
-### Anti-Pattern 2: Streaming Intermediate Agent Responses to ChatPanel
-
-**What goes wrong:** LLMModule publishes `port.response` for each LLM call in the loop, including those that contain tool calls.
-**Why it's wrong:** ChatPanel's `_pendingAssistantResponse` TCS resolves on first `OnMessageReceived`, completing the send cycle before the loop finishes. Subsequent publishes have no pending TCS to resolve and are silently dropped.
-**Do this instead:** Suppress `port.response` for intermediate iterations. Only publish after the loop exits with a final clean response.
-
-### Anti-Pattern 3: Putting the Agent Loop in a New Module
-
-**What goes wrong:** Create an `AgentLoopModule` that sits between LLMModule and ChatOutputModule in the wiring graph, orchestrating tool calls.
-**Why it's wrong:** The agent loop requires tight coupling to the message list being assembled for the LLM — it needs to append tool results before the next LLM call. A separate module would need to maintain this cross-call state and synchronize with LLMModule's semaphore and message list. This creates bidirectional dependencies and race conditions.
-**Do this instead:** Keep the loop inside `LLMModule.ExecuteWithMessagesListAsync`. The loop is an LLM execution concern, not a routing concern.
-
-### Anti-Pattern 4: Using Native OpenAI Function Calling
-
-**What goes wrong:** Add `ChatTool` objects to `CompleteChatAsync`, parse `ToolCallUpdate` finish reason, and dispatch `ChatFunction` results.
-**Why it's wrong:** Requires significant SDK API changes to `CompleteWithCustomClientAsync`, does not generalize across all OpenAI-compatible providers (some don't support native function calling), and duplicates the existing XML marker system already used for routing.
-**Do this instead:** XML text markers. The existing codebase already proven this pattern works for `<route>` markers. Extend it for `<tool_call>` markers.
-
-### Anti-Pattern 5: Showing All Intermediate LLM Responses in ChatPanel
-
-**What goes wrong:** Display "thinking" messages (LLM responses containing tool calls) as assistant bubbles in the chat history.
-**Why it's wrong:** These responses contain raw `<tool_call>` XML that is meaningless to the user. The chat becomes noisy and confusing.
-**Do this instead:** Suppress intermediate responses from the `Messages` list. Show only tool call bubbles (tool name + status + summary) and the final clean response. Users see what tools ran but not the raw LLM tool-calling text.
-
-## Suggested Build Order
-
-1. **ToolCallParser**
-   - Static class; no dependencies.
-   - Parse `<tool_call>` XML, extract tool name + parameters, return clean remainder text.
-   - Add unit tests: valid calls, multiple calls, malformed tags (self-correction path), no calls.
-   - Rationale: everything depends on this; start here.
-
-2. **AgentToolDispatcher**
-   - New service; depends on `IEnumerable<IWorkspaceTool>`, `IRunService`, `IStepRecorder`.
-   - Thin dispatch layer: find tool by name, resolve workspace root, call `ExecuteAsync`.
-   - Add unit tests mocking tool and run service.
-   - Rationale: agent loop calls this; must exist before loop.
-
-3. **LLMModule agent loop**
-   - Add `agentMaxIterations` schema field.
-   - Replace single-shot path with bounded loop in `ExecuteWithMessagesListAsync`.
-   - Inject `IAgentToolDispatcher?`; null = loop disabled (backward compat).
-   - Publish `AgentLoop.ToolCallStarted`/`Completed` EventBus events.
-   - Unit tests: zero iterations (no tools), single tool call, multi-tool, iteration limit hit.
-   - Rationale: core behavior; all subsequent work depends on this.
-
-4. **DI registration**
-   - Register `AgentToolDispatcher` as singleton.
-   - Add optional parameter to `LLMModule` constructor (no breaking change — optional).
-   - Update `AnimaServiceExtensions` if needed.
-   - Rationale: wires everything together.
-
-5. **ChatSessionMessage + ChatMessage.razor tool call rendering**
-   - Add `tool_call` role and `ToolName`/`ToolCallSuccess` fields to `ChatSessionMessage`.
-   - Add tool call bubble branch in `ChatMessage.razor`.
-   - Rationale: UI work; depends on agent loop event shape being finalized.
-
-6. **ChatPanel agent loop event subscriptions**
-   - Subscribe to `AgentLoop.ToolCallStarted`/`Completed`.
-   - Add/update tool call bubbles in `Messages` list.
-   - Extend generation timeout for agent mode.
-   - Rationale: last piece; depends on all above.
-
-7. **System prompt update for tool call protocol**
-   - Extend `BuildToolDescriptorBlock` to include `<tool_call>` usage instructions.
-   - Rationale: last; finalize call format after ToolCallParser format is locked.
-
-## Integration Points
-
-### Modified Existing Surfaces
-
-| Surface | Change | Risk |
-|---------|--------|------|
-| `LLMModule.ExecuteWithMessagesListAsync` | Wrap single-shot CallLlmAsync in agent loop | Medium — core execution path |
-| `LLMModule.GetSchema()` | Add `agentMaxIterations` field | Low — additive only |
-| `LLMModule` constructor | Add optional `IAgentToolDispatcher?` param | Low — optional/nullable |
-| `LLMModule.BuildToolDescriptorBlock` | Append tool call protocol to system prompt block | Low — additive to existing XML block |
-| `ChatPanel.OnInitialized` | Subscribe to `AgentLoop.ToolCallStarted/Completed` | Low — additive subscriptions |
-| `ChatPanel.GenerateAssistantResponseAsync` | Extend timeout for agent mode | Low — numeric constant change |
-| `ChatSessionMessage` | Add `ToolName`, `ToolCallSuccess`, new role | Low — additive fields |
-| `ChatMessage.razor` | New `tool_call` branch | Low — new branch, existing branches unchanged |
-
-### New Surfaces
-
-| Surface | Purpose |
-|---------|---------|
-| `ToolCallParser` (static class) | Parse `<tool_call>` XML from LLM text |
-| `IAgentToolDispatcher` | Direct tool dispatch contract |
-| `AgentToolDispatcher` | IWorkspaceTool resolution + execution |
-| `AgentToolCallEvent` record | EventBus payload for tool call notifications |
-
-### What Does NOT Change
+### No Changes Required
 
 | Component | Reason |
 |-----------|--------|
-| `WiringEngine` | Agent loop bypasses wiring; WiringEngine still routes final response → ChatOutputModule |
-| `WorkspaceToolModule` | Remains for explicit wiring use; agent loop uses IWorkspaceTool directly |
-| `ChatOutputModule` | Receives final response only; no changes needed |
-| `ILLMService` / `LLMService` | `CompleteAsync` used as-is; no streaming changes for v2.0.2 |
-| `TriggerSedimentation` | Fires on final response after loop exits; receives full tool-augmented message history |
-| `IMemoryRecallService` | Memory recall continues before agent loop entry; no per-iteration recall |
-| Per-module SemaphoreSlim in WiringEngine | Unchanged; agent loop holds LLMModule's own `_executionGuard`, not WiringEngine semaphores |
-
-## Sources
-
-- Direct inspection: `/home/user/OpenAnima/src/OpenAnima.Core/Modules/LLMModule.cs`
-- Direct inspection: `/home/user/OpenAnima/src/OpenAnima.Core/Modules/WorkspaceToolModule.cs`
-- Direct inspection: `/home/user/OpenAnima/src/OpenAnima.Core/Modules/ChatOutputModule.cs`
-- Direct inspection: `/home/user/OpenAnima/src/OpenAnima.Core/Components/Shared/ChatPanel.razor`
-- Direct inspection: `/home/user/OpenAnima/src/OpenAnima.Core/Components/Shared/ChatMessage.razor`
-- Direct inspection: `/home/user/OpenAnima/src/OpenAnima.Core/Wiring/WiringEngine.cs`
-- Direct inspection: `/home/user/OpenAnima/src/OpenAnima.Core/Anima/AnimaRuntime.cs`
-- Direct inspection: `/home/user/OpenAnima/src/OpenAnima.Core/Anima/AnimaRuntimeManager.cs`
-- Direct inspection: `/home/user/OpenAnima/src/OpenAnima.Core/LLM/ILLMService.cs`
-- Direct inspection: `/home/user/OpenAnima/src/OpenAnima.Core/LLM/LLMService.cs`
-- Direct inspection: `/home/user/OpenAnima/src/OpenAnima.Core/Tools/IWorkspaceTool.cs`
-- Direct inspection: `/home/user/OpenAnima/src/OpenAnima.Core/Tools/ToolDescriptor.cs`
-- Direct inspection: `/home/user/OpenAnima/src/OpenAnima.Core/Tools/ToolResult.cs`
-- Direct inspection: `/home/user/OpenAnima/.planning/PROJECT.md`
+| `EditorStateService.cs` | `DeleteSelected()` and `RemoveConnection()` already handle connections. `SelectConnection()` already tracks connection IDs. `SelectedConnectionIds` already populated on connection click. |
+| `Editor.razor` | `HandleKeyDown` already calls `_state.DeleteSelected()`. Keyboard delete path requires no change. |
+| `WiringEngine.cs` | Connection deletion is an editor-layer concern. WiringEngine reloads from `EditorStateService` config on auto-save. |
+| `LanguageService.cs` | No new methods needed. Components inject `IStringLocalizer<SharedResources>` directly. |
+| `IPortRegistry.cs` | No interface change needed. `GetPorts()` returns `PortMetadata` which gains a `Description` field but the interface signature is unchanged. |
 
 ---
-*Architecture research for: OpenAnima v2.0.2 Chat Agent Loop*
-*Researched: 2026-03-23*
+
+## Confidence Assessment
+
+| Area | Confidence | Reason |
+|------|------------|--------|
+| EDUX-03 integration | HIGH | Delete key path already works end-to-end in code. Context menu pattern is identical to the existing `ModuleContextMenu.razor`. |
+| EDUX-01 integration | HIGH | `IStringLocalizer` fallback pattern is established throughout the codebase. Both target components confirmed in code. |
+| EDUX-02 integration | HIGH | `IModuleMetadata.Description` exists in Contracts. `ModuleSchemaService` already has the static module type map to extend. |
+| EDUX-04 Contracts changes | HIGH | Adding optional property to a C# record and optional parameter to an attribute is backward-compatible. All callers confirmed. |
+| EDUX-04 SVG title tooltip | MEDIUM | SVG `<title>` tooltip appearance varies by browser (gray box, OS-dependent delay). Functional but not styled. Acceptable for port labels. |
+
+---
+
+## Gaps to Address During Phase Execution
+
+- **ModulePalette search vs display name:** The search filter currently searches against the
+  raw C# class name. After EDUX-01, it should also search the localized display name. This
+  is a minor enhancement that can be done in the same phase.
+
+- **External module descriptions:** External modules loaded via PluginLoader do not have
+  .resx entries and may not set `Description` on their port attributes. The empty-string
+  default in `PortMetadata` means no tooltip is shown — this is acceptable, not a bug.
+
+- **ConnectionContextMenu coordinate precision:** The context menu div must be positioned
+  relative to the correct ancestor element. Inspect `ModuleContextMenu.razor.css` for the
+  positioning context used there and replicate it for `ConnectionContextMenu`.
+
+- **EDUX-04 module count:** Approximately 15 built-in module files need Chinese descriptions
+  added to their port attribute declarations. This is mechanical work but accounts for the
+  bulk of the EDUX-04 diff.
+
+---
+
+*Architecture research for: OpenAnima v2.0.3 Editor Experience*
+*Researched: 2026-03-24*

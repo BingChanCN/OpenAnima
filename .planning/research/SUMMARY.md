@@ -1,207 +1,363 @@
 # Project Research Summary
 
-**Project:** OpenAnima v2.0.2 Chat Agent Loop
-**Domain:** Agent loop with tool calling for a local-first multi-Anima agent platform (.NET 8 / Blazor Server)
-**Researched:** 2026-03-23
+**Project:** OpenAnima v2.0.3 — Editor Experience
+**Domain:** Visual node editor UX improvements for a Blazor Server AI agent wiring platform
+**Researched:** 2026-03-24
 **Confidence:** HIGH
 
 ## Executive Summary
 
-OpenAnima v2.0.2 adds a think-act-observe agent loop to the existing chat pipeline. The platform already has all the necessary pieces — `LLMModule` orchestrates LLM calls, `WorkspaceToolModule` owns 15 `IWorkspaceTool` implementations, and `ChatPanel` drives the real-time UI. The work is behavioural extension, not greenfield: replace the single-shot `CallLlmAsync` inside `ExecuteWithMessagesListAsync` with a bounded iteration loop that parses XML `<tool_call>` markers from the model's response, dispatches to tools directly (bypassing the EventBus), injects results back into the message list, and re-calls the LLM until it produces a clean response or the iteration ceiling is hit.
+OpenAnima v2.0.3 is a targeted editor UX improvement milestone built on a mature Blazor Server
+visual wiring application. All four active requirements (EDUX-01 through EDUX-04) address i18n
+module names, module descriptions, connection deletion, and port hover tooltips — all within a
+codebase that already contains the infrastructure to support them. No new NuGet packages are
+required. Every feature is implementable using existing primitives: `IStringLocalizer<SharedResources>`,
+`.resx` resource files, the established context menu component pattern (`AnimaContextMenu.razor` /
+`ModuleContextMenu.razor`), and SVG `<title>` elements already used at the card level in `NodeCard.razor`.
 
-The recommended approach uses XML text markers for tool calls — consistent with the existing `<route>` marker convention used for cross-Anima routing — rather than native OpenAI function calling. This keeps the integration provider-agnostic (all OpenAI-compatible endpoints in the provider registry will work) and avoids SDK API changes across the three-layer LLM call stack. No new NuGet packages are required. All types needed for native tool calling (`ChatTool`, `ChatCompletionOptions.Tools`, `ChatFinishReason.ToolCalls`, `ToolChatMessage`) are confirmed present in the OpenAI SDK 2.8.0 already in the project, but they are used only as a future migration path — the immediate implementation works at the text layer.
+The recommended implementation approach keeps localization and display metadata firmly in the UI
+shell layer, never in `OpenAnima.Contracts`. Module display names and descriptions go into `.resx`
+files, not into `IModuleMetadata`. Port descriptions go on `InputPortAttribute`/`OutputPortAttribute`
+(code-level, co-located with port declarations) as optional parameters. Connection deletion reuses
+the exact context menu component shape established by `ModuleContextMenu.razor`. This discipline
+prevents breaking changes to the external SDK surface and keeps the diff bounded and reviewable.
 
-The dominant risk class is concurrency: the `_executionGuard` SemaphoreSlim(1,1) must be held for the entire loop without ever routing tool results through the EventBus (which could cause re-entrant deadlock). Three other risks require phase-1 attention: tool result context overflow (tool outputs accumulate in the message list without a token budget guard), an infinite loop when a failing tool gets called repeatedly (requires a hard, unconfigurable iteration ceiling), and tool content injection (raw file content injected into context must be XML-escaped before the LLM sees it).
+The key risk is the invariant/display name split for i18n: module names used in `WiringConfiguration`
+storage, `PortRegistry` lookups, and drag-start events must remain as C# class names at all times.
+Rendering localized display names while accidentally threading them into storage paths silently breaks
+saved configurations on reload. A secondary risk is focus management for the Delete key path —
+`EditorCanvas` must restore focus to the editor container div after every SVG click to ensure
+keyboard events fire reliably. Both risks are well-understood from direct codebase inspection and
+have clear, low-effort mitigations.
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
 
-No new NuGet packages are required for v2.0.2. The existing OpenAI SDK 2.8.0 (`OpenAI.Chat` namespace) contains all necessary tool-calling types, verified by direct assembly inspection. Blazor Server's built-in SignalR provides the real-time push channel for tool call progress events. The stack question for this milestone is purely about correct API usage patterns within the existing dependency set.
+No new dependencies are required for any of the four EDUX features. The existing stack covers all
+implementation needs entirely within established patterns.
 
-**Core technologies:**
-- **OpenAI SDK 2.8.0** (existing): `ChatTool.CreateFunctionTool`, `ChatFinishReason.ToolCalls`, `ToolChatMessage` all confirmed present via assembly inspection. `StreamingChatToolCallsBuilder` is absent from the standalone SDK (available only in `Azure.AI.OpenAI`); manual accumulation via `StreamingChatToolCallUpdate.Index` is used if streaming is needed. Do not upgrade to 2.9.x — the `MessageRole` enum change would require touching every role `switch` statement for no benefit relevant to this milestone.
-- **Blazor Server / SignalR 8.0.x** (existing): Agent loop progress events (`AgentLoop.ToolCallStarted`, `AgentLoop.ToolCallCompleted`) are published to the existing EventBus; `ChatPanel` subscribes to them using the same pattern already used for `LLMModule.port.error`. No new Hub or SignalR surface required.
-- **XML marker convention** (existing pattern extended): `<tool_call name="..."><param name="...">value</param></tool_call>` follows the same `<route>` marker pattern that `FormatDetector` already handles. No new parsing library needed; a static `ToolCallParser` class mirrors the existing `FormatDetector` implementation.
+**Core technologies (unchanged):**
+- `.NET 8.0 / Blazor Server` — all Blazor event directives (`@oncontextmenu`, `@onkeydown`,
+  `@onmouseenter`) are native; no JS interop beyond the existing `editorCanvas.init` call
+- `IStringLocalizer<SharedResources>` + `.resx` files — already injected in most page components;
+  extended with ~80 new keys under `Module.DisplayName.*`, `Module.Description.*`, and
+  `Editor.Connection.*` namespaces for EDUX-01, EDUX-02, EDUX-03
+- SVG `<title>` child elements — native browser tooltip, zero JS interop, already validated in
+  `NodeCard.razor` for card-level status tooltips; the same pattern applied to port circles for EDUX-04
+- Blazor context menu component pattern (`AnimaContextMenu.razor` / `ModuleContextMenu.razor`) —
+  new `ConnectionContextMenu.razor` follows this exact shape: backdrop div, fixed-position menu div,
+  `IsVisible`/`X`/`Y` parameters, `EventCallback` for actions (EDUX-03)
+- `EditorStateService.DeleteSelected()` / `RemoveConnection()` — already handles connection
+  deletion; no new state management needed (EDUX-03)
+- `ModuleSchemaService.cs` — already has a static built-in module type map; extended with
+  `GetDescription(string moduleName)` for EDUX-02
 
 ### Expected Features
 
-**Must have — v2.0.2 launch (P1):**
-- `ToolCallParser` — parse `<tool_call>` XML blocks from LLM text response, return clean remainder and structured `ToolCallRequest[]`
-- Direct tool invocation path — `IAgentToolDispatcher.DispatchAsync` calls `IWorkspaceTool.ExecuteAsync` directly, not through EventBus, returns `ToolResult` synchronously within the loop
-- Result injection into message history — assistant message (with tool call markup) + tool result message appended before each re-call
-- Bounded LLM re-call loop inside `ExecuteWithMessagesListAsync` — exits on no tool calls or `agentMaxIterations` reached
-- `agentMaxIterations` config key in `LLMModule.GetSchema()` (default 10, hard server-side ceiling, never unbounded)
-- Updated tool descriptor system prompt — tells the model the `<tool_call>` invocation grammar and that tool-result content is data, not instructions
-- Error propagation — `ToolResult.Success=false` becomes a tool result message so the LLM can self-correct
-- Streaming indication — `_isGenerating` stays `true` for full loop duration; per-tool status text shown in the assistant bubble minimum ("Calling tools...")
-- Sedimentation of the full expanded message list (all tool turns, not just final response)
-- CancellationToken propagation through all loop steps with `finally` cleanup guaranteeing `_executionGuard` release and step recorder closure
+**Must have (table stakes — all required for v2.0.3):**
+- EDUX-01: Chinese display names for module palette items, node card title bars, and
+  `EditorConfigSidebar` header — raw C# class names like `LLMModule` break immersion in a zh-CN UI
+- EDUX-02: Module description wired from `ModuleSchemaService` into `EditorConfigSidebar` and as
+  a `title` attribute on palette items — the data exists and is populated but the UI always shows
+  a hardcoded "No description" fallback
+- EDUX-03: Right-click context menu on connection bezier paths with a "Delete Connection" action;
+  Delete key path already works end-to-end and requires only verification
+- EDUX-04: Port hover tooltips with Chinese descriptions rendered in the SVG canvas via SVG
+  `<title>` elements on port circles — essential for zh-CN users who cannot infer port purpose
+  from English identifiers like `"prompt"` or `"output"`
 
-**Should have — add after loop is validated (P2):**
-- Inline tool call visualization: collapsible step cards in `ChatMessage.razor` (tool name + status + result summary)
-- Per-turn tool call count badge on the assistant message
-- Tool availability guard: suppress tool descriptor injection when no active run exists (saves tokens, avoids misleading the agent)
-- Agent loop iteration brackets in `StepRecorder` timeline for Run inspector observability
+**Should have (low effort, add if time permits in v2.0.3):**
+- Module palette search that also matches the localized display name
+- Module palette item `title` attribute showing the description on hover (native browser tooltip)
+- Localized palette search placeholder and "no modules" text (currently hardcoded English)
+- Localized display name shown alongside raw class name as a subtitle in `EditorConfigSidebar`
 
-**Defer — v2.1+ (P3):**
-- Native OpenAI function calling (`ChatTool` / `ChatCompletionOptions.Tools`) — requires abstracting the three-layer LLM call stack
-- Parallel tool execution within a turn — requires model-declared independence
-- Human-in-the-loop tool approval before destructive commands
-- Agent loop context compaction / rolling window summarization for very long runs
-- Token-by-token streaming of the final response turn during an agent loop
+**Defer (v2.1+):**
+- Undo/redo for connection deletion — requires command pattern refactor of `EditorStateService`
+- Rich styled port tooltips with type badge and color indicator
+- Port description editing by end users
 
 ### Architecture Approach
 
-The agent loop is an internal `LLMModule` concern, not a wiring concern. The loop lives entirely within `ExecuteWithMessagesListAsync`, replacing the single `CallLlmAsync` + `PublishResponseAsync` call with a bounded iteration that calls tools via a new `AgentToolDispatcher` service (direct method dispatch, no EventBus round-trip). `ChatOutputModule` and `WiringEngine` are unchanged — they receive only the final clean response as today. Intermediate iterations (those containing `<tool_call>` blocks) are suppressed from `port.response`. Two new classes (`ToolCallParser`, `AgentToolDispatcher`) are added. Existing components (`LLMModule`, `ChatPanel`, `ChatSessionMessage`, `ChatMessage.razor`) receive additive changes only.
+All four features integrate into the existing three-layer architecture (Contracts, Core services
+and components, `.resx` i18n layer) without introducing new patterns. The only genuinely new data
+flow is the connection right-click path: `ConnectionLine` `@oncontextmenu` fires an `OnContextMenu`
+`EventCallback` with screen coordinates and connection identity up to `EditorCanvas`, which manages
+visibility state and renders `<ConnectionContextMenu>`, which invokes `EditorStateService.RemoveConnection()`
+on "Delete". All other changes are additive rendering changes: read existing or newly-added data,
+emit localized text or SVG tooltip elements.
 
-**Major components:**
-1. **`ToolCallParser`** (new static class) — parses `<tool_call>` XML from LLM text, extracts `ToolCallRequest[]`, returns clean remainder text; mirrors the `FormatDetector` pattern including self-correction for malformed tags
-2. **`AgentToolDispatcher`** (new service, `IAgentToolDispatcher`) — resolves `IWorkspaceTool` by name from DI, gets workspace root from `IRunService`, calls `ExecuteAsync`, records step via `IStepRecorder`; registered as singleton; returns `ToolResult.Failed("No active run")` when no run is active
-3. **`LLMModule` (extended)** — adds `agentMaxIterations` config field (group "agent", default "10"), replaces single-shot execution with bounded loop, injects optional `IAgentToolDispatcher?` (null = agent loop disabled for backward compatibility), publishes `AgentLoop.ToolCallStarted`/`Completed` events via `_eventBus`
-4. **`ChatPanel` (extended)** — subscribes to agent loop events, manages tool call bubbles in `Messages`, holds `_isGenerating = true` for the full loop lifecycle, extends generation timeout from 30s to 300s when agent mode is active
-5. **`ChatSessionMessage` (extended)** — adds `ToolName`, `ToolCallSuccess` fields and `tool_call` role variant for distinct bubble rendering
+**Major components and their EDUX roles:**
+1. `ModulePalette.razor` — inject `IStringLocalizer<SharedResources>` and subscribe to
+   `LanguageChanged`; render localized display name; show description via `title` attribute
+   (EDUX-01, EDUX-02)
+2. `NodeCard.razor` — inject `IStringLocalizer`; cache display name in `OnParametersSet`; wrap
+   port circles in `<g><title>` elements for native browser tooltips (EDUX-01, EDUX-04)
+3. `EditorConfigSidebar.razor` — replace hardcoded fallback with `ModuleSchemaService.GetDescription()`
+   and localized display name in the module header (EDUX-01, EDUX-02)
+4. `ConnectionLine.razor` — add `OnContextMenu EventCallback` and `@oncontextmenu` with
+   `stopPropagation` on the transparent hit-detection path element (EDUX-03)
+5. `ConnectionContextMenu.razor` (new) — context menu for connection deletion following
+   `ModuleContextMenu.razor` pattern (EDUX-03)
+6. `EditorCanvas.razor` — receive `OnContextMenu` from `ConnectionLine`, manage menu state,
+   render `<ConnectionContextMenu>` (EDUX-03)
+7. `ModuleSchemaService.cs` — add `GetDescription(string moduleName)` that looks up the `.resx`
+   description key first, falls back to `IModuleMetadata.Description`, then to the "No description"
+   fallback (EDUX-02)
+
+**Contracts changes (EDUX-04 only, backward-compatible additive):**
+- `Ports/InputPortAttribute.cs` / `OutputPortAttribute.cs` — add `string description = ""`
+  optional parameter; default empty string means all existing module code compiles unchanged
+- `Ports/PortMetadata.cs` — add `string Description = ""` positional parameter with default
+- `Core/Ports/PortDiscovery.cs` — read `attr.Description` and pass to `PortMetadata` constructor
+- All ~15 built-in module files — add Chinese `description` strings to `[InputPort]`/`[OutputPort]`
+  attribute declarations
 
 ### Critical Pitfalls
 
-1. **Semaphore deadlock via EventBus re-entry** — If the agent loop dispatches tool calls through `EventBus.PublishAsync` and any subscriber routes back through LLMModule's ports, `_executionGuard.WaitAsync` deadlocks. Prevention: call `IWorkspaceTool.ExecuteAsync` directly from `AgentToolDispatcher`; never await an EventBus response from within `_executionGuard` scope. The full agent loop must be contained within a single `WaitAsync` / `Release` pair.
+1. **Translated name leaked into invariant storage (silent wiring corruption)** — `ModulePalette`
+   currently passes `module.Name` (C# class name) to `HandleDragStart`. If the localized display
+   name replaces the invariant name in this path, saved wiring configurations fail to reload
+   silently. Prevention: rename `ModuleInfo.Name` to `InvariantName`, add separate `DisplayName`;
+   only use `DisplayName` in render expressions, never in `HandleDragStart`, `EditorStateService.AddNode`,
+   or serialization.
 
-2. **Tool result context overflow** — Each iteration appends assistant + tool result messages with no token budget check. A `read_file` on a large source file can add 10,000+ tokens per iteration, silently overshooting the model's context window and producing `finish_reason: "length"`. Prevention: add a token budget guard before each iteration's LLM call comparing accumulated message tokens against 70% of `MaxContextTokens`.
+2. **`DeleteSelected()` connection ID parse fragility** — the existing decoder splits on `:` and
+   `->`. Port names containing these characters cause silent deletion failure with no error.
+   Prevention: replace string-split decode with `PortConnection` struct value equality, and add a
+   unit test that creates, selects, and deletes a connection and asserts the count decreased by 1.
 
-3. **Infinite loop from a repeatedly failing tool** — Without repetition detection, the LLM calls the same failing tool every iteration until the limit is hit. Prevention: enforce a hard ceiling (never configurable to 0 or unbounded); detect same-tool + same-parameter-hash + `Success=false` on two consecutive iterations and inject a failure synthesis message instead of forwarding the raw error again.
+3. **Editor container focus not maintained — Delete key fires on sidebar inputs** — `@onkeydown`
+   on the `tabindex="0"` editor div only fires when that div has focus. After sidebar interaction,
+   focus moves to input fields and Delete deletes characters instead of connections. Prevention:
+   call `JS.InvokeVoidAsync("editorCanvas.focusContainer")` after canvas click events, after
+   sidebar config commits, and in `OnAfterRenderAsync(firstRender)`.
 
-4. **Tool content injection from file reads** — `ToolResult.Output` may contain XML resembling tool call syntax (code samples, documentation). If injected unescaped, the LLM may interpret it as instruction. Prevention: wrap all injected tool results in `<tool-result name="...">escaped content</tool-result>`; add an explicit system prompt instruction that tool-result block content is data, not commands.
+4. **Child components not subscribed to `LanguageChanged` — i18n does not update live** —
+   `ModulePalette` and `NodeCard` currently do not subscribe to `LanguageService.LanguageChanged`.
+   Blazor re-render propagation will not update them on language switch because their parameters
+   do not change. Prevention: add explicit `LanguageChanged` subscription in `ModulePalette.OnInitialized`
+   and in `EditorCanvas.OnInitialized`; both call `InvokeAsync(StateHasChanged)` on event fire.
 
-5. **UI unlock mid-loop (`_isGenerating` desync)** — If `port.response` is published for any intermediate iteration (one containing tool calls), `ChatPanel._pendingAssistantResponse` TCS resolves early, the send button re-enables, and a concurrent user message races the running loop. Prevention: suppress `port.response` for all intermediate iterations; publish only the final clean response after the loop exits.
+5. **`IModuleMetadata.Description` is always English and may be unavailable at runtime** — the
+   Contracts interface has no i18n surface; accessing `.Description` from a live module instance
+   risks `NullReferenceException` when the Anima runtime is stopped. Prevention: use `.resx` keys
+   (`Module.{invariantName}.Description`) as the primary description source for built-in modules;
+   fall back to `IModuleMetadata.Description` only as a last resort; never access the live module
+   instance from a UI component.
+
+---
 
 ## Implications for Roadmap
 
-The agent loop has clear architectural dependencies that determine build order. Concurrency correctness and safety work must be in the foundation before any UI work layers on top of it.
+Research identifies four sequential implementation phases. Each phase is independent enough to
+ship, test, and verify before the next begins. The four phases map directly to the four EDUX
+features, grouped by dependency and risk.
 
-### Phase 1: Agent Loop Core
+### Phase 1: Module i18n Foundation (EDUX-01)
 
-**Rationale:** All subsequent phases depend on a working, safe iteration loop. The concurrency pitfalls (semaphore deadlock, context overflow, infinite loop, cancellation cleanup, tool injection) must ship in the foundation — retrofitting correctness after UI is wired is high-risk. This phase is deliberately minimal on UI surface so loop correctness can be validated in the Run inspector before it is exposed in the chat interface.
+**Rationale:** EDUX-01 is the most structurally consequential change because it introduces the
+display-name / invariant-name split that all subsequent work depends on. Establishing the `.resx`
+lookup pattern, the `Module.DisplayName.*` keys, and the `LanguageChanged` subscriptions first
+means all subsequent phases can rely on a proven foundation. Pitfalls 1 (wiring corruption from
+leaked display names) and 4 (stale display on language switch) are only addressable here.
 
-**Delivers:** A functional agent loop behind the existing chat interface. The model can call tools, see results, and produce a final response. The chat UI shows "Calling tools..." during execution and surfaces the final response normally. The Run inspector shows per-tool step entries.
+**Delivers:**
+- Localized module display names in `ModulePalette`, `NodeCard` title bars, and
+  `EditorConfigSidebar` header rendered in zh-CN or en-US based on `LanguageService.Current`
+- Live language switch updates palette and canvas node titles without page reload
+- `Module.DisplayName.*` keys in both `.resx` files for all built-in modules
+- Validated `InvariantName` vs `DisplayName` split pattern enforced across all call sites
 
-**Implements from FEATURES.md (P1 set):**
-- `ToolCallParser` static class (unit-tested: valid calls, multiple calls, malformed tags, no calls)
-- `AgentToolDispatcher` registered singleton (unit-tested: tool not found, no active run, successful dispatch)
-- LLMModule agent loop with `agentMaxIterations` config, hard ceiling, and token budget guard
-- Tool descriptor system prompt update with `<tool_call>` grammar and tool-result-as-data instruction
-- Error propagation: `ToolResult.Success=false` becomes a tool result message
-- `_isGenerating` held for full loop duration
-- Sedimentation receives full expanded message history after loop exits
-- CancellationToken propagated through all steps; `finally` guarantees `_executionGuard.Release()` and step recorder closure
+**Addresses:** EDUX-01 fully
 
-**Avoids from PITFALLS.md:** Pitfalls 1 (semaphore deadlock), 2 (context overflow), 3 (infinite loop), 4 (tool injection), 5 (UI unlock mid-loop), 6 (EventBus dispatch deadlock), 7 (cancellation/step cleanup)
+**Avoids:** Translated name leaking into `WiringConfiguration` (Pitfall 1); stale display on
+language switch (Pitfall 4)
 
-**Build order within this phase:** `ToolCallParser` → `AgentToolDispatcher` → `LLMModule` loop → DI registration → system prompt update
+**Research flag:** Standard patterns — no research phase needed. `IStringLocalizer`, `LanguageChanged`
+subscription, and `.resx` fallback behavior are all established in the codebase.
 
-**Research flag:** No research phase needed. SDK API surface is fully mapped in STACK.md. Architecture is fully specified in ARCHITECTURE.md with anti-patterns documented.
+---
 
-### Phase 2: Tool Call Display and UI Wiring
+### Phase 2: Connection Deletion UX (EDUX-03)
 
-**Rationale:** Once the loop is validated functionally (termination correctness, tool execution, final response delivery), the UI layer can be added without risking loop correctness. Separating UI from core logic avoids compound debugging: if tool cards render incorrectly, the loop itself is not suspect.
+**Rationale:** EDUX-03 is independent of all other EDUX features and resolves the highest user
+friction — connections cannot currently be deleted via any discoverable UI. The Delete key path is
+already ~80% implemented; only the right-click context menu is new work. This phase also resolves
+the latent `DeleteSelected()` ID parse bug (Pitfall 2) and the editor container focus issue
+(Pitfall 3) before they ship to users.
 
-**Delivers:** Visible agent activity in the chat interface. Users see which tools ran, how long they took, and whether they succeeded. The generation timeout is extended. The post-response race condition (rapid send-after-agent) is fixed.
+**Delivers:**
+- `ConnectionContextMenu.razor` and `.css` following the `ModuleContextMenu.razor` pattern exactly
+- `@oncontextmenu` handler on `ConnectionLine` hit-detection path with `stopPropagation`
+- Context menu positioned at `ClientX/ClientY` (HTML overlay rendered outside the SVG transform
+  group so it does not pan/zoom with the canvas)
+- Focus restoration via `editorCanvas.focusContainer()` JS interop after canvas click events
+- Fixed `DeleteSelected()` connection decode (struct value equality or validated re-encode) with
+  a unit test covering create-select-delete-assert
 
-**Implements from FEATURES.md (P2 set):**
-- `ChatSessionMessage` `tool_call` role variant + `ToolName`/`ToolCallSuccess` fields
-- `ChatMessage.razor` tool call bubble branch (collapsible, running/success/error states)
-- `ChatPanel` subscriptions to `AgentLoop.ToolCallStarted`/`Completed` events
-- Generation timeout extension from 30s to 300s for agent mode
-- Post-response barrier to prevent race condition between agent result and next user message send
-- Per-turn tool call count badge on assistant message
+**Addresses:** EDUX-03 fully
 
-**Avoids from PITFALLS.md:** Pitfall 9 (race condition between agent result and next user message), streaming interruption (Pitfall 5 hardening)
+**Avoids:** Context menu rendered inside SVG transform and appearing at wrong coordinates (Pitfall 6
+in PITFALLS.md); Delete key firing on sidebar inputs (Pitfall 3); silent deletion failure from ID
+parse bug (Pitfall 2)
 
-**Research flag:** No research phase needed. Blazor `InvokeAsync`/`StateHasChanged` patterns for background thread UI updates are well-documented.
+**Research flag:** Standard patterns — `ModuleContextMenu.razor` is a direct template. No research
+phase needed.
 
-### Phase 3: Hardening and Memory Integration
+---
 
-**Rationale:** After the core loop and UI are validated, address accurate token accounting and memory graph hygiene. These are correctness improvements that become visible in sustained production use — context overflow on long runs, and memory quality degradation from sedimented tool call JSON.
+### Phase 3: Module Descriptions in Editor Panel (EDUX-02)
 
-**Delivers:** Accurate context window display that accounts for system message overhead and in-loop tool result tokens. Memory sedimentation that filters tool call JSON and only stores useful natural-language content from agent interactions.
+**Rationale:** EDUX-02 is the simplest feature but benefits from Phase 1 being complete. Phase 1
+establishes the `Module.Description.*` `.resx` keys and `ModuleSchemaService` as the description
+source. This phase wires them into two call sites. Separating this from Phase 1 keeps the structural
+i18n split decision clean and avoids mixing concerns.
 
-**Implements from FEATURES.md:**
-- Tool availability guard: suppress tool descriptor injection when `IRunService.GetActiveRun(animaId) == null` (saves tokens in non-run chat)
-- Agent loop context overhead accounting: expose `ChatCompletion.Usage.InputTokenCount` from the API response in the Run inspector; update `ChatContextManager` to include system message overhead in the pre-send check
-- Sedimentation filter: prevent tool call JSON and transient tool output from being stored as memory nodes
-- Agent loop step brackets in `StepRecorder` timeline (parent "AgentLoop iteration N" step wrapping each tool call set)
+**Delivers:**
+- `EditorConfigSidebar` replaces hardcoded `L["Editor.Config.NoDescription"]` with
+  `ModuleSchemaService.GetDescription(_selectedNode.ModuleName)` — `.resx` first, English
+  `IModuleMetadata.Description` fallback, then the "No description" fallback
+- `ModulePalette` module item `div` gains `title="@GetDescription(module.InvariantName)"`
+  attribute for native browser tooltip on palette hover
+- Descriptions render correctly when the Anima runtime is stopped (no live module instance access)
 
-**Avoids from PITFALLS.md:** Pitfall 8 (context token budget mismatch between UI display and actual API request), sedimentation pollution identified in the Technical Debt Patterns section
+**Addresses:** EDUX-02 fully
 
-**Research flag:** If integration testing shows context overflow is common (not just pathological), a rolling window truncation strategy needs a research spike before implementation. The directional approach in PITFALLS.md is sound (retain system block + original user turn + N most recent tool result pairs, drop oldest first), but the right N value is empirically determined.
+**Avoids:** Description fetched from live module instance that may be null (Pitfall 8 in PITFALLS.md);
+English description rendered to zh-CN users (Pitfall 5)
+
+**Research flag:** Standard patterns — no research phase needed. One new method on `ModuleSchemaService`,
+one call site in `EditorConfigSidebar`, one attribute in `ModulePalette`.
+
+---
+
+### Phase 4: Port Hover Tooltips (EDUX-04)
+
+**Rationale:** EDUX-04 has the widest diff (Contracts layer changes plus ~15 built-in module files)
+and benefits from all other features being stable before it begins. The Contracts changes are
+backward-compatible additive; external modules that do not add descriptions compile unchanged.
+Doing this last also means the SVG tooltip rendering approach can be validated with context from
+the completed editor UX.
+
+**Delivers:**
+- `InputPortAttribute` and `OutputPortAttribute` gain optional `string description = ""`
+  parameter (backward-compatible; all existing module code unchanged)
+- `PortMetadata` record gains `string Description = ""` positional parameter with default
+- `PortDiscovery.cs` reads `attr.Description` and passes it to `PortMetadata` constructor
+- All ~15 built-in module files have Chinese descriptions on their port attribute declarations
+- `NodeCard.razor` wraps each port `<circle>` in a `<g><title>` element; tooltip text:
+  `"{portName}: {description} ({portType})"`, falling back to `"{portName} ({portType})"` when
+  description is empty
+- Display name in `NodeCard` title bar cached in `OnParametersSet` to avoid `IStringLocalizer`
+  re-evaluation on every SVG render frame during node drag
+
+**Addresses:** EDUX-04 fully
+
+**Avoids:** Translated display name allocated on every render frame during drag (Performance Trap
+in PITFALLS.md); port tooltip interfering with connection drag hit-testing (UX Pitfall in PITFALLS.md)
+
+**Research flag:** One open decision — SVG `<title>` vs custom SVG overlay inside the `<g transform>`
+group. PITFALLS.md recommends custom overlay for zoom-accurate positioning; ARCHITECTURE.md
+recommends `<title>` for simplicity (consistent with existing card-level tooltip). Resolve at
+Phase 4 planning time by evaluating the actual zoom range users operate in. If position accuracy
+at low zoom matters, implement custom SVG overlay; otherwise use `<title>`.
+
+---
 
 ### Phase Ordering Rationale
 
-- Phase 1 before Phase 2: Loop correctness must be verified before UI adds diagnostic complexity. Tool call bubbles in a wrong state are only interpretable when the underlying loop is known-good.
-- Phase 1 before Phase 3: Token accounting and memory filtering cannot be tested meaningfully until the loop is running real tool calls with real output sizes.
-- Phases 2 and 3 could partially overlap: the `ChatSessionMessage` model change (Phase 2) and the sedimentation filter (Phase 3) are independent and could be developed in parallel if team capacity allows.
-- All pitfalls labeled "Phase 1: Agent loop core" in PITFALLS.md are correctness pre-conditions, not hardening concerns — they ship with Phase 1 regardless.
+- Phase 1 before all others: the invariant/display name split and `.resx` description infrastructure
+  are shared by Phases 2, 3, and 4; establishing them first ensures correctness from the first
+  line of localization code.
+- Phase 2 independent: connection deletion has no dependency on i18n or descriptions; placing it
+  second resolves the `DeleteSelected` bug and focus issue before they affect any other test path.
+- Phase 3 after Phase 1: `ModuleSchemaService.GetDescription()` created in Phase 1 is a direct
+  sequential dependency of Phase 3.
+- Phase 4 last: widest diff, Contracts changes, most module files; benefits from everything else
+  being stable; the SVG tooltip approach is validated against real canvas UX with all other
+  features present.
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 3 (context compaction):** If integration tests show context overflow is common in practice, the rolling window truncation strategy needs a research spike to determine the right window size and truncation policy for the 15 existing workspace tools.
+Phases likely needing deeper research during planning:
+- **Phase 4 (EDUX-04):** Resolve the SVG `<title>` vs custom SVG overlay decision at planning
+  time. Both approaches are implementable; the choice determines whether `NodeCard` needs hover
+  state management or just static `<title>` elements. This is the only unresolved architectural
+  decision across the milestone.
 
 Phases with standard patterns (skip research-phase):
-- **Phase 1:** Fully mapped. SDK types confirmed via assembly inspection. Architecture fully specified with anti-patterns. Build order is deterministic.
-- **Phase 2:** Standard Blazor component extension patterns. `ChatSessionMessage` shape change and `ChatMessage.razor` render branch are straightforward.
-- **Phase 3:** Token accounting via `ChatCompletion.Usage.InputTokenCount` is a single SDK property read. Memory sedimentation filter is a predicate on input content.
+- **Phase 1 (EDUX-01):** `IStringLocalizer` fallback, `.resx` key conventions, and `LanguageChanged`
+  subscription are all established with multiple existing examples in the codebase.
+- **Phase 2 (EDUX-03):** `ModuleContextMenu.razor` is a direct template; SVG `@oncontextmenu`
+  with `stopPropagation` is a known Blazor pattern; one existing JS call site for focus interop.
+- **Phase 3 (EDUX-02):** One method addition on `ModuleSchemaService`, one `EditorConfigSidebar`
+  call site change, one `ModulePalette` attribute addition.
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All SDK types and members verified by direct assembly inspection of `/home/user/.nuget/packages/openai/2.8.0/lib/net8.0/OpenAI.dll`. Version compatibility between 2.8.0 and 2.9.x fully assessed. No new dependencies. |
-| Features | HIGH | Based on direct codebase inspection of `LLMModule`, `WorkspaceToolModule`, `ChatPanel`, `FormatDetector`. Feature boundaries are clear. P1/P2/P3 boundaries are opinionated and explicitly justified with complexity vs. value rationale. |
-| Architecture | HIGH | Based on direct codebase inspection of all integration surfaces: WiringEngine, ChatOutputModule, LLMService, AnimaRuntime, EventBus. Anti-patterns documented with specific deadlock mechanics and reproduction paths. |
-| Pitfalls | HIGH | Semaphore and EventBus pitfalls are based on direct inspection of `_executionGuard` SemaphoreSlim usage and the existing self-correction loop — the exact pattern being extended. Context overflow and injection pitfalls are backed by external production incident reports and OWASP guidance. |
+| Stack | HIGH | All findings from direct codebase inspection. No new packages needed — conclusion is certain. All component and service files read directly. |
+| Features | HIGH | All four EDUX requirements are defined in PROJECT.md. Feature scope is fixed with no ambiguous boundaries. Industry norms confirm they are table stakes. |
+| Architecture | HIGH | Every integration point confirmed by reading actual source files. Component boundaries, existing patterns, and data flows verified from code, not documentation. |
+| Pitfalls | HIGH | All pitfalls identified from actual code patterns. `DeleteSelected()` split bug cited to specific code pattern. Focus issue tied to the specific `tabindex="0"` div. Recovery strategies are concrete. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Streaming final response:** STACK.md recommends keeping `CompleteAsync` (non-streaming) for the entire agent loop in v2.0.2. If token-by-token streaming of the final turn is wanted, it requires a separate delivery mechanism — streaming tokens must reach `ChatPanel` before `_pendingAssistantResponse` resolves. This is orthogonal to the agent loop and should be scoped as a separate follow-on.
+- **Port tooltip rendering decision (Phase 4):** SVG `<title>` vs custom SVG overlay — the one
+  unresolved architectural decision. Resolve at Phase 4 planning time by evaluating zoom-level UX
+  tradeoff against implementation cost.
 
-- **`agentMaxIterations` safe upper bound:** Research recommends default 10, max 50. The actual safe maximum depends on which tools are wired and their typical output sizes. Validate empirically during Phase 1 integration testing, specifically with `read_file` and `bash` tools which produce the largest outputs.
+- **ModulePalette search behavior with localized names (Phase 1 scope extension):** After EDUX-01,
+  search filter should also match localized display names. Include in Phase 1 or defer to v2.0.3+.
+  Decide at Phase 1 planning.
 
-- **Tool call grammar finalization:** The `<tool_call name="..."><param name="...">value</param></tool_call>` format must be locked before the system prompt is written and `ToolCallParser` is unit-tested — any grammar change after testing requires updating both. Lock the format at the start of Phase 1.
+- **`DeleteSelected()` encode/decode fix scope (Phase 2):** Full struct refactor to `HashSet<PortConnection>`
+  vs minimum defensive fix (validated re-encode + unit test). Evaluate at Phase 2 planning.
 
-- **`finish_reason: "length"` at loop entry:** If the context is already overflowing before the first iteration (not just mid-loop), the loop has no clean recovery path. Handle this edge case explicitly in Phase 1: either truncate the pre-loop message list or surface a clear error to the user before attempting the first LLM call.
+- **External module descriptions and tooltips (acceptable gap):** External modules have no `.resx`
+  entries and may add no port attribute descriptions. Both gaps are handled by fallback behavior
+  (raw class name displayed, no port tooltip shown). Document in Phase verification checklists.
+
+---
 
 ## Sources
 
-### Primary (HIGH confidence)
+### Primary (HIGH confidence — direct codebase inspection)
 
-- Direct assembly inspection: `/home/user/.nuget/packages/openai/2.8.0/lib/net8.0/OpenAI.dll` — all SDK type and member claims
-- Direct codebase inspection: `src/OpenAnima.Core/Modules/LLMModule.cs` — semaphore structure, existing self-correction loop, `CallLlmAsync`, `BuildToolDescriptorBlock`, `TriggerSedimentation`
-- Direct codebase inspection: `src/OpenAnima.Core/Modules/WorkspaceToolModule.cs` — `_concurrencyGuard`, `GetToolDescriptors()`, EventBus invocation pattern, `HandleInvocationAsync`
-- Direct codebase inspection: `src/OpenAnima.Core/Components/Shared/ChatPanel.razor` — `_pendingAssistantResponse`, `_isGenerating`, 30s timeout, message history snapshot timing
-- Direct codebase inspection: `src/OpenAnima.Core/Wiring/WiringEngine.cs` — per-module SemaphoreSlim structure and inline EventBus subscriber dispatch
-- Direct codebase inspection: `src/OpenAnima.Core/Tools/IWorkspaceTool.cs`, `ToolResult.cs`, `ToolDescriptor.cs`
-- Direct codebase inspection: `src/OpenAnima.Core/LLM/ILLMService.cs`, `LLMService.cs`
-- Direct codebase inspection: `.planning/PROJECT.md` — milestone scope, existing architecture decisions
+- `src/OpenAnima.Core/Components/Shared/NodeCard.razor` — SVG `<title>` pattern, port rendering loop, `MarkupString` interpolation
+- `src/OpenAnima.Core/Components/Shared/EditorCanvas.razor` — `@oncontextmenu:preventDefault`, SVG transform group, connection rendering, `HandleConnectionClick`
+- `src/OpenAnima.Core/Components/Shared/ConnectionLine.razor` — hit-target path, `IsSelected`, `OnClick` EventCallback pattern
+- `src/OpenAnima.Core/Components/Shared/ModulePalette.razor` — `HandleDragStart`, `_availableModules`, hardcoded English strings confirmed
+- `src/OpenAnima.Core/Components/Shared/EditorConfigSidebar.razor` — hardcoded `L["Editor.Config.NoDescription"]`, `_selectedNode.ModuleName` header
+- `src/OpenAnima.Core/Components/Shared/AnimaContextMenu.razor` / `ModuleContextMenu.razor` — context menu component pattern
+- `src/OpenAnima.Core/Components/Pages/Editor.razor` — `tabindex="0"`, `@onkeydown`, `HandleKeyDown`, `LanguageChanged` subscription
+- `src/OpenAnima.Core/Services/EditorStateService.cs` — `DeleteSelected()` ID split logic, `SelectedConnectionIds`, `SelectConnection`, `RemoveConnection`
+- `src/OpenAnima.Core/Services/LanguageService.cs` — `LanguageChanged` event, singleton pattern
+- `src/OpenAnima.Core/Services/ModuleSchemaService.cs` — static module type map, existing extension point
+- `src/OpenAnima.Contracts/IModuleMetadata.cs` — `Name`, `Version`, `Description` fields; no i18n surface
+- `src/OpenAnima.Contracts/Ports/PortMetadata.cs` — `Name`, `Type`, `Direction`, `ModuleName` — no `Description` confirmed
+- `src/OpenAnima.Contracts/Ports/InputPortAttribute.cs` / `OutputPortAttribute.cs` — no description parameter confirmed
+- `src/OpenAnima.Core/Ports/PortDiscovery.cs` — attribute-to-record mapping confirmed
+- `src/OpenAnima.Core/Resources/SharedResources.zh-CN.resx` — 208 existing keys, naming conventions
+- `.planning/PROJECT.md` — v2.0.3 active requirements, architecture decisions
 
-### Secondary (MEDIUM confidence)
+### Secondary (MEDIUM confidence — industry reference)
 
-- [openai/openai-dotnet GitHub](https://github.com/openai/openai-dotnet) — tool calling patterns, `ChatFinishReason.ToolCalls` do-while loop
-- [OpenAI .NET SDK Issue #218](https://github.com/openai/openai-dotnet/issues/218) — `CompleteChatAsync` + options after `ToolChatMessage` 400 error
-- [OpenAI SDK CHANGELOG](https://github.com/openai/openai-dotnet/blob/main/CHANGELOG.md) — 2.8.0 vs 2.9.x breaking changes confirmed
-- [Braintrust: The canonical agent architecture](https://www.braintrust.dev/blog/agent-while-loop) — iteration limit norms (10-20), sequential tool execution default
-- [Context Window Overflow in 2026 — Redis](https://redis.io/blog/context-window-overflow/) — tool result accumulation patterns and overflow failure modes
-- [OWASP LLM01:2025 Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/) — tool content injection via file reads as indirect prompt injection vector
-- [Marc Gravell: Fun with the Spiral of Death](https://blog.marcgravell.com/2019/02/fun-with-spiral-of-death.html) — SemaphoreSlim re-entrancy deadlock mechanics
-- [Blazor University: Thread safety using InvokeAsync](https://blazor-university.com/components/multi-threaded-rendering/invokeasync/) — `StateHasChanged` from background threads pattern
-- [AG-UI Protocol overview](https://www.datacamp.com/tutorial/ag-ui) — `TOOL_CALL_START`/`TOOL_CALL_RESULT` event patterns, inline visualization standards
-
-### Tertiary (LOW confidence)
-
-- [OpenAI community: StreamingChatToolCallsBuilder missing in 2.1.0](https://community.openai.com/t/streamingchattoolcallsbuilder-missing-in-openai-2-1-0-nuget/1104918) — confirms standalone SDK limitation (cross-validated by assembly inspection)
-- [Spring AI: Converting tool response formats](https://spring.io/blog/2025/11/25/spring-ai-tool-response-formats/) — XML/JSON/YAML format trade-offs (different runtime; directionally applicable)
+- Blender node editor, Unreal Blueprint, ComfyUI, NodeRed — Delete key and right-click menu for
+  connection deletion is universal table stakes in visual wiring tools
+- Per-port hover description — expected in professional visual node editors for user discovery
+- SVG `<title>` browser compatibility — supported in all modern browsers; OS-dependent appearance
+  and ~0.5s delay are known limitations
 
 ---
-*Research completed: 2026-03-23*
+*Research completed: 2026-03-24*
 *Ready for roadmap: yes*

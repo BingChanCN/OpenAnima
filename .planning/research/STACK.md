@@ -1,12 +1,12 @@
 # Stack Research
 
-**Domain:** OpenAnima v2.0.2 Chat Agent Loop — agent loop, tool calling protocol, real-time UI updates
-**Researched:** 2026-03-23
+**Domain:** OpenAnima v2.0.3 Editor Experience — module i18n names, descriptions, connection deletion UX, port hover tooltips
+**Researched:** 2026-03-24
 **Confidence:** HIGH
 
 ## Context
 
-This is a subsequent-milestone stack update. The existing stack (validated through v2.0.1) is:
+This is a subsequent-milestone stack update. The existing validated stack is:
 
 - .NET 8.0, Blazor Server, SignalR 8.0.x
 - OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3
@@ -16,244 +16,108 @@ This is a subsequent-milestone stack update. The existing stack (validated throu
 
 **The question is not "what stack to use" — it is "what, if anything, to add or change."**
 
+All four active requirements (EDUX-01 through EDUX-04) are pure UI/metadata changes within the existing Blazor Server + SVG editor infrastructure. No new NuGet packages are required.
+
 ---
 
 ## Recommended Stack Additions
 
 ### No New NuGet Packages Required
 
-The v2.0.2 milestone can be fully implemented using the existing OpenAI SDK 2.8.0 and the existing Blazor Server + SignalR infrastructure. Every new capability maps cleanly to existing SDK primitives.
+All four EDUX features are implemented entirely using existing framework primitives:
+- `IStringLocalizer<SharedResources>` — already used for all UI text
+- `.resx` resource files — already exist at `SharedResources.zh-CN.resx` / `SharedResources.en-US.resx`
+- SVG `<title>` elements — already used for node-level status tooltips in `NodeCard.razor`
+- Blazor component patterns — `AnimaContextMenu` and `ModuleContextMenu` are existing templates
 
 ---
 
-## OpenAI SDK 2.8.0: Tool Calling API Surface
+## Feature-by-Feature Stack Analysis
 
-All required types are confirmed present in the standalone `OpenAI` 2.8.0 NuGet package via assembly inspection:
+### EDUX-01: Module Chinese Names in Editor
 
-| Type | Namespace | Purpose |
-|------|-----------|---------|
-| `ChatTool` | `OpenAI.Chat` | Defines a function tool via `CreateFunctionTool(name, description, parameters)` |
-| `ChatCompletionOptions` | `OpenAI.Chat` | Carries `Tools` list, `ToolChoice`, `AllowParallelToolCalls` |
-| `ChatToolChoice` | `OpenAI.Chat` | `CreateAutoChoice()`, `CreateFunctionChoice(name)` — controls model behavior |
-| `ChatFinishReason.ToolCalls` | `OpenAI.Chat` | Signals the model wants to invoke tools before completing |
-| `ChatFinishReason.Stop` | `OpenAI.Chat` | Normal completion — add assistant message and exit loop |
-| `ChatToolCall` | `OpenAI.Chat` | Single tool call: `Id`, `FunctionName`, `FunctionArguments` (BinaryData) |
-| `ToolChatMessage` | `OpenAI.Chat` | Returns tool result back to the model: `new ToolChatMessage(toolCall.Id, resultJson)` |
-| `AssistantChatMessage` | `OpenAI.Chat` | Wraps assistant response including tool calls: `new AssistantChatMessage(completion)` |
-| `StreamingChatToolCallUpdate` | `OpenAI.Chat` | Streaming fragment for a tool call: `ToolCallId`, `FunctionName`, `FunctionArgumentsUpdate`, `Index` |
+**What needs to change:** `ModulePalette.razor` shows `module.Name` (always the C# class name, e.g., `LLMModule`). `NodeCard.razor` also renders the raw class name as the SVG title text. Neither is localized.
 
-**Important:** `StreamingChatToolCallsBuilder` does NOT exist in the standalone `OpenAI` 2.8.0 package. It is available in `Azure.AI.OpenAI` (a separate package built on top of the standalone SDK). Manual accumulation is required for streaming tool calls — this is straightforward (see implementation pattern below).
+**What exists already:**
+- `LanguageService` singleton with `Current.Name` ("zh-CN" or "en-US") and `LanguageChanged` event
+- `IStringLocalizer<SharedResources>` wired into all pages and context menus
+- 208 existing `.resx` keys covering navigation, actions, and UI labels
 
-### Tool Definition Pattern (2.8.0)
+**Recommended approach:** Add `.resx` keys under the `Module.DisplayName.*` namespace for each built-in module (e.g., `Module.DisplayName.LLMModule = "语言模型"`, `Module.DisplayName.ChatInputModule = "聊天输入"`). Inject `IStringLocalizer<SharedResources>` into `ModulePalette.razor` and `NodeCard.razor`, then resolve display name at render time: `L[$"Module.DisplayName.{module.Name}"].Value` with fallback to `module.Name` when the key is absent.
 
-```csharp
-var tool = ChatTool.CreateFunctionTool(
-    functionName: "file_read",
-    functionDescription: "Read the contents of a file in the workspace.",
-    functionParameters: BinaryData.FromBytes("""
-    {
-        "type": "object",
-        "properties": {
-            "path": { "type": "string", "description": "Relative path to the file" },
-            "offset": { "type": "integer", "description": "Line to start reading from (optional)" }
-        },
-        "required": ["path"]
-    }
-    """u8.ToArray())
-);
-```
+**Why not add a `DisplayName` property to `IModuleMetadata`:** That interface is in `OpenAnima.Contracts` and used by all external module authors. Adding a localized display name property would require every external module to implement it. Module names are a UI concern, not a module identity concern. The `.resx` lookup is the correct boundary — it keeps localization in the dashboard layer where it belongs.
 
-**Note:** Use `BinaryData.FromBytes(...u8.ToArray())` (UTF-8 byte literal, stable API in 2.x stable) not `BinaryData.FromString(...)` (beta-era pattern).
-
-### Non-Streaming Agent Loop Pattern (2.8.0)
-
-The correct loop for the in-process agent execution in `LLMModule`:
-
-```csharp
-var options = new ChatCompletionOptions();
-foreach (var tool in tools)
-    options.Tools.Add(tool);
-
-int iterations = 0;
-while (iterations < maxIterations)
-{
-    var completion = await chatClient.CompleteChatAsync(messages, options, ct);
-
-    if (completion.Value.FinishReason == ChatFinishReason.Stop)
-    {
-        // Done — publish final response
-        messages.Add(new AssistantChatMessage(completion.Value));
-        break;
-    }
-
-    if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
-    {
-        messages.Add(new AssistantChatMessage(completion.Value));
-
-        foreach (var toolCall in completion.Value.ToolCalls)
-        {
-            // Dispatch to IWorkspaceTool, get JSON result
-            var result = await DispatchToolCallAsync(toolCall, ct);
-            messages.Add(new ToolChatMessage(toolCall.Id, result));
-        }
-
-        iterations++;
-        continue;
-    }
-
-    // FinishReason.Length, ContentFilter, etc. — treat as terminal
-    break;
-}
-```
-
-**Known issue in SDK 2.x (GitHub Issue #218):** Passing `options` in `CompleteChatAsync` after `ToolChatMessage` entries are in the message list can cause a `400 Bad Request` from some providers. Mitigation: pass options only on the first call, or pass `null` for options after tool results are appended. Alternatively, reconstruct `options` each loop iteration.
-
-### Streaming Agent Loop — Manual Accumulation
-
-Because `StreamingChatToolCallsBuilder` is absent from the standalone SDK 2.8.0, streaming tool call fragments must be accumulated manually:
-
-```csharp
-var contentBuilder = new StringBuilder();
-var toolCallAccumulator = new Dictionary<int, (string Id, string Name, StringBuilder Args)>();
-
-await foreach (var update in chatClient.CompleteChatStreamingAsync(messages, options, ct))
-{
-    // Accumulate content tokens (for real-time display)
-    foreach (var part in update.ContentUpdate)
-        contentBuilder.Append(part.Text);
-
-    // Accumulate tool call fragments by index
-    foreach (var tcUpdate in update.ToolCallUpdates)
-    {
-        var idx = tcUpdate.Index;
-        if (!toolCallAccumulator.TryGetValue(idx, out var entry))
-        {
-            entry = (tcUpdate.ToolCallId ?? "", tcUpdate.FunctionName ?? "", new StringBuilder());
-            toolCallAccumulator[idx] = entry;
-        }
-        entry.Args.Append(tcUpdate.FunctionArgumentsUpdate?.ToString() ?? "");
-    }
-
-    // Yield content tokens to UI (streaming display)
-    if (update.ContentUpdate.Count > 0)
-        await YieldTokenAsync(update.ContentUpdate[0].Text);
-}
-
-// Build AssistantChatMessage from accumulated tool calls
-var toolCalls = toolCallAccumulator.Values
-    .Select(e => ChatToolCall.CreateFunctionToolCall(e.Id, e.Name, BinaryData.FromString(e.Args.ToString())))
-    .ToList();
-```
-
-**However:** For the agent loop use case, the non-streaming `CompleteChatAsync` is simpler and preferred. Streaming adds complexity to the accumulation logic without meaningful benefit during tool-calling iterations. Use streaming only for the final "stop" response that is delivered to the chat UI.
-
-**Recommended approach:** Non-streaming for tool-calling iterations inside the agent loop. Streaming for the final response when `FinishReason == Stop` and no tool calls are pending.
+**Integration point:** `ModulePalette.razor` and `NodeCard.razor` — both inject `IStringLocalizer<SharedResources>` (already done in many other components). Palette also subscribes to `LanguageService.LanguageChanged` to re-render on language switch.
 
 ---
 
-## Integration with Existing `LLMModule`
+### EDUX-02: Module Descriptions in Editor
 
-The agent loop runs entirely inside `LLMModule.ExecuteWithMessagesListAsync`. No new module is needed — this is an extension of the existing `CompleteWithCustomClientAsync` method.
+**What needs to change:** `ModulePalette.razor` shows only `@module.Name` and port counts. No description is visible. `IModuleMetadata.Description` already exists but nothing in the palette reads it.
 
-### What Changes in `LLMModule`
+**What exists already:**
+- `IModuleMetadata.Description` — a string on every built-in module (set in the `ModuleMetadataRecord` constructor calls)
+- `PluginRegistry.GetAllModules()` — returns `PluginRegistryEntry` which holds `IModule.Metadata`
+- `ModulePalette.razor` currently builds its module list from `IPortRegistry.GetAllPorts()` grouped by `ModuleName` — it does not currently access `IModuleMetadata`
 
-| Existing | Required Change |
-|---------|----------------|
-| `CompleteWithCustomClientAsync` calls `CompleteChatAsync` once, returns `LLMResult` | Extend to loop on `FinishReason.ToolCalls`, dispatching to `WorkspaceToolModule._tools` directly or via a new `IAgentToolDispatcher` |
-| `BuildToolDescriptorBlock` builds XML for prompt injection | Replace with `ChatTool.CreateFunctionTool` construction from `IWorkspaceTool.Descriptor` — the LLM no longer parses XML, it gets native `tool_calls` from the API |
-| `LLMResult(success, content, error)` — single response record | Add `ToolCallsExecuted` count or iteration tracking for observability |
-| No iteration limit config | Add `agentMaxIterations` config key (default: 5) — follows `llmMaxRetries` pattern already in `GetSchema()` |
+**Recommended approach:** Inject `IModuleService` (or `PluginRegistry` directly — already used in `ModuleSchemaService`) into `ModulePalette.razor`. When building `_availableModules`, look up the description via `_pluginRegistry.GetEntry(moduleName)?.Module.Metadata.Description`. For built-in modules that are registered as DI singletons (not via `PluginRegistry`), add a separate `IBuiltinModuleDescriptionService` or extend `ModuleSchemaService` with a `GetDescription(moduleName)` method.
 
-### What Does NOT Change
+**Alternative approach (simpler, preferred):** Add descriptions as `.resx` keys alongside display names — `Module.Description.LLMModule = "..."`, `Module.Description.ChatInputModule = "..."`. This avoids needing to query `PluginRegistry` from the palette, keeps descriptions translateable, and follows the same pattern as EDUX-01.
 
-- `CallLlmAsync` three-layer provider resolution (provider-backed → manual → global) — preserved, just the inner call becomes an agent loop
-- Memory recall injection (`BuildMemorySystemMessage`) — still prepended before the loop starts
-- Format detection and self-correction loop — preserved for routing use cases (non-tool-call path)
-- `TriggerSedimentation` — fires after the final response, unchanged
-- `EventBus.PublishAsync` for response/error ports — unchanged
-- `_executionGuard` semaphore — unchanged
-
-### Tool Argument Format Change
-
-**Current (v2.0.1):** LLMModule injects XML descriptors into the system message. The LLM produces a JSON `{"tool": "name", "parameters": {...}}` payload in its text response. `WorkspaceToolModule` receives this via the `invoke` port (event bus).
-
-**New (v2.0.2):** LLMModule passes native `ChatTool` objects in `ChatCompletionOptions.Tools`. The LLM returns `FinishReason.ToolCalls` with `ChatToolCall` objects. LLMModule parses `toolCall.FunctionArguments` JSON directly and dispatches to tools — **bypassing the EventBus invoke port entirely during the agent loop**.
-
-The `WorkspaceToolModule` invoke port continues to work for heartbeat-driven tool invocations and external module wiring. The agent loop uses a direct dispatch path inside `LLMModule`.
-
-### Tool Argument Parsing
-
-`toolCall.FunctionArguments` is `BinaryData`. Parse with `JsonDocument`:
-
-```csharp
-using var doc = JsonDocument.Parse(toolCall.FunctionArguments);
-var parameters = doc.RootElement.EnumerateObject()
-    .ToDictionary(p => p.Name, p => p.Value.GetString() ?? "");
-```
-
-**Validate arguments before dispatching** — models can hallucinate parameters. Check required fields are present before calling `IWorkspaceTool.ExecuteAsync`.
-
-### `ChatTool` Construction from `ToolDescriptor`
-
-Build the JSON schema from `IWorkspaceTool.Descriptor` at call time:
-
-```csharp
-private static ChatTool BuildChatTool(ToolDescriptor descriptor)
-{
-    var required = descriptor.Parameters
-        .Where(p => p.Required)
-        .Select(p => $"\"{p.Name}\"");
-
-    var props = descriptor.Parameters
-        .Select(p => $"\"{p.Name}\": {{\"type\": \"{p.Type}\", \"description\": \"{p.Description}\"}}");
-
-    var schema = $$"""
-    {
-        "type": "object",
-        "properties": { {{string.Join(", ", props)}} },
-        "required": [{{string.Join(", ", required)}}]
-    }
-    """;
-
-    return ChatTool.CreateFunctionTool(
-        functionName: descriptor.Name,
-        functionDescription: descriptor.Description,
-        functionParameters: BinaryData.FromBytes(Encoding.UTF8.GetBytes(schema))
-    );
-}
-```
+**Why prefer `.resx` for built-in descriptions over `IModuleMetadata.Description`:** The `IModuleMetadata.Description` values on built-in modules are currently English strings set at compile time. For zh-CN users they would display in English unless the `.resx` approach is used. The `.resx` lookup gives proper localized descriptions for free.
 
 ---
 
-## Real-Time UI Updates During Agent Loop
+### EDUX-03: Connection Deletion via Delete Key and Right-Click Menu
 
-### Existing Infrastructure is Sufficient
+**What needs to change:**
+1. Delete key — already 90% wired. `Editor.razor` handles `@onkeydown` with `HandleKeyDown` calling `_state.DeleteSelected()`. `EditorStateService.SelectConnection` and `DeleteSelected` both exist and work correctly. The missing piece is that connections can only be selected via `ConnectionLine` click — verified as working via `HandleConnectionClick` in `EditorCanvas.razor`. The Delete key flow is complete.
 
-Blazor Server already has SignalR built-in. `ChatPanel.razor` uses the existing `ChatSessionMessage` / `_pendingAssistantResponse` TaskCompletionSource pattern. The chat UI needs to display tool call progress, but the underlying push mechanism is already in place.
+2. Right-click context menu on connections — this is the gap. `EditorCanvas.razor` has `@oncontextmenu:preventDefault` on the SVG element, which blocks the browser's default menu but fires no custom handler. `ConnectionLine.razor` currently has no `@oncontextmenu` handler.
 
-### What Changes in the UI
+**What exists already:**
+- `AnimaContextMenu.razor` and `ModuleContextMenu.razor` — identical pattern: CSS-positioned `<div class="context-menu">` with backdrop, `IsVisible`/`X`/`Y` parameters, `EventCallback` for each action, `IDisposable` LanguageChanged subscription
+- The existing context menu CSS classes (`context-menu`, `context-menu-backdrop`, `context-menu-item`, `context-menu-item--danger`) are already defined in the global stylesheet
+- `EditorStateService.RemoveConnection` and `DeleteSelected` exist and handle the state mutation
 
-| Current | Required Change |
-|---------|----------------|
-| `ChatSessionMessage { Role, Content, IsStreaming }` | Add `ToolCallsInProgress` (list of in-flight tool call names) or a `ToolCallLog` list |
-| Single assistant message — content fills in as response arrives | Agent loop: intermediate "thinking" state + tool call badges + final response |
-| `_pendingAssistantResponse` TaskCompletionSource resolved by `ChatOutputModule.OnMessageReceived` | Extend to handle tool-call progress events: `LLMModule.port.tool_start`, `LLMModule.port.tool_result` (new EventBus events) |
+**Recommended approach:** Add a `ConnectionContextMenu.razor` component following the exact structure of `AnimaContextMenu.razor`. Wire it into `EditorCanvas.razor` via three new parameters on `ConnectionLine.razor`: `@oncontextmenu` event that bubbles the source/target connection identity to the canvas, which positions and shows the menu.
 
-**Recommendation:** Add new EventBus events `LLMModule.port.tool_start` and `LLMModule.port.tool_result` that `ChatPanel` subscribes to. For each `tool_start`, append a status line to the current assistant message (e.g., `[Running: file_read]`). For `tool_result`, update to `[Done: file_read (150ms)]`. This requires no new component — append to the streaming content string.
+**Key implementation note:** SVG `@oncontextmenu` inside a Blazor `<g>` element works with `@oncontextmenu:stopPropagation` to prevent the outer SVG `@oncontextmenu:preventDefault` handler from interfering. The `MouseEventArgs.ClientX`/`ClientY` from the context menu event gives the viewport position for the floating menu div.
 
-**Alternative (simpler):** No streaming UI for tool calls. LLMModule publishes a single response with all tool call summaries embedded after all iterations complete. Trade-off: user sees no progress during multi-step execution. Not recommended for production.
+**No new package needed.** The existing CSS, the existing context menu component structure, and `EditorStateService` cover everything.
 
-### `ChatPanel` Timeout Change Required
+---
 
-`ChatPanel.razor` currently uses a 30-second timeout (`TimeSpan.FromSeconds(30)`) for assistant response. Multi-step agent loops can take 60-120+ seconds (each tool call + LLM re-call can take 10-30s). This timeout must be configurable per-Anima or set to a higher default (e.g., 300 seconds) with per-iteration progress resets.
+### EDUX-04: Port Hover Tooltips (Chinese Descriptions)
 
-```csharp
-// Current — 30s hard timeout
-using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+**What needs to change:** `NodeCard.razor` renders port circles as `<circle>` SVG elements. There is no `<title>` child element on port circles — only the node-level `<title>@GetStatusTooltip()</title>` at the top of the SVG `<g>`. Port names are rendered as `<text>` elements next to the circles. No description text is shown or available.
 
-// New — extend to 5 minutes, or use a per-step keepalive pattern
-using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(300));
-```
+**Current SVG tooltip mechanism:** The existing node-level tooltip uses the SVG `<title>` element. When a `<title>` is a direct child of an SVG element, the browser renders a native tooltip on hover. This same mechanism works on `<circle>` elements.
+
+**What needs to be added to `PortMetadata`:** A `Description` property. The `PortMetadata` record is in `OpenAnima.Contracts/Ports/PortMetadata.cs` — currently `record PortMetadata(string Name, PortType Type, PortDirection Direction, string ModuleName)`. Add an optional `string? Description = null` positional parameter (default null preserves all existing construction sites without changes).
+
+**Port description source options:**
+
+Option A — Extend `InputPortAttribute` / `OutputPortAttribute` to accept an optional `description` parameter, then surface it through `PortDiscovery`. This is clean and keeps descriptions co-located with port declarations at the attribute site. Requires touching 17 module files to add descriptions, but all in `OpenAnima.Core/Modules/`.
+
+Option B — `.resx` keys like `Port.Description.LLMModule.prompt = "发送给语言模型的提示文本"`. Keeps descriptions in the UI layer, translateable. Requires no changes to `PortMetadata` or attributes. Lookup in `NodeCard.razor` via `L[$"Port.Description.{port.ModuleName}.{port.Name}"]` with fallback to port name.
+
+**Recommended approach: Option B (`.resx` keys, no Contracts change).** Reason: `PortMetadata` is in `OpenAnima.Contracts` — adding a `Description` field there means external module authors now need to provide descriptions via attributes. For the current milestone scope (built-in module port descriptions), `.resx` keys keep the change entirely within the dashboard UI layer. The fallback to port name when no key exists means external module ports gracefully degrade to showing the port name as the tooltip.
+
+**SVG tooltip rendering:** In `NodeCard.razor`, within each port `<circle>` render loop, add a `<title>` SVG child element. SVG `<title>` must be the first child of the containing element to work reliably across browsers. Use `@((MarkupString)...)` for the SVG inner content since `NodeCard.razor` uses string interpolation for SVG rendering. Alternatively, add the `<title>` as a sibling group element — both work.
+
+**Browser compatibility:** SVG `<title>` tooltips are supported in all modern browsers (Chrome, Firefox, Edge, Safari). They respect browser default tooltip delay (~0.5s hover). This is the correct pattern — the existing `NodeCard.razor` already uses this for card-level tooltips, so the approach is already validated in the codebase.
+
+---
+
+## Summary: All Changes Are Pure Code — No New Dependencies
+
+| Feature | Implementation Layer | New Code Needed |
+|---------|---------------------|----------------|
+| EDUX-01: Chinese module names | `.resx` keys + `ModulePalette.razor` + `NodeCard.razor` | ~20 `.resx` entries, 2 component edits |
+| EDUX-02: Module descriptions | `.resx` keys + `ModulePalette.razor` tooltip or text | ~20 `.resx` entries, 1 component edit |
+| EDUX-03: Connection delete | New `ConnectionContextMenu.razor` + `ConnectionLine.razor` + `EditorCanvas.razor` | 1 new component (30-40 lines), 2 component edits |
+| EDUX-04: Port tooltips | `.resx` keys + `NodeCard.razor` SVG `<title>` elements | ~40 `.resx` entries, 1 component edit |
 
 ---
 
@@ -261,13 +125,11 @@ using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(300));
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| `Azure.AI.OpenAI` package | Brings `StreamingChatToolCallsBuilder` but adds a separate Azure SDK dependency. Manual accumulation is 10 lines of code. The standalone `OpenAI` SDK is already in the project. | Manual accumulation with `StreamingChatToolCallUpdate.Index` |
-| Upgrade to OpenAI SDK 2.9.1 | 2.9.0/2.9.1 adds the Responses API and web search but also changes `MessageRole` to a regular enum and renames `ToolChoice` in `ResponseCreationOptions`. The streaming/ChatTool surface is unchanged between 2.8.0 and 2.9.1. No feature in v2.0.2 requires the Responses API. | Stay on 2.8.0 — stable, tested, no breaking changes needed |
-| Separate `AgentLoopModule` | The agent loop is a behavioral change to `LLMModule` internal execution, not a new module type. A separate module would require new wiring between LLMModule and AgentLoopModule, adding complexity without value. | Extend `LLMModule.CompleteWithCustomClientAsync` |
-| Microsoft.Extensions.AI | Higher-level AI abstraction layer. Adds abstraction over the OpenAI SDK. This codebase has a deliberate `ILLMService` abstraction already. Adding another layer would create two abstraction stacks. | Use `OpenAI.Chat.ChatClient` directly (existing pattern) |
-| Semantic Kernel | Full orchestration framework. Heavy dependency, different programming model. The existing WiringEngine is the orchestration layer. | Existing WiringEngine + LLMModule agent loop |
-| New SignalR Hub for agent progress | The existing `RuntimeHub` and `IHubContext` injection pattern already handles real-time push. A new Hub adds routing complexity with no benefit. | Existing EventBus → `ChatPanel` event subscription |
-| JSON schema library (NJsonSchema, etc.) | Schema construction from `ToolDescriptor` is ~10 lines of string interpolation. A schema library adds a dependency for a trivial task. | Manual JSON string construction from `ToolDescriptor.Parameters` |
+| Adding `string DisplayName` to `IModuleMetadata` | `IModuleMetadata` is in `OpenAnima.Contracts` — a public contract for external module authors. Localization is a UI shell concern, not a module identity concern. Changing the interface breaks every external module. | `.resx` lookup with `Module.DisplayName.*` keys, falling back to `Metadata.Name` |
+| Adding `string? Description` to `PortMetadata` in Contracts | Same reasoning as above — Contracts is the external-facing SDK. Port descriptions for tooltip purposes are a UI display concern. Changes ripple to `PortDiscovery`, `InputPortAttribute`, `OutputPortAttribute`, and all module files. | `.resx` lookup with `Port.Description.*` keys |
+| JavaScript interop for tooltips (e.g., a JS tooltip library) | SVG `<title>` elements already deliver native browser tooltips. The codebase deliberately avoids JS except where required (`editorCanvas.init`). Adding a JS tooltip library for what native HTML/SVG provides is unnecessary complexity. | SVG `<title>` child elements in `NodeCard.razor` |
+| MudBlazor or Blazor component libraries | The codebase uses pure CSS dark theme by design (documented decision: "can add MudBlazor later if needed"). None of the EDUX features require a component library. The existing context menu pattern (CSS `position: fixed` div) handles all UX needs. | Existing CSS context menu classes |
+| New SignalR events or hub methods | Editor UX features are client-side state changes, not server push events. Connection deletion and tooltip display require no server coordination. | Existing `EditorStateService.OnStateChanged` event |
 
 ---
 
@@ -275,75 +137,70 @@ using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(300));
 
 | Recommended | Alternative | Why Not |
 |-------------|-------------|---------|
-| Non-streaming for tool-calling iterations, streaming for final response | Streaming throughout with manual accumulation | Accumulation adds ~50 lines of state management per loop. The tool-calling iterations are already async server-side — streaming doesn't improve UX because the LLM waits for all tool results before generating the next token. |
-| Direct dispatch from `LLMModule` to `IWorkspaceTool` implementations | Dispatch via EventBus `WorkspaceToolModule.port.invoke` | EventBus dispatch would require waiting for result on a separate subscription, creating a request-response pattern on top of a pub/sub bus — complexity without benefit. |
-| `agentMaxIterations` as a module config key | `ConvergenceGuard` (existing per-run step budget) | `ConvergenceGuard` is per-run across all steps. Agent loop iterations are per-LLM-call and need a much tighter bound (5-10 iterations vs 1000 steps). Both limits can coexist. |
-| Inline tool result in message history (standard OpenAI pattern) | Store tool results as artifacts in `IMemoryGraph` | Memory writes add latency and are for long-term recall. Tool results within an agent loop are ephemeral context — inline history is the standard pattern. |
-| Stay on OpenAI 2.8.0 | Upgrade to 2.9.1 | No v2.0.2 feature requires 2.9.x. The `MessageRole` enum change in 2.9.x would require touching every `switch` statement on message role. Risk without reward for this milestone. |
+| `.resx` keys for module display names | `IModuleMetadata.GetDisplayName(string culture)` method | Would require every external module author to implement the method. Breaks the contract boundary. `.resx` keeps localization as a UI shell concern. |
+| `.resx` keys for port descriptions | Extend `InputPortAttribute` with optional `description` parameter | Valid approach but touches 17 module files and changes `OpenAnima.Contracts`. Viable for a future milestone when the full port attribute surface needs enrichment, but excessive scope for EDUX-04 tooltips only. |
+| `ConnectionContextMenu.razor` (new component) | Inline context menu state in `EditorCanvas.razor` | `AnimaContextMenu.razor` and `ModuleContextMenu.razor` establish a clear component boundary pattern. Inline state in `EditorCanvas.razor` (already 365 lines) adds scope complexity. The component approach is consistent with existing patterns and testable. |
+| SVG `<title>` for port tooltips | CSS tooltip via `::after` pseudo-element | SVG context requires SVG-native tooltip mechanism. CSS pseudo-elements on SVG circles inside a transformed `<g>` are unreliable across browsers. The existing codebase already uses `<title>` for card-level tooltips — consistency. |
 
 ---
 
 ## Version Compatibility
 
-| Package | Version | Notes |
-|---------|---------|-------|
-| OpenAI | 2.8.0 (existing) | `ChatTool`, `ChatCompletionOptions.Tools`, `ChatFinishReason.ToolCalls`, `ToolChatMessage` all confirmed present via assembly inspection. No upgrade needed. |
-| OpenAI | 2.9.1 (available) | `MessageRole` enum change is the only relevant breaking change. Skip unless forced by a provider compatibility issue. |
-| Blazor Server / SignalR | 8.0.x (existing) | No change. Existing event subscription pattern in `ChatPanel.razor` handles new agent progress events via the same `EventBus.Subscribe<string>` mechanism. |
-| Microsoft.Data.Sqlite | 8.0.12 (existing) | No change. Agent loop state is in-memory within `LLMModule` execution. |
-| SharpToken | 2.0.4 (existing) | Token counting for context management still applies. Tool results injected as `ToolChatMessage` objects count against the context window. |
+| Package | Version | Change? | Notes |
+|---------|---------|---------|-------|
+| .NET 8.0 | 8.0.x | None | All patterns used (records with optional params, string interpolation, `IStringLocalizer`) are stable in .NET 8 |
+| Blazor Server / SignalR | 8.0.x | None | `@oncontextmenu`, `KeyboardEventArgs`, `IStringLocalizer` — all .NET 8 Blazor primitives |
+| OpenAI SDK | 2.8.0 | None | Not relevant to EDUX features |
+| Microsoft.Extensions.Localization | bundled with .NET 8 | None | `IStringLocalizer<T>` is already injected in all page components |
+
+---
+
+## Integration Points Summary
+
+| Component | Current State | Required Change |
+|-----------|--------------|----------------|
+| `ModulePalette.razor` | Shows `module.Name` (C# class name), port counts | Inject `IStringLocalizer`, resolve display name and description from `.resx`, subscribe to `LanguageChanged` |
+| `NodeCard.razor` | Shows `Node.ModuleName` as SVG text, no port tooltips | Inject `IStringLocalizer`, show localized display name in title bar text, add `<title>` to each port circle |
+| `ConnectionLine.razor` | `@onclick` handler only, no `@oncontextmenu` | Add `@oncontextmenu` event callback parameter, wire to canvas handler |
+| `EditorCanvas.razor` | `@oncontextmenu:preventDefault` on SVG root, no connection context menu | Add `ConnectionContextMenu` component instance, handle `@oncontextmenu` from `ConnectionLine` |
+| `ConnectionContextMenu.razor` | Does not exist | New component following `AnimaContextMenu.razor` pattern (backdrop div + menu div with Delete action) |
+| `SharedResources.zh-CN.resx` | 208 keys for nav, chat, settings, modules | Add ~80 new keys: `Module.DisplayName.*`, `Module.Description.*`, `Port.Description.*`, `Editor.DeleteConnection` |
+| `SharedResources.en-US.resx` | Parallel English file | Same new keys in English |
 
 ---
 
 ## Installation
 
-No new packages required. All features implemented using the existing stack.
+No new packages required.
 
 ```bash
-# No new dotnet add package commands needed.
-# All required types (ChatTool, ChatCompletionOptions, ChatFinishReason, ToolChatMessage)
-# are in OpenAI 2.8.0 — already a project dependency.
+# No dotnet add package commands needed.
+# All four EDUX features are implemented using:
+# - Existing IStringLocalizer<SharedResources> + .resx files
+# - Existing Blazor component patterns
+# - Existing EditorStateService.DeleteSelected / RemoveConnection
+# - SVG <title> elements (native browser, no library)
 ```
-
----
-
-## Key SDK Facts (Verified via Assembly Inspection)
-
-Confirmed in `/home/user/.nuget/packages/openai/2.8.0/lib/net8.0/OpenAI.dll`:
-
-| Fact | Confidence |
-|------|------------|
-| `ChatTool.CreateFunctionTool(name, description, BinaryData)` exists | HIGH — direct assembly inspection |
-| `ChatCompletionOptions.Tools: IList<ChatTool>` exists | HIGH — direct assembly inspection |
-| `ChatCompletionOptions.ToolChoice: ChatToolChoice` exists | HIGH — direct assembly inspection |
-| `ChatCompletionOptions.AllowParallelToolCalls: bool?` exists | HIGH — direct assembly inspection |
-| `ChatFinishReason.ToolCalls` enum value exists | HIGH — direct assembly inspection |
-| `ChatToolCall.Id: string` exists | HIGH — direct assembly inspection |
-| `ChatToolCall.FunctionName: string` exists | HIGH — direct assembly inspection |
-| `ChatToolCall.FunctionArguments: BinaryData` exists | HIGH — direct assembly inspection |
-| `ToolChatMessage(string toolCallId, string content)` exists | HIGH — direct assembly inspection |
-| `StreamingChatToolCallUpdate.ToolCallId: string` exists | HIGH — direct assembly inspection |
-| `StreamingChatToolCallUpdate.FunctionArgumentsUpdate: BinaryData` exists | HIGH — direct assembly inspection |
-| `StreamingChatToolCallUpdate.Index: int` exists | HIGH — direct assembly inspection |
-| `StreamingChatToolCallsBuilder` does NOT exist in standalone 2.8.0 | HIGH — confirmed absent via assembly inspection |
 
 ---
 
 ## Sources
 
-- Direct assembly inspection: `/home/user/.nuget/packages/openai/2.8.0/lib/net8.0/OpenAI.dll` — authoritative type verification for all SDK claims
-- Codebase inspection: `src/OpenAnima.Core/Modules/LLMModule.cs` — existing `CompleteWithCustomClientAsync`, `BuildToolDescriptorBlock`, `ExecuteWithMessagesListAsync`
-- Codebase inspection: `src/OpenAnima.Core/Modules/WorkspaceToolModule.cs` — `_tools` dictionary, `GetToolDescriptors()`, `HandleInvocationAsync`
-- Codebase inspection: `src/OpenAnima.Core/Tools/IWorkspaceTool.cs`, `ToolDescriptor.cs`, `ToolParameterSchema.cs`, `ToolResult.cs`
-- Codebase inspection: `src/OpenAnima.Core/Components/Shared/ChatPanel.razor` — existing `_pendingAssistantResponse` pattern, 30s timeout
-- Codebase inspection: `src/OpenAnima.Core/Services/ChatSessionState.cs` — `ChatSessionMessage` shape
-- WebSearch (MEDIUM): OpenAI .NET SDK tool calling patterns — https://github.com/openai/openai-dotnet
-- WebSearch (MEDIUM): `StreamingChatToolCallsBuilder` missing from standalone 2.1.0 NuGet — https://community.openai.com/t/streamingchattoolcallsbuilder-missing-in-openai-2-1-0-nuget/1104918
-- WebSearch (MEDIUM): Known issue with `CompleteChatAsync` + options after `ToolChatMessage` — https://github.com/openai/openai-dotnet/issues/218
-- WebSearch (MEDIUM): SDK 2.8.0 vs 2.9.1 changes — confirmed streaming/ChatTool surface unchanged — https://github.com/openai/openai-dotnet/blob/main/CHANGELOG.md
-- WebSearch (MEDIUM): `ChatFinishReason.ToolCalls` do-while agent loop pattern — https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/chatgpt
+- Codebase inspection: `src/OpenAnima.Contracts/IModuleMetadata.cs` — Name, Version, Description fields; single-locale, no DisplayName
+- Codebase inspection: `src/OpenAnima.Contracts/Ports/PortMetadata.cs` — no Description field confirmed
+- Codebase inspection: `src/OpenAnima.Contracts/Ports/InputPortAttribute.cs` / `OutputPortAttribute.cs` — no description parameter
+- Codebase inspection: `src/OpenAnima.Core/Ports/PortDiscovery.cs` — attribute-to-record mapping, no description propagation
+- Codebase inspection: `src/OpenAnima.Core/Components/Shared/NodeCard.razor` — existing `<title>` tooltip pattern on card `<g>`, port circles have no `<title>`
+- Codebase inspection: `src/OpenAnima.Core/Components/Shared/ModulePalette.razor` — shows `module.Name` only, no `IStringLocalizer`, no `LanguageChanged` subscription
+- Codebase inspection: `src/OpenAnima.Core/Components/Shared/ConnectionLine.razor` — `@onclick` only, no `@oncontextmenu`
+- Codebase inspection: `src/OpenAnima.Core/Components/Shared/EditorCanvas.razor` — `@oncontextmenu:preventDefault` present, no custom handler; `SelectConnection`/`HandleConnectionClick` confirmed working
+- Codebase inspection: `src/OpenAnima.Core/Components/Pages/Editor.razor` — `HandleKeyDown` with `DeleteSelected()` on Delete/Backspace — key path already complete
+- Codebase inspection: `src/OpenAnima.Core/Services/EditorStateService.cs` — `SelectConnection`, `DeleteSelected`, `RemoveConnection`, `SelectedConnectionIds` all confirmed present
+- Codebase inspection: `src/OpenAnima.Core/Components/Shared/AnimaContextMenu.razor` / `ModuleContextMenu.razor` — established pattern for CSS-positioned context menus with `IStringLocalizer` and `LanguageChanged` subscription
+- Codebase inspection: `src/OpenAnima.Core/Resources/SharedResources.zh-CN.resx` — 208 existing keys, naming conventions `Nav.*`, `Modules.*`, `Editor.*`, `Common.*`
+- Codebase inspection: `src/OpenAnima.Core/Services/LanguageService.cs` — singleton, `Current.Name`, `LanguageChanged` event
 
 ---
-*Stack research for: OpenAnima v2.0.2 Chat Agent Loop*
-*Researched: 2026-03-23*
+*Stack research for: OpenAnima v2.0.3 Editor Experience (EDUX-01 through EDUX-04)*
+*Researched: 2026-03-24*
 *Confidence: HIGH*

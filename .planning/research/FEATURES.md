@@ -1,18 +1,35 @@
 # Feature Research
 
-**Domain:** Chat-based agent loop with tool calling for a local-first multi-Anima agent platform
-**Researched:** 2026-03-23
+**Domain:** Visual node editor UX improvements for a local-first Blazor Server agent wiring platform
+**Researched:** 2026-03-24
 **Confidence:** HIGH
 
 ## Context: What Already Exists
 
-This is a subsequent-milestone feature research. v2.0.1 shipped:
-- `LLMModule` with `ExecuteWithMessagesListAsync` — full message-list assembly, three-layer LLM config precedence, memory recall injection, tool descriptor block injection (XML)
-- `WorkspaceToolModule` with 15 `IWorkspaceTool` implementations (12 file/git/shell + 3 memory tools), `GetToolDescriptors()`, `CommandBlacklistGuard` safety, per-tool `StepRecorder` timeline
-- `FormatDetector` for XML marker parsing with self-correction loop (used for cross-Anima routing, pattern is directly applicable to tool-call extraction)
-- `ChatPanel.razor` with streaming assistant placeholder, `_pendingAssistantResponse` TaskCompletionSource pattern, `_isGenerating` guard
+This is a subsequent-milestone (v2.0.3) feature research. The editor shipped in v1.3 and has been extended
+through v2.0.2. The following is confirmed from direct codebase inspection:
 
-The question is: **what is needed specifically for the agent loop** (think→act→observe iteration) that does not yet exist.
+- SVG-based `EditorCanvas.razor` with `NodeCard`, `ConnectionLine`, `EditorConfigSidebar`, `ModulePalette`
+- `EditorStateService` with `SelectedConnectionIds` (HashSet), `SelectConnection()`, `DeleteSelected()`
+- `Editor.razor` already handles `Delete`/`Backspace` key via `@onkeydown="HandleKeyDown"` calling `_state.DeleteSelected()`
+- `EditorCanvas.razor` suppresses default context menu (`@oncontextmenu:preventDefault`) but fires no custom one
+- `ConnectionLine.razor` has `@onclick` for selection but no `@oncontextmenu` handler
+- `IModuleMetadata` has `Name`, `Version`, `Description` — no `DisplayName` property
+- `EditorConfigSidebar` line 24 shows `@_selectedNode.ModuleName` (raw class name) in the sidebar h3
+- `EditorConfigSidebar` line 48: hardcoded `@L["Editor.Config.NoDescription"]` — never reads `Metadata.Description`
+- `ModulePalette` builds `ModuleInfo` from `IPortRegistry.GetAllPorts()` — only exposes `Name` (class name), `InputCount`, `OutputCount`; no description
+- `PortMetadata` record: `(string Name, PortType Type, PortDirection Direction, string ModuleName)` — no description field
+- `InputPortAttribute` / `OutputPortAttribute`: only `Name` and `Type` parameters — no description parameter
+- `NodeCard.razor` uses SVG `<title>GetStatusTooltip()` for node-level status tooltip (whole-node scope, not per-port)
+- Port circles in `NodeCard.razor` are plain `<circle>` elements with no tooltip of any kind
+- Full i18n infrastructure: `LanguageService`, `SharedResources.zh-CN.resx`, `IStringLocalizer<SharedResources>`
+- `AnimaContextMenu.razor` and `ModuleContextMenu.razor` exist as reusable context menu component pattern
+
+The four active requirements for this milestone (from PROJECT.md Active section):
+- EDUX-01: Module names display in Chinese when language is zh-CN
+- EDUX-02: Each module shows a brief description in the editor module list
+- EDUX-03: User can delete connections via click-select + Delete key and right-click menu
+- EDUX-04: Ports show Chinese tooltip on hover explaining their purpose
 
 ---
 
@@ -20,140 +37,122 @@ The question is: **what is needed specifically for the agent loop** (think→act
 
 ### Table Stakes (Users Expect These)
 
-Features that must exist for "the agent can use tools during a chat" to be a real claim. Missing any of these makes the loop feel broken.
+Features users assume exist in a visual node editor. Missing these makes the editor feel unfinished.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Tool call extraction from LLM response | The model emits `<tool name="..."><param>...</param></tool>` markers; the runtime must detect and parse them before routing to `WorkspaceToolModule` | MEDIUM | Existing `FormatDetector` XML pattern is directly reusable. Need a parallel `ToolCallDetector` (or extend `FormatDetector`) for `<tool>` marker grammar. The model must be told this format in the system message. |
-| Tool invocation via `WorkspaceToolModule` | Parsed tool calls must actually execute against the registered `IWorkspaceTool` implementations without user action | MEDIUM | `WorkspaceToolModule` already exists and handles invocation. The loop needs to call it directly (in-process) rather than via EventBus publish, since result must return to the loop synchronously before the next LLM call. |
-| Result injection into conversation history | Tool output (JSON `ToolResult`) must become a new "tool" or "assistant" message appended to the message list before the re-call | MEDIUM | Standard pattern: append `assistant` message with tool call markup, then `user` (or `tool` role) message with the result. `ChatMessageInput` currently supports `role: string` — adding a "tool" role message requires no structural change, just a new role value. |
-| LLM re-call with tool results in context | After all tools in a turn execute, the LLM must be called again with the expanded message history | LOW | The existing `CallLlmAsync` already accepts a `List<ChatMessageInput>` — the loop just calls it again with the appended result messages. |
-| Iteration limit (configurable per Anima) | Without a cap, a misbehaving model can loop indefinitely consuming tokens and blocking the chat | LOW | Add `agentMaxIterations` config key to `LLMModule.GetSchema()`. Default 10. Expose via `EditorConfigSidebar` alongside existing `llmMaxRetries`. |
-| Loop termination when no tool calls are present | The loop must stop when the model produces a response with no tool markers — this is the "I'm done" signal | LOW | Already implicit in the loop design: if `ToolCallDetector` finds no tool calls, publish the response and exit. No special configuration needed. |
-| Error propagation when a tool fails | The tool result must communicate failure back to the LLM so it can recover, not silently drop the error | LOW | `ToolResult.Success = false` + `ToolResult.Error` already carries failure messages. The loop should inject the error as the tool result message; the LLM can then attempt a corrected call or explain the failure. |
-| Streaming indication during tool execution | The Chat UI must show the agent is "working" while tools run — users expect something visible, not silence | LOW | The existing `IsStreaming = true` on the assistant message covers the waiting state. A status text update (e.g. "Using tool: file_read...") is the minimum; a placeholder in the existing streaming bubble suffices. Full tool call cards are a differentiator. |
+| Localized module names in editor palette and node cards | In a Chinese-language UI, English class names like "LLMModule" break immersion; users expect "LLM模块" or localized equivalents | MEDIUM | `IModuleMetadata.Name` is a raw C# class name. Need a display name layer: either add a `DisplayName` property to `IModuleMetadata` (contract change) or maintain a lookup service. The name appears in three places: `ModulePalette` item label, `NodeCard` SVG title text (line 36), and `EditorConfigSidebar` h3 header (line 24). All three must read from the same source. |
+| Module description shown in editor sidebar | When a user selects a module to configure it, they expect to see what it does — "Sends prompt to LLM and returns response" is more useful than a blank field | LOW | `IModuleMetadata.Description` exists and is populated on every built-in module. `EditorConfigSidebar` renders the field but hardcodes `@L["Editor.Config.NoDescription"]` (line 48) — the fix is wiring it to the actual metadata. Requires a `GetMetadata(moduleName)` lookup since `EditorConfigSidebar` knows `ModuleName` string but not the live `IModule` instance. |
+| Delete connections by selecting them and pressing Delete | Every node editor (Blender, Unreal, Unity, ComfyUI, NodeRed) treats Delete key as "remove selected". Users will try Delete immediately | LOW | The Delete key path is already implemented in `Editor.razor` and `EditorStateService.DeleteSelected()`. Connection clicking and selection already work via `HandleConnectionClick` and `SelectedConnectionIds`. EDUX-03 Delete-key path requires only verification, not implementation. |
+| Right-click context menu on connections | Users accustomed to node editors right-click for actions on elements; a "Delete Connection" entry is universal | MEDIUM | No right-click handling on `ConnectionLine` exists. `EditorCanvas` suppresses default context menu globally. Needs: (1) `@oncontextmenu` on `ConnectionLine` hit-area path, (2) a `ConnectionContextMenu` component following `AnimaContextMenu`/`ModuleContextMenu` pattern, (3) wiring into `EditorCanvas` or `Editor.razor` for menu visibility and position state. |
+| Port hover tooltips explaining port purpose | Users do not know what "messages" or "trigger" ports accept. Tooltip on hover is the universal discovery mechanism. Chinese descriptions are critical for the zh-CN target audience | MEDIUM | Port circles in `NodeCard.razor` are plain `<circle>` elements with no tooltip attribute. SVG `<title>` child elements render as native browser tooltips (established precedent at node level). A floating div (following `AnimaContextMenu` positioning) is preferred for styled output matching the dark theme. Requires adding a description field to port attributes since `PortMetadata` has no description field. |
 
 ### Differentiators (Competitive Advantage)
 
-Features that elevate the agent loop from functional to excellent.
+Features that raise OpenAnima's editor above generic visual wiring tools for the Chinese-speaking target audience.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Inline tool call visualization in Chat UI | Users see exactly which tools the agent called, with what parameters, and what was returned — transforms the agent from a black box into a transparent collaborator | MEDIUM | Render tool-call "step cards" inside the assistant message bubble: `tool_name(param=value)` header + collapsible result panel. No new libraries needed — pure Razor + CSS following the existing `ChatMessage.razor` component pattern. |
-| Per-turn tool call count display | Users know how many tool calls happened in a given response without expanding cards | LOW | Badge or subtitle line under the assistant message: "Used 3 tools." One-line addition to `ChatMessage.razor`. |
-| Tool call / result recording in StepRecorder timeline | Every tool call executed during an agent loop turn already records in the Run inspector via `WorkspaceToolModule` — the loop should ensure a parent "AgentLoop iteration N" step brackets each set | MEDIUM | Wrap each loop iteration with a `RecordStepStartAsync` / `RecordStepCompleteAsync` pair in `LLMModule` so the Run inspector shows the agent loop structure, not just isolated tool steps. |
-| Graceful handling of partial tool calls (malformed markers) | LLMs occasionally emit incomplete XML — treat the same as the existing routing self-correction loop: send the error back and request correction | LOW | Reuse the existing `BuildCorrectionMessage` / retry pattern from `FormatDetector`. Counts against `agentMaxIterations`, not against `llmMaxRetries` (different failure modes). |
-| Tool availability guard — only inject tools when a run is active | The model is told about tools it cannot actually use (tools require an active run for workspace root). Injecting descriptors unconditionally misleads the agent and wastes tokens | LOW | Already partially handled: `WorkspaceToolModule` returns `"No active run"` errors. Better: suppress tool descriptor injection entirely when `IRunService.GetActiveRun(animaId) == null`. Saves tokens and avoids unhelpful tool-not-available errors mid-loop. |
-| Sedimentation of agent loop conversations (not just single-turn) | Currently `TriggerSedimentation` is called once with the final response. Multi-turn agent loops produce richer conversations worth sedimenting as a whole | LOW | Pass the full final message list (including tool call/result messages) to `SedimentAsync` rather than only the last assistant response. The sedimentation LLM can then extract facts from tool interactions too. |
+| Chinese port descriptions on canvas hover | Hovering a port and seeing "输入：用户的聊天消息文本" directly on the SVG canvas is a UX level above ComfyUI or NodeRed for Chinese users | MEDIUM | Requires: adding `Description` parameter to `InputPortAttribute`/`OutputPortAttribute`, adding `Description` to `PortMetadata`, updating `PortDiscovery` to read it, populating descriptions in all built-in modules, rendering tooltip in `NodeCard` port circles. Attribute-level approach propagates correctly through existing `PortDiscovery` reflection-based registration. |
+| Module palette shows description on hover | Non-technical users browsing the palette understand what a module does before placing it | LOW | `ModulePalette` uses `module.Name` in `.module-item` divs. Adding a `title` attribute with description shows it on hover via native browser tooltip. Very low effort once the description data is wired through to `ModuleInfo`. |
+| Localized module name with raw name as subtitle | Show "LLM模块" as primary label but keep "LLMModule" as a smaller subtitle in the sidebar — developers appreciate seeing the actual class name | LOW | Purely a display decision in `EditorConfigSidebar`. No structural complexity once display name source is resolved. |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Native OpenAI function-calling API (`tools` parameter) | Feels "proper" — it is the official tool-use API | The current LLM integration uses `CompleteWithCustomClientAsync` with `CompleteChatAsync(List<ChatMessage>)`. Adding `ChatCompletionOptions.Tools` requires SDK changes across all three LLM call layers (global `ILLMService`, per-Anima client, registry-backed client), plus schema conversion from `ToolDescriptor` to `ChatTool`. The XML marker approach already works, is provider-agnostic (works with every OpenAI-compatible provider including non-OpenAI ones), and the existing `FormatDetector` pattern is validated. The XML approach does not require rewriting the LLM client layer. | Keep XML markers for v2.0.2; add native function-calling as a future option when the LLM client layer is abstracted further |
-| Parallel tool execution within a turn | Seems faster — why execute tools sequentially when they could run in parallel? | Tool calls are often causally dependent within a turn (read file, then modify it). Parallel execution requires the model to declare independence, which adds protocol complexity. For the 15 workspace tools, most real agent turns involve 1-3 sequential operations. | Execute tools sequentially within a turn; revisit if benchmarks show >3 tools per turn regularly |
-| Automatic retry of failed tools without LLM feedback | Retry instantly on tool error to save a round-trip | The LLM must see the error to adapt its strategy (e.g., the path was wrong, not a transient failure). Silent retry hides information the agent needs to self-correct. | Always inject failure as a tool result message and let the LLM decide whether to retry or abandon |
-| Agent loop that bypasses the existing ContextModule | Build a separate message history just for the agent loop | The existing `ChatPanel` and `ContextModule` already manage conversation history and token counting. A parallel history creates divergence — the user sees one conversation, the agent reasons over another. | The agent loop message list IS the conversation history; pass through the same `List<ChatMessageInput>` already assembled by `ExecuteWithMessagesListAsync` |
-| Streaming token-by-token output during tool execution turns | Stream partial tokens while the agent decides what tool to call next | During tool-call turns, the model's output is parsed for tool markers before any text is shown — showing partial tokens before parsing is complete creates incomplete XML that triggers false malformed-marker detection. | Stream only the final human-readable response (when no tool calls are present). Show tool-execution progress via discrete step indicators, not token streaming. |
-| Unlimited agent iterations | "The agent will stop when it's done, no need for an artificial cap" | Runaway agents consuming hundreds of API calls have been documented in every major agent deployment. A missing limit is a production reliability bug, not a feature. | Default 10 iterations; configurable per Anima via `agentMaxIterations`; surface the limit in the UI so users understand the tradeoff |
+| Auto-translate module descriptions via LLM at runtime | "Just have the AI translate the English description to Chinese automatically" | Adds LLM call latency to editor load. Creates coupling between editor initialization and network/API state. Descriptions for built-in modules are known at compile time. | Store Chinese descriptions as static strings in the module attribute or a lookup dictionary. O(1) lookup, zero latency, zero network dependency. |
+| Per-port inline editing of descriptions | "Let users customize what ports mean for their workflow" | Port descriptions reflect the module contract defined by the module developer, not the end user. Editable descriptions create mismatch between actual port behavior and displayed description. | Read-only tooltips. Descriptions live in module source alongside port names and types. |
+| Animated port tooltips with rich HTML | "Make the tooltip look polished with type badges, colors, icons" | SVG tooltip rendering is constrained. HTML overlays require absolute positioning tracking SVG pan/zoom transformations, significantly increasing complexity for a cosmetic improvement. | Plain text tooltip with type prefix ("【Text】接收用户的聊天消息") is readable and implementable without transform tracking. |
+| Undo/redo for connection deletion | "What if I accidentally delete a connection?" | Undo/redo requires maintaining a command history stack across all editor mutations (add/remove node, add/remove connection, move node). Full subsystem addition touching `EditorStateService` deeply — scope is not proportional to the four EDUX requirements. | Add a brief "Undo" toast appearing for 3 seconds after deletion. This is a future differentiator, not an EDUX blocker. |
 
 ---
 
 ## Feature Dependencies
 
 ```text
-[Tool Call Extraction from LLM response]
-    └──requires──> [XML marker grammar defined in system message]
-                       └──requires──> [WorkspaceToolModule tool descriptors already injected] (EXISTS)
+[EDUX-01: Localized module names]
+    └──requires──> [Display name source decision]
+        Choice A: Add DisplayName to IModuleMetadata (contract change, all implementing classes update)
+        Choice B: Static lookup dictionary in a service (no contract change, out-of-band lookup)
+    └──affects──> [ModulePalette] module-item label (module.Name currently)
+    └──affects──> [NodeCard] SVG title text (Node.ModuleName currently, line 36)
+    └──affects──> [EditorConfigSidebar] sidebar h3 header (_selectedNode.ModuleName currently, line 24)
+    └──independent of──> [EDUX-02, EDUX-03, EDUX-04]
 
-[Tool Invocation]
-    └──requires──> [Tool Call Extraction]
-    └──requires──> [WorkspaceToolModule.ExecuteToolAsync or direct IWorkspaceTool call] (NEEDS DIRECT PATH)
-    └──requires──> [Active run for workspace root] (EXISTS via IRunService)
+[EDUX-02: Module descriptions in editor]
+    └──requires──> [IModuleMetadata.Description already populated on all built-ins] (EXISTS)
+    └──requires──> [Lookup: moduleName -> IModuleMetadata] (MISSING — EditorConfigSidebar lacks this)
+        Option A: New GetMetadata(moduleName) on IPortRegistry or a thin IModuleDescriptionService
+        Option B: Pass metadata through EditorStateService alongside node data
+    └──requires──> [EditorConfigSidebar reads Metadata.Description instead of hardcoded fallback]
+    └──enhances──> [ModulePalette] (description as title attribute on hover — low effort add-on)
+    └──loosely enhances──> [EDUX-01] (once display names resolved, description display is natural)
 
-[Result Injection]
-    └──requires──> [Tool Invocation]
-    └──requires──> [ChatMessageInput supports tool/result role values]
+[EDUX-03: Connection deletion]
+    └──Delete key path:
+        [Editor.razor @onkeydown] --> [EditorStateService.DeleteSelected()] (ALREADY IMPLEMENTED)
+        Verify only: ensure connection-only selections delete correctly without nodes selected
+    └──Right-click menu path: (NEW WORK)
+        [ConnectionLine @oncontextmenu] --> [EditorCanvas/Editor.razor menu state]
+            └──requires──> [New ConnectionContextMenu.razor following AnimaContextMenu pattern]
+            └──requires──> [EditorCanvas stop suppressing contextmenu globally for ConnectionLine events]
+            └──requires──> [OnDeleteConnection callback to EditorStateService.RemoveConnection()]
+    └──independent of──> [EDUX-01, EDUX-02, EDUX-04]
 
-[LLM Re-call with context]
-    └──requires──> [Result Injection]
-    └──uses──> [CallLlmAsync existing method] (EXISTS)
+[EDUX-04: Port hover tooltips]
+    └──requires──> [Port description text source]
+        Recommended: Add Description parameter to InputPortAttribute/OutputPortAttribute
+            └──requires──> [PortMetadata gains Description field]
+            └──requires──> [PortDiscovery reads Description from attribute]
+            └──requires──> [All built-in modules populate Description on port attributes]
+        Alternative: Static lookup dictionary keyed by moduleName+portName (no contract change)
+    └──requires──> [NodeCard renders tooltip per port circle]
+        Recommended: Floating div tooltip with CSS positioning (matches dark theme, styled)
+        Simpler: SVG <title> child on port circle (native browser, no styling, zero infrastructure)
+    └──independent of──> [EDUX-01, EDUX-02, EDUX-03]
 
-[Iteration Limit]
-    └──controls──> [LLM Re-call with context loop]
-    └──requires──> [agentMaxIterations config key in LLMModule.GetSchema()]
+[EDUX-03 right-click] ──reuses──> [AnimaContextMenu pattern]
+    (same component shape: IsVisible, X, Y, callbacks, backdrop click to close)
 
-[Loop Termination]
-    └──requires──> [Tool Call Extraction returns empty → loop exits]
-
-[Inline Tool Call Visualization in Chat UI]
-    └──requires──> [ChatSessionMessage carries tool-call metadata]
-    └──requires──> [ChatPanel propagates tool steps to ChatMessage.razor]
-    └──enhances──> [Tool Invocation]
-
-[Tool Call Recording in StepRecorder]
-    └──requires──> [Tool Invocation]
-    └──uses──> [IStepRecorder already in LLMModule] (EXISTS)
-    └──enhances──> [Run inspector observability] (EXISTS)
-
-[Tool availability guard]
-    └──requires──> [IRunService.GetActiveRun check before descriptor injection]
-    └──enhances──> [Token efficiency in non-run chat]
-
-[Sedimentation of full agent loop conversation]
-    └──requires──> [Final expanded message list passed to TriggerSedimentation]
-    └──enhances──> [ISedimentationService already wired] (EXISTS)
-
-[Streaming indication during tool execution]
-    └──requires──> [_isGenerating = true already in ChatPanel] (EXISTS)
-    └──enhances──> [Inline Tool Call Visualization]
+[EDUX-04 floating tooltip] ──reuses──> [AnimaContextMenu positioning pattern]
+    (absolute positioned div, mouse coordinates, show/hide on port mouseenter/mouseleave)
 ```
 
 ### Dependency Notes
 
-- **Direct tool invocation vs EventBus publish:** The agent loop must get tool results back synchronously within `ExecuteWithMessagesListAsync`. The existing `WorkspaceToolModule` handles invocations via EventBus subscription (fire-and-forget pattern). For the loop, tools must be callable with an `await` that returns `ToolResult`. Two options: (a) add a `ExecuteToolDirectAsync(name, params)` method to `WorkspaceToolModule` — preferred for simplicity; (b) the loop resolves `IWorkspaceTool` directly from the DI-registered dictionary. Option (a) keeps the tool invocation path testable and consistent.
+- **EDUX-01 display name source decision is the only structural choice**: Extending `IModuleMetadata` with `DisplayName` is cleaner but touches all implementing classes (built-in modules + any external modules). A lookup dictionary (e.g., `ModuleDisplayNameService`) is less invasive and localizable via .resx but requires maintaining a separate mapping. Given Chinese is the default language and built-in modules are the primary target, the lookup approach is lower risk for this milestone.
 
-- **ChatSessionMessage model change:** The Chat UI currently stores messages as `{ Role, Content, IsStreaming }`. Surfacing tool calls in the UI requires adding tool-call metadata to `ChatSessionMessage`. This is a UI-layer concern only — the `ChatMessageInput` record used for LLM context does not need to change (only role string matters for the LLM).
+- **EDUX-02 requires resolving IModuleMetadata from a module name string**: `EditorConfigSidebar` knows `_selectedNode.ModuleName` (string) but not the live `IModule` instance. The simplest path is injecting a service with `GetDescription(moduleName)` — either extend `IPortRegistry` (already injected in the sidebar) or add a thin `IModuleDescriptionService`. The description is static data, so a dictionary-backed implementation is trivial.
 
-- **Config key `agentMaxIterations` must go in `LLMModule.GetSchema()`:** The same config sidebar that exposes provider/model selection already has an `EditorConfigSidebar` renderer. Adding an integer field for max iterations follows the exact pattern of existing `llmMaxRetries`.
+- **EDUX-03 Delete key is already done**: Only the right-click context menu path is new work. The `EditorCanvas` global `@oncontextmenu:preventDefault` must be narrowed — either move suppression to `NodeCard` and `EditorCanvas` background only, or let `ConnectionLine` call `stopPropagation` before the canvas catches the event.
 
-- **Tool call extraction must handle the case where format detection (routing) is also active:** LLMModule currently has two marker grammars: `<route service="...">` for cross-Anima routing and `<tool name="...">` for workspace tools. These must not interfere. The recommended approach: run tool extraction first (the new loop), then routing (existing `FormatDetector`) on the final passthrough response only.
+- **EDUX-04 SVG `<title>` vs floating div**: SVG `<title>` (as used in `NodeCard.GetStatusTooltip()`) requires zero new infrastructure but appearance is OS/browser controlled. A floating div (as used in `AnimaContextMenu`) allows styled tooltips matching the dark theme and positions with CSS. The floating div approach is consistent with existing patterns and recommended.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v2.0.2)
+### This Milestone (v2.0.3)
 
-Minimum viable set for "agents can use tools during conversation."
+All four EDUX requirements are the MVP — they are the milestone definition.
 
-- [ ] `ToolCallDetector` — parse `<tool name="..."><param name="..." value="..."/></tool>` markers from LLM response
-- [ ] Direct tool invocation path in `WorkspaceToolModule` (or via resolved `IWorkspaceTool`) with `await`-able result
-- [ ] Result injection as assistant+tool message pair into the running message list
-- [ ] LLM re-call loop in `ExecuteWithMessagesListAsync` — bounded by `agentMaxIterations`
-- [ ] `agentMaxIterations` config key in `LLMModule.GetSchema()` with `EditorConfigSidebar` rendering
-- [ ] Updated tool descriptor system message format — tell the model the invocation grammar
-- [ ] Error propagation: failed `ToolResult` becomes a tool result message, not a thrown exception
-- [ ] Loop termination: no tool calls in response → publish response and exit
-- [ ] Streaming indication during tool execution: status text update in the assistant message bubble (minimum: "Calling tools...")
-- [ ] `sedimentation` receives the full expanded message list after the loop completes
+- [ ] EDUX-01: Localized module display names in palette, node cards, and sidebar (zh-CN)
+- [ ] EDUX-02: Module description wired from `IModuleMetadata.Description` in `EditorConfigSidebar`
+- [ ] EDUX-03: Right-click context menu on connections with "Delete Connection" action
+- [ ] EDUX-04: Port hover tooltips with Chinese descriptions
 
-### Add After Validation (v2.0.2+)
+### Add After Validation (v2.0.3+)
 
-Features to add once the core loop is working and tool calls are being observed.
-
-- [ ] Inline tool call visualization (step cards in Chat UI) — add when users request visibility into what the agent did
-- [ ] Per-turn tool call count badge — add alongside visualization
-- [ ] `AgentLoop iteration N` bracket steps in `StepRecorder` — add once the Run inspector becomes the primary debugging surface
-- [ ] Tool availability guard (suppress descriptors when no active run) — add when token budget becomes a visible concern
+- [ ] "Undo" toast after connection deletion — when accidental deletion is reported by users
+- [ ] Module palette description on hover — low effort, add if users report confusion about module purpose
+- [ ] Localized module name + raw class name as subtitle in sidebar — developer convenience
 
 ### Future Consideration (v2.1+)
 
-- [ ] Native OpenAI function-calling API support — requires abstracting the LLM client layer further
-- [ ] Parallel tool execution within a turn — requires model-declared independence and results ordering
-- [ ] Human-in-the-loop tool approval — interrupt the loop before destructive tools execute; relevant when shell/git tools are used
-- [ ] Agent loop context compaction — summarize tool results in long runs to prevent context rot
-- [ ] Streaming tokens during non-tool-call turns of a multi-turn loop — applicable only when the agent knows it will not emit tool calls
+- [ ] Full undo/redo command history for editor mutations — requires command pattern refactor of `EditorStateService`
+- [ ] Port description editing in external module packages — surface in SDK scaffolding once external module UX is prioritized
+- [ ] Rich port tooltip with type badge and color indicator — after base tooltip is proven useful
 
 ---
 
@@ -161,62 +160,66 @@ Features to add once the core loop is working and tool calls are being observed.
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Tool call extraction (`ToolCallDetector`) | HIGH | LOW | P1 |
-| Direct tool invocation with awaitable result | HIGH | LOW | P1 |
-| Result injection into message list | HIGH | LOW | P1 |
-| LLM re-call loop with iteration limit | HIGH | LOW | P1 |
-| `agentMaxIterations` config field | HIGH | LOW | P1 |
-| Updated tool descriptor system message format | HIGH | LOW | P1 |
-| Error propagation (failed tool → message) | HIGH | LOW | P1 |
-| Streaming indication ("Calling tools...") | MEDIUM | LOW | P1 |
-| Sedimentation of full agent loop conversation | MEDIUM | LOW | P1 |
-| Inline tool call visualization (step cards) | HIGH | MEDIUM | P2 |
-| Tool availability guard | MEDIUM | LOW | P2 |
-| Agent loop steps in StepRecorder | MEDIUM | LOW | P2 |
-| Per-turn tool count badge | LOW | LOW | P2 |
-| Human-in-the-loop tool approval | HIGH | HIGH | P3 |
-| Native OpenAI function-calling API | MEDIUM | HIGH | P3 |
-| Parallel tool execution | LOW | HIGH | P3 |
-| Context compaction for long loops | MEDIUM | HIGH | P3 |
+| EDUX-02: Module description in sidebar | HIGH | LOW | P1 — one-line wiring fix once lookup added |
+| EDUX-03: Delete key for connections | HIGH | LOW | P1 — verify existing implementation only |
+| EDUX-03: Right-click context menu on connections | HIGH | MEDIUM | P1 — required by milestone definition |
+| EDUX-01: Localized module names | HIGH | MEDIUM | P1 — requires display name source decision |
+| EDUX-04: Port hover tooltips | HIGH | MEDIUM | P1 — requires port attribute extension |
+| Module palette description on hover | MEDIUM | LOW | P2 — falls out of EDUX-02 data wiring |
+| Localized name + raw class name subtitle | LOW | LOW | P2 — display-only change |
+| Undo/redo | HIGH | HIGH | P3 — future milestone scope |
 
 **Priority key:**
-- P1: Must have for v2.0.2 launch
-- P2: Should have — add when core loop is validated
-- P3: Future consideration — defer until baseline matures
+- P1: Required for v2.0.3 milestone completion
+- P2: Low-effort additions, add if time permits
+- P3: Future milestone scope
 
 ---
 
-## Ecosystem Analysis
+## Industry Context: Visual Node Editor UX Norms
 
-| Concern | Industry Standard | OpenAnima Approach | Notes |
-|---------|-------------------|--------------------|-------|
-| Tool call format | JSON via native `tools` API (OpenAI/Anthropic) | XML markers in system message (`<tool name="...">`) | Native API is provider-specific and requires schema conversion. XML markers work with every OpenAI-compatible endpoint already in the provider registry. Reuses the existing `FormatDetector` pattern. |
-| Result injection role | `tool` role message with `tool_call_id` | `user` or `tool` role message with tool name and result content | `ChatMessageInput` supports arbitrary role strings. Using a `tool` role is semantically cleaner; models understand it. No structural change required. |
-| Iteration control | 10–20 max iterations typical | `agentMaxIterations` config, default 10 | Consistent with industry norms. Configurable per-Anima via existing config schema system. |
-| UI feedback | `TOOL_CALL_START` / `TOOL_CALL_RESULT` events (AG-UI protocol) or inline step cards (Chainlit) | Inline status text minimum; step cards as differentiator | Full AG-UI protocol is overkill for a Blazor Server app with SignalR already in place. The SignalR real-time push already handles state updates. |
-| Error handling | Tool errors injected as tool result messages with error content | `ToolResult.Success=false` + `ToolResult.Error` already structured; inject as-is into message | No change needed to `ToolResult` — the existing error fields are sufficient. |
-| Streaming during tool use | Most frameworks suppress streaming during tool-call turns and only stream the final response | Same — collect full response before tool parsing, stream only the final human-visible response | Correct because XML marker detection requires the complete response before routing decisions. |
+Established behavior from Blender node editor, Unreal Blueprint, ComfyUI, NodeRed.
+
+| UX Pattern | Industry Standard | Recommended Approach |
+|------------|-------------------|----------------------|
+| Node name display | Localized label as primary, internal ID hidden or as tooltip | Chinese display name primary; raw class name as subtitle or title tooltip |
+| Module/node description | Side panel on selection; tooltip on hover in palette | Side panel on selection (EDUX-02); palette hover tooltip (P2 add-on) |
+| Connection deletion by keyboard | Click to select, then Delete key — universal across all node editors | Delete key path already exists; verify selection visual feedback is clear |
+| Connection deletion by context menu | Right-click selected connection, "Delete" menu item — single action, no submenu | `ConnectionContextMenu` with single "Delete Connection" action |
+| Port tooltips | Hover port to see name + type + brief description — native title or custom overlay | Floating div following `AnimaContextMenu` positioning; Chinese text |
+| Port description granularity | One sentence, 15-30 chars: what data flows through this port | "接收用户聊天输入的文本内容" — keep short, no technical jargon |
+| Context menu positioning | Appears at cursor position, closes on backdrop click or Escape key | `AnimaContextMenu` component pattern already implements this |
+| i18n for node labels | Separate display name from technical ID; display name in resource files or module attribute | Display name in lookup service or module attribute; not in .resx (generates too many keys for external modules) |
+
+---
+
+## Implementation Path Summary
+
+Ordered by increasing complexity, respecting dependencies:
+
+1. **EDUX-02** (lowest, no dependencies): Add `GetDescription(moduleName)` to `IPortRegistry` or a thin service. Change `EditorConfigSidebar` line 48 from hardcoded fallback to metadata description. One method, one call site.
+
+2. **EDUX-03 Delete key** (verify, not implement): Confirm `EditorStateService.DeleteSelected()` handles connection-only selections when no nodes are selected. No new code expected.
+
+3. **EDUX-03 Right-click menu** (medium): New `ConnectionContextMenu.razor` following `AnimaContextMenu` shape. Add `@oncontextmenu` to `ConnectionLine` hit-area path. Wire position and visibility state in `EditorCanvas` or `Editor.razor`. Adjust context menu suppression scope.
+
+4. **EDUX-01 Display names** (medium, requires design decision first): Resolve display name source (lookup service recommended). Update `ModulePalette`, `NodeCard` SVG text, and `EditorConfigSidebar` h3 to use display name when language is zh-CN. Populate Chinese display names for all built-in modules.
+
+5. **EDUX-04 Port tooltips** (medium, has attribute + data dependencies): Add `Description` parameter to `InputPortAttribute`/`OutputPortAttribute`. Extend `PortMetadata` record. Update `PortDiscovery` to read attribute. Populate Chinese descriptions in all built-in module port attributes. Add floating div tooltip rendering in `NodeCard` port circles, triggered by `onmouseenter`/`onmouseleave`.
 
 ---
 
 ## Sources
 
-- [OpenAnima PROJECT.md](file:///home/user/OpenAnima/.planning/PROJECT.md) — existing features, milestone scope, key decisions
-- Codebase inspection: `LLMModule.cs` — `ExecuteWithMessagesListAsync`, `CallLlmAsync`, `FormatDetector` self-correction loop, `BuildToolDescriptorBlock`, `TriggerSedimentation`
-- Codebase inspection: `WorkspaceToolModule.cs` — `HandleInvocationAsync`, `GetToolDescriptors()`, EventBus-based invocation pattern
-- Codebase inspection: `FormatDetector.cs` — XML marker extraction, self-correction, passthrough text handling
-- Codebase inspection: `ChatPanel.razor` — `_pendingAssistantResponse`, `_isGenerating`, `ChatSessionMessage`, streaming pattern
-- Codebase inspection: `IWorkspaceTool.cs`, `ToolResult.cs`, `ToolDescriptor.cs` — tool contract, result structure
-- [Braintrust: The canonical agent architecture — a while loop with tools](https://www.braintrust.dev/blog/agent-while-loop) — MEDIUM confidence, confirms iteration limit norms (10–20), sequential tool execution default
-- [Oracle: What is the AI agent loop](https://blogs.oracle.com/developers/what-is-the-ai-agent-loop-the-core-architecture-behind-autonomous-ai-systems) — MEDIUM confidence, Plan-Act-Observe loop structure, context-as-memory pattern
-- [DEV Community: Building AI agents with tool use — patterns that work in production (2026)](https://dev.to/young_gao/practical-guide-to-building-ai-agents-with-tool-use-patterns-that-actually-work-in-production-455b) — MEDIUM confidence, token cost ratios, observability requirements
-- [Letta blog: Rearchitecting the agent loop](https://www.letta.com/blog/letta-v1-agent) — MEDIUM confidence, memory-first agent loop design patterns
-- [AG-UI Protocol overview](https://www.datacamp.com/tutorial/ag-ui) — LOW-MEDIUM confidence, TOOL_CALL_START/RESULT event patterns, inline visualization standards
-- [Context engineering in agents — LangChain docs](https://docs.langchain.com/oss/python/langchain/context-engineering) — MEDIUM confidence, context rot thresholds, tool result token share (67.6% of total context)
-- [Braintrust: Stop using chat history as your agent state store](https://blog.raed.dev/posts/agentic-workflows-are-not-conversations/) — MEDIUM confidence, anti-pattern: conversation array as control flow
-- [Spring AI: Converting tool response formats](https://spring.io/blog/2025/11/25/spring-ai-tool-response-formats/) — LOW confidence, XML/JSON/YAML format discussion
-- [OWASP Top 10 for agentic applications (2026)](https://www.aikido.dev/blog/owasp-top-10-agentic-applications) — MEDIUM confidence, indirect prompt injection via tool results, least-privilege tool access
+- Codebase inspection (direct read): `Editor.razor`, `EditorCanvas.razor`, `NodeCard.razor`, `ConnectionLine.razor`, `EditorConfigSidebar.razor`, `ModulePalette.razor`
+- Codebase inspection (direct read): `EditorStateService.cs` — `SelectedConnectionIds`, `SelectConnection`, `DeleteSelected`, `RemoveConnection`
+- Codebase inspection (direct read): `IModuleMetadata.cs`, `ModuleMetadataRecord.cs` — current interface shape
+- Codebase inspection (direct read): `InputPortAttribute.cs`, `OutputPortAttribute.cs`, `PortMetadata.cs` — current port contract shape, confirmed no Description field
+- Codebase inspection (direct read): `AnimaContextMenu.razor`, `ModuleContextMenu.razor` — established context menu component pattern
+- Codebase inspection (direct read): `SharedResources.zh-CN.resx` — existing i18n key structure
+- [OpenAnima PROJECT.md](/home/user/OpenAnima/.planning/PROJECT.md) — v2.0.3 active requirements, existing architecture decisions
+- Industry reference: Blender node editor, Unreal Blueprint editor, ComfyUI, NodeRed — deletion by Delete key and right-click context menu is universal; per-port hover description is table stakes in professional tools
 
 ---
-*Feature research for: OpenAnima v2.0.2 Chat Agent Loop*
-*Researched: 2026-03-23*
+*Feature research for: OpenAnima v2.0.3 Editor Experience*
+*Researched: 2026-03-24*
