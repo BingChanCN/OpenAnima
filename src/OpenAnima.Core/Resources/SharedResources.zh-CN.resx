@@ -752,6 +752,123 @@
   <data name="Module.Description.WorkspaceToolModule" xml:space="preserve">
     <value>为 LLM Agent 提供工具调用能力，如文件读写和搜索</value>
   </data>
+  <data name="Port.Description.LLMModule.messages" xml:space="preserve">
+    <value>聊天消息历史</value>
+  </data>
+  <data name="Port.Description.LLMModule.prompt" xml:space="preserve">
+    <value>系统提示词</value>
+  </data>
+  <data name="Port.Description.LLMModule.response" xml:space="preserve">
+    <value>LLM 生成的回复</value>
+  </data>
+  <data name="Port.Description.LLMModule.error" xml:space="preserve">
+    <value>失败时的错误信息</value>
+  </data>
+  <data name="Port.Description.ChatInputModule.userMessage" xml:space="preserve">
+    <value>用户聊天消息</value>
+  </data>
+  <data name="Port.Description.ChatOutputModule.displayText" xml:space="preserve">
+    <value>显示在聊天界面的文本</value>
+  </data>
+  <data name="Port.Description.HeartbeatModule.tick" xml:space="preserve">
+    <value>周期性心跳信号</value>
+  </data>
+  <data name="Port.Description.FixedTextModule.trigger" xml:space="preserve">
+    <value>触发文本输出</value>
+  </data>
+  <data name="Port.Description.FixedTextModule.output" xml:space="preserve">
+    <value>固定文本内容</value>
+  </data>
+  <data name="Port.Description.TextJoinModule.input1" xml:space="preserve">
+    <value>第一个文本输入</value>
+  </data>
+  <data name="Port.Description.TextJoinModule.input2" xml:space="preserve">
+    <value>第二个文本输入</value>
+  </data>
+  <data name="Port.Description.TextJoinModule.input3" xml:space="preserve">
+    <value>第三个文本输入</value>
+  </data>
+  <data name="Port.Description.TextJoinModule.output" xml:space="preserve">
+    <value>拼接后的文本</value>
+  </data>
+  <data name="Port.Description.TextSplitModule.input" xml:space="preserve">
+    <value>待分割的文本</value>
+  </data>
+  <data name="Port.Description.TextSplitModule.output" xml:space="preserve">
+    <value>分割后的文本</value>
+  </data>
+  <data name="Port.Description.ConditionalBranchModule.input" xml:space="preserve">
+    <value>待判断的数据</value>
+  </data>
+  <data name="Port.Description.ConditionalBranchModule.true" xml:space="preserve">
+    <value>条件为真时的输出</value>
+  </data>
+  <data name="Port.Description.ConditionalBranchModule.false" xml:space="preserve">
+    <value>条件为假时的输出</value>
+  </data>
+  <data name="Port.Description.AnimaInputPortModule.request" xml:space="preserve">
+    <value>来自其他 Anima 的请求</value>
+  </data>
+  <data name="Port.Description.AnimaOutputPortModule.response" xml:space="preserve">
+    <value>发往其他 Anima 的响应</value>
+  </data>
+  <data name="Port.Description.AnimaRouteModule.request" xml:space="preserve">
+    <value>待路由的消息</value>
+  </data>
+  <data name="Port.Description.AnimaRouteModule.trigger" xml:space="preserve">
+    <value>触发路由发送</value>
+  </data>
+  <data name="Port.Description.AnimaRouteModule.response" xml:space="preserve">
+    <value>路由返回的数据</value>
+  </data>
+  <data name="Port.Description.AnimaRouteModule.error" xml:space="preserve">
+    <value>路由错误信息</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.body.Input" xml:space="preserve">
+    <value>请求体内容</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.trigger" xml:space="preserve">
+    <value>触发发送请求</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.body.Output" xml:space="preserve">
+    <value>响应体内容</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.statusCode" xml:space="preserve">
+    <value>HTTP 状态码</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.error" xml:space="preserve">
+    <value>请求错误信息</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.input_1" xml:space="preserve">
+    <value>第一个屏障输入</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.input_2" xml:space="preserve">
+    <value>第二个屏障输入</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.input_3" xml:space="preserve">
+    <value>第三个屏障输入</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.input_4" xml:space="preserve">
+    <value>第四个屏障输入</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.output" xml:space="preserve">
+    <value>所有输入就绪后的输出</value>
+  </data>
+  <data name="Port.Description.MemoryModule.query" xml:space="preserve">
+    <value>记忆查询文本</value>
+  </data>
+  <data name="Port.Description.MemoryModule.write" xml:space="preserve">
+    <value>写入记忆的内容</value>
+  </data>
+  <data name="Port.Description.MemoryModule.result" xml:space="preserve">
+    <value>记忆查询结果</value>
+  </data>
+  <data name="Port.Description.WorkspaceToolModule.invoke" xml:space="preserve">
+    <value>工具调用请求</value>
+  </data>
+  <data name="Port.Description.WorkspaceToolModule.result" xml:space="preserve">
+    <value>工具执行结果</value>
+  </data>
   <data name="Run.StopReasonPrefix" xml:space="preserve">
     <value>运行已暂停：</value>
   </data>

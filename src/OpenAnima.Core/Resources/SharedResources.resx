@@ -752,6 +752,123 @@
   <data name="Module.Description.WorkspaceToolModule" xml:space="preserve">
     <value>Provides tool-calling capabilities for LLM Agents such as file read/write and search</value>
   </data>
+  <data name="Port.Description.LLMModule.messages" xml:space="preserve">
+    <value>Chat message history input</value>
+  </data>
+  <data name="Port.Description.LLMModule.prompt" xml:space="preserve">
+    <value>System prompt text</value>
+  </data>
+  <data name="Port.Description.LLMModule.response" xml:space="preserve">
+    <value>LLM generated response</value>
+  </data>
+  <data name="Port.Description.LLMModule.error" xml:space="preserve">
+    <value>Error message on failure</value>
+  </data>
+  <data name="Port.Description.ChatInputModule.userMessage" xml:space="preserve">
+    <value>User chat message</value>
+  </data>
+  <data name="Port.Description.ChatOutputModule.displayText" xml:space="preserve">
+    <value>Text to display in chat</value>
+  </data>
+  <data name="Port.Description.HeartbeatModule.tick" xml:space="preserve">
+    <value>Periodic heartbeat signal</value>
+  </data>
+  <data name="Port.Description.FixedTextModule.trigger" xml:space="preserve">
+    <value>Trigger to emit text</value>
+  </data>
+  <data name="Port.Description.FixedTextModule.output" xml:space="preserve">
+    <value>Fixed text content</value>
+  </data>
+  <data name="Port.Description.TextJoinModule.input1" xml:space="preserve">
+    <value>First text input</value>
+  </data>
+  <data name="Port.Description.TextJoinModule.input2" xml:space="preserve">
+    <value>Second text input</value>
+  </data>
+  <data name="Port.Description.TextJoinModule.input3" xml:space="preserve">
+    <value>Third text input</value>
+  </data>
+  <data name="Port.Description.TextJoinModule.output" xml:space="preserve">
+    <value>Joined text result</value>
+  </data>
+  <data name="Port.Description.TextSplitModule.input" xml:space="preserve">
+    <value>Text to split</value>
+  </data>
+  <data name="Port.Description.TextSplitModule.output" xml:space="preserve">
+    <value>Split text result</value>
+  </data>
+  <data name="Port.Description.ConditionalBranchModule.input" xml:space="preserve">
+    <value>Data to evaluate</value>
+  </data>
+  <data name="Port.Description.ConditionalBranchModule.true" xml:space="preserve">
+    <value>Output when condition is true</value>
+  </data>
+  <data name="Port.Description.ConditionalBranchModule.false" xml:space="preserve">
+    <value>Output when condition is false</value>
+  </data>
+  <data name="Port.Description.AnimaInputPortModule.request" xml:space="preserve">
+    <value>Incoming cross-Anima request</value>
+  </data>
+  <data name="Port.Description.AnimaOutputPortModule.response" xml:space="preserve">
+    <value>Outgoing cross-Anima response</value>
+  </data>
+  <data name="Port.Description.AnimaRouteModule.request" xml:space="preserve">
+    <value>Message to route</value>
+  </data>
+  <data name="Port.Description.AnimaRouteModule.trigger" xml:space="preserve">
+    <value>Trigger to send route</value>
+  </data>
+  <data name="Port.Description.AnimaRouteModule.response" xml:space="preserve">
+    <value>Route response data</value>
+  </data>
+  <data name="Port.Description.AnimaRouteModule.error" xml:space="preserve">
+    <value>Route error message</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.body.Input" xml:space="preserve">
+    <value>Request body content</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.trigger" xml:space="preserve">
+    <value>Trigger to send request</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.body.Output" xml:space="preserve">
+    <value>Response body content</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.statusCode" xml:space="preserve">
+    <value>HTTP status code</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.error" xml:space="preserve">
+    <value>Request error message</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.input_1" xml:space="preserve">
+    <value>First barrier input</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.input_2" xml:space="preserve">
+    <value>Second barrier input</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.input_3" xml:space="preserve">
+    <value>Third barrier input</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.input_4" xml:space="preserve">
+    <value>Fourth barrier input</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.output" xml:space="preserve">
+    <value>Barrier output when all inputs received</value>
+  </data>
+  <data name="Port.Description.MemoryModule.query" xml:space="preserve">
+    <value>Memory query text</value>
+  </data>
+  <data name="Port.Description.MemoryModule.write" xml:space="preserve">
+    <value>Content to write to memory</value>
+  </data>
+  <data name="Port.Description.MemoryModule.result" xml:space="preserve">
+    <value>Memory query result</value>
+  </data>
+  <data name="Port.Description.WorkspaceToolModule.invoke" xml:space="preserve">
+    <value>Tool invocation request</value>
+  </data>
+  <data name="Port.Description.WorkspaceToolModule.result" xml:space="preserve">
+    <value>Tool execution result</value>
+  </data>
   <data name="Run.StopReasonPrefix" xml:space="preserve">
     <value>Run paused:</value>
   </data>
