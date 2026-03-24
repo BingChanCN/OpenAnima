@@ -225,7 +225,7 @@ Plans:
   5. Port tooltips do not interfere with drag-to-connect interaction on port circles
 **Plans**: 1 plan
 Plans:
-- [ ] 63-01-PLAN.md -- Add module description .resx keys and wire sidebar + palette tooltip
+- [ ] 64-01-PLAN.md -- Add Port.Description.* .resx keys and wire SVG title tooltips in NodeCard.razor
 
 ## Progress
 
@@ -293,12 +293,12 @@ Plans:
 | 59. Tool Call Display and UI Wiring | v2.0.2 | 2/2 | Complete | 2026-03-23 |
 | 60. Hardening and Memory Integration | v2.0.2 | 1/1 | Complete | 2026-03-23 |
 | 61. Module i18n Foundation | v2.0.3 | 2/2 | Complete | 2026-03-24 |
-| 62. Connection Deletion UX | 2/2 | Complete    | 2026-03-24 | - |
-| 63. Module Descriptions | 1/1 | Complete    | 2026-03-24 | - |
-| 64. Port Hover Tooltips | v2.0.3 | 0/? | Not started | - |
+| 62. Connection Deletion UX | v2.0.3 | 2/2 | Complete | 2026-03-24 |
+| 63. Module Descriptions | v2.0.3 | 1/1 | Complete | 2026-03-24 |
+| 64. Port Hover Tooltips | v2.0.3 | 0/1 | Not started | - |
 
-**Total shipped: 61 phases, 140 plans across 13 milestones**
-**Active: 3 phases (62-64) in v2.0.3**
+**Total shipped: 63 phases, 145 plans across 13 milestones**
+**Active: 1 phase (64) in v2.0.3**
 
 ---
-*Last updated: 2026-03-24 -- Phase 63 planned (1 plan); v2.0.3 Editor Experience in progress*
+*Last updated: 2026-03-24 -- Phase 64 planned (1 plan); v2.0.3 Editor Experience in progress*
