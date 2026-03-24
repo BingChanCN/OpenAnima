@@ -164,14 +164,24 @@
             if (!string.IsNullOrEmpty(saved))
             {
                 LanguageService.SetLanguage(saved);
+                LanguageService.EnsureThreadCulture();
                 await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                // Ensure thread culture matches default on first render
+                LanguageService.EnsureThreadCulture();
             }
         }
     }
 
     private void OnLanguageChanged()
     {
-        InvokeAsync(StateHasChanged);
+        InvokeAsync(() =>
+        {
+            LanguageService.EnsureThreadCulture();
+            StateHasChanged();
+        });
     }
 
     private void HandleSidebarHeaderClick()

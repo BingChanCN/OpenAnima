@@ -441,7 +441,7 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+    private void OnLanguageChanged() => InvokeAsync(() => { LangSvc.EnsureThreadCulture(); StateHasChanged(); });
 
     private void LoadSelectedNode()
     {

@@ -97,7 +97,7 @@
         return localized.ResourceNotFound ? moduleName : localized.Value;
     }
 
-    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+    private void OnLanguageChanged() => InvokeAsync(() => { LangSvc.EnsureThreadCulture(); StateHasChanged(); });
 
     public void Dispose()
     {
