@@ -351,10 +351,54 @@
 
 ---
 
+## Milestone: v2.0.3 — Editor Experience
+
+**Shipped:** 2026-03-24
+**Phases:** 4 | **Plans:** 6 | **Commits:** ~30
+
+### What Was Built
+- Module i18n foundation: 15 Module.DisplayName.* resx keys with live language switching across palette, node cards, and config sidebar; dual-language search in palette
+- Connection deletion UX: Fixed DeleteSelected() two-step connection ID parsing, JS interop isActiveElementEditable focus guard, ConnectionContextMenu component with right-click delete
+- Module descriptions: 15 Module.Description.* resx keys wired into EditorConfigSidebar description field and ModulePalette hover tooltips
+- Port hover tooltips: 39 Port.Description.* resx keys with browser-native SVG title tooltips on all port circles; HttpRequestModule body port direction disambiguation
+- 70 i18n keys added total across 3 resource files with zero namespace collisions
+
+### What Worked
+- 4-phase milestone completed in a single day with zero regressions (658/658 tests green)
+- Consistent i18n pattern (IStringLocalizer + ResourceNotFound fallback + LanguageChanged subscription) scaled cleanly across all 4 phases
+- Browser-native SVG `<title>` for port tooltips eliminated JS complexity entirely — auto-dismisses on mousedown preserving drag-to-connect
+- ConnectionContextMenu followed ModuleContextMenu pattern exactly — visual consistency and reduced design time
+- Integration checker confirmed all 12 cross-phase exports wired correctly with zero orphaned exports
+
+### What Was Inefficient
+- SUMMARY frontmatter missing `requirements-completed` field for phases 63 and 64 — metadata discipline still inconsistent (recurring issue from v2.0.1/v2.0.2)
+- Phase 62 VERIFICATION status `human_needed` — browser UX scenarios cannot be confirmed statically, 5 items remain pending
+- Nyquist VALIDATION.md missing for all 4 phases — validation discipline not yet routine for UI-focused phases
+
+### Patterns Established
+- Module.DisplayName.* / Module.Description.* / Port.Description.* resx key namespace convention for all editor i18n
+- ResourceNotFound fallback pattern: check `localized.ResourceNotFound` before using value, fall back to class name or empty string
+- LanguageChanged subscription pattern: inject LangSvc, subscribe in OnInitialized, call EnsureThreadCulture() + StateHasChanged(), unsubscribe in Dispose
+- JS interop focus guard: `editorCanvas.isActiveElementEditable` checks INPUT/TEXTAREA/SELECT/contentEditable before keyboard mutations
+- ConnectionContextMenu pattern: backdrop div for outside-click close, fixed positioning from MouseEventArgs.ClientX/ClientY
+
+### Key Lessons
+1. Browser-native SVG elements (`<title>`) are preferred over JS solutions for tooltips — simpler, zero maintenance, compatible with drag gestures
+2. i18n key namespaces (Module.DisplayName.*, Module.Description.*, Port.Description.*) should be planned upfront to avoid collision risk as the keyspace grows
+3. SUMMARY frontmatter `requirements-completed` field should be enforced by the executor — recurring omission across 3 milestones now
+
+### Cost Observations
+- Model mix: ~80% sonnet (execution), ~20% opus (audit, verification)
+- Sessions: 1 (single-day completion)
+- Notable: 4 phases in 1 day (~24 min total execution time across 6 plans) — fastest milestone per-phase delivery
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Commits | Phases | Notable Patterns |
 |-----------|---------|--------|------------------|
+| v2.0.3 | ~30 | 4 | Module i18n, connection deletion UX, module descriptions, port tooltips, 70 resx keys |
 | v2.0.2 | ~18 | 3 | Agent loop, tool call display, token budget, bracket steps, full-history sedimentation |
 | v2.0.1 | 115 | 8 | Provider registry, memory recall pipeline, sedimentation, review surfaces |
 | v2.0 | 48 | 5 | Durable runs, workspace tools, run inspector, memory graph, workflow presets |
@@ -385,6 +429,7 @@
 | v2.0 | ~41,773 | SQLite WAL stores, IWorkspaceTool, JoinBarrier, Aho-Corasick glossary, workflow presets | 11 |
 | v2.0.1 | ~44,700 | AES-GCM encryption, CascadingDropdown, memory recall pipeline, sedimentation, review surfaces | 6 |
 | v2.0.2 | ~52,000 | XML tool call markers, direct tool dispatch, bounded iteration, bracket steps, CTS replacement | 8 |
+| v2.0.3 | ~52,000 | ResourceNotFound i18n fallback, SVG title port tooltips, JS focus guard, resx namespace convention | 3 |
 
 ### Top Lessons (Verified Across Milestones)
 

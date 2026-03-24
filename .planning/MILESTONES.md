@@ -1,5 +1,27 @@
 # Milestones
 
+## v2.0.3 Editor Experience (Shipped: 2026-03-24)
+
+**Phases:** 61-64 | **Plans:** 6 | **Tasks:** 13 | **LOC:** +7,819 lines across 49 files
+**Git range:** cfbf2cc..8cdf5d9 | **Timeline:** 2026-03-24 (1 day)
+
+**Delivered:** Full Chinese/English editor experience — localized module display names, module descriptions in sidebar and palette tooltips, port hover tooltips with Chinese descriptions, and connection deletion via right-click context menu and Delete key with focus guard.
+
+**Key accomplishments:**
+
+- Module i18n foundation: 15 Module.DisplayName.* resx keys with live language switching across palette, node cards, and config sidebar; dual-language search in palette
+- Connection deletion UX: Fixed DeleteSelected() parsing, added JS interop focus guard, ConnectionContextMenu component with right-click delete and localized label
+- Module descriptions: 15 Module.Description.* resx keys wired into EditorConfigSidebar description field and ModulePalette hover tooltips with ResourceNotFound fallback
+- Port hover tooltips: 39 Port.Description.* resx keys with SVG `<title>` tooltips on all input/output port circles, HttpRequestModule body port direction disambiguation
+- 70 i18n keys added total across 3 resource files (DisplayName + Description + Port.Description + Editor.Connection.Delete) — zero namespace collisions
+- Test suite: 658/658 green, zero regressions across all 4 phases
+
+**Tech debt (accepted):** 3 items — ConnectionContextMenu.razor missing EnsureThreadCulture() call (non-functional consistency gap), Phase 62 browser UX human verification pending, plan key count documentation inconsistency. See v2.0.3-MILESTONE-AUDIT.md.
+
+**Archive:** [milestones/v2.0.3-ROADMAP.md](milestones/v2.0.3-ROADMAP.md) | [milestones/v2.0.3-REQUIREMENTS.md](milestones/v2.0.3-REQUIREMENTS.md) | [milestones/v2.0.3-MILESTONE-AUDIT.md](milestones/v2.0.3-MILESTONE-AUDIT.md)
+
+---
+
 ## v2.0.2 Chat Agent Loop (Shipped: 2026-03-23)
 
 **Phases:** 58-60 | **Plans:** 5 | **Tasks:** 11 | **LOC:** +7,385 lines across 46 files

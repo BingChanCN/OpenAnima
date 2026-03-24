@@ -3,8 +3,8 @@
 ## Current State
 
 **Latest shipped:** v2.0.3 Editor Experience (2026-03-24)
-**Current milestone:** v2.0.3 Editor Experience (complete)
-**Milestones complete:** v1.0–v2.0.3 (14 milestones, 64 phases, 143 plans)
+**Current milestone:** Planning next milestone
+**Milestones complete:** v1.0-v2.0.3 (14 milestones, 64 phases, 149 plans)
 **Codebase:** ~52,000 LOC (C#, Razor, CSS, JS) | 658 tests green
 
 ## What This Is
@@ -145,14 +145,14 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ Agent loop core: ToolCallParser XML marker extraction, AgentToolDispatcher direct dispatch, bounded iteration loop with configurable limit (max 50), system prompt tool-call syntax injection, cancellation safety (LOOP-01~07) — v2.0.2
 - ✓ Tool call display: real-time collapsible tool cards in chat bubbles, "Used N tools" badge, per-event resettable timeout, send locking, cancel button (TCUI-01~04) — v2.0.2
 - ✓ Agent loop hardening: StepRecorder bracket steps (AgentLoop/AgentIteration), token budget management (70% of agentContextWindowSize), full-history sedimentation wiring with tool message truncation (HARD-01~03) — v2.0.2
+- ✓ Module i18n: localized display names in palette, node cards, and config sidebar with live language switching (EDUX-01) — v2.0.3
+- ✓ Module descriptions in config sidebar and palette hover tooltips (EDUX-02, EDUX-05) — v2.0.3
+- ✓ Connection deletion via right-click context menu and Delete key with focus guard (EDUX-03) — v2.0.3
+- ✓ Port hover tooltips with Chinese descriptions on all built-in module ports (EDUX-04) — v2.0.3
 
 ### Active
 
-- [x] Module names display in Chinese when language is zh-CN (EDUX-01) -- validated 2026-03-24
-- [x] Each module shows a brief description in the editor module list (EDUX-02) -- validated 2026-03-24
-- [x] User can delete connections via click-select + Delete key and right-click menu (EDUX-03) -- validated 2026-03-24
-- [x] Ports show Chinese tooltip on hover explaining their purpose (EDUX-04) -- validated 2026-03-24
-- [x] Module palette items show description tooltip on hover (EDUX-05) -- validated 2026-03-24
+(None — next milestone not yet planned)
 
 ### Deferred
 
@@ -197,17 +197,16 @@ Agents that proactively think and act on their own, while module connections rem
 
 ## Context
 
-Shipped v2.0.2 with ~52,000 LOC across all source files (C#, Razor, CSS, JS).
+Shipped v2.0.3 with ~52,000 LOC across all source files (C#, Razor, CSS, JS).
 Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4, Microsoft.Extensions.Http.Resilience 8.7.0, Microsoft.Data.Sqlite 8.0.12, Dapper 2.1.72.
-Full test suite: 654/654 green.
+Full test suite: 658/658 green.
 
-v2.0.2 delivered the chat agent loop:
-- Agent loop core: ToolCallParser (compiled regex XML marker extraction), AgentToolDispatcher (direct IWorkspaceTool dispatch bypassing EventBus), RunAgentLoopAsync bounded iteration in LLMModule, configurable agentMaxIterations (default 10, max 50), system prompt tool-call syntax block, CancellationToken propagation through all steps
-- Tool call display: ToolCallInfo data model with three-state status (Running/Success/Failed), EventBus event publishing (tool_call.started/completed), ChatMessage.razor collapsible tool cards with spinner/check/X icons, "Used N tools" badge, localized strings
-- Agent UI controls: ChatPanel per-event resettable 60s timeout (_agentTimeoutCts replacement pattern), send locking during agent execution, ChatInput cancel button transformation
-- Token budget management: agentContextWindowSize config field (default 128K), 70% budget floor with SharpToken cl100k_base counting, oldest assistant+tool pair dropping, truncation notice insertion
-- Bracket step recording: AgentLoop/AgentIteration bracket steps in StepRecorder with PropagationId chaining, StepTimelineRow CSS semantic classes
-- Full-history sedimentation: BuildExtractionMessages includes tool role messages with 500-char content truncation
+v2.0.3 delivered editor experience improvements:
+- Module i18n foundation: 15 Module.DisplayName.* resx keys (zh-CN/en-US) with live language switching across palette, node cards, and config sidebar; dual-language search in palette; invariant names preserved for wiring storage
+- Connection deletion UX: Fixed DeleteSelected() two-step connection ID parsing, JS interop isActiveElementEditable focus guard, ConnectionContextMenu component with right-click delete and localized label
+- Module descriptions: 15 Module.Description.* resx keys wired into EditorConfigSidebar description field and ModulePalette hover tooltips with ResourceNotFound fallback
+- Port hover tooltips: 39 Port.Description.* resx keys with browser-native SVG title tooltips on all input/output port circles; HttpRequestModule body port direction disambiguation
+- 70 total i18n keys added across 3 resource files with zero namespace collisions
 
 Known tech debt:
 - ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred
@@ -340,6 +339,10 @@ Known tech debt:
 | Per-event resettable 60s timeout | _agentTimeoutCts replaced (not extended) on each tool call event — 60s from last activity | ✓ Good — v2.0.2 |
 | Token budget 70% of agentContextWindowSize | Oldest assistant+tool pairs dropped; truncation notice inserted before removal to stay anchored | ✓ Good — v2.0.2 |
 | agentContextWindowSize floor clamped to 1000 | Math.Max prevents zero-budget pathology from misconfigured small values | ✓ Good — v2.0.2 |
+| ResourceNotFound fallback for module display names | Missing .resx key returns class name instead of throwing — safe for external plugins | ✓ Good — v2.0.3 |
+| SVG `<title>` for port tooltips | Browser-native, zero JS, auto-dismisses on mousedown so drag-to-connect unaffected | ✓ Good — v2.0.3 |
+| Two-step split for connection ID parsing | `->` first then `:` on each half — unambiguous and mirrors SelectConnection() construction | ✓ Good — v2.0.3 |
+| JS interop focus guard for Delete key | `isActiveElementEditable` checks activeElement tag before allowing keyboard deletion | ✓ Good — v2.0.3 |
 
 ## Constraints
 
@@ -350,4 +353,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-24 after Phase 64 complete — v2.0.3 milestone finished*
+*Last updated: 2026-03-25 after v2.0.3 milestone*
