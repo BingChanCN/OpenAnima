@@ -2,8 +2,13 @@
 @using OpenAnima.Core.Wiring
 @using OpenAnima.Core.Ports
 @using OpenAnima.Contracts.Ports
+@using Microsoft.Extensions.Localization
+@using OpenAnima.Core.Resources
+@implements IDisposable
 @inject IPortRegistry _portRegistry
 @inject EditorStateService _editorState
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
 
 <g transform="translate(@Node.Position.X, @Node.Position.Y)"
    class="node-card-root @(IsSelected ? "node-selected" : "")"
@@ -33,7 +38,7 @@
           class="cursor-move" />
 
     <!-- Title text -->
-    @((MarkupString)$"<text x=\"{_nodeWidth / 2}\" y=\"{_titleHeight / 2 + 4}\" fill=\"#e4e6f0\" font-size=\"13\" font-family=\"var(--font-family)\" text-anchor=\"middle\" font-weight=\"500\" style=\"pointer-events: none\">{Node.ModuleName}</text>")
+    @((MarkupString)$"<text x=\"{_nodeWidth / 2}\" y=\"{_titleHeight / 2 + 4}\" fill=\"#e4e6f0\" font-size=\"13\" font-family=\"var(--font-family)\" text-anchor=\"middle\" font-weight=\"500\" style=\"pointer-events: none\">{GetDisplayName(Node.ModuleName)}</text>")
 
     <!-- Status indicator -->
     <circle cx="@(_nodeWidth - 12)" cy="@(_titleHeight / 2)" r="4"
@@ -96,6 +101,11 @@
     private List<PortMetadata> _inputPorts = new();
     private List<PortMetadata> _outputPorts = new();
     private double _nodeHeight;
+
+    protected override void OnInitialized()
+    {
+        LangSvc.LanguageChanged += OnLanguageChanged;
+    }
 
     protected override void OnParametersSet()
     {
@@ -167,7 +177,7 @@
     {
         var moduleState = _editorState.GetModuleState(Node.ModuleId);
         if (moduleState == null)
-            return $"Status: Idle{Environment.NewLine}Node: {Node.ModuleName}";
+            return $"Status: Idle{Environment.NewLine}Node: {GetDisplayName(Node.ModuleName)}";
 
         var statusText = moduleState.State switch
         {
@@ -177,13 +187,27 @@
 
         if (moduleState.State != "Error")
         {
-            return $"Status: {statusText}{Environment.NewLine}Node: {Node.ModuleName}{Environment.NewLine}Updated: {moduleState.LastUpdated:HH:mm:ss} UTC";
+            return $"Status: {statusText}{Environment.NewLine}Node: {GetDisplayName(Node.ModuleName)}{Environment.NewLine}Updated: {moduleState.LastUpdated:HH:mm:ss} UTC";
         }
 
         var stackLine = string.IsNullOrWhiteSpace(moduleState.StackTrace)
             ? "None"
             : moduleState.StackTrace.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "None";
 
-        return $"Status: Error{Environment.NewLine}Node: {Node.ModuleName}{Environment.NewLine}Message: {moduleState.ErrorMessage}{Environment.NewLine}Stack: {stackLine}";
+        return $"Status: Error{Environment.NewLine}Node: {GetDisplayName(Node.ModuleName)}{Environment.NewLine}Message: {moduleState.ErrorMessage}{Environment.NewLine}Stack: {stackLine}";
+    }
+
+    private string GetDisplayName(string moduleName)
+    {
+        var key = $"Module.DisplayName.{moduleName}";
+        var localized = L[key];
+        return localized.ResourceNotFound ? moduleName : localized.Value;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        LangSvc.LanguageChanged -= OnLanguageChanged;
     }
 }
