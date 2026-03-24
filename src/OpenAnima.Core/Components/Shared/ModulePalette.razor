@@ -3,7 +3,7 @@
 @using OpenAnima.Contracts
 @using OpenAnima.Contracts.Ports
 @using Microsoft.Extensions.Localization
-@using OpenAnima.Core.Resources
+@using OpenAnima.Core
 @implements IDisposable
 @inject IPortRegistry _portRegistry
 @inject EditorStateService _editorState
@@ -29,6 +29,7 @@
             @foreach (var module in FilteredModules)
             {
                 <div class="module-item"
+                     title="@GetDescription(module.Name)"
                      draggable="true"
                      @ondragstart="@(() => HandleDragStart(module.Name))"
                      @ondragend="HandleDragEnd">
@@ -95,6 +96,13 @@
         var localized = L[key];
         // If no translation found, IStringLocalizer returns the key itself -- fall back to class name
         return localized.ResourceNotFound ? moduleName : localized.Value;
+    }
+
+    private string GetDescription(string moduleName)
+    {
+        var key = $"Module.Description.{moduleName}";
+        var localized = L[key];
+        return localized.ResourceNotFound ? "" : localized.Value;
     }
 
     private void OnLanguageChanged() => InvokeAsync(() => { LangSvc.EnsureThreadCulture(); StateHasChanged(); });

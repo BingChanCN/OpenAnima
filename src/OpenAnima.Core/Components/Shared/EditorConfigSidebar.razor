@@ -7,8 +7,8 @@
 @using OpenAnima.Contracts.Ports
 @implements IDisposable
 @inject EditorStateService _editorState
-@inject IAnimaModuleConfigService _configService
-@inject IAnimaContext _animaContext
+@inject IModuleConfigStore _configService
+@inject IModuleContext _animaContext
 @inject IPortRegistry _portRegistry
 @inject ICrossAnimaRouter _router
 @inject IAnimaRuntimeManager _runtimeManager
@@ -45,7 +45,7 @@
             </div>
             <div class="info-section">
                 <label>@L["Editor.Config.Description"]</label>
-                <span>@L["Editor.Config.NoDescription"]</span>
+                <span>@GetModuleDescription(_selectedNode.ModuleName)</span>
             </div>
 
             <!-- Ports Section -->
@@ -496,6 +496,13 @@
         var key = $"Module.DisplayName.{moduleName}";
         var localized = L[key];
         return localized.ResourceNotFound ? moduleName : localized.Value;
+    }
+
+    private string GetModuleDescription(string moduleName)
+    {
+        var key = $"Module.Description.{moduleName}";
+        var localized = L[key];
+        return localized.ResourceNotFound ? L["Editor.Config.NoDescription"].Value : localized.Value;
     }
 
     private void HandleConfigChanged(string key, string newValue)
