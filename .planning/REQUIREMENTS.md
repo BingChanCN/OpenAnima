@@ -9,7 +9,7 @@ Requirements for Editor Experience milestone. Each maps to roadmap phases.
 
 ### i18n Localization
 
-- [ ] **EDUX-01**: Module names display in Chinese in palette, node card title, and config sidebar when language is zh-CN
+- [x] **EDUX-01**: Module names display in Chinese in palette, node card title, and config sidebar when language is zh-CN
 
 ### Editor Interaction
 
@@ -46,7 +46,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EDUX-01 | Phase 61 | Pending |
+| EDUX-01 | Phase 61 | Complete |
 | EDUX-02 | Phase 63 | Pending |
 | EDUX-03 | Phase 62 | Pending |
 | EDUX-04 | Phase 64 | Pending |
