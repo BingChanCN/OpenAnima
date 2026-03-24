@@ -21,7 +21,7 @@
     @if (_selectedNode != null)
     {
         <div class="sidebar-header">
-            <h3>@_selectedNode.ModuleName</h3>
+            <h3>@GetModuleDisplayName(_selectedNode.ModuleName)</h3>
             <div class="header-actions">
                 <button class="action-btn text-error" @onclick="HandleDelete" title="@L["Editor.Config.Delete"]" aria-label="Delete Module">
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -489,6 +489,13 @@
 
         _validationErrors.Clear();
         _lastAnimaId = _animaContext.ActiveAnimaId;
+    }
+
+    private string GetModuleDisplayName(string moduleName)
+    {
+        var key = $"Module.DisplayName.{moduleName}";
+        var localized = L[key];
+        return localized.ResourceNotFound ? moduleName : localized.Value;
     }
 
     private void HandleConfigChanged(string key, string newValue)
