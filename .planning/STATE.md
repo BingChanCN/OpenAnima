@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 63-01-PLAN.md
-last_updated: "2026-03-24T14:27:11.822Z"
+stopped_at: Phase 64 context gathered
+last_updated: "2026-03-24T14:35:00.149Z"
 progress:
   total_phases: 4
   completed_phases: 3
@@ -84,9 +84,9 @@ Phase 64 has one open architectural decision: SVG `<title>` vs custom SVG overla
 
 ## Session Continuity
 
-Last session: 2026-03-24T14:23:06.360Z
-Stopped at: Completed 63-01-PLAN.md
-Resume file: None
+Last session: 2026-03-24T14:35:00.147Z
+Stopped at: Phase 64 context gathered
+Resume file: .planning/phases/64-port-hover-tooltips/64-CONTEXT.md
 
 ### Quick Tasks Completed
 
