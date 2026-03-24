@@ -285,7 +285,7 @@ Plans:
 | 58. Agent Loop Core | v2.0.2 | 2/2 | Complete | 2026-03-23 |
 | 59. Tool Call Display and UI Wiring | v2.0.2 | 2/2 | Complete | 2026-03-23 |
 | 60. Hardening and Memory Integration | v2.0.2 | 1/1 | Complete | 2026-03-23 |
-| 61. Module i18n Foundation | 1/2 | In Progress|  | - |
+| 61. Module i18n Foundation | 2/2 | Complete   | 2026-03-24 | - |
 | 62. Connection Deletion UX | v2.0.3 | 0/? | Not started | - |
 | 63. Module Descriptions | v2.0.3 | 0/? | Not started | - |
 | 64. Port Hover Tooltips | v2.0.3 | 0/? | Not started | - |
