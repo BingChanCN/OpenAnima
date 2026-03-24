@@ -2,14 +2,19 @@
 @using OpenAnima.Core.Ports
 @using OpenAnima.Contracts
 @using OpenAnima.Contracts.Ports
+@using Microsoft.Extensions.Localization
+@using OpenAnima.Core.Resources
+@implements IDisposable
 @inject IPortRegistry _portRegistry
 @inject EditorStateService _editorState
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
 
 <div class="module-palette">
     <div class="palette-header">
         <input type="text"
                class="search-box"
-               placeholder="Search modules..."
+               placeholder="@L["Modules.Search"]"
                @bind="_searchFilter"
                @bind:event="oninput" />
     </div>
@@ -27,7 +32,7 @@
                      draggable="true"
                      @ondragstart="@(() => HandleDragStart(module.Name))"
                      @ondragend="HandleDragEnd">
-                    <div class="module-name">@module.Name</div>
+                    <div class="module-name">@GetDisplayName(module.Name)</div>
                     <div class="module-info">
                         @module.InputCount in, @module.OutputCount out
                     </div>
@@ -46,6 +51,7 @@
     protected override void OnInitialized()
     {
         LoadAvailableModules();
+        LangSvc.LanguageChanged += OnLanguageChanged;
     }
 
     private void LoadAvailableModules()
@@ -68,7 +74,8 @@
                 return _availableModules;
 
             return _availableModules.Where(m =>
-                m.Name.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase));
+                m.Name.Contains(_searchFilter, StringComparison.OrdinalIgnoreCase) ||
+                GetDisplayName(m.Name).Contains(_searchFilter, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -80,5 +87,20 @@
     private void HandleDragEnd()
     {
         _editorState.DraggedModuleName = null;
+    }
+
+    private string GetDisplayName(string moduleName)
+    {
+        var key = $"Module.DisplayName.{moduleName}";
+        var localized = L[key];
+        // If no translation found, IStringLocalizer returns the key itself -- fall back to class name
+        return localized.ResourceNotFound ? moduleName : localized.Value;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        LangSvc.LanguageChanged -= OnLanguageChanged;
     }
 }
