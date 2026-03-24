@@ -707,4 +707,373 @@
   <data name="Module.DisplayName.WorkspaceToolModule" xml:space="preserve">
     <value>工作区工具</value>
   </data>
+  <data name="Run.StopReasonPrefix" xml:space="preserve">
+    <value>运行已暂停：</value>
+  </data>
+  <data name="MainLayout.ExpandSidebar" xml:space="preserve">
+    <value>展开侧边栏</value>
+  </data>
+  <data name="MainLayout.CollapseSidebar" xml:space="preserve">
+    <value>收起侧边栏</value>
+  </data>
+  <data name="MainLayout.ToggleSidebar" xml:space="preserve">
+    <value>切换侧边栏</value>
+  </data>
+  <data name="MainLayout.MainNavigation" xml:space="preserve">
+    <value>主导航</value>
+  </data>
+  <data name="MainLayout.Navigation" xml:space="preserve">
+    <value>导航</value>
+  </data>
+  <data name="MainLayout.ToggleMenu" xml:space="preserve">
+    <value>切换菜单</value>
+  </data>
+  <data name="Runs.Title" xml:space="preserve">
+    <value>运行</value>
+  </data>
+  <data name="Runs.History" xml:space="preserve">
+    <value>运行历史</value>
+  </data>
+  <data name="Runs.EmptyHeading" xml:space="preserve">
+    <value>暂无运行记录</value>
+  </data>
+  <data name="Runs.EmptyBody" xml:space="preserve">
+    <value>启动一个运行以开始跟踪长时间图执行。</value>
+  </data>
+  <data name="Runs.CancelConfirmTitle" xml:space="preserve">
+    <value>取消运行？</value>
+  </data>
+  <data name="Runs.CancelConfirmMessage" xml:space="preserve">
+    <value>这将永久停止该运行。已完成的步骤会被保留，但运行在取消后无法恢复。</value>
+  </data>
+  <data name="Runs.CancelConfirmAction" xml:space="preserve">
+    <value>取消运行</value>
+  </data>
+  <data name="Runs.StartFailed" xml:space="preserve">
+    <value>启动运行失败。</value>
+  </data>
+  <data name="Runs.NoActiveAnima" xml:space="preserve">
+    <value>当前未选中 Anima。</value>
+  </data>
+  <data name="RunLaunch.NewRun" xml:space="preserve">
+    <value>新建运行</value>
+  </data>
+  <data name="RunLaunch.Objective" xml:space="preserve">
+    <value>目标</value>
+  </data>
+  <data name="RunLaunch.ObjectivePlaceholder" xml:space="preserve">
+    <value>描述这个运行需要完成什么</value>
+  </data>
+  <data name="RunLaunch.WorkspaceRoot" xml:space="preserve">
+    <value>工作区根目录</value>
+  </data>
+  <data name="RunLaunch.WorkspacePlaceholder" xml:space="preserve">
+    <value>/path/to/repository</value>
+  </data>
+  <data name="RunLaunch.MaxStepsOptional" xml:space="preserve">
+    <value>最大步骤数（可选）</value>
+  </data>
+  <data name="RunLaunch.MaxWallSecondsOptional" xml:space="preserve">
+    <value>最大墙钟时间（秒，可选）</value>
+  </data>
+  <data name="RunLaunch.Start" xml:space="preserve">
+    <value>启动运行</value>
+  </data>
+  <data name="RunLaunch.ObjectiveRequired" xml:space="preserve">
+    <value>目标不能为空</value>
+  </data>
+  <data name="RunLaunch.WorkspaceRequired" xml:space="preserve">
+    <value>工作区根目录不能为空</value>
+  </data>
+  <data name="RunLaunch.MaxStepsPositive" xml:space="preserve">
+    <value>最大步骤数必须为正数</value>
+  </data>
+  <data name="RunLaunch.MaxWallSecondsPositive" xml:space="preserve">
+    <value>最大墙钟时间必须为正数</value>
+  </data>
+  <data name="RunLaunch.StartFailed" xml:space="preserve">
+    <value>启动运行失败，请检查工作区路径后重试。</value>
+  </data>
+  <data name="WorkflowPreset.Label" xml:space="preserve">
+    <value>工作流模板</value>
+  </data>
+  <data name="WorkflowPreset.NoneManual" xml:space="preserve">
+    <value>无 - 手动连线</value>
+  </data>
+  <data name="WorkflowPreset.CodebaseAnalysisDescription" xml:space="preserve">
+    <value>扫描工作区，运行 4 条并行 LLM 分析分支，并汇总生成 Markdown 报告。</value>
+  </data>
+  <data name="WorkflowPreset.DefaultDescription" xml:space="preserve">
+    <value>工作流模板</value>
+  </data>
+  <data name="RunCard.StepCount" xml:space="preserve">
+    <value>{0} 步</value>
+  </data>
+  <data name="RunCard.Pause" xml:space="preserve">
+    <value>暂停运行</value>
+  </data>
+  <data name="RunCard.PauseAria" xml:space="preserve">
+    <value>暂停运行 {0}</value>
+  </data>
+  <data name="RunCard.Resume" xml:space="preserve">
+    <value>恢复运行</value>
+  </data>
+  <data name="RunCard.ResumeAria" xml:space="preserve">
+    <value>恢复运行 {0}</value>
+  </data>
+  <data name="RunCard.Cancel" xml:space="preserve">
+    <value>取消运行</value>
+  </data>
+  <data name="RunCard.CancelAria" xml:space="preserve">
+    <value>取消运行 {0}</value>
+  </data>
+  <data name="RunState.Aria" xml:space="preserve">
+    <value>运行状态：{0}</value>
+  </data>
+  <data name="RunState.Starting" xml:space="preserve">
+    <value>启动中</value>
+  </data>
+  <data name="RunState.Running" xml:space="preserve">
+    <value>运行中</value>
+  </data>
+  <data name="RunState.Paused" xml:space="preserve">
+    <value>已暂停</value>
+  </data>
+  <data name="RunState.Completed" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="RunState.Cancelled" xml:space="preserve">
+    <value>已取消</value>
+  </data>
+  <data name="RunState.Failed" xml:space="preserve">
+    <value>已失败</value>
+  </data>
+  <data name="RunState.Interrupted" xml:space="preserve">
+    <value>已中断</value>
+  </data>
+  <data name="RunDetail.Loading" xml:space="preserve">
+    <value>加载中...</value>
+  </data>
+  <data name="RunDetail.BudgetSteps" xml:space="preserve">
+    <value>步</value>
+  </data>
+  <data name="RunDetail.BudgetSeconds" xml:space="preserve">
+    <value>秒</value>
+  </data>
+  <data name="RunDetail.Step.PropagationPrefix" xml:space="preserve">
+    <value>传播链：</value>
+  </data>
+  <data name="RunDetail.Step.FilterPropagationAria" xml:space="preserve">
+    <value>按传播链 {0} 筛选</value>
+  </data>
+  <data name="RunDetail.Step.FilterPropagationSummaryAria" xml:space="preserve">
+    <value>按传播链 {0} 筛选</value>
+  </data>
+  <data name="MemoryPage.Title" xml:space="preserve">
+    <value>记忆</value>
+  </data>
+  <data name="MemoryPage.NewNode" xml:space="preserve">
+    <value>新建节点</value>
+  </data>
+  <data name="MemoryPage.SearchPlaceholder" xml:space="preserve">
+    <value>按 URI 路径搜索...</value>
+  </data>
+  <data name="MemoryPage.ClearSearch" xml:space="preserve">
+    <value>清除搜索</value>
+  </data>
+  <data name="MemoryPage.UriTreeAria" xml:space="preserve">
+    <value>记忆 URI 树</value>
+  </data>
+  <data name="MemoryPage.EmptyHeading" xml:space="preserve">
+    <value>暂无记忆节点</value>
+  </data>
+  <data name="MemoryPage.EmptyBody" xml:space="preserve">
+    <value>创建一个节点以开始构建这个 Anima 的记忆图。</value>
+  </data>
+  <data name="MemoryPage.UriLabel" xml:space="preserve">
+    <value>URI</value>
+  </data>
+  <data name="MemoryPage.NewUriPlaceholder" xml:space="preserve">
+    <value>例如 core://agent/identity</value>
+  </data>
+  <data name="MemoryPage.NewUriAria" xml:space="preserve">
+    <value>新记忆节点 URI</value>
+  </data>
+  <data name="MemoryPage.ContentLabel" xml:space="preserve">
+    <value>内容</value>
+  </data>
+  <data name="MemoryPage.NewContentAria" xml:space="preserve">
+    <value>新记忆节点内容</value>
+  </data>
+  <data name="MemoryPage.CreateNode" xml:space="preserve">
+    <value>创建节点</value>
+  </data>
+  <data name="MemoryPage.Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="MemoryPage.NoSelection" xml:space="preserve">
+    <value>选择一个记忆节点以查看或编辑。</value>
+  </data>
+  <data name="MemoryPage.DeleteConfirmTitle" xml:space="preserve">
+    <value>删除记忆节点？</value>
+  </data>
+  <data name="MemoryPage.DeleteConfirmBody" xml:space="preserve">
+    <value>这将永久删除该节点及其所有边，此操作无法撤销。</value>
+  </data>
+  <data name="MemoryPage.DeleteConfirmAction" xml:space="preserve">
+    <value>删除节点</value>
+  </data>
+  <data name="MemoryPage.DeleteConfirmCancel" xml:space="preserve">
+    <value>保留节点</value>
+  </data>
+  <data name="Memory.ContentAria" xml:space="preserve">
+    <value>{0} 的记忆节点内容</value>
+  </data>
+  <data name="Memory.DisclosureTrigger" xml:space="preserve">
+    <value>触发条件</value>
+  </data>
+  <data name="Memory.DisclosureTriggerPlaceholder" xml:space="preserve">
+    <value>例如：当用户提到项目 X 时</value>
+  </data>
+  <data name="Memory.DisclosureTriggerAria" xml:space="preserve">
+    <value>{0} 的触发条件</value>
+  </data>
+  <data name="Memory.KeywordsGlossary" xml:space="preserve">
+    <value>关键词（术语表）</value>
+  </data>
+  <data name="Memory.RemoveKeywordAria" xml:space="preserve">
+    <value>删除关键词 {0}</value>
+  </data>
+  <data name="Memory.AddKeywordPlaceholder" xml:space="preserve">
+    <value>+ 添加关键词</value>
+  </data>
+  <data name="Memory.AddKeywordAria" xml:space="preserve">
+    <value>添加关键词</value>
+  </data>
+  <data name="Memory.Source" xml:space="preserve">
+    <value>来源：</value>
+  </data>
+  <data name="Memory.SaveChanges" xml:space="preserve">
+    <value>保存更改</value>
+  </data>
+  <data name="Memory.SaveChangesAria" xml:space="preserve">
+    <value>保存对 {0} 的更改</value>
+  </data>
+  <data name="Memory.DeleteNode" xml:space="preserve">
+    <value>删除节点</value>
+  </data>
+  <data name="Memory.DeleteNodeAria" xml:space="preserve">
+    <value>删除记忆节点 {0}</value>
+  </data>
+  <data name="Memory.Saved" xml:space="preserve">
+    <value>已保存</value>
+  </data>
+  <data name="Memory.RestoreSnapshotAria" xml:space="preserve">
+    <value>从 {0} 恢复快照</value>
+  </data>
+  <data name="Memory.ThisNode" xml:space="preserve">
+    <value>当前节点</value>
+  </data>
+  <data name="Memory.NavigateToAria" xml:space="preserve">
+    <value>跳转到 {0}</value>
+  </data>
+  <data name="Artifact.SectionAria" xml:space="preserve">
+    <value>制品：{0}</value>
+  </data>
+  <data name="Artifact.Title" xml:space="preserve">
+    <value>制品</value>
+  </data>
+  <data name="Artifact.ViewFullContentAria" xml:space="preserve">
+    <value>查看 {0} 的完整内容</value>
+  </data>
+  <data name="Artifact.CollapseContentAria" xml:space="preserve">
+    <value>收起 {0} 的内容</value>
+  </data>
+  <data name="Artifact.LoadError" xml:space="preserve">
+    <value>加载制品内容失败，请刷新页面或检查运行日志。</value>
+  </data>
+  <data name="Artifact.Provenance" xml:space="preserve">
+    <value>来源：</value>
+  </data>
+  <data name="Artifact.ViewStepAria" xml:space="preserve">
+    <value>查看步骤 {0}</value>
+  </data>
+  <data name="Artifact.ViewRunAria" xml:space="preserve">
+    <value>查看运行 {0}</value>
+  </data>
+  <data name="Artifact.PreviewNotice" xml:space="preserve">
+    <value>显示前 {0} 行。查看完整内容</value>
+  </data>
+  <data name="Providers.AffectedSingle" xml:space="preserve">
+    <value>LLM 模块将受影响。</value>
+  </data>
+  <data name="Providers.AffectedPlural" xml:space="preserve">
+    <value>LLM 模块将受影响。</value>
+  </data>
+  <data name="Common.CopyToClipboard" xml:space="preserve">
+    <value>复制到剪贴板</value>
+  </data>
+  <data name="Common.Collapse" xml:space="preserve">
+    <value>收起</value>
+  </data>
+  <data name="Common.Retry" xml:space="preserve">
+    <value>重试</value>
+  </data>
+  <data name="Common.Step" xml:space="preserve">
+    <value>步骤</value>
+  </data>
+  <data name="Common.Run" xml:space="preserve">
+    <value>运行</value>
+  </data>
+  <data name="Common.Module" xml:space="preserve">
+    <value>模块</value>
+  </data>
+  <data name="Common.Status" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="Common.Occurred" xml:space="preserve">
+    <value>发生时间</value>
+  </data>
+  <data name="Common.Duration" xml:space="preserve">
+    <value>持续时间</value>
+  </data>
+  <data name="Common.Output" xml:space="preserve">
+    <value>输出</value>
+  </data>
+  <data name="Common.Created" xml:space="preserve">
+    <value>创建于</value>
+  </data>
+  <data name="Common.Updated" xml:space="preserve">
+    <value>更新于</value>
+  </data>
+  <data name="Connection.Connected" xml:space="preserve">
+    <value>已连接</value>
+  </data>
+  <data name="Connection.Reconnecting" xml:space="preserve">
+    <value>重新连接中...</value>
+  </data>
+  <data name="Connection.Disconnected" xml:space="preserve">
+    <value>已断开</value>
+  </data>
+  <data name="Anima.ListTitle" xml:space="preserve">
+    <value>Anima 列表</value>
+  </data>
+  <data name="TokenUsage.Tokens" xml:space="preserve">
+    <value>令牌</value>
+  </data>
+  <data name="TokenUsage.Input" xml:space="preserve">
+    <value>输入</value>
+  </data>
+  <data name="TokenUsage.Output" xml:space="preserve">
+    <value>输出</value>
+  </data>
+  <data name="TokenUsage.Total" xml:space="preserve">
+    <value>总计</value>
+  </data>
+  <data name="TokenUsage.Context" xml:space="preserve">
+    <value>上下文</value>
+  </data>
+  <data name="Editor.Connection.Delete" xml:space="preserve">
+    <value>删除连接</value>
+  </data>
 </root>

@@ -8,7 +8,7 @@
 @using OpenAnima.Core.Anima
 @inject EditorStateService _state
 @inject IPortRegistry _portRegistry
-@inject IAnimaContext _animaContext
+@inject IModuleContext _animaContext
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 @implements IAsyncDisposable
@@ -49,7 +49,8 @@
             var isSelected = _state.SelectedConnectionIds.Contains(connectionId);
 
             <ConnectionLine Start="@start" End="@end" Color="@color" IsPreview="false" IsSelected="@isSelected"
-                          OnClick="@(() => HandleConnectionClick(connection))" />
+                          OnClick="@(() => HandleConnectionClick(connection))"
+                          OnContextMenu="@((MouseEventArgs e) => HandleConnectionContextMenu(connection, e))" />
         }
 
         <!-- Render preview connection during drag -->
@@ -82,6 +83,11 @@
         }
     </g>
 </svg>
+    <ConnectionContextMenu IsVisible="@_showConnectionContextMenu"
+                           X="@_connectionContextMenuX"
+                           Y="@_connectionContextMenuY"
+                           OnDelete="HandleConnectionContextMenuDelete"
+                           OnClose="HandleConnectionContextMenuClose" />
 </div>
 
 @code {
@@ -94,6 +100,12 @@
     private const int RenderThrottleMs = 50;
     private HubConnection? _hubConnection;
     private CancellationTokenSource? _rejectionClearCts;
+
+    // Connection context menu state
+    private bool _showConnectionContextMenu;
+    private double _connectionContextMenuX;
+    private double _connectionContextMenuY;
+    private PortConnection? _contextMenuConnection;
 
     protected override async Task OnInitializedAsync()
     {
@@ -220,6 +232,35 @@
                                connection.TargetModuleId, connection.TargetPortName, false);
     }
 
+    private void HandleConnectionContextMenu(PortConnection connection, MouseEventArgs e)
+    {
+        _contextMenuConnection = connection;
+        _connectionContextMenuX = e.ClientX;
+        _connectionContextMenuY = e.ClientY;
+        _showConnectionContextMenu = true;
+        StateHasChanged();
+    }
+
+    private void HandleConnectionContextMenuDelete()
+    {
+        if (_contextMenuConnection != null)
+        {
+            _state.RemoveConnection(
+                _contextMenuConnection.SourceModuleId,
+                _contextMenuConnection.SourcePortName,
+                _contextMenuConnection.TargetModuleId,
+                _contextMenuConnection.TargetPortName);
+        }
+        _showConnectionContextMenu = false;
+        _contextMenuConnection = null;
+    }
+
+    private void HandleConnectionContextMenuClose()
+    {
+        _showConnectionContextMenu = false;
+        _contextMenuConnection = null;
+    }
+
     private void HandleWheel(WheelEventArgs e)
     {
         // Zoom centered on cursor
@@ -241,6 +282,10 @@
     {
         // Refresh canvas offset in case layout changed
         await UpdateCanvasOffset();
+
+        // Close connection context menu if open
+        _showConnectionContextMenu = false;
+        _contextMenuConnection = null;
 
         // Clear selection on background click
         _state.ClearSelection();

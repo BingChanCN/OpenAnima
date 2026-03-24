@@ -707,4 +707,373 @@
   <data name="Module.DisplayName.WorkspaceToolModule" xml:space="preserve">
     <value>Workspace Tool</value>
   </data>
+  <data name="Run.StopReasonPrefix" xml:space="preserve">
+    <value>Run paused:</value>
+  </data>
+  <data name="MainLayout.ExpandSidebar" xml:space="preserve">
+    <value>Expand sidebar</value>
+  </data>
+  <data name="MainLayout.CollapseSidebar" xml:space="preserve">
+    <value>Collapse sidebar</value>
+  </data>
+  <data name="MainLayout.ToggleSidebar" xml:space="preserve">
+    <value>Toggle sidebar</value>
+  </data>
+  <data name="MainLayout.MainNavigation" xml:space="preserve">
+    <value>Main navigation</value>
+  </data>
+  <data name="MainLayout.Navigation" xml:space="preserve">
+    <value>Navigation</value>
+  </data>
+  <data name="MainLayout.ToggleMenu" xml:space="preserve">
+    <value>Toggle menu</value>
+  </data>
+  <data name="Runs.Title" xml:space="preserve">
+    <value>Runs</value>
+  </data>
+  <data name="Runs.History" xml:space="preserve">
+    <value>Run History</value>
+  </data>
+  <data name="Runs.EmptyHeading" xml:space="preserve">
+    <value>No runs yet</value>
+  </data>
+  <data name="Runs.EmptyBody" xml:space="preserve">
+    <value>Start a run to begin tracking long-running graph execution.</value>
+  </data>
+  <data name="Runs.CancelConfirmTitle" xml:space="preserve">
+    <value>Cancel Run?</value>
+  </data>
+  <data name="Runs.CancelConfirmMessage" xml:space="preserve">
+    <value>This will stop the run permanently. Completed steps are preserved, but the run cannot be resumed after cancellation.</value>
+  </data>
+  <data name="Runs.CancelConfirmAction" xml:space="preserve">
+    <value>Cancel Run</value>
+  </data>
+  <data name="Runs.StartFailed" xml:space="preserve">
+    <value>Failed to start run.</value>
+  </data>
+  <data name="Runs.NoActiveAnima" xml:space="preserve">
+    <value>No active Anima selected.</value>
+  </data>
+  <data name="RunLaunch.NewRun" xml:space="preserve">
+    <value>New Run</value>
+  </data>
+  <data name="RunLaunch.Objective" xml:space="preserve">
+    <value>Objective</value>
+  </data>
+  <data name="RunLaunch.ObjectivePlaceholder" xml:space="preserve">
+    <value>Describe what this run should accomplish</value>
+  </data>
+  <data name="RunLaunch.WorkspaceRoot" xml:space="preserve">
+    <value>Workspace Root</value>
+  </data>
+  <data name="RunLaunch.WorkspacePlaceholder" xml:space="preserve">
+    <value>/path/to/repository</value>
+  </data>
+  <data name="RunLaunch.MaxStepsOptional" xml:space="preserve">
+    <value>Max Steps (optional)</value>
+  </data>
+  <data name="RunLaunch.MaxWallSecondsOptional" xml:space="preserve">
+    <value>Max Wall Time (s) (optional)</value>
+  </data>
+  <data name="RunLaunch.Start" xml:space="preserve">
+    <value>Start Run</value>
+  </data>
+  <data name="RunLaunch.ObjectiveRequired" xml:space="preserve">
+    <value>Objective is required</value>
+  </data>
+  <data name="RunLaunch.WorkspaceRequired" xml:space="preserve">
+    <value>Workspace root is required</value>
+  </data>
+  <data name="RunLaunch.MaxStepsPositive" xml:space="preserve">
+    <value>Max steps must be a positive number</value>
+  </data>
+  <data name="RunLaunch.MaxWallSecondsPositive" xml:space="preserve">
+    <value>Max wall time must be a positive number</value>
+  </data>
+  <data name="RunLaunch.StartFailed" xml:space="preserve">
+    <value>Failed to start run. Check the workspace path and try again.</value>
+  </data>
+  <data name="WorkflowPreset.Label" xml:space="preserve">
+    <value>Workflow Template</value>
+  </data>
+  <data name="WorkflowPreset.NoneManual" xml:space="preserve">
+    <value>None - manual wiring</value>
+  </data>
+  <data name="WorkflowPreset.CodebaseAnalysisDescription" xml:space="preserve">
+    <value>Scans workspace, runs 4 parallel LLM analysis branches, synthesizes a Markdown report.</value>
+  </data>
+  <data name="WorkflowPreset.DefaultDescription" xml:space="preserve">
+    <value>Workflow template</value>
+  </data>
+  <data name="RunCard.StepCount" xml:space="preserve">
+    <value>{0} steps</value>
+  </data>
+  <data name="RunCard.Pause" xml:space="preserve">
+    <value>Pause Run</value>
+  </data>
+  <data name="RunCard.PauseAria" xml:space="preserve">
+    <value>Pause run {0}</value>
+  </data>
+  <data name="RunCard.Resume" xml:space="preserve">
+    <value>Resume Run</value>
+  </data>
+  <data name="RunCard.ResumeAria" xml:space="preserve">
+    <value>Resume run {0}</value>
+  </data>
+  <data name="RunCard.Cancel" xml:space="preserve">
+    <value>Cancel Run</value>
+  </data>
+  <data name="RunCard.CancelAria" xml:space="preserve">
+    <value>Cancel run {0}</value>
+  </data>
+  <data name="RunState.Aria" xml:space="preserve">
+    <value>Run state: {0}</value>
+  </data>
+  <data name="RunState.Starting" xml:space="preserve">
+    <value>Starting</value>
+  </data>
+  <data name="RunState.Running" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="RunState.Paused" xml:space="preserve">
+    <value>Paused</value>
+  </data>
+  <data name="RunState.Completed" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="RunState.Cancelled" xml:space="preserve">
+    <value>Cancelled</value>
+  </data>
+  <data name="RunState.Failed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="RunState.Interrupted" xml:space="preserve">
+    <value>Interrupted</value>
+  </data>
+  <data name="RunDetail.Loading" xml:space="preserve">
+    <value>Loading...</value>
+  </data>
+  <data name="RunDetail.BudgetSteps" xml:space="preserve">
+    <value>steps</value>
+  </data>
+  <data name="RunDetail.BudgetSeconds" xml:space="preserve">
+    <value>seconds</value>
+  </data>
+  <data name="RunDetail.Step.PropagationPrefix" xml:space="preserve">
+    <value>Propagation chain:</value>
+  </data>
+  <data name="RunDetail.Step.FilterPropagationAria" xml:space="preserve">
+    <value>Filter by propagation chain {0}</value>
+  </data>
+  <data name="RunDetail.Step.FilterPropagationSummaryAria" xml:space="preserve">
+    <value>Filter by propagation chain {0}</value>
+  </data>
+  <data name="MemoryPage.Title" xml:space="preserve">
+    <value>Memory</value>
+  </data>
+  <data name="MemoryPage.NewNode" xml:space="preserve">
+    <value>New Node</value>
+  </data>
+  <data name="MemoryPage.SearchPlaceholder" xml:space="preserve">
+    <value>Search by URI path...</value>
+  </data>
+  <data name="MemoryPage.ClearSearch" xml:space="preserve">
+    <value>Clear search</value>
+  </data>
+  <data name="MemoryPage.UriTreeAria" xml:space="preserve">
+    <value>Memory URI tree</value>
+  </data>
+  <data name="MemoryPage.EmptyHeading" xml:space="preserve">
+    <value>No memory nodes yet</value>
+  </data>
+  <data name="MemoryPage.EmptyBody" xml:space="preserve">
+    <value>Create a node to start building this Anima's memory graph.</value>
+  </data>
+  <data name="MemoryPage.UriLabel" xml:space="preserve">
+    <value>URI</value>
+  </data>
+  <data name="MemoryPage.NewUriPlaceholder" xml:space="preserve">
+    <value>e.g. core://agent/identity</value>
+  </data>
+  <data name="MemoryPage.NewUriAria" xml:space="preserve">
+    <value>New memory node URI</value>
+  </data>
+  <data name="MemoryPage.ContentLabel" xml:space="preserve">
+    <value>Content</value>
+  </data>
+  <data name="MemoryPage.NewContentAria" xml:space="preserve">
+    <value>New memory node content</value>
+  </data>
+  <data name="MemoryPage.CreateNode" xml:space="preserve">
+    <value>Create Node</value>
+  </data>
+  <data name="MemoryPage.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="MemoryPage.NoSelection" xml:space="preserve">
+    <value>Select a memory node to view or edit.</value>
+  </data>
+  <data name="MemoryPage.DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete memory node?</value>
+  </data>
+  <data name="MemoryPage.DeleteConfirmBody" xml:space="preserve">
+    <value>This will permanently remove the node and all its edges. This cannot be undone.</value>
+  </data>
+  <data name="MemoryPage.DeleteConfirmAction" xml:space="preserve">
+    <value>Delete Node</value>
+  </data>
+  <data name="MemoryPage.DeleteConfirmCancel" xml:space="preserve">
+    <value>Keep Node</value>
+  </data>
+  <data name="Memory.ContentAria" xml:space="preserve">
+    <value>Memory node content for {0}</value>
+  </data>
+  <data name="Memory.DisclosureTrigger" xml:space="preserve">
+    <value>Disclosure Trigger</value>
+  </data>
+  <data name="Memory.DisclosureTriggerPlaceholder" xml:space="preserve">
+    <value>e.g. when user mentions project X</value>
+  </data>
+  <data name="Memory.DisclosureTriggerAria" xml:space="preserve">
+    <value>Disclosure trigger for {0}</value>
+  </data>
+  <data name="Memory.KeywordsGlossary" xml:space="preserve">
+    <value>Keywords (glossary)</value>
+  </data>
+  <data name="Memory.RemoveKeywordAria" xml:space="preserve">
+    <value>Remove keyword {0}</value>
+  </data>
+  <data name="Memory.AddKeywordPlaceholder" xml:space="preserve">
+    <value>+ add keyword</value>
+  </data>
+  <data name="Memory.AddKeywordAria" xml:space="preserve">
+    <value>Add keyword</value>
+  </data>
+  <data name="Memory.Source" xml:space="preserve">
+    <value>Source:</value>
+  </data>
+  <data name="Memory.SaveChanges" xml:space="preserve">
+    <value>Save Changes</value>
+  </data>
+  <data name="Memory.SaveChangesAria" xml:space="preserve">
+    <value>Save changes to {0}</value>
+  </data>
+  <data name="Memory.DeleteNode" xml:space="preserve">
+    <value>Delete Node</value>
+  </data>
+  <data name="Memory.DeleteNodeAria" xml:space="preserve">
+    <value>Delete memory node {0}</value>
+  </data>
+  <data name="Memory.Saved" xml:space="preserve">
+    <value>Saved</value>
+  </data>
+  <data name="Memory.RestoreSnapshotAria" xml:space="preserve">
+    <value>Restore snapshot from {0}</value>
+  </data>
+  <data name="Memory.ThisNode" xml:space="preserve">
+    <value>This node</value>
+  </data>
+  <data name="Memory.NavigateToAria" xml:space="preserve">
+    <value>Navigate to {0}</value>
+  </data>
+  <data name="Artifact.SectionAria" xml:space="preserve">
+    <value>Artifact: {0}</value>
+  </data>
+  <data name="Artifact.Title" xml:space="preserve">
+    <value>Artifact</value>
+  </data>
+  <data name="Artifact.ViewFullContentAria" xml:space="preserve">
+    <value>View full content of {0}</value>
+  </data>
+  <data name="Artifact.CollapseContentAria" xml:space="preserve">
+    <value>Collapse content of {0}</value>
+  </data>
+  <data name="Artifact.LoadError" xml:space="preserve">
+    <value>Failed to load artifact content. Try refreshing the page or check the run logs.</value>
+  </data>
+  <data name="Artifact.Provenance" xml:space="preserve">
+    <value>Source:</value>
+  </data>
+  <data name="Artifact.ViewStepAria" xml:space="preserve">
+    <value>View step {0}</value>
+  </data>
+  <data name="Artifact.ViewRunAria" xml:space="preserve">
+    <value>View run {0}</value>
+  </data>
+  <data name="Artifact.PreviewNotice" xml:space="preserve">
+    <value>Showing first {0} lines. View full content</value>
+  </data>
+  <data name="Providers.AffectedSingle" xml:space="preserve">
+    <value>LLM module will be affected.</value>
+  </data>
+  <data name="Providers.AffectedPlural" xml:space="preserve">
+    <value>LLM modules will be affected.</value>
+  </data>
+  <data name="Common.CopyToClipboard" xml:space="preserve">
+    <value>Copy to clipboard</value>
+  </data>
+  <data name="Common.Collapse" xml:space="preserve">
+    <value>Collapse</value>
+  </data>
+  <data name="Common.Retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="Common.Step" xml:space="preserve">
+    <value>Step</value>
+  </data>
+  <data name="Common.Run" xml:space="preserve">
+    <value>Run</value>
+  </data>
+  <data name="Common.Module" xml:space="preserve">
+    <value>Module</value>
+  </data>
+  <data name="Common.Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Common.Occurred" xml:space="preserve">
+    <value>Occurred</value>
+  </data>
+  <data name="Common.Duration" xml:space="preserve">
+    <value>Duration</value>
+  </data>
+  <data name="Common.Output" xml:space="preserve">
+    <value>Output</value>
+  </data>
+  <data name="Common.Created" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="Common.Updated" xml:space="preserve">
+    <value>Updated</value>
+  </data>
+  <data name="Connection.Connected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="Connection.Reconnecting" xml:space="preserve">
+    <value>Reconnecting...</value>
+  </data>
+  <data name="Connection.Disconnected" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="Anima.ListTitle" xml:space="preserve">
+    <value>Animas</value>
+  </data>
+  <data name="TokenUsage.Tokens" xml:space="preserve">
+    <value>Tokens</value>
+  </data>
+  <data name="TokenUsage.Input" xml:space="preserve">
+    <value>Input</value>
+  </data>
+  <data name="TokenUsage.Output" xml:space="preserve">
+    <value>Output</value>
+  </data>
+  <data name="TokenUsage.Total" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="TokenUsage.Context" xml:space="preserve">
+    <value>Context</value>
+  </data>
+  <data name="Editor.Connection.Delete" xml:space="preserve">
+    <value>Delete Connection</value>
+  </data>
 </root>
