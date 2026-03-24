@@ -662,4 +662,49 @@
   <data name="Chat.CancelExecution" xml:space="preserve">
     <value>Cancel execution</value>
   </data>
+  <data name="Module.DisplayName.LLMModule" xml:space="preserve">
+    <value>LLM</value>
+  </data>
+  <data name="Module.DisplayName.ChatInputModule" xml:space="preserve">
+    <value>Chat Input</value>
+  </data>
+  <data name="Module.DisplayName.ChatOutputModule" xml:space="preserve">
+    <value>Chat Output</value>
+  </data>
+  <data name="Module.DisplayName.HeartbeatModule" xml:space="preserve">
+    <value>Heartbeat</value>
+  </data>
+  <data name="Module.DisplayName.FixedTextModule" xml:space="preserve">
+    <value>Fixed Text</value>
+  </data>
+  <data name="Module.DisplayName.TextJoinModule" xml:space="preserve">
+    <value>Text Join</value>
+  </data>
+  <data name="Module.DisplayName.TextSplitModule" xml:space="preserve">
+    <value>Text Split</value>
+  </data>
+  <data name="Module.DisplayName.ConditionalBranchModule" xml:space="preserve">
+    <value>Conditional Branch</value>
+  </data>
+  <data name="Module.DisplayName.AnimaInputPortModule" xml:space="preserve">
+    <value>Anima Input Port</value>
+  </data>
+  <data name="Module.DisplayName.AnimaOutputPortModule" xml:space="preserve">
+    <value>Anima Output Port</value>
+  </data>
+  <data name="Module.DisplayName.AnimaRouteModule" xml:space="preserve">
+    <value>Anima Route</value>
+  </data>
+  <data name="Module.DisplayName.HttpRequestModule" xml:space="preserve">
+    <value>HTTP Request</value>
+  </data>
+  <data name="Module.DisplayName.JoinBarrierModule" xml:space="preserve">
+    <value>Join Barrier</value>
+  </data>
+  <data name="Module.DisplayName.MemoryModule" xml:space="preserve">
+    <value>Memory</value>
+  </data>
+  <data name="Module.DisplayName.WorkspaceToolModule" xml:space="preserve">
+    <value>Workspace Tool</value>
+  </data>
 </root>

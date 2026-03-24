@@ -662,4 +662,49 @@
   <data name="Chat.CancelExecution" xml:space="preserve">
     <value>取消执行</value>
   </data>
+  <data name="Module.DisplayName.LLMModule" xml:space="preserve">
+    <value>LLM</value>
+  </data>
+  <data name="Module.DisplayName.ChatInputModule" xml:space="preserve">
+    <value>聊天输入</value>
+  </data>
+  <data name="Module.DisplayName.ChatOutputModule" xml:space="preserve">
+    <value>聊天输出</value>
+  </data>
+  <data name="Module.DisplayName.HeartbeatModule" xml:space="preserve">
+    <value>心跳</value>
+  </data>
+  <data name="Module.DisplayName.FixedTextModule" xml:space="preserve">
+    <value>固定文本</value>
+  </data>
+  <data name="Module.DisplayName.TextJoinModule" xml:space="preserve">
+    <value>文本拼接</value>
+  </data>
+  <data name="Module.DisplayName.TextSplitModule" xml:space="preserve">
+    <value>文本分割</value>
+  </data>
+  <data name="Module.DisplayName.ConditionalBranchModule" xml:space="preserve">
+    <value>条件分支</value>
+  </data>
+  <data name="Module.DisplayName.AnimaInputPortModule" xml:space="preserve">
+    <value>Anima 输入端口</value>
+  </data>
+  <data name="Module.DisplayName.AnimaOutputPortModule" xml:space="preserve">
+    <value>Anima 输出端口</value>
+  </data>
+  <data name="Module.DisplayName.AnimaRouteModule" xml:space="preserve">
+    <value>Anima 路由</value>
+  </data>
+  <data name="Module.DisplayName.HttpRequestModule" xml:space="preserve">
+    <value>HTTP 请求</value>
+  </data>
+  <data name="Module.DisplayName.JoinBarrierModule" xml:space="preserve">
+    <value>汇合屏障</value>
+  </data>
+  <data name="Module.DisplayName.MemoryModule" xml:space="preserve">
+    <value>记忆</value>
+  </data>
+  <data name="Module.DisplayName.WorkspaceToolModule" xml:space="preserve">
+    <value>工作区工具</value>
+  </data>
 </root>
