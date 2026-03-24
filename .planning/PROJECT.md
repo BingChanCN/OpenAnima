@@ -148,7 +148,7 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Active
 
-- [ ] Module names display in Chinese when language is zh-CN (EDUX-01)
+- [x] Module names display in Chinese when language is zh-CN (EDUX-01) -- validated 2026-03-24
 - [ ] Each module shows a brief description in the editor module list (EDUX-02)
 - [ ] User can delete connections via click-select + Delete key and right-click menu (EDUX-03)
 - [ ] Ports show Chinese tooltip on hover explaining their purpose (EDUX-04)
@@ -350,4 +350,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-23 after v2.0.3 milestone start*
+*Last updated: 2026-03-24 after Phase 61 complete*
