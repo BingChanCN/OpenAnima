@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: unknown
 stopped_at: Completed 64-01-PLAN.md
-last_updated: "2026-03-24T16:05:19.909Z"
+last_updated: "2026-03-25T09:20:00Z"
 progress:
   total_phases: 4
   completed_phases: 4
@@ -86,7 +86,7 @@ Phase 64 has one open architectural decision: SVG `<title>` vs custom SVG overla
 
 ## Session Continuity
 
-Last activity: 2026-03-25 - Completed quick task 260325-ncp: Dashboard Chat input box - center and make rectangular
+Last activity: 2026-03-25 - Completed quick task 260325-ntq: 修复Dashboard中输入框会侵入左右边界，输入框宽度约为窗口1/3而不是铺满
 Stopped at: Completed 64-01-PLAN.md
 Resume file: None
 
@@ -97,3 +97,4 @@ Resume file: None
 | `260323-of9` | 2026-03-23 | UI review and fix editor layout overlap |
 | `260323-ox4` | 2026-03-23 | Redesign dialogs to rectangular and fix sidebar overlap |
 | `260325-ncp` | 2026-03-25 | Dashboard Chat input box - center and make rectangular |
+| `260325-ntq` | 2026-03-25 | 修复Dashboard中输入框会侵入左右边界，输入框宽度约为窗口1/3而不是铺满 |
