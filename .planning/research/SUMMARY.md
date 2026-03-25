@@ -1,34 +1,17 @@
 # Project Research Summary
 
-**Project:** OpenAnima v2.0.3 — Editor Experience
-**Domain:** Visual node editor UX improvements for a Blazor Server AI agent wiring platform
-**Researched:** 2026-03-24
+**Project:** OpenAnima v2.0.4 Intelligent Memory & Persistence
+**Domain:** Graph-based agent memory architecture + Blazor Server persistence patterns
+**Researched:** 2026-03-25
 **Confidence:** HIGH
 
 ## Executive Summary
 
-OpenAnima v2.0.3 is a targeted editor UX improvement milestone built on a mature Blazor Server
-visual wiring application. All four active requirements (EDUX-01 through EDUX-04) address i18n
-module names, module descriptions, connection deletion, and port hover tooltips — all within a
-codebase that already contains the infrastructure to support them. No new NuGet packages are
-required. Every feature is implementable using existing primitives: `IStringLocalizer<SharedResources>`,
-`.resx` resource files, the established context menu component pattern (`AnimaContextMenu.razor` /
-`ModuleContextMenu.razor`), and SVG `<title>` elements already used at the card level in `NodeCard.razor`.
+OpenAnima v2.0.4 upgrades a working modular AI agent runtime from flat memory storage to a structured graph-based system while fixing critical persistence gaps that undermine daily usability. The milestone targets six interconnected areas: enriching the memory data model with typed nodes and weighted edges, adding LLM-guided graph exploration as an optional recall strategy, delivering explicit first-person memory CRUD tools for the agent, persisting wiring layout and chat history across restarts, keeping LLM execution alive when the user navigates away from the chat page, and surfacing memory operations as visible events in the chat UI. All six areas can be implemented using the existing .NET 8 / Blazor Server / SQLite + Dapper stack without introducing any new NuGet packages.
 
-The recommended implementation approach keeps localization and display metadata firmly in the UI
-shell layer, never in `OpenAnima.Contracts`. Module display names and descriptions go into `.resx`
-files, not into `IModuleMetadata`. Port descriptions go on `InputPortAttribute`/`OutputPortAttribute`
-(code-level, co-located with port declarations) as optional parameters. Connection deletion reuses
-the exact context menu component shape established by `ModuleContextMenu.razor`. This discipline
-prevents breaking changes to the external SDK surface and keeps the diff bounded and reviewable.
+The recommended approach divides the work into two phases. Phase A delivers independent, high-value, low-risk improvements first: schema column additions (additive, never destructive), the new memory CRUD tools, chat history persistence, wiring layout pan/zoom persistence, and memory operation visibility. These deliverables can ship in any order within the phase because they share no runtime dependencies on each other beyond the initial schema migration. Phase B delivers the two architectural refactors that carry real regression risk: background chat execution (a singleton bridge that decouples `ChatPanel` from the LLM execution lifecycle) and LLM-guided graph exploration recall (a BFS traversal with configurable secondary LLM scoring). Phase B depends on Phase A being stable.
 
-The key risk is the invariant/display name split for i18n: module names used in `WiringConfiguration`
-storage, `PortRegistry` lookups, and drag-start events must remain as C# class names at all times.
-Rendering localized display names while accidentally threading them into storage paths silently breaks
-saved configurations on reload. A secondary risk is focus management for the Delete key path —
-`EditorCanvas` must restore focus to the editor container div after every SVG click to ensure
-keyboard events fire reliably. Both risks are well-understood from direct codebase inspection and
-have clear, low-effort mitigations.
+The highest risks in this milestone are data loss from a destructive SQLite migration and a context-budget explosion when restoring chat history to the LLM on restart. Both have clear preventions: the schema migration must use only additive `ALTER TABLE ADD COLUMN` operations and never drop the existing `memory_nodes` table; chat history persistence must distinguish UI restore (all messages) from LLM context restore (last N messages, default 10). Secondary risks include Blazor memory leaks from missed event unsubscription, SQLite write contention from concurrent background sedimentation, and LLM hallucinated URIs in graph exploration scoring responses. Every one of these is addressed by documented patterns already present in the codebase.
 
 ---
 
@@ -36,266 +19,150 @@ have clear, low-effort mitigations.
 
 ### Recommended Stack
 
-No new dependencies are required for any of the four EDUX features. The existing stack covers all
-implementation needs entirely within established patterns.
+The existing stack requires zero additions for this milestone. All five feature areas are implemented with .NET 8 BCL primitives (`System.Threading.Channels`, `Task.WhenAll`, `Queue<string>`, `HashSet<string>`), the existing `Microsoft.Data.Sqlite 8.0.12 + Dapper 2.1.72` persistence layer, the existing `OpenAI SDK 2.8.0` for secondary LLM calls, and Blazor Server SignalR for real-time events. The deliberate avoidance of new dependencies is validated: Neo4j and embedded graph databases are ruled out because the memory graph is small (hundreds of nodes per Anima) and SQLite edge queries are sufficient at this scale; EF Core is ruled out because the established `MigrateSchemaAsync` pattern handles additive migrations with less overhead; vector/embedding stores are ruled out as premature (listed as Future in PROJECT.md).
 
-**Core technologies (unchanged):**
-- `.NET 8.0 / Blazor Server` — all Blazor event directives (`@oncontextmenu`, `@onkeydown`,
-  `@onmouseenter`) are native; no JS interop beyond the existing `editorCanvas.init` call
-- `IStringLocalizer<SharedResources>` + `.resx` files — already injected in most page components;
-  extended with ~80 new keys under `Module.DisplayName.*`, `Module.Description.*`, and
-  `Editor.Connection.*` namespaces for EDUX-01, EDUX-02, EDUX-03
-- SVG `<title>` child elements — native browser tooltip, zero JS interop, already validated in
-  `NodeCard.razor` for card-level status tooltips; the same pattern applied to port circles for EDUX-04
-- Blazor context menu component pattern (`AnimaContextMenu.razor` / `ModuleContextMenu.razor`) —
-  new `ConnectionContextMenu.razor` follows this exact shape: backdrop div, fixed-position menu div,
-  `IsVisible`/`X`/`Y` parameters, `EventCallback` for actions (EDUX-03)
-- `EditorStateService.DeleteSelected()` / `RemoveConnection()` — already handles connection
-  deletion; no new state management needed (EDUX-03)
-- `ModuleSchemaService.cs` — already has a static built-in module type map; extended with
-  `GetDescription(string moduleName)` for EDUX-02
+**Core technologies (unchanged, confirmed sufficient):**
+- .NET 8 BCL (`Channel<T>`, `Task.WhenAll`, `SemaphoreSlim`) — background execution queue and parallel BFS; no extra package needed
+- `Microsoft.Data.Sqlite 8.0.12` + `Dapper 2.1.72` — additive schema migrations and new tables via established `MigrateSchemaAsync` pattern
+- `OpenAI SDK 2.8.0` — secondary LLM calls for graph exploration scoring, same pattern as `SedimentationService.CallProductionLlmAsync`
+- `System.Text.Json` (BCL) — `WiringConfiguration` JSON pan/zoom field additions
+- Blazor Server SignalR — singleton event bridge for real-time memory notifications to components
 
 ### Expected Features
 
-**Must have (table stakes — all required for v2.0.3):**
-- EDUX-01: Chinese display names for module palette items, node card title bars, and
-  `EditorConfigSidebar` header — raw C# class names like `LLMModule` break immersion in a zh-CN UI
-- EDUX-02: Module description wired from `ModuleSchemaService` into `EditorConfigSidebar` and as
-  a `title` attribute on palette items — the data exists and is populated but the UI always shows
-  a hardcoded "No description" fallback
-- EDUX-03: Right-click context menu on connection bezier paths with a "Delete Connection" action;
-  Delete key path already works end-to-end and requires only verification
-- EDUX-04: Port hover tooltips with Chinese descriptions rendered in the SVG canvas via SVG
-  `<title>` elements on port circles — essential for zh-CN users who cannot infer port purpose
-  from English identifiers like `"prompt"` or `"output"`
+**Must have (table stakes):**
+- Wiring layout pan/zoom persists across restarts — node positions already save; viewport reset is a visible regression
+- Chat history persists across restarts — any "persistent AI" product implies scroll-back after restart
+- Agent can delete its own memories (`memory_delete` tool) — create without delete is incoherent
+- Agent can list memories by prefix (`memory_list` tool) — prerequisite for self-aware memory management
+- Memory operations visible in chat — users need to see when the agent creates or updates memory, not just file/git tool calls
+- LLM execution continues when navigating away — long agent loops silently dying on page navigation is a user trust failure
 
-**Should have (low effort, add if time permits in v2.0.3):**
-- Module palette search that also matches the localized display name
-- Module palette item `title` attribute showing the description on hover (native browser tooltip)
-- Localized palette search placeholder and "no modules" text (currently hardcoded English)
-- Localized display name shown alongside raw class name as a subtitle in `EditorConfigSidebar`
+**Should have (differentiators):**
+- Node/Memory/Edge/Path four-layer schema enrichment — `node_type`, `display_name`, edge `weight`, `bidirectional` columns; `memory_uri_aliases` table for stable routing
+- LLM-guided graph exploration recall — BFS traversal over flat keyword matching; improves recall precision for semantically complex queries (opt-in per Anima, default off)
+- Explicit `memory_create` and `memory_update` tools — unambiguous agent semantics produce better knowledge management behavior than the existing upsert `memory_write`
+- Improved sedimentation quality (bilingual keywords, message count cap) — current English-only extraction prompt produces poor coverage for Chinese conversations
 
-**Defer (v2.1+):**
-- Undo/redo for connection deletion — requires command pattern refactor of `EditorStateService`
-- Rich styled port tooltips with type badge and color indicator
-- Port description editing by end users
+**Defer to v2.1+:**
+- `memory_alias` first-person tool — requires Path routing layer implementation
+- Version chain rollback UI on `/memory` — requires full `memory_versions` table with deprecation flags
+- Vector/embedding memory store — listed as Future in PROJECT.md; improve lexical recall quality first
+
+**Anti-features to avoid:**
+- Restoring full chat history as LLM context — blows context budget and re-injects sedimented knowledge; restore UI display only, limit LLM context to last N messages
+- Automatic graph exploration on every message — 3-4 extra LLM calls per turn at depth=2; gate behind explicit per-Anima config opt-in
+- Silent auto-delete of stale memories — destroys user trust; only agent-initiated explicit delete with UI chip visibility
 
 ### Architecture Approach
 
-All four features integrate into the existing three-layer architecture (Contracts, Core services
-and components, `.resx` i18n layer) without introducing new patterns. The only genuinely new data
-flow is the connection right-click path: `ConnectionLine` `@oncontextmenu` fires an `OnContextMenu`
-`EventCallback` with screen coordinates and connection identity up to `EditorCanvas`, which manages
-visibility state and renders `<ConnectionContextMenu>`, which invokes `EditorStateService.RemoveConnection()`
-on "Delete". All other changes are additive rendering changes: read existing or newly-added data,
-emit localized text or SVG tooltip elements.
+The architecture is a two-tier system: Blazor Server scoped components on top, a layer of singletons below that survive component dispose and page navigation. The v2.0.4 changes add two new singletons (`ChatExecutionService` as an execution bridge, `ChatHistoryService` as a SQLite-backed persistence layer), one new optional singleton (`GraphExplorationService`), three new `IWorkspaceTool` implementations, and additive schema changes to the SQLite persistence layer. The key architectural principle is that `ChatPanel.razor` must become a subscriber rather than an owner: it subscribes to singleton events and reads from singleton state, but does not own the execution lifecycle or the persistence path.
 
-**Major components and their EDUX roles:**
-1. `ModulePalette.razor` — inject `IStringLocalizer<SharedResources>` and subscribe to
-   `LanguageChanged`; render localized display name; show description via `title` attribute
-   (EDUX-01, EDUX-02)
-2. `NodeCard.razor` — inject `IStringLocalizer`; cache display name in `OnParametersSet`; wrap
-   port circles in `<g><title>` elements for native browser tooltips (EDUX-01, EDUX-04)
-3. `EditorConfigSidebar.razor` — replace hardcoded fallback with `ModuleSchemaService.GetDescription()`
-   and localized display name in the module header (EDUX-01, EDUX-02)
-4. `ConnectionLine.razor` — add `OnContextMenu EventCallback` and `@oncontextmenu` with
-   `stopPropagation` on the transparent hit-detection path element (EDUX-03)
-5. `ConnectionContextMenu.razor` (new) — context menu for connection deletion following
-   `ModuleContextMenu.razor` pattern (EDUX-03)
-6. `EditorCanvas.razor` — receive `OnContextMenu` from `ConnectionLine`, manage menu state,
-   render `<ConnectionContextMenu>` (EDUX-03)
-7. `ModuleSchemaService.cs` — add `GetDescription(string moduleName)` that looks up the `.resx`
-   description key first, falls back to `IModuleMetadata.Description`, then to the "No description"
-   fallback (EDUX-02)
+**Major new and changed components:**
+1. `ChatExecutionService` (new singleton) — bridges `ChatOutputModule.OnMessageReceived` to active Blazor circuits; owns stream buffer for reconnect replay; owns the per-execution `CancellationTokenSource` formerly held by `ChatPanel`
+2. `ChatHistoryService` (new singleton) — `AppendAsync` / `LoadRecentAsync` backed by new `chat_messages` SQLite table; `ChatPanel.OnInitializedAsync` seeds from this on circuit init
+3. `GraphExplorationService` (new singleton, optional) — LLM-guided BFS from seed nodes using cross-depth `HashSet<string>` visited set and `SemaphoreSlim(3)` concurrency cap; injected optionally into `MemoryRecallService` as a fourth recall pass; disabled by default
+4. `MemoryCreateTool`, `MemoryUpdateTool`, `MemoryListTool` (new `IWorkspaceTool`) — registered via DI, automatically available to `AgentToolDispatcher`; use atomic `INSERT OR IGNORE` + row-count-check instead of check-then-insert to avoid TOCTOU races
+5. `RunDbInitializer.MigrateSchemaAsync` (extended) — add `node_type`, `display_name` to `memory_nodes`; `weight`, `bidirectional` to `memory_edges`; create `memory_uri_aliases` and `chat_messages` tables; all additive, all idempotent
+6. `WiringConfiguration` record (extended) — add `PanX`, `PanY`, `Scale`; `EditorStateService.LoadConfiguration` restores these directly from the record (avoids scoped-service-in-singleton DI violation)
 
-**Contracts changes (EDUX-04 only, backward-compatible additive):**
-- `Ports/InputPortAttribute.cs` / `OutputPortAttribute.cs` — add `string description = ""`
-  optional parameter; default empty string means all existing module code compiles unchanged
-- `Ports/PortMetadata.cs` — add `string Description = ""` positional parameter with default
-- `Core/Ports/PortDiscovery.cs` — read `attr.Description` and pass to `PortMetadata` constructor
-- All ~15 built-in module files — add Chinese `description` strings to `[InputPort]`/`[OutputPort]`
-  attribute declarations
+**Unchanged components (deliberate):**
+- `WiringEngine.cs` — execution pipeline already decoupled from Blazor circuit lifecycle
+- `LLMModule.cs` — memory recall pass already integrated at correct pipeline stage; no new call sites needed
+- `DisclosureMatcher.cs`, `GlossaryIndex.cs`, `BootMemoryInjector.cs` — operate on `MemoryNode.Keywords` and `DisclosureTrigger` which are unchanged
 
 ### Critical Pitfalls
 
-1. **Translated name leaked into invariant storage (silent wiring corruption)** — `ModulePalette`
-   currently passes `module.Name` (C# class name) to `HandleDragStart`. If the localized display
-   name replaces the invariant name in this path, saved wiring configurations fail to reload
-   silently. Prevention: rename `ModuleInfo.Name` to `InvariantName`, add separate `DisplayName`;
-   only use `DisplayName` in render expressions, never in `HandleDragStart`, `EditorStateService.AddNode`,
-   or serialization.
+1. **SQLite schema migration data loss** — A destructive `DROP TABLE memory_nodes` during the four-layer split destroys all user memory on next startup. Prevention: use only additive `ALTER TABLE ADD COLUMN`; never drop or rename `memory_nodes`; wrap any structural split in a single `BEGIN`/`COMMIT` transaction with `CREATE TABLE new ... INSERT INTO new SELECT ...` before any `DROP TABLE`.
 
-2. **`DeleteSelected()` connection ID parse fragility** — the existing decoder splits on `:` and
-   `->`. Port names containing these characters cause silent deletion failure with no error.
-   Prevention: replace string-split decode with `PortConnection` struct value equality, and add a
-   unit test that creates, selects, and deletes a connection and asserts the count decreased by 1.
+2. **Chat history blowing LLM context budget on restart** — Restoring 80 persisted messages to `ChatContextManager` immediately triggers the 70% token budget guard, disabling send. Prevention: separate UI restore (all messages in `ChatSessionState.Messages`) from LLM context restore (last 10 messages via configurable `contextRestoreMessages` key). Never feed raw history and sedimented memory simultaneously.
 
-3. **Editor container focus not maintained — Delete key fires on sidebar inputs** — `@onkeydown`
-   on the `tabindex="0"` editor div only fires when that div has focus. After sidebar interaction,
-   focus moves to input fields and Delete deletes characters instead of connections. Prevention:
-   call `JS.InvokeVoidAsync("editorCanvas.focusContainer")` after canvas click events, after
-   sidebar config commits, and in `OnAfterRenderAsync(firstRender)`.
+3. **Blazor `ChatPanel` memory leaks from missed event unsubscription** — The existing code already has a gap: `_animaRuntimeManager.WiringConfigurationChanged` is never unhooked in `DisposeAsync`. Every new subscription that is also unhook-missed leaks one component instance for the 3-minute circuit retention window. Prevention: fix the pre-existing gap first; for every new `+=` add a corresponding `-=` in `DisposeAsync`; prefer `EventBus.Subscribe<T>` (returns `IDisposable`) over direct delegate attachment.
 
-4. **Child components not subscribed to `LanguageChanged` — i18n does not update live** —
-   `ModulePalette` and `NodeCard` currently do not subscribe to `LanguageService.LanguageChanged`.
-   Blazor re-render propagation will not update them on language switch because their parameters
-   do not change. Prevention: add explicit `LanguageChanged` subscription in `ModulePalette.OnInitialized`
-   and in `EditorCanvas.OnInitialized`; both call `InvokeAsync(StateHasChanged)` on event fire.
+4. **LLM-guided graph exploration infinite loop and cost explosion** — Cyclic memory graphs cause BFS to re-visit nodes unless a `HashSet<string> visited` is maintained across ALL depth levels. Without a per-level candidate cap, depth=3 with fan-out=5 generates 620 candidates requiring 3 extra LLM scoring calls per message. Prevention: maintain cross-depth visited set; hard-cap candidates to 20 via `.Take(20)` before LLM scoring; `SemaphoreSlim(3)` concurrency cap; `graphExplorationEnabled = false` by default; max depth clamped to 3.
 
-5. **`IModuleMetadata.Description` is always English and may be unavailable at runtime** — the
-   Contracts interface has no i18n surface; accessing `.Description` from a live module instance
-   risks `NullReferenceException` when the Anima runtime is stopped. Prevention: use `.resx` keys
-   (`Module.{invariantName}.Description`) as the primary description source for built-in modules;
-   fall back to `IModuleMetadata.Description` only as a last resort; never access the live module
-   instance from a UI component.
+5. **LLM hallucinating node URIs in graph exploration** — The scoring LLM returns `{ "relevant_uris": [...] }` but may invent URIs not in the candidate set. These silently return null from `GetNodeAsync`. Prevention: validate every returned URI against the known candidate set; discard and log at Warning level any hallucinated URI; instruct explicitly in the scoring prompt to return only URIs from the exact list provided.
 
 ---
 
 ## Implications for Roadmap
 
-Research identifies four sequential implementation phases. Each phase is independent enough to
-ship, test, and verify before the next begins. The four phases map directly to the four EDUX
-features, grouped by dependency and risk.
+Based on combined research, the recommended phase structure has two active phases (A and B) and a deferred Phase C. This maps directly to the feature dependency graph: Phase A features are mutually independent beyond the schema migration; Phase B features depend on Phase A being stable; Phase C features depend on Path layer implementation deferred past this milestone.
 
-### Phase 1: Module i18n Foundation (EDUX-01)
+### Phase A: Foundation and Independence
 
-**Rationale:** EDUX-01 is the most structurally consequential change because it introduces the
-display-name / invariant-name split that all subsequent work depends on. Establishing the `.resx`
-lookup pattern, the `Module.DisplayName.*` keys, and the `LanguageChanged` subscriptions first
-means all subsequent phases can rely on a proven foundation. Pitfalls 1 (wiring corruption from
-leaked display names) and 4 (stale display on language switch) are only addressable here.
+**Rationale:** All Phase A deliverables share no runtime dependencies on each other beyond the initial schema migration (step 1 within the phase). They are independently testable and independently shippable. Shipping them before Phase B allows the test suite to validate the full memory tool surface and persistence patterns before the higher-risk architectural refactors begin. The schema migration must complete first because all other services read the new columns, but it takes under an hour to implement.
 
-**Delivers:**
-- Localized module display names in `ModulePalette`, `NodeCard` title bars, and
-  `EditorConfigSidebar` header rendered in zh-CN or en-US based on `LanguageService.Current`
-- Live language switch updates palette and canvas node titles without page reload
-- `Module.DisplayName.*` keys in both `.resx` files for all built-in modules
-- Validated `InvariantName` vs `DisplayName` split pattern enforced across all call sites
+**Delivers:** Wiring layout viewport persistence; chat history persistence; three new memory CRUD tools; two existing tools enriched with event publishing; memory operation chips in chat UI; `MemoryOperationPayload` event type + `ToolCategory` enum.
 
-**Addresses:** EDUX-01 fully
+**Features addressed:**
+- Wiring pan/zoom persistence — three JSON fields added to `WiringConfiguration`; `EditorStateService.LoadConfiguration` restores from record directly
+- Chat history persistence — `ChatHistoryService` singleton + `chat_messages` table; seeded into `ChatSessionState` on circuit init
+- `memory_delete` and `memory_list` tools — wrap existing `IMemoryGraph.DeleteNodeAsync` and `QueryByPrefixAsync`
+- `memory_create` and `memory_update` tools — atomic `INSERT OR IGNORE` + row-count-check; reject-on-wrong-state semantics
+- `MemoryOperationPayload` event record + `ToolCategory` enum — shared by all memory notification consumers
+- Memory operation chips in `ChatMessage.razor` — distinct CSS class for `ToolCategory.Memory`; compact sedimentation chips
+- Improved sedimentation prompt — bilingual keyword extraction; `messages.TakeLast(20)` cap
 
-**Avoids:** Translated name leaking into `WiringConfiguration` (Pitfall 1); stale display on
-language switch (Pitfall 4)
+**Pitfalls to avoid:**
+- Additive-only schema migration; never drop `memory_nodes` (Pitfall 1)
+- `EditorStateService` scoped-vs-singleton DI — restore pan/zoom via `LoadConfiguration`, not from `IHostedService` injection (Pitfall 7)
+- Pre-existing `WiringConfigurationChanged` unhook gap — fix before adding new subscriptions (Pitfall 3)
+- SQLite `Busy Timeout=5000` on all connections — add before any new write path (Pitfall 9)
+- Multi-Anima pan/zoom collision — store viewport as per-Anima sidecar `{animaId}/viewport.json`, not inside shared `WiringConfiguration` JSON (Pitfall 10)
+- `memory_create` TOCTOU race — use atomic `INSERT OR IGNORE` + row count check (Pitfall 12)
+- `InvokeAsync(StateHasChanged)` from disposed circuit — add `_disposed` guard before adding new subscriptions (Pitfall 8)
+- Thread-safe list mutation — all `ChatSessionState.Messages` mutations inside `InvokeAsync(() => { ... StateHasChanged(); })` (Pitfall 11)
 
-**Research flag:** Standard patterns — no research phase needed. `IStringLocalizer`, `LanguageChanged`
-subscription, and `.resx` fallback behavior are all established in the codebase.
+### Phase B: Architectural Refactors
 
----
+**Rationale:** Background chat execution (`ChatExecutionService`) and LLM-guided graph exploration (`GraphExplorationService`) are the two highest-risk deliverables. `ChatExecutionService` requires `ChatHistoryService` for final message persistence (Phase A prerequisite). `GraphExplorationService` requires `GetAdjacentNodesAsync` on `IMemoryGraph` which reads the new schema columns (Phase A prerequisite). Both touch core runtime paths; shipping them second lets Phase A integration tests catch regressions before the execution model changes.
 
-### Phase 2: Connection Deletion UX (EDUX-03)
+**Delivers:** LLM execution survives page navigation; stream buffer replay on component reattach; opt-in LLM-guided BFS recall with configurable depth and model; `GetAdjacentNodesAsync` and `GetNodesByUrisAsync` batch method on `IMemoryGraph`.
 
-**Rationale:** EDUX-03 is independent of all other EDUX features and resolves the highest user
-friction — connections cannot currently be deleted via any discoverable UI. The Delete key path is
-already ~80% implemented; only the right-click context menu is new work. This phase also resolves
-the latent `DeleteSelected()` ID parse bug (Pitfall 2) and the editor container focus issue
-(Pitfall 3) before they ship to users.
+**Features addressed:**
+- Singleton `ChatExecutionService` with `Channel<ChatExecutionRequest>` queue; `Action<>` events for stream tokens and completion
+- `ChatPanel` refactor — becomes subscriber; delegates `_generationCts` ownership to `ChatExecutionService`; replays stream buffer on reattach
+- `GraphExplorationService` BFS — cross-depth `HashSet<string>` visited set; `.Take(20)` candidate cap per level; `SemaphoreSlim(3)` concurrency cap; `TriggerType` guard to skip on heartbeat-triggered paths
+- Optional fourth recall pass in `MemoryRecallService`; enabled via `recallGraphExplorationEnabled = "true"` Anima config key
 
-**Delivers:**
-- `ConnectionContextMenu.razor` and `.css` following the `ModuleContextMenu.razor` pattern exactly
-- `@oncontextmenu` handler on `ConnectionLine` hit-detection path with `stopPropagation`
-- Context menu positioned at `ClientX/ClientY` (HTML overlay rendered outside the SVG transform
-  group so it does not pan/zoom with the canvas)
-- Focus restoration via `editorCanvas.focusContainer()` JS interop after canvas click events
-- Fixed `DeleteSelected()` connection decode (struct value equality or validated re-encode) with
-  a unit test covering create-select-delete-assert
+**Pitfalls to avoid:**
+- Blank assistant bubble after navigation away and back — stream buffer in `ChatExecutionService` replays on component re-mount (Pitfall 2)
+- `InvokeAsync` on disposed circuit — try/catch wrapper around all singleton-to-component calls (Pitfall 8)
+- Graph exploration on heartbeat-triggered paths — `TriggerType.HeartbeatProactive` check skips exploration (Pitfall 14)
+- LLM hallucinated URIs — candidate set whitelist validation before any `GetNodeAsync` call (Pitfall 5)
+- BFS N+1 SQLite calls — batch load via `GetNodesByUrisAsync` for post-exploration node fetch (Architecture anti-pattern 4)
+- Graph BFS infinite loop on cyclic graphs — cross-depth `visited` HashSet (Pitfall 4)
 
-**Addresses:** EDUX-03 fully
+### Phase C: Deferred (v2.1+)
 
-**Avoids:** Context menu rendered inside SVG transform and appearing at wrong coordinates (Pitfall 6
-in PITFALLS.md); Delete key firing on sidebar inputs (Pitfall 3); silent deletion failure from ID
-parse bug (Pitfall 2)
+**Rationale:** These features depend on the Path routing layer that is scaffolded in v2.0.4 (the `memory_uri_aliases` table is created) but whose full semantics require additional implementation beyond this milestone's scope.
 
-**Research flag:** Standard patterns — `ModuleContextMenu.razor` is a direct template. No research
-phase needed.
-
----
-
-### Phase 3: Module Descriptions in Editor Panel (EDUX-02)
-
-**Rationale:** EDUX-02 is the simplest feature but benefits from Phase 1 being complete. Phase 1
-establishes the `Module.Description.*` `.resx` keys and `ModuleSchemaService` as the description
-source. This phase wires them into two call sites. Separating this from Phase 1 keeps the structural
-i18n split decision clean and avoids mixing concerns.
-
-**Delivers:**
-- `EditorConfigSidebar` replaces hardcoded `L["Editor.Config.NoDescription"]` with
-  `ModuleSchemaService.GetDescription(_selectedNode.ModuleName)` — `.resx` first, English
-  `IModuleMetadata.Description` fallback, then the "No description" fallback
-- `ModulePalette` module item `div` gains `title="@GetDescription(module.InvariantName)"`
-  attribute for native browser tooltip on palette hover
-- Descriptions render correctly when the Anima runtime is stopped (no live module instance access)
-
-**Addresses:** EDUX-02 fully
-
-**Avoids:** Description fetched from live module instance that may be null (Pitfall 8 in PITFALLS.md);
-English description rendered to zh-CN users (Pitfall 5)
-
-**Research flag:** Standard patterns — no research phase needed. One new method on `ModuleSchemaService`,
-one call site in `EditorConfigSidebar`, one attribute in `ModulePalette`.
-
----
-
-### Phase 4: Port Hover Tooltips (EDUX-04)
-
-**Rationale:** EDUX-04 has the widest diff (Contracts layer changes plus ~15 built-in module files)
-and benefits from all other features being stable before it begins. The Contracts changes are
-backward-compatible additive; external modules that do not add descriptions compile unchanged.
-Doing this last also means the SVG tooltip rendering approach can be validated with context from
-the completed editor UX.
-
-**Delivers:**
-- `InputPortAttribute` and `OutputPortAttribute` gain optional `string description = ""`
-  parameter (backward-compatible; all existing module code unchanged)
-- `PortMetadata` record gains `string Description = ""` positional parameter with default
-- `PortDiscovery.cs` reads `attr.Description` and passes it to `PortMetadata` constructor
-- All ~15 built-in module files have Chinese descriptions on their port attribute declarations
-- `NodeCard.razor` wraps each port `<circle>` in a `<g><title>` element; tooltip text:
-  `"{portName}: {description} ({portType})"`, falling back to `"{portName} ({portType})"` when
-  description is empty
-- Display name in `NodeCard` title bar cached in `OnParametersSet` to avoid `IStringLocalizer`
-  re-evaluation on every SVG render frame during node drag
-
-**Addresses:** EDUX-04 fully
-
-**Avoids:** Translated display name allocated on every render frame during drag (Performance Trap
-in PITFALLS.md); port tooltip interfering with connection drag hit-testing (UX Pitfall in PITFALLS.md)
-
-**Research flag:** One open decision — SVG `<title>` vs custom SVG overlay inside the `<g transform>`
-group. PITFALLS.md recommends custom overlay for zoom-accurate positioning; ARCHITECTURE.md
-recommends `<title>` for simplicity (consistent with existing card-level tooltip). Resolve at
-Phase 4 planning time by evaluating the actual zoom range users operate in. If position accuracy
-at low zoom matters, implement custom SVG overlay; otherwise use `<title>`.
-
----
+**Delivers:** First-person `memory_alias` tool; version chain rollback UI on `/memory` page.
 
 ### Phase Ordering Rationale
 
-- Phase 1 before all others: the invariant/display name split and `.resx` description infrastructure
-  are shared by Phases 2, 3, and 4; establishing them first ensures correctness from the first
-  line of localization code.
-- Phase 2 independent: connection deletion has no dependency on i18n or descriptions; placing it
-  second resolves the `DeleteSelected` bug and focus issue before they affect any other test path.
-- Phase 3 after Phase 1: `ModuleSchemaService.GetDescription()` created in Phase 1 is a direct
-  sequential dependency of Phase 3.
-- Phase 4 last: widest diff, Contracts changes, most module files; benefits from everything else
-  being stable; the SVG tooltip approach is validated against real canvas UX with all other
-  features present.
+- Schema migration is step 1 within Phase A because every subsequent Phase A feature reads new columns or creates data in new tables. The migration is purely additive (O(1) `ALTER TABLE ADD COLUMN`) and idempotent.
+- Memory CRUD tools come before memory visibility features because the visibility features need the tools to publish `MemoryOperationPayload` events.
+- `MemoryOperationPayload` event type and `ToolCategory` enum are defined before both the tools and the chat UI changes that consume them.
+- `ChatHistoryService` completes before `ChatExecutionService` because the background execution service calls `ChatHistoryService.AppendAsync` on completion.
+- `ChatExecutionService` is the last deliverable across all phases that touches `ChatPanel`, because it changes the most UI code paths and has the highest regression surface.
+- `GraphExplorationService` is last because it makes additional LLM calls per message and should be tested under the stabilized background execution model.
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 4 (EDUX-04):** Resolve the SVG `<title>` vs custom SVG overlay decision at planning
-  time. Both approaches are implementable; the choice determines whether `NodeCard` needs hover
-  state management or just static `<title>` elements. This is the only unresolved architectural
-  decision across the milestone.
+Phases likely needing deeper investigation during planning:
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (EDUX-01):** `IStringLocalizer` fallback, `.resx` key conventions, and `LanguageChanged`
-  subscription are all established with multiple existing examples in the codebase.
-- **Phase 2 (EDUX-03):** `ModuleContextMenu.razor` is a direct template; SVG `@oncontextmenu`
-  with `stopPropagation` is a known Blazor pattern; one existing JS call site for focus interop.
-- **Phase 3 (EDUX-02):** One method addition on `ModuleSchemaService`, one `EditorConfigSidebar`
-  call site change, one `ModulePalette` attribute addition.
+- **Phase B (ChatExecutionService):** The exact boundary between what `ChatPanel` retains vs. delegates to `ChatExecutionService` needs careful specification. In particular: cancellation flow (user clicks cancel), error display (LLM API errors mid-stream), and multi-Anima state isolation in the `_states` dictionary. The existing `ChatPanel` is dense and any refactor risks silent regression in the streaming display path.
+
+- **Phase B (GraphExplorationService):** The secondary LLM prompt for graph scoring needs iteration before relying on it in production recall. The `SedimentationService` pattern provides the call mechanics, but the prompt content (which node summary fields to include, how to instruct URI-only return, structured JSON output format) needs validation against actual LLM behavior.
+
+Phases with standard patterns (no extra research needed):
+
+- **Phase A (schema migration):** The `MigrateSchemaAsync` pattern is in production and well-understood. All new columns are nullable or have defaults. The `CREATE TABLE IF NOT EXISTS` pattern for new tables is also established.
+- **Phase A (memory CRUD tools):** `IWorkspaceTool` is a well-documented extension point; all three new tools follow the same pattern as `MemoryWriteTool` and `MemoryDeleteTool`.
+- **Phase A (chat history persistence):** `ChatHistoryService` follows the identical pattern as existing Dapper services; the schema is simple and validated.
+- **Phase A (wiring pan/zoom):** Three double fields added to a JSON record; deserialization default values provide full backward compatibility.
 
 ---
 
@@ -303,61 +170,45 @@ Phases with standard patterns (skip research-phase):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All findings from direct codebase inspection. No new packages needed — conclusion is certain. All component and service files read directly. |
-| Features | HIGH | All four EDUX requirements are defined in PROJECT.md. Feature scope is fixed with no ambiguous boundaries. Industry norms confirm they are table stakes. |
-| Architecture | HIGH | Every integration point confirmed by reading actual source files. Component boundaries, existing patterns, and data flows verified from code, not documentation. |
-| Pitfalls | HIGH | All pitfalls identified from actual code patterns. `DeleteSelected()` split bug cited to specific code pattern. Focus issue tied to the specific `tabindex="0"` div. Recovery strategies are concrete. |
+| Stack | HIGH | All features confirmed implementable with existing packages; no new NuGet required; validated against each feature area with direct source inspection |
+| Features | HIGH | Feature list derived from codebase inspection (what exists, what is missing) plus Nocturne Memory architecture reference and Blazor official docs |
+| Architecture | HIGH | All integration points confirmed by reading every affected source file; two MEDIUM gaps identified (EventBus injection scope, `EditorStateService` DI lifetime) with concrete resolutions documented |
+| Pitfalls | HIGH | All 15 pitfalls derived from direct codebase inspection, not generic advice; each has a confirmed reproduction path and a concrete prevention strategy |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Port tooltip rendering decision (Phase 4):** SVG `<title>` vs custom SVG overlay — the one
-  unresolved architectural decision. Resolve at Phase 4 planning time by evaluating zoom-level UX
-  tradeoff against implementation cost.
+- **`EditorStateService` scoped DI lifetime vs pan/zoom restore:** `WiringInitializationService` is a singleton `IHostedService` and cannot directly inject a scoped `EditorStateService`. Resolution: have `EditorStateService.LoadConfiguration(config)` restore `PanX/PanY/Scale` directly from the config record when called during circuit initialization. The `WiringInitializationService` does not need to touch `EditorStateService` at all. Verify this path covers both the app-restart restore case and the within-session Anima-switch case.
 
-- **ModulePalette search behavior with localized names (Phase 1 scope extension):** After EDUX-01,
-  search filter should also match localized display names. Include in Phase 1 or defer to v2.0.3+.
-  Decide at Phase 1 planning.
+- **Global vs per-Anima EventBus for memory operation events:** `SedimentationService` does not currently inject `IEventBus`. The singleton global `IEventBus` is the correct target, not the per-Anima `AnimaRuntime.EventBus`. Verify DI registration resolves the correct instance before implementing `MemoryOperationPayload` publishing. Also verify `AgentToolDispatcher` has no circular dependency when `IEventBus` is added to its constructor.
 
-- **`DeleteSelected()` encode/decode fix scope (Phase 2):** Full struct refactor to `HashSet<PortConnection>`
-  vs minimum defensive fix (validated re-encode + unit test). Evaluate at Phase 2 planning.
+- **Multi-Anima pan/zoom file path collision:** The current `WiringConfiguration` file path is not scoped to `AnimaId`. Use a per-Anima sidecar file `{configDir}/{animaId}/viewport.json` rather than embedding pan/zoom fields in the shared `WiringConfiguration` JSON to avoid Anima-switch collisions.
 
-- **External module descriptions and tooltips (acceptable gap):** External modules have no `.resx`
-  entries and may add no port attribute descriptions. Both gaps are handled by fallback behavior
-  (raw class name displayed, no port tooltip shown). Document in Phase verification checklists.
+- **`memory_delete` soft vs hard delete:** Hard-deleting via an agent tool call has no undo path and can destroy identity nodes like `core://agent/identity`. Consider implementing a `deprecated = 1` soft-delete flag with `/memory` UI restore capability before exposing `memory_delete` as an active tool. Resolve this design decision before Phase A implementation begins.
+
+- **Sedimentation notification UX noise:** Showing one chip per sedimented node would produce 3+ chips per exchange, making chat visually noisy. Resolution: show a single collapsed "N memories sedimented" summary chip rather than one chip per node; show individual chips only for explicit agent-initiated `memory_create`, `memory_update`, `memory_delete` calls.
 
 ---
 
 ## Sources
 
-### Primary (HIGH confidence — direct codebase inspection)
+### Primary (HIGH confidence)
 
-- `src/OpenAnima.Core/Components/Shared/NodeCard.razor` — SVG `<title>` pattern, port rendering loop, `MarkupString` interpolation
-- `src/OpenAnima.Core/Components/Shared/EditorCanvas.razor` — `@oncontextmenu:preventDefault`, SVG transform group, connection rendering, `HandleConnectionClick`
-- `src/OpenAnima.Core/Components/Shared/ConnectionLine.razor` — hit-target path, `IsSelected`, `OnClick` EventCallback pattern
-- `src/OpenAnima.Core/Components/Shared/ModulePalette.razor` — `HandleDragStart`, `_availableModules`, hardcoded English strings confirmed
-- `src/OpenAnima.Core/Components/Shared/EditorConfigSidebar.razor` — hardcoded `L["Editor.Config.NoDescription"]`, `_selectedNode.ModuleName` header
-- `src/OpenAnima.Core/Components/Shared/AnimaContextMenu.razor` / `ModuleContextMenu.razor` — context menu component pattern
-- `src/OpenAnima.Core/Components/Pages/Editor.razor` — `tabindex="0"`, `@onkeydown`, `HandleKeyDown`, `LanguageChanged` subscription
-- `src/OpenAnima.Core/Services/EditorStateService.cs` — `DeleteSelected()` ID split logic, `SelectedConnectionIds`, `SelectConnection`, `RemoveConnection`
-- `src/OpenAnima.Core/Services/LanguageService.cs` — `LanguageChanged` event, singleton pattern
-- `src/OpenAnima.Core/Services/ModuleSchemaService.cs` — static module type map, existing extension point
-- `src/OpenAnima.Contracts/IModuleMetadata.cs` — `Name`, `Version`, `Description` fields; no i18n surface
-- `src/OpenAnima.Contracts/Ports/PortMetadata.cs` — `Name`, `Type`, `Direction`, `ModuleName` — no `Description` confirmed
-- `src/OpenAnima.Contracts/Ports/InputPortAttribute.cs` / `OutputPortAttribute.cs` — no description parameter confirmed
-- `src/OpenAnima.Core/Ports/PortDiscovery.cs` — attribute-to-record mapping confirmed
-- `src/OpenAnima.Core/Resources/SharedResources.zh-CN.resx` — 208 existing keys, naming conventions
-- `.planning/PROJECT.md` — v2.0.3 active requirements, architecture decisions
+- Codebase inspection — `RunDbInitializer.cs`, `MemoryGraph.cs`, `IMemoryGraph.cs`, `SedimentationService.cs`, `MemoryRecallService.cs`, `ChatSessionState.cs`, `EditorStateService.cs`, `WiringConfiguration.cs`, `ChatPanel.razor`, `AnimaRuntime.cs`, `MemoryWriteTool.cs`, `MemoryDeleteTool.cs`, `ChatEvents.cs`, `Program.cs`, `ActivityChannelHost.cs`, `AgentToolDispatcher.cs`, `AnimaServiceExtensions.cs`
+- ASP.NET Core official docs — Blazor Server synchronization context (`learn.microsoft.com/aspnet/core/blazor/components/synchronization-context`)
+- dotnet/aspnetcore discussions — Blazor Server background task patterns surviving navigation
 
-### Secondary (MEDIUM confidence — industry reference)
+### Secondary (MEDIUM confidence)
 
-- Blender node editor, Unreal Blueprint, ComfyUI, NodeRed — Delete key and right-click menu for
-  connection deletion is universal table stakes in visual wiring tools
-- Per-port hover description — expected in professional visual node editors for user discovery
-- SVG `<title>` browser compatibility — supported in all modern browsers; OS-dependent appearance
-  and ~0.5s delay are known limitations
+- Nocturne Memory GitHub (`github.com/Dataojitori/nocturne_memory`) — Node/Memory/Edge/Path four-layer architecture reference
+- ReMindRAG NeurIPS 2025 (`arxiv.org/abs/2510.13193`) — LLM-guided graph traversal algorithm pattern
+- Mem0 blog January 2026 (`mem0.ai/blog/graph-memory-solutions-ai-agents`) — graph memory for AI agents landscape
+
+### Tertiary (LOW confidence)
+
+- AtomMem research (`arxiv.org/abs/2501.13956`) — agent memory CRUD as POMDP; research-stage only, not applied directly
 
 ---
-*Research completed: 2026-03-24*
+*Research completed: 2026-03-25*
 *Ready for roadmap: yes*
