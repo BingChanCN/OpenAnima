@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 65-01-PLAN.md (data model records)
-last_updated: "2026-03-25T16:54:46.501Z"
+stopped_at: Completed 65-03-PLAN.md (MemoryGraph four-table schema rewrite)
+last_updated: "2026-03-25T17:05:13.075Z"
 last_activity: 2026-03-25 - Roadmap created for v2.0.4
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State: OpenAnima
@@ -43,6 +43,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 65-memory-schema-migration]: All new record properties use defaults (string.Empty/Fact/1.0/false) so existing construction sites compile without modification
 - [Phase 65-memory-schema-migration]: FromUri/ToUri kept on MemoryEdge for backward compat; Plan 03 will populate via SQL JOIN
 - [Phase 65-memory-schema-migration]: Busy Timeout=5000 only on production constructor; raw/test constructor unchanged
+- [Phase 65-memory-schema-migration]: GetContentHistoryAsync returns MemoryContent list DESC (newest first), replaces GetSnapshotsAsync
+- [Phase 65-memory-schema-migration]: AddEdgeAsync silently returns if source or target UUID cannot be resolved from URI
 
 ### Key Design Discussions (from milestone kickoff)
 
@@ -65,7 +67,7 @@ None.
 ## Session Continuity
 
 Last activity: 2026-03-25 - Roadmap created for v2.0.4
-Stopped at: Completed 65-01-PLAN.md (data model records)
+Stopped at: Completed 65-03-PLAN.md (MemoryGraph four-table schema rewrite)
 Resume file: None
 
 ### Quick Tasks Completed
@@ -77,3 +79,4 @@ Resume file: None
 | `260325-ncp` | 2026-03-25 | Dashboard Chat input box - center and make rectangular |
 | `260325-ntq` | 2026-03-25 | Dashboard input box width correction |
 | Phase 65-memory-schema-migration P01 | 4 | 5 tasks | 5 files |
+| Phase 65 P03 | 7 | 4 tasks | 7 files |

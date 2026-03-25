@@ -30,7 +30,7 @@ Requirements for Intelligent Memory & Persistence milestone. Each maps to roadma
 - [ ] **MEMA-05**: Schema migration from existing memory_nodes/memory_edges to four-table model in a single atomic transaction (BEGIN/COMMIT)
 - [ ] **MEMA-06**: Existing memory data fully migrated to new schema without loss (verified by migration test)
 - [x] **MEMA-07**: Nodes support node_type and display_name columns for graph organization
-- [ ] **MEMA-08**: IMemoryGraph interface updated for four-table model with backward-compatible method signatures where possible
+- [x] **MEMA-08**: IMemoryGraph interface updated for four-table model with backward-compatible method signatures where possible
 
 ### Memory Recall
 
@@ -112,7 +112,7 @@ Requirements for Intelligent Memory & Persistence milestone. Each maps to roadma
 | MEMA-05 | Phase 65 | Pending |
 | MEMA-06 | Phase 65 | Pending |
 | MEMA-07 | Phase 65 | Complete |
-| MEMA-08 | Phase 65 | Pending |
+| MEMA-08 | Phase 65 | Complete |
 | MEMR-01 | Phase 70 | Pending |
 | MEMR-02 | Phase 70 | Pending |
 | MEMR-03 | Phase 70 | Pending |
