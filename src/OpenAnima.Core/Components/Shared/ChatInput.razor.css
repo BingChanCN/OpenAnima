@@ -5,7 +5,8 @@
     background: rgba(30, 32, 54, 0.98);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 12px;
-    width: 36%;
+    width: clamp(20rem, 33vw, 34rem);
+    max-width: 100%;
     min-width: 280px;
     margin: 0 auto;
     box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.25);
@@ -13,6 +14,7 @@
 
 textarea {
     flex: 1;
+    min-width: 0;
     background: rgba(255, 255, 255, 0.05);
     color: #e0e0e0;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -79,4 +81,11 @@ textarea:disabled {
 
 .cancel-btn:hover {
     background: #c82333;
+}
+
+@media (max-width: 768px) {
+    .chat-input-container {
+        width: 100%;
+        min-width: 0;
+    }
 }
