@@ -1,4 +1,5 @@
 using Dapper;
+using Microsoft.Extensions.Logging;
 
 namespace OpenAnima.Core.RunPersistence;
 
@@ -10,6 +11,7 @@ namespace OpenAnima.Core.RunPersistence;
 public class RunDbInitializer
 {
     private readonly RunDbConnectionFactory _factory;
+    private readonly ILogger<RunDbInitializer>? _logger;
 
     /// <summary>The complete schema creation script, executed as a single batch.</summary>
     private const string SchemaScript = """
@@ -118,9 +120,11 @@ public class RunDbInitializer
     /// Initializes a new <see cref="RunDbInitializer"/> using the provided connection factory.
     /// </summary>
     /// <param name="factory">The factory used to obtain a <see cref="Microsoft.Data.Sqlite.SqliteConnection"/>.</param>
-    public RunDbInitializer(RunDbConnectionFactory factory)
+    /// <param name="logger">Optional logger for migration diagnostics.</param>
+    public RunDbInitializer(RunDbConnectionFactory factory, ILogger<RunDbInitializer>? logger = null)
     {
         _factory = factory ?? throw new ArgumentNullException(nameof(factory));
+        _logger = logger;
     }
 
     /// <summary>
@@ -146,7 +150,7 @@ public class RunDbInitializer
     /// Applies additive schema migrations for columns added after the initial schema creation.
     /// All migrations are idempotent — safe to call on every startup.
     /// </summary>
-    private static async Task MigrateSchemaAsync(Microsoft.Data.Sqlite.SqliteConnection conn)
+    private async Task MigrateSchemaAsync(Microsoft.Data.Sqlite.SqliteConnection conn)
     {
         // Check if workflow_preset column exists (added in Phase 49-02)
         var columns = await conn.QueryAsync<string>(
@@ -157,5 +161,244 @@ public class RunDbInitializer
         {
             await conn.ExecuteAsync("ALTER TABLE runs ADD COLUMN workflow_preset TEXT");
         }
+
+        // Phase 65: Migrate old 3-table memory model to new 4-table model
+        await MigrateToFourTableModelAsync(conn);
+    }
+
+    /// <summary>
+    /// Migrates the old 3-table memory model (memory_nodes with content column,
+    /// memory_edges with from_uri/to_uri, memory_snapshots) to the new 4-table model
+    /// (memory_nodes with UUID PK, memory_contents, memory_edges with parent_uuid/child_uuid,
+    /// memory_uri_paths). Runs inside an atomic transaction with automatic backup.
+    /// </summary>
+    private async Task MigrateToFourTableModelAsync(Microsoft.Data.Sqlite.SqliteConnection conn)
+    {
+        // Detect old schema: old memory_nodes has a 'content' column; new one does not.
+        var nodeColumns = await conn.QueryAsync<string>(
+            "SELECT name FROM pragma_table_info('memory_nodes')");
+        var nodeColSet = new HashSet<string>(nodeColumns);
+
+        if (!nodeColSet.Contains("content"))
+            return; // Already migrated or fresh install with new schema
+
+        _logger?.LogInformation("Detected old memory schema. Starting migration to four-table model...");
+
+        // Backup the database file before migration
+        var dbPath = conn.DataSource;
+        if (!string.IsNullOrEmpty(dbPath) && System.IO.File.Exists(dbPath))
+        {
+            var backupPath = $"{dbPath}.bak-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}";
+            System.IO.File.Copy(dbPath, backupPath);
+            _logger?.LogInformation("Database backed up to {BackupPath}", backupPath);
+        }
+
+        await using var tx = await conn.BeginTransactionAsync();
+        try
+        {
+            // 1. Read all old data before dropping tables
+            var oldNodes = (await conn.QueryAsync<OldMemoryNode>(
+                "SELECT uri, anima_id, content, disclosure_trigger, keywords, source_artifact_id, source_step_id, created_at, updated_at FROM memory_nodes",
+                transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx)).ToList();
+
+            var oldEdges = (await conn.QueryAsync<OldMemoryEdge>(
+                "SELECT id, anima_id, from_uri, to_uri, label, created_at FROM memory_edges",
+                transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx)).ToList();
+
+            var oldSnapshots = (await conn.QueryAsync<OldMemorySnapshot>(
+                "SELECT id, uri, anima_id, content, snapshot_at FROM memory_snapshots",
+                transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx)).ToList();
+
+            _logger?.LogInformation("Read {NodeCount} nodes, {EdgeCount} edges, {SnapshotCount} snapshots from old schema",
+                oldNodes.Count, oldEdges.Count, oldSnapshots.Count);
+
+            // 2. Build UUID map: (uri, anima_id) -> uuid
+            var uuidMap = new Dictionary<(string Uri, string AnimaId), string>();
+            foreach (var node in oldNodes)
+            {
+                uuidMap[(node.Uri, node.AnimaId)] = Guid.NewGuid().ToString("D");
+            }
+
+            // 3. Drop old tables and indexes
+            await conn.ExecuteAsync("DROP INDEX IF EXISTS idx_memory_nodes_anima", transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
+            await conn.ExecuteAsync("DROP INDEX IF EXISTS idx_memory_edges_anima", transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
+            await conn.ExecuteAsync("DROP INDEX IF EXISTS idx_memory_edges_to_uri", transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
+            await conn.ExecuteAsync("DROP INDEX IF EXISTS idx_memory_snapshots_uri", transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
+            await conn.ExecuteAsync("DROP TABLE IF EXISTS memory_snapshots", transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
+            await conn.ExecuteAsync("DROP TABLE IF EXISTS memory_edges", transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
+            await conn.ExecuteAsync("DROP TABLE IF EXISTS memory_nodes", transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
+
+            // 4. Create new tables (same structure as SchemaScript memory section)
+            await conn.ExecuteAsync("""
+                CREATE TABLE memory_nodes (
+                    uuid        TEXT NOT NULL PRIMARY KEY,
+                    anima_id    TEXT NOT NULL,
+                    node_type   TEXT NOT NULL DEFAULT 'Fact',
+                    display_name TEXT,
+                    created_at  TEXT NOT NULL,
+                    updated_at  TEXT NOT NULL
+                );
+
+                CREATE TABLE memory_contents (
+                    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                    node_uuid           TEXT NOT NULL,
+                    anima_id            TEXT NOT NULL,
+                    content             TEXT NOT NULL,
+                    disclosure_trigger  TEXT,
+                    keywords            TEXT,
+                    source_artifact_id  TEXT,
+                    source_step_id      TEXT,
+                    created_at          TEXT NOT NULL
+                );
+
+                CREATE TABLE memory_edges (
+                    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                    anima_id            TEXT NOT NULL,
+                    parent_uuid         TEXT NOT NULL,
+                    child_uuid          TEXT NOT NULL,
+                    label               TEXT NOT NULL,
+                    priority            INTEGER NOT NULL DEFAULT 0,
+                    weight              REAL NOT NULL DEFAULT 1.0,
+                    bidirectional       INTEGER NOT NULL DEFAULT 0,
+                    disclosure_trigger  TEXT,
+                    created_at          TEXT NOT NULL
+                );
+
+                CREATE TABLE memory_uri_paths (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    uri         TEXT NOT NULL,
+                    node_uuid   TEXT NOT NULL,
+                    anima_id    TEXT NOT NULL,
+                    created_at  TEXT NOT NULL
+                );
+
+                CREATE INDEX idx_memory_nodes_anima ON memory_nodes(anima_id);
+                CREATE INDEX idx_memory_contents_node ON memory_contents(node_uuid, id DESC);
+                CREATE INDEX idx_memory_contents_anima ON memory_contents(anima_id);
+                CREATE INDEX idx_memory_edges_anima ON memory_edges(anima_id, parent_uuid);
+                CREATE INDEX idx_memory_edges_child ON memory_edges(anima_id, child_uuid);
+                CREATE UNIQUE INDEX idx_memory_uri_paths_uri_anima ON memory_uri_paths(uri, anima_id);
+                CREATE INDEX idx_memory_uri_paths_node ON memory_uri_paths(node_uuid);
+                """, transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
+
+            // 5. Migrate nodes -> memory_nodes + memory_contents + memory_uri_paths
+            foreach (var old in oldNodes)
+            {
+                var uuid = uuidMap[(old.Uri, old.AnimaId)];
+                var nodeType = InferNodeType(old.Uri);
+                var displayName = ExtractDisplayName(old.Uri);
+
+                await conn.ExecuteAsync(
+                    "INSERT INTO memory_nodes (uuid, anima_id, node_type, display_name, created_at, updated_at) VALUES (@Uuid, @AnimaId, @NodeType, @DisplayName, @CreatedAt, @UpdatedAt)",
+                    new { Uuid = uuid, old.AnimaId, NodeType = nodeType, DisplayName = displayName, old.CreatedAt, old.UpdatedAt },
+                    transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
+
+                // Current content becomes latest memory_contents row
+                await conn.ExecuteAsync(
+                    "INSERT INTO memory_contents (node_uuid, anima_id, content, disclosure_trigger, keywords, source_artifact_id, source_step_id, created_at) VALUES (@NodeUuid, @AnimaId, @Content, @DisclosureTrigger, @Keywords, @SourceArtifactId, @SourceStepId, @CreatedAt)",
+                    new { NodeUuid = uuid, old.AnimaId, old.Content, old.DisclosureTrigger, old.Keywords, old.SourceArtifactId, old.SourceStepId, CreatedAt = old.UpdatedAt },
+                    transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
+
+                // URI path entry
+                await conn.ExecuteAsync(
+                    "INSERT INTO memory_uri_paths (uri, node_uuid, anima_id, created_at) VALUES (@Uri, @NodeUuid, @AnimaId, @CreatedAt)",
+                    new { old.Uri, NodeUuid = uuid, old.AnimaId, old.CreatedAt },
+                    transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
+            }
+
+            // 6. Migrate snapshots -> older memory_contents rows
+            foreach (var snap in oldSnapshots)
+            {
+                if (uuidMap.TryGetValue((snap.Uri, snap.AnimaId), out var uuid))
+                {
+                    await conn.ExecuteAsync(
+                        "INSERT INTO memory_contents (node_uuid, anima_id, content, disclosure_trigger, keywords, source_artifact_id, source_step_id, created_at) VALUES (@NodeUuid, @AnimaId, @Content, NULL, NULL, NULL, NULL, @CreatedAt)",
+                        new { NodeUuid = uuid, snap.AnimaId, snap.Content, CreatedAt = snap.SnapshotAt },
+                        transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
+                }
+            }
+
+            // 7. Migrate edges (URI-based -> UUID-based)
+            foreach (var old in oldEdges)
+            {
+                if (uuidMap.TryGetValue((old.FromUri, old.AnimaId), out var parentUuid) &&
+                    uuidMap.TryGetValue((old.ToUri, old.AnimaId), out var childUuid))
+                {
+                    await conn.ExecuteAsync(
+                        "INSERT INTO memory_edges (anima_id, parent_uuid, child_uuid, label, priority, weight, bidirectional, disclosure_trigger, created_at) VALUES (@AnimaId, @ParentUuid, @ChildUuid, @Label, 0, 1.0, 0, NULL, @CreatedAt)",
+                        new { old.AnimaId, ParentUuid = parentUuid, ChildUuid = childUuid, old.Label, old.CreatedAt },
+                        transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
+                }
+                else
+                {
+                    _logger?.LogWarning("Skipping edge {FromUri} -> {ToUri}: one or both nodes not found in UUID map", old.FromUri, old.ToUri);
+                }
+            }
+
+            await tx.CommitAsync();
+            _logger?.LogInformation("Memory schema migration complete: {NodeCount} nodes, {EdgeCount} edges, {SnapshotCount} content versions migrated",
+                oldNodes.Count, oldEdges.Count, oldSnapshots.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Memory schema migration FAILED. Rolling back. Old data is safe in backup file.");
+            await tx.RollbackAsync();
+            throw new InvalidOperationException("Memory schema migration failed. Application cannot start with inconsistent schema. See backup file.", ex);
+        }
+    }
+
+    /// <summary>Infers node type from URI prefix per CONTEXT.md mapping.</summary>
+    private static string InferNodeType(string uri)
+    {
+        if (uri.StartsWith("core://", StringComparison.Ordinal)) return "System";
+        if (uri.StartsWith("sediment://fact/", StringComparison.Ordinal)) return "Fact";
+        if (uri.StartsWith("sediment://preference/", StringComparison.Ordinal)) return "Preference";
+        if (uri.StartsWith("sediment://entity/", StringComparison.Ordinal)) return "Entity";
+        if (uri.StartsWith("sediment://learning/", StringComparison.Ordinal)) return "Learning";
+        if (uri.StartsWith("run://", StringComparison.Ordinal)) return "Artifact";
+        return "Fact";
+    }
+
+    /// <summary>Extracts last segment after the final '/' as display name.</summary>
+    private static string ExtractDisplayName(string uri)
+    {
+        var lastSlash = uri.LastIndexOf('/');
+        return lastSlash >= 0 && lastSlash < uri.Length - 1
+            ? uri[(lastSlash + 1)..]
+            : uri;
+    }
+
+    // ---- Migration DTO types (internal only) ----
+
+    private record OldMemoryNode
+    {
+        public string Uri { get; init; } = string.Empty;
+        public string AnimaId { get; init; } = string.Empty;
+        public string Content { get; init; } = string.Empty;
+        public string? DisclosureTrigger { get; init; }
+        public string? Keywords { get; init; }
+        public string? SourceArtifactId { get; init; }
+        public string? SourceStepId { get; init; }
+        public string CreatedAt { get; init; } = string.Empty;
+        public string UpdatedAt { get; init; } = string.Empty;
+    }
+
+    private record OldMemoryEdge
+    {
+        public int Id { get; init; }
+        public string AnimaId { get; init; } = string.Empty;
+        public string FromUri { get; init; } = string.Empty;
+        public string ToUri { get; init; } = string.Empty;
+        public string Label { get; init; } = string.Empty;
+        public string CreatedAt { get; init; } = string.Empty;
+    }
+
+    private record OldMemorySnapshot
+    {
+        public int Id { get; init; }
+        public string Uri { get; init; } = string.Empty;
+        public string AnimaId { get; init; } = string.Empty;
+        public string Content { get; init; } = string.Empty;
+        public string SnapshotAt { get; init; } = string.Empty;
     }
 }
