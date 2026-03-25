@@ -5,7 +5,7 @@
 <div class="chat-input-container">
     <textarea
         id="chat-input"
-        rows="1"
+        rows="3"
         placeholder="@(IsAgentRunning ? L["Chat.AgentRunning"] : L["Chat.Placeholder"])"
         @oninput="OnInput"
         disabled="@IsDisabled">

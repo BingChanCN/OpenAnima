@@ -12,12 +12,12 @@
 @inject ChatContextManager _contextManager
 @inject ChatSessionState _chatSessionState
 @inject IAnimaRuntimeManager _animaRuntimeManager
-@inject IAnimaContext _animaContext
+@inject IModuleContext _animaContext
 @inject NavigationManager _navigation
 @inject IJSRuntime JS
 @inject IStringLocalizer<SharedResources> L
 @inject LanguageService LangSvc
-@inject IAnimaModuleConfigService _moduleConfigService
+@inject IModuleConfig _moduleConfigService
 
 <div class="chat-panel">
     @if (!IsPipelineConfigured())
@@ -56,10 +56,12 @@
         OutputTokens="@_contextManager.TotalOutputTokens"
         CurrentContextTokens="@_contextManager.CurrentContextTokens"
         MaxContextTokens="@_contextManager.MaxContextTokens" />
-    <ChatInput OnSend="SendMessage"
-               IsDisabled="@(_isGenerating || IsContextLimitReached() || !IsPipelineConfigured())"
-               IsAgentRunning="@(_isGenerating && _isAgentMode)"
-               OnCancel="CancelAgentExecution" />
+    <div class="chat-input-wrapper">
+        <ChatInput OnSend="SendMessage"
+                   IsDisabled="@(_isGenerating || IsContextLimitReached() || !IsPipelineConfigured())"
+                   IsAgentRunning="@(_isGenerating && _isAgentMode)"
+                   OnCancel="CancelAgentExecution" />
+    </div>
 </div>
 
 @code {
