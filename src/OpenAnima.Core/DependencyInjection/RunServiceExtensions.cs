@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenAnima.Core.Artifacts;
 using OpenAnima.Core.Hosting;
 using OpenAnima.Core.Memory;
@@ -38,7 +39,9 @@ public static class RunServiceExtensions
         services.AddSingleton<IArtifactStore, ArtifactStore>();
 
         services.AddSingleton(new RunDbConnectionFactory(dbPath));
-        services.AddSingleton<RunDbInitializer>();
+        services.AddSingleton(sp => new RunDbInitializer(
+            sp.GetRequiredService<RunDbConnectionFactory>(),
+            sp.GetRequiredService<ILogger<RunDbInitializer>>()));
         services.AddSingleton<IRunRepository, RunRepository>();
         services.AddSingleton<IRunService, RunService>();
         services.AddSingleton<IStepRecorder, StepRecorder>();
