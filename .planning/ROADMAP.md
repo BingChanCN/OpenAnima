@@ -16,6 +16,7 @@
 - ✅ **v2.0.1 Provider Registry & Living Memory** — Phases 50-57 (shipped 2026-03-23)
 - ✅ **v2.0.2 Chat Agent Loop** — Phases 58-60 (shipped 2026-03-23)
 - ✅ **v2.0.3 Editor Experience** — Phases 61-64 (shipped 2026-03-24)
+- [ ] **v2.0.4 Intelligent Memory & Persistence** — Phases 65-70
 
 ## Phases
 
@@ -168,6 +169,87 @@
 
 </details>
 
+### v2.0.4 Intelligent Memory & Persistence (Phases 65-70)
+
+**Milestone Goal:** Overhaul the memory system with graph-based architecture, LLM-guided recall, and first-person memory CRUD; fix platform persistence and chat resilience.
+
+- [ ] **Phase 65: Memory Schema Migration** - Four-table data model split with atomic migration and SQLite hardening
+- [ ] **Phase 66: Platform Persistence** - Wiring layout and chat history survive application restarts
+- [ ] **Phase 67: Memory Tools & Sedimentation** - First-person memory CRUD tools and improved sedimentation quality
+- [ ] **Phase 68: Memory Visibility** - Memory operations displayed as tool cards and summary chips in chat
+- [ ] **Phase 69: Background Chat Execution** - LLM streaming survives page navigation with buffer replay
+- [ ] **Phase 70: LLM-Guided Graph Exploration** - Opt-in LLM-driven graph traversal recall with dynamic depth
+
+## Phase Details
+
+### Phase 65: Memory Schema Migration
+**Goal**: Memory data model fully split into four tables (Nodes/Memories/Edges/Paths) with stable node identity, first-class edges, and URI routing — all existing data migrated without loss
+**Depends on**: Phase 64 (v2.0.3 complete)
+**Requirements**: MEMA-01, MEMA-02, MEMA-03, MEMA-04, MEMA-05, MEMA-06, MEMA-07, MEMA-08, PERS-04
+**Success Criteria** (what must be TRUE):
+  1. Application starts with four memory tables (memory_nodes, memory_contents, memory_edges, memory_uri_paths) present in SQLite, each with correct columns
+  2. Existing memory data from pre-migration schema appears intact after migration — no nodes lost, content preserved, edges maintained (verified by automated migration test)
+  3. Content updates to a memory node create new memory_contents rows while the node UUID remains stable (node identity independent from content)
+  4. IMemoryGraph consumers (recall, sedimentation, /memory UI) continue to function with updated interface — no runtime errors on existing workflows
+  5. All SQLite connections include Busy Timeout=5000, preventing write failures under concurrent access (sedimentation + tool writes)
+**Plans**: TBD
+
+### Phase 66: Platform Persistence
+**Goal**: Users return to their wiring editor and chat exactly where they left off after restarting the application
+**Depends on**: Phase 65 (SQLite busy timeout in place, schema migration pattern established)
+**Requirements**: PERS-01, PERS-02, PERS-03
+**Success Criteria** (what must be TRUE):
+  1. User restarts the application and the wiring editor opens with the same pan/zoom/scale viewport position as before shutdown — per Anima
+  2. User restarts the application and sees previous chat messages in scrollback — per Anima
+  3. Restored chat history feeds only the last N messages (default 10, configurable) to the LLM context, not the full scrollback — preventing context budget explosion
+**Plans**: TBD
+
+### Phase 67: Memory Tools & Sedimentation
+**Goal**: Agent can autonomously create, update, soft-delete, and list its own memory nodes with improved bilingual sedimentation quality
+**Depends on**: Phase 65 (four-table schema required for new memory operations)
+**Requirements**: MEMT-01, MEMT-02, MEMT-03, MEMT-04, MEMT-05, MEMS-01, MEMS-02, MEMS-03
+**Success Criteria** (what must be TRUE):
+  1. Agent can create a new memory node by calling `memory_create` with path, content, and keywords — the node appears on the /memory page
+  2. Agent can update an existing memory node's content via `memory_update` — the /memory page shows updated content while the node UUID remains the same
+  3. Agent can soft-delete a memory node via `memory_delete` — the node is hidden from recall but recoverable from the /memory UI (deprecated flag, not hard delete)
+  4. Agent can list memory nodes by URI prefix via `memory_list` — enabling self-aware navigation of its own knowledge graph
+  5. All memory tool operations publish MemoryOperationPayload events on the EventBus for downstream consumers (visibility, logging)
+  6. Sedimentation extracts bilingual (Chinese + English) keywords and broader trigger conditions, with input capped at last 20 messages
+**Plans**: TBD
+
+### Phase 68: Memory Visibility
+**Goal**: Users can see exactly when and how the agent creates, updates, or deletes memories directly in the chat interface
+**Depends on**: Phase 67 (memory tools must publish MemoryOperationPayload events)
+**Requirements**: MEMV-01, MEMV-02, MEMV-03
+**Success Criteria** (what must be TRUE):
+  1. Explicit memory tool calls (memory_create, memory_update, memory_delete) appear as collapsible tool cards in chat bubbles — same interaction pattern as existing workspace tool cards
+  2. Background sedimentation shows a single collapsed "N memories sedimented" summary chip in chat — not one card per sedimented node
+  3. Memory tool cards are visually distinguishable from workspace tool cards via a distinct CSS class (ToolCategory.Memory)
+**Plans**: TBD
+
+### Phase 69: Background Chat Execution
+**Goal**: LLM conversations continue running when the user navigates away from the chat page, and the user sees the complete response upon returning
+**Depends on**: Phase 66 (chat history persistence needed for final message storage), Phase 67 (tool call events survive navigation)
+**Requirements**: CHAT-01, CHAT-02, CHAT-03, CHAT-04
+**Success Criteria** (what must be TRUE):
+  1. User sends a message, navigates to another page (e.g., /settings), waits, navigates back — the assistant response is fully rendered in chat
+  2. User can see streaming tokens resume in real-time if they return to chat while the LLM is still generating
+  3. User can cancel an in-progress background LLM execution from the chat interface after navigating back
+  4. Agent tool calls (workspace and memory) continue executing to completion even when the user is on a different page
+**Plans**: TBD
+
+### Phase 70: LLM-Guided Graph Exploration
+**Goal**: Memory recall can optionally use a secondary LLM to explore the graph from root nodes, selecting relevant branches based on conversation context for deeper recall precision
+**Depends on**: Phase 65 (four-table schema with edges), Phase 67 (memory tools populate graph), Phase 69 (stable execution model)
+**Requirements**: MEMR-01, MEMR-02, MEMR-03, MEMR-04, MEMR-05, MEMR-06, MEMR-07, MEMR-08, MEMR-09
+**Success Criteria** (what must be TRUE):
+  1. Graph exploration appears as an optional fourth pass in the recall pipeline (after Boot/Disclosure/Glossary) — disabled by default, enabled per Anima via module config
+  2. When enabled, the LLM starts from root/top-level nodes and selects relevant branches, exploring selected branches in parallel (configurable concurrency, default 3)
+  3. Exploration depth is dynamically decided by the LLM with a hard ceiling (max 3 levels) — the LLM can stop early if branches are not relevant
+  4. User can configure which LLM model is used for memory exploration in Settings — independent from the main chat LLM
+  5. Cyclic graphs do not cause infinite loops (cross-depth visited HashSet), per-level candidates are capped (.Take(20)), and LLM-returned URIs are validated against the candidate set (hallucination guard)
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -237,8 +319,15 @@
 | 62. Connection Deletion UX | v2.0.3 | 2/2 | Complete | 2026-03-24 |
 | 63. Module Descriptions | v2.0.3 | 1/1 | Complete | 2026-03-24 |
 | 64. Port Hover Tooltips | v2.0.3 | 1/1 | Complete | 2026-03-24 |
+| 65. Memory Schema Migration | v2.0.4 | 0/TBD | Not started | - |
+| 66. Platform Persistence | v2.0.4 | 0/TBD | Not started | - |
+| 67. Memory Tools & Sedimentation | v2.0.4 | 0/TBD | Not started | - |
+| 68. Memory Visibility | v2.0.4 | 0/TBD | Not started | - |
+| 69. Background Chat Execution | v2.0.4 | 0/TBD | Not started | - |
+| 70. LLM-Guided Graph Exploration | v2.0.4 | 0/TBD | Not started | - |
 
 **Total shipped: 64 phases, 149 plans across 14 milestones**
+**v2.0.4 in progress: 6 phases (65-70), 36 requirements**
 
 ---
-*Last updated: 2026-03-25 -- v2.0.3 Editor Experience shipped*
+*Last updated: 2026-03-25 -- v2.0.4 roadmap created*
