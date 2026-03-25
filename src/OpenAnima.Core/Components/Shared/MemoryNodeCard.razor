@@ -8,22 +8,22 @@
 <div class="node-card">
     <div class="node-uri-pill">@Node.Uri</div>
 
-    <label class="field-label">Content</label>
+    <label class="field-label">@L["MemoryPage.ContentLabel"]</label>
     <textarea class="node-content-input"
               @bind="EditContent"
               @bind:event="oninput"
               rows="8"
-              aria-label="Memory node content for @Node.Uri"></textarea>
+              aria-label="@L["Memory.ContentAria", Node.Uri]"></textarea>
 
-    <label class="field-label">Disclosure Trigger</label>
+    <label class="field-label">@L["Memory.DisclosureTrigger"]</label>
     <input class="node-trigger-input"
            type="text"
            @bind="EditTrigger"
            @bind:event="oninput"
-           placeholder="e.g. when user mentions project X"
-           aria-label="Disclosure trigger for @Node.Uri" />
+           placeholder="@L["Memory.DisclosureTriggerPlaceholder"]"
+           aria-label="@L["Memory.DisclosureTriggerAria", Node.Uri]" />
 
-    <label class="field-label">Keywords (glossary)</label>
+    <label class="field-label">@L["Memory.KeywordsGlossary"]</label>
     <div class="keyword-tags">
         @foreach (var kw in _keywords)
         {
@@ -31,7 +31,7 @@
                 @kw
                 <button class="keyword-remove"
                         @onclick="() => RemoveKeyword(kw)"
-                        aria-label="Remove keyword @kw">×</button>
+                        aria-label="@L["Memory.RemoveKeywordAria", kw]">×</button>
             </span>
         }
         <input class="keyword-add-input"
@@ -39,8 +39,8 @@
                @bind="_newKeyword"
                @bind:event="oninput"
                @onkeydown="HandleKeywordKeyDown"
-               placeholder="+ add keyword"
-               aria-label="Add keyword" />
+               placeholder="@L["Memory.AddKeywordPlaceholder"]"
+               aria-label="@L["Memory.AddKeywordAria"]" />
     </div>
 
     <!-- ═══ Provenance Section (default expanded) ═══ -->
@@ -60,15 +60,15 @@
             @if (Node.SourceStepId != null || Node.SourceArtifactId != null)
             {
                 <div class="provenance-row">
-                    <span>Source:</span>
+                    <span>@L["Memory.Source"]</span>
                     @if (Node.SourceStepId != null)
                     {
-                        <span class="provenance-value">Step @Node.SourceStepId</span>
+                        <span class="provenance-value">@L["Common.Step"] @Node.SourceStepId</span>
                     }
                     @if (Node.SourceArtifactId != null)
                     {
                         <span class="provenance-separator">·</span>
-                        <span class="provenance-value">Artifact @Node.SourceArtifactId</span>
+                        <span class="provenance-value">@L["Artifact.Title"] @Node.SourceArtifactId</span>
                     }
                 </div>
                 @if (Node.SourceStepId != null)
@@ -81,17 +81,17 @@
                     @if (_stepDetailsExpanded && _stepDetails != null)
                     {
                         <div class="step-detail-block">
-                            <div class="step-detail-row"><span class="step-label">Module:</span> <span>@_stepDetails.ModuleName</span></div>
-                            <div class="step-detail-row"><span class="step-label">Status:</span> <span class="step-status step-status-@_stepDetails.Status.ToLowerInvariant()">@_stepDetails.Status</span></div>
-                            <div class="step-detail-row"><span class="step-label">Occurred:</span> <span>@FormatTimestamp(_stepDetails.OccurredAt)</span></div>
+                            <div class="step-detail-row"><span class="step-label">@L["Common.Module"]:</span> <span>@_stepDetails.ModuleName</span></div>
+                            <div class="step-detail-row"><span class="step-label">@L["Common.Status"]:</span> <span class="step-status step-status-@_stepDetails.Status.ToLowerInvariant()">@_stepDetails.Status</span></div>
+                            <div class="step-detail-row"><span class="step-label">@L["Common.Occurred"]:</span> <span>@FormatTimestamp(_stepDetails.OccurredAt)</span></div>
                             @if (_stepDetails.DurationMs.HasValue)
                             {
-                                <div class="step-detail-row"><span class="step-label">Duration:</span> <span>@(_stepDetails.DurationMs)ms</span></div>
+                                <div class="step-detail-row"><span class="step-label">@L["Common.Duration"]:</span> <span>@(_stepDetails.DurationMs)ms</span></div>
                             }
                             @if (!string.IsNullOrEmpty(_stepDetails.OutputSummary))
                             {
                                 <div class="step-detail-row">
-                                    <span class="step-label">Output:</span>
+                                    <span class="step-label">@L["Common.Output"]:</span>
                                     <pre class="step-output">@Truncate(_stepDetails.OutputSummary, 200)</pre>
                                 </div>
                             }
@@ -111,7 +111,7 @@
                 </div>
             }
             <div class="node-timestamps">
-                Created: @FormatTimestamp(Node.CreatedAt) · Updated: @FormatTimestamp(Node.UpdatedAt)
+                @L["Common.Created"]: @FormatTimestamp(Node.CreatedAt) · @L["Common.Updated"]: @FormatTimestamp(Node.UpdatedAt)
             </div>
         </div>
     }
@@ -144,7 +144,7 @@
 
                     <div class="snapshot-entry" role="listitem">
                         <div class="snapshot-row">
-                            <span class="snapshot-timestamp">@FormatTimestamp(snapshot.SnapshotAt)</span>
+                            <span class="snapshot-timestamp">@FormatTimestamp(snapshot.CreatedAt)</span>
                             <span class="snapshot-preview">@Truncate(snapshot.Content, 60)</span>
                             <button class="btn-text-link"
                                     @onclick="() => _expandedSnapshotId = isExpanded ? null : snapshot.Id">
@@ -161,7 +161,7 @@
                             </div>
                             <button class="btn-restore"
                                     @onclick="() => RequestRestore(snapshot)"
-                                    aria-label="Restore snapshot from @FormatTimestamp(snapshot.SnapshotAt)">
+                                    aria-label="@L["Memory.RestoreSnapshotAria", FormatTimestamp(snapshot.CreatedAt)]">
                                 @L["Memory.RestoreButton"]
                             </button>
                         }
@@ -202,14 +202,14 @@
                         @foreach (var edge in _outgoingEdges)
                         {
                             <div class="edge-row" role="listitem">
-                                <span class="edge-this-node">This node</span>
+                                <span class="edge-this-node">@L["Memory.ThisNode"]</span>
                                 <span class="edge-arrow">&#x2192;</span>
                                 <span class="edge-uri-wrapper"
                                       @onmouseover="() => _tooltipUri = edge.ToUri"
                                       @onmouseout="() => _tooltipUri = null">
                                     <button class="edge-uri-link"
                                             @onclick="() => NavigateToNode(edge.ToUri)"
-                                            aria-label="Navigate to @edge.ToUri">
+                                            aria-label="@L["Memory.NavigateToAria", edge.ToUri]">
                                         @edge.ToUri
                                     </button>
                                     @if (_tooltipUri == edge.ToUri && _nodeContentCache.TryGetValue(edge.ToUri, out var outTip))
@@ -240,7 +240,7 @@
                                       @onmouseout="() => _tooltipUri = null">
                                     <button class="edge-uri-link"
                                             @onclick="() => NavigateToNode(edge.FromUri)"
-                                            aria-label="Navigate to @edge.FromUri">
+                                            aria-label="@L["Memory.NavigateToAria", edge.FromUri]">
                                         @edge.FromUri
                                     </button>
                                     @if (_tooltipUri == edge.FromUri && _nodeContentCache.TryGetValue(edge.FromUri, out var inTip))
@@ -249,7 +249,7 @@
                                     }
                                 </span>
                                 <span class="edge-arrow">&#x2192;</span>
-                                <span class="edge-this-node">This node</span>
+                                <span class="edge-this-node">@L["Memory.ThisNode"]</span>
                                 <span class="edge-label-badge">@edge.Label</span>
                                 <span class="edge-date">@FormatTimestamp(edge.CreatedAt)</span>
                             </div>
@@ -263,19 +263,19 @@
     <div class="node-actions">
         <button class="btn-save"
                 @onclick="OnSave"
-                aria-label="Save changes to @Node.Uri">
-            Save Changes
+                aria-label="@L["Memory.SaveChangesAria", Node.Uri]">
+            @L["Memory.SaveChanges"]
         </button>
         <button class="btn-danger"
                 @onclick="OnDeleteClick"
-                aria-label="Delete memory node @Node.Uri">
-            Delete Node
+                aria-label="@L["Memory.DeleteNodeAria", Node.Uri]">
+            @L["Memory.DeleteNode"]
         </button>
     </div>
 
     @if (_showSaveFlash)
     {
-        <div class="save-flash">@(_isRestoreFlash ? L["Memory.RestoreFlash"] : "Saved")</div>
+        <div class="save-flash">@(_isRestoreFlash ? L["Memory.RestoreFlash"] : L["Memory.Saved"])</div>
     }
 
     @if (_showRestoreConfirm && _pendingRestoreSnapshot != null)
@@ -315,10 +315,10 @@
     // Snapshot History section
     private bool _snapshotHistoryExpanded;
     private bool _snapshotsLoaded;
-    private IReadOnlyList<MemorySnapshot> _snapshots = Array.Empty<MemorySnapshot>();
+    private IReadOnlyList<MemoryContent> _snapshots = Array.Empty<MemoryContent>();
     private int? _expandedSnapshotId;
     private bool _showRestoreConfirm;
-    private MemorySnapshot? _pendingRestoreSnapshot;
+    private MemoryContent? _pendingRestoreSnapshot;
 
     // Relationships section
     private bool _relationshipsExpanded;
@@ -343,7 +343,7 @@
 
         _snapshotHistoryExpanded = false;
         _snapshotsLoaded = false;
-        _snapshots = Array.Empty<MemorySnapshot>();
+        _snapshots = Array.Empty<MemoryContent>();
         _expandedSnapshotId = null;
         _showRestoreConfirm = false;
         _pendingRestoreSnapshot = null;
@@ -407,7 +407,7 @@
         _snapshotHistoryExpanded = !_snapshotHistoryExpanded;
         if (_snapshotHistoryExpanded && !_snapshotsLoaded)
         {
-            _snapshots = await MemoryGraphService.GetSnapshotsAsync(Node.AnimaId, Node.Uri);
+            _snapshots = await MemoryGraphService.GetContentHistoryAsync(Node.AnimaId, Node.Uri);
             _snapshotsLoaded = true;
         }
     }
@@ -471,7 +471,7 @@
 
     // ── Restore ──
 
-    private void RequestRestore(MemorySnapshot snapshot)
+    private void RequestRestore(MemoryContent snapshot)
     {
         _pendingRestoreSnapshot = snapshot;
         _showRestoreConfirm = true;
@@ -501,7 +501,7 @@
         _snapshotsLoaded = false;
         if (_snapshotHistoryExpanded)
         {
-            _snapshots = await MemoryGraphService.GetSnapshotsAsync(Node.AnimaId, Node.Uri);
+            _snapshots = await MemoryGraphService.GetContentHistoryAsync(Node.AnimaId, Node.Uri);
             _snapshotsLoaded = true;
         }
 
