@@ -17,7 +17,8 @@
 **Latest shipped:** v2.0.3 Editor Experience (2026-03-24)
 **Current milestone:** v2.0.4 Intelligent Memory & Persistence
 **Milestones complete:** v1.0-v2.0.3 (14 milestones, 64 phases, 149 plans)
-**Codebase:** ~52,000 LOC (C#, Razor, CSS, JS) | 658 tests green
+**Codebase:** ~52,000 LOC (C#, Razor, CSS, JS) | 662 tests green
+**Phase 65 complete:** Memory schema migration — 4-table model (memory_nodes/UUID PK, memory_contents, memory_edges/UUID refs, memory_uri_paths), atomic migration with backup/rollback, MemoryGraph rewrite
 
 ## What This Is
 
