@@ -315,6 +315,9 @@ public class FakeMemoryGraph : IMemoryGraph
     public Task<IReadOnlyList<MemoryEdge>> GetIncomingEdgesAsync(string animaId, string toUri, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<MemoryEdge>>([]);
 
-    public Task<IReadOnlyList<MemorySnapshot>> GetSnapshotsAsync(string animaId, string uri, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<MemorySnapshot>>([]);
+    public Task<IReadOnlyList<MemoryContent>> GetContentHistoryAsync(string animaId, string uri, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<MemoryContent>>([]);
+
+    public Task<MemoryNode?> GetNodeByUuidAsync(string uuid, CancellationToken ct = default) =>
+        Task.FromResult<MemoryNode?>(null);
 }

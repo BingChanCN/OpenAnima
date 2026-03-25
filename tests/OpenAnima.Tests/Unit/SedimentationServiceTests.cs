@@ -173,10 +173,10 @@ public class SedimentationServiceTests : IDisposable
         // Act
         await service.SedimentAsync("anima-s05", MakeMessages(), "response", sourceStepId: null);
 
-        // Assert: snapshot of old content created
-        var snapshots = await _graph.GetSnapshotsAsync("anima-s05", existingUri);
-        Assert.NotEmpty(snapshots);
-        Assert.Contains(snapshots, s => s.Content == "Old content");
+        // Assert: content version history has both versions (new schema: content versioning)
+        var history = await _graph.GetContentHistoryAsync("anima-s05", existingUri);
+        Assert.NotEmpty(history);
+        Assert.Contains(history, s => s.Content == "Old content");
 
         // And node content updated
         var node = await _graph.GetNodeAsync("anima-s05", existingUri);

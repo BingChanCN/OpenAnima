@@ -54,7 +54,20 @@ public class MemoryGraphTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteNodeAsync_ExistingNode_CreatesSnapshot()
+    public async Task WriteNodeAsync_NewNode_GeneratesUuid()
+    {
+        var node = MakeNode("core://agent/uuid-test");
+        await _graph.WriteNodeAsync(node);
+
+        var result = await _graph.GetNodeAsync("anima01", "core://agent/uuid-test");
+
+        Assert.NotNull(result);
+        Assert.False(string.IsNullOrEmpty(result!.Uuid));
+        Assert.True(Guid.TryParse(result.Uuid, out _), "Uuid should be a valid GUID");
+    }
+
+    [Fact]
+    public async Task WriteNodeAsync_ExistingNode_CreatesContentVersion()
     {
         var node = MakeNode("core://agent/mission", content: "original content");
         await _graph.WriteNodeAsync(node);
@@ -62,34 +75,61 @@ public class MemoryGraphTests : IDisposable
         var updated = node with { Content = "updated content", UpdatedAt = DateTimeOffset.UtcNow.ToString("O") };
         await _graph.WriteNodeAsync(updated);
 
-        var snapshots = await _graph.GetSnapshotsAsync("anima01", "core://agent/mission");
+        // New schema: GetContentHistoryAsync returns all versions, newest first
+        var history = await _graph.GetContentHistoryAsync("anima01", "core://agent/mission");
 
-        Assert.Single(snapshots);
-        Assert.Equal("original content", snapshots[0].Content);
+        Assert.Equal(2, history.Count);
+        Assert.Equal("updated content", history[0].Content); // Latest (newest first)
+        Assert.Equal("original content", history[1].Content); // Previous
     }
 
     [Fact]
-    public async Task WriteNodeAsync_ExistingNode_PrunesSnapshotsToTen()
+    public async Task WriteNodeAsync_ExistingNode_PrunesContentToTen()
     {
         var node = MakeNode("core://agent/prunetest", content: "v0");
         await _graph.WriteNodeAsync(node);
 
-        // Overwrite 12 times — should produce 12 snapshots but pruned to 10
+        // Overwrite 12 more times — should produce 13 content versions but pruned to 10
         for (int i = 1; i <= 12; i++)
         {
             var next = node with { Content = $"v{i}", UpdatedAt = DateTimeOffset.UtcNow.ToString("O") };
             await _graph.WriteNodeAsync(next);
         }
 
-        var snapshots = await _graph.GetSnapshotsAsync("anima01", "core://agent/prunetest");
+        var history = await _graph.GetContentHistoryAsync("anima01", "core://agent/prunetest");
 
-        Assert.Equal(10, snapshots.Count);
+        Assert.Equal(10, history.Count);
     }
 
     [Fact]
     public async Task GetNodeAsync_NonExistent_ReturnsNull()
     {
         var result = await _graph.GetNodeAsync("anima01", "core://does-not-exist");
+        Assert.Null(result);
+    }
+
+    // --- GetNodeByUuidAsync ---
+
+    [Fact]
+    public async Task GetNodeByUuidAsync_ExistingNode_ReturnsNode()
+    {
+        var node = MakeNode("core://agent/by-uuid");
+        await _graph.WriteNodeAsync(node);
+
+        var written = await _graph.GetNodeAsync("anima01", "core://agent/by-uuid");
+        Assert.NotNull(written);
+
+        var byUuid = await _graph.GetNodeByUuidAsync(written!.Uuid);
+
+        Assert.NotNull(byUuid);
+        Assert.Equal("core://agent/by-uuid", byUuid!.Uri);
+        Assert.Equal("test content", byUuid.Content);
+    }
+
+    [Fact]
+    public async Task GetNodeByUuidAsync_NonExistent_ReturnsNull()
+    {
+        var result = await _graph.GetNodeByUuidAsync("00000000-0000-0000-0000-000000000000");
         Assert.Null(result);
     }
 
@@ -111,16 +151,18 @@ public class MemoryGraphTests : IDisposable
     // --- DeleteNodeAsync ---
 
     [Fact]
-    public async Task DeleteNodeAsync_RemovesNodeEdgesAndSnapshots()
+    public async Task DeleteNodeAsync_RemovesNodeEdgesAndContentHistory()
     {
-        var node = MakeNode("core://agent/deleteme");
-        await _graph.WriteNodeAsync(node);
+        var nodeA = MakeNode("core://agent/deleteme");
+        var nodeB = MakeNode("core://agent/identity");
+        await _graph.WriteNodeAsync(nodeA);
+        await _graph.WriteNodeAsync(nodeB);
 
-        // Create a snapshot by overwriting
-        var updated = node with { Content = "updated", UpdatedAt = DateTimeOffset.UtcNow.ToString("O") };
+        // Create a content version by overwriting
+        var updated = nodeA with { Content = "updated", UpdatedAt = DateTimeOffset.UtcNow.ToString("O") };
         await _graph.WriteNodeAsync(updated);
 
-        // Add an edge
+        // Add an edge (both nodes must exist for UUID resolution)
         var edge = new MemoryEdge
         {
             AnimaId = "anima01",
@@ -138,9 +180,9 @@ public class MemoryGraphTests : IDisposable
         var gone = await _graph.GetNodeAsync("anima01", "core://agent/deleteme");
         Assert.Null(gone);
 
-        // Verify snapshots gone
-        var snapshots = await _graph.GetSnapshotsAsync("anima01", "core://agent/deleteme");
-        Assert.Empty(snapshots);
+        // Verify content history gone
+        var history = await _graph.GetContentHistoryAsync("anima01", "core://agent/deleteme");
+        Assert.Empty(history);
 
         // Verify edges gone
         var edges = await _graph.GetEdgesAsync("anima01", "core://agent/deleteme");
@@ -152,6 +194,11 @@ public class MemoryGraphTests : IDisposable
     [Fact]
     public async Task AddEdgeAsync_CanBeRetrieved()
     {
+        var nodeA = MakeNode("core://agent/a");
+        var nodeB = MakeNode("core://agent/b");
+        await _graph.WriteNodeAsync(nodeA);
+        await _graph.WriteNodeAsync(nodeB);
+
         var edge = new MemoryEdge
         {
             AnimaId = "anima01",
@@ -184,6 +231,22 @@ public class MemoryGraphTests : IDisposable
         Assert.Equal("project launch", disclosureNodes[0].DisclosureTrigger);
     }
 
+    // --- GetContentHistoryAsync ---
+
+    [Fact]
+    public async Task GetContentHistoryAsync_AfterDelete_ReturnsEmpty()
+    {
+        var node = MakeNode("core://agent/hist-delete");
+        await _graph.WriteNodeAsync(node);
+        var updated = node with { Content = "v2", UpdatedAt = DateTimeOffset.UtcNow.ToString("O") };
+        await _graph.WriteNodeAsync(updated);
+
+        await _graph.DeleteNodeAsync("anima01", "core://agent/hist-delete");
+
+        var history = await _graph.GetContentHistoryAsync("anima01", "core://agent/hist-delete");
+        Assert.Empty(history);
+    }
+
     // --- FindGlossaryMatches ---
 
     [Fact]
@@ -208,6 +271,15 @@ public class MemoryGraphTests : IDisposable
     [Fact]
     public async Task GetIncomingEdgesAsync_ReturnsEdgesPointingToUri()
     {
+        var nodeA = MakeNode("core://agent/a");
+        var nodeB = MakeNode("core://agent/b");
+        var nodeT = MakeNode("core://agent/target");
+        var nodeC = MakeNode("core://agent/c");
+        await _graph.WriteNodeAsync(nodeA);
+        await _graph.WriteNodeAsync(nodeB);
+        await _graph.WriteNodeAsync(nodeT);
+        await _graph.WriteNodeAsync(nodeC);
+
         var edge1 = new MemoryEdge
         {
             AnimaId = "anima01",
