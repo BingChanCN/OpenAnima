@@ -132,23 +132,36 @@ public class RunDbInitializer
     /// Enables WAL journal mode and sets synchronous mode to NORMAL for safe concurrent access.
     /// This method is idempotent and safe to call on every application startup.
     /// </summary>
+    /// <remarks>
+    /// Migration order matters: <see cref="MigrateToFourTableModelAsync"/> must run before
+    /// <see cref="SchemaScript"/> so that the new memory table indexes (referencing parent_uuid etc.)
+    /// are only applied after the old tables have been dropped and recreated with the new schema.
+    /// </remarks>
     public async Task EnsureCreatedAsync()
     {
         await using var conn = _factory.CreateConnection();
         await conn.OpenAsync();
 
-        // WAL mode enables concurrent reads while writing — required for Phase 47 UI queries
+        // WAL mode enables concurrent reads while writing -- required for Phase 47 UI queries
         await conn.ExecuteAsync("PRAGMA journal_mode=WAL;");
         await conn.ExecuteAsync("PRAGMA synchronous=NORMAL;");
+
+        // Phase 65: migrate old 3-table memory model BEFORE running SchemaScript.
+        // SchemaScript uses CREATE INDEX ... ON memory_edges(anima_id, parent_uuid) which would
+        // fail against the old table (which has from_uri/to_uri, not parent_uuid). Running the
+        // migration first drops and recreates the memory tables so SchemaScript indexes succeed.
+        await MigrateToFourTableModelAsync(conn);
+
+        // Create all tables and indexes. All statements use IF NOT EXISTS so this is idempotent.
         await conn.ExecuteAsync(SchemaScript);
 
-        // Additive migrations for columns added after initial schema creation
+        // Additive column migrations for rows added after initial schema creation
         await MigrateSchemaAsync(conn);
     }
 
     /// <summary>
     /// Applies additive schema migrations for columns added after the initial schema creation.
-    /// All migrations are idempotent — safe to call on every startup.
+    /// All migrations are idempotent -- safe to call on every startup.
     /// </summary>
     private async Task MigrateSchemaAsync(Microsoft.Data.Sqlite.SqliteConnection conn)
     {
@@ -161,9 +174,6 @@ public class RunDbInitializer
         {
             await conn.ExecuteAsync("ALTER TABLE runs ADD COLUMN workflow_preset TEXT");
         }
-
-        // Phase 65: Migrate old 3-table memory model to new 4-table model
-        await MigrateToFourTableModelAsync(conn);
     }
 
     /// <summary>
@@ -196,17 +206,27 @@ public class RunDbInitializer
         await using var tx = await conn.BeginTransactionAsync();
         try
         {
-            // 1. Read all old data before dropping tables
+            // 1. Read all old data before dropping tables.
+            //    Use explicit AS aliases to guarantee Dapper property mapping
+            //    (avoids reliance on underscore-stripping convention).
             var oldNodes = (await conn.QueryAsync<OldMemoryNode>(
-                "SELECT uri, anima_id, content, disclosure_trigger, keywords, source_artifact_id, source_step_id, created_at, updated_at FROM memory_nodes",
+                @"SELECT uri AS Uri, anima_id AS AnimaId, content AS Content,
+                         disclosure_trigger AS DisclosureTrigger, keywords AS Keywords,
+                         source_artifact_id AS SourceArtifactId, source_step_id AS SourceStepId,
+                         created_at AS CreatedAt, updated_at AS UpdatedAt
+                  FROM memory_nodes",
                 transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx)).ToList();
 
             var oldEdges = (await conn.QueryAsync<OldMemoryEdge>(
-                "SELECT id, anima_id, from_uri, to_uri, label, created_at FROM memory_edges",
+                @"SELECT id AS Id, anima_id AS AnimaId, from_uri AS FromUri,
+                         to_uri AS ToUri, label AS Label, created_at AS CreatedAt
+                  FROM memory_edges",
                 transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx)).ToList();
 
             var oldSnapshots = (await conn.QueryAsync<OldMemorySnapshot>(
-                "SELECT id, uri, anima_id, content, snapshot_at FROM memory_snapshots",
+                @"SELECT id AS Id, uri AS Uri, anima_id AS AnimaId,
+                         content AS Content, snapshot_at AS SnapshotAt
+                  FROM memory_snapshots",
                 transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx)).ToList();
 
             _logger?.LogInformation("Read {NodeCount} nodes, {EdgeCount} edges, {SnapshotCount} snapshots from old schema",
@@ -281,7 +301,9 @@ public class RunDbInitializer
                 CREATE INDEX idx_memory_uri_paths_node ON memory_uri_paths(node_uuid);
                 """, transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
 
-            // 5. Migrate nodes -> memory_nodes + memory_contents + memory_uri_paths
+            // 5. Migrate nodes -> memory_nodes + memory_uri_paths
+            //    Insert content in two passes so snapshots (older versions) get lower IDs
+            //    and the current content row always gets the highest ID (= latest version).
             foreach (var old in oldNodes)
             {
                 var uuid = uuidMap[(old.Uri, old.AnimaId)];
@@ -293,12 +315,6 @@ public class RunDbInitializer
                     new { Uuid = uuid, old.AnimaId, NodeType = nodeType, DisplayName = displayName, old.CreatedAt, old.UpdatedAt },
                     transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
 
-                // Current content becomes latest memory_contents row
-                await conn.ExecuteAsync(
-                    "INSERT INTO memory_contents (node_uuid, anima_id, content, disclosure_trigger, keywords, source_artifact_id, source_step_id, created_at) VALUES (@NodeUuid, @AnimaId, @Content, @DisclosureTrigger, @Keywords, @SourceArtifactId, @SourceStepId, @CreatedAt)",
-                    new { NodeUuid = uuid, old.AnimaId, old.Content, old.DisclosureTrigger, old.Keywords, old.SourceArtifactId, old.SourceStepId, CreatedAt = old.UpdatedAt },
-                    transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
-
                 // URI path entry
                 await conn.ExecuteAsync(
                     "INSERT INTO memory_uri_paths (uri, node_uuid, anima_id, created_at) VALUES (@Uri, @NodeUuid, @AnimaId, @CreatedAt)",
@@ -306,7 +322,7 @@ public class RunDbInitializer
                     transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
             }
 
-            // 6. Migrate snapshots -> older memory_contents rows
+            // 6. Migrate snapshots -> older memory_contents rows (inserted first for lower IDs)
             foreach (var snap in oldSnapshots)
             {
                 if (uuidMap.TryGetValue((snap.Uri, snap.AnimaId), out var uuid))
@@ -316,6 +332,17 @@ public class RunDbInitializer
                         new { NodeUuid = uuid, snap.AnimaId, snap.Content, CreatedAt = snap.SnapshotAt },
                         transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
                 }
+            }
+
+            // 6b. Insert current content as the latest version (highest ID)
+            foreach (var old in oldNodes)
+            {
+                var uuid = uuidMap[(old.Uri, old.AnimaId)];
+
+                await conn.ExecuteAsync(
+                    "INSERT INTO memory_contents (node_uuid, anima_id, content, disclosure_trigger, keywords, source_artifact_id, source_step_id, created_at) VALUES (@NodeUuid, @AnimaId, @Content, @DisclosureTrigger, @Keywords, @SourceArtifactId, @SourceStepId, @CreatedAt)",
+                    new { NodeUuid = uuid, old.AnimaId, old.Content, old.DisclosureTrigger, old.Keywords, old.SourceArtifactId, old.SourceStepId, CreatedAt = old.UpdatedAt },
+                    transaction: (Microsoft.Data.Sqlite.SqliteTransaction)tx);
             }
 
             // 7. Migrate edges (URI-based -> UUID-based)
