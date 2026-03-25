@@ -1,9 +1,21 @@
 # OpenAnima
 
+## Current Milestone: v2.0.4 Intelligent Memory & Persistence
+
+**Goal:** Overhaul the memory system with graph-based architecture, LLM-guided recall, and first-person memory CRUD; fix platform persistence and chat resilience.
+
+**Target features:**
+- Memory data model refactor (Node/Memory/Edge/Path four-layer separation)
+- LLM-driven graph exploration recall (configurable model, dynamic depth)
+- First-person memory CRUD (AI decides what to remember)
+- Wiring layout and chat history persistence across restarts
+- Background chat execution (survives page navigation)
+- Memory operation visibility in chat interface
+
 ## Current State
 
 **Latest shipped:** v2.0.3 Editor Experience (2026-03-24)
-**Current milestone:** Planning next milestone
+**Current milestone:** v2.0.4 Intelligent Memory & Persistence
 **Milestones complete:** v1.0-v2.0.3 (14 milestones, 64 phases, 149 plans)
 **Codebase:** ~52,000 LOC (C#, Razor, CSS, JS) | 658 tests green
 
@@ -152,7 +164,14 @@ Agents that proactively think and act on their own, while module connections rem
 
 ### Active
 
-(None — next milestone not yet planned)
+- [ ] Memory data model refactored to Node/Memory/Edge/Path four-layer separation (inspired by Nocturne Memory)
+- [ ] LLM-driven graph exploration recall with configurable model and dynamic depth
+- [ ] First-person memory CRUD tools (create/update/delete/organize)
+- [ ] Improved sedimentation quality (bilingual keywords, broader triggers)
+- [ ] Wiring layout persists across application restarts
+- [ ] Chat history persists across application restarts
+- [ ] LLM execution continues in background when navigating away from chat
+- [ ] Memory operations (create/update) visible in chat interface in real-time
 
 ### Deferred
 
@@ -353,4 +372,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-25 after v2.0.3 milestone*
+*Last updated: 2026-03-25 after v2.0.4 milestone start*

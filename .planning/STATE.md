@@ -1,48 +1,39 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-stopped_at: Completed 64-01-PLAN.md
-last_updated: "2026-03-25T09:32:00Z"
+milestone: v2.0.4
+milestone_name: Intelligent Memory & Persistence
+status: defining_requirements
+stopped_at: null
+last_updated: "2026-03-25T12:00:00Z"
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 6
-  completed_plans: 6
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State: OpenAnima
 
 **Last updated:** 2026-03-25
-**Current milestone:** Planning next milestone
+**Current milestone:** v2.0.4 Intelligent Memory & Persistence
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-03-25)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v2.0.4
 
 ## Current Position
 
-Milestone v2.0.3 complete. Ready for `/gsd:new-milestone`.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-25 — Milestone v2.0.4 started
 
 ## Performance Metrics
 
-| Metric | Value |
-|--------|-------|
-| Phases total | 4 |
-| Phases complete | 1 |
-| Plans total | 2 |
-| Plans complete | 2 |
-| Requirements mapped | 5/5 |
-| Phase 61 P01 | 2min | 2 tasks | 3 files |
-| Phase 61 P02 | 3min | 3 tasks | 2 files |
-| Phase 62 P01 | 8min | 2 tasks | 4 files |
-| Phase 62 P02 | 4 | 2 tasks | 7 files |
-| Phase 63 P01 | 3min | 2 tasks | 5 files |
-| Phase 64 P01 | 4min | 2 tasks | 4 files |
+(New milestone — no metrics yet)
 
 ## Accumulated Context
 
@@ -50,31 +41,15 @@ Milestone v2.0.3 complete. Ready for `/gsd:new-milestone`.
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
-- [Phase 61]: Used ResourceNotFound fallback to class name for missing module display name translations
-- [Phase 61]: Named sidebar helper GetModuleDisplayName to avoid collision with any future GetDisplayName in the component
-- [Phase 62]: Two-step split on -> then : is more robust than multi-separator split for connection ID parsing
-- [Phase 62]: JS interop focus guard added to window.editorCanvas namespace; HandleKeyDown changed to async Task
-- [Phase 62]: ConnectionContextMenu follows ModuleContextMenu pattern exactly; context menu rendered outside SVG for CSS fixed positioning
-- [Phase 62]: EventCallback<MouseEventArgs> used for OnContextMenu so ClientX/ClientY can position the menu at cursor
-- [Phase 63]: GetDescription in ModulePalette falls back to empty string so no tooltip appears for unknown plugin modules
-- [Phase 63]: GetModuleDescription in EditorConfigSidebar falls back to L[Editor.Config.NoDescription].Value for graceful display
-- [Phase 64]: Used SVG <title> elements for port tooltips; browser-native, no JS, auto-dismisses on mousedown
-- [Phase 64]: HttpRequestModule body port disambiguated via Port.Description.HttpRequestModule.body.{Direction} key
+### Key Design Discussions (from milestone kickoff)
 
-### Phase Order Rationale
-
-- Phase 61 first: introduces the invariant/display name split that Phases 63 and 64 depend on; also establishes .resx Module.DisplayName.* keys and LanguageChanged subscriptions
-- Phase 62 independent: connection deletion has no dependency on i18n or descriptions; resolves highest user friction (connections cannot be deleted via discoverable UI)
-- Phase 63 after Phase 61: ModuleSchemaService.GetDescription() and Module.Description.* .resx keys created in Phase 61 are direct dependencies
-- Phase 64 last: widest diff (Contracts layer changes + ~15 built-in module files); benefits from all other editor UX being stable; SVG tooltip approach validated against real canvas context
-
-### Key Pitfalls to Watch
-
-- Translated display name must never reach WiringConfiguration storage, PortRegistry lookups, or drag-start events (silent wiring corruption on reload)
-- DeleteSelected() connection ID parse uses string-split on ':' and '->' — fragile if port names contain these chars; fix with struct value equality
-- Editor container focus must be restored after canvas click so Delete key fires on connections not sidebar inputs
-- ModulePalette and NodeCard must subscribe to LanguageService.LanguageChanged for live language switch updates
-- Module descriptions must come from .resx keys, not live module instances (avoid NullReferenceException when runtime stopped)
+- Memory recall failure analysis: "我叫什么名字" fails because Aho-Corasick keyword matching has no semantic understanding, disclosure triggers are too narrow, and keywords are English-only
+- RAG/Embedding rejected as primary recall: good for document QA but lacks mental structure; can't create experiential bindings (e.g., "nut shop → fear") that have no semantic similarity
+- Document-style memory rejected: static hierarchy limits AI growth
+- LLM-guided graph exploration chosen: read root node summaries → LLM selects relevant branches → parallel exploration of children → dynamic depth with upper limit
+- Nocturne Memory (github.com/Dataojitori/nocturne_memory) studied as reference: Node/Memory/Edge/Path four-layer data model, URI routing, first-person memory CRUD, alias system
+- Memory exploration model: user-configurable in Settings (not hardcoded)
+- Exploration depth: LLM dynamically decides whether to go deeper (with ceiling)
 
 ### Pending Todos
 
@@ -82,12 +57,12 @@ None.
 
 ### Blockers/Concerns
 
-Phase 64 has one open architectural decision: SVG `<title>` vs custom SVG overlay for port tooltips. Resolve at Phase 64 planning time by evaluating zoom-level UX tradeoff.
+None.
 
 ## Session Continuity
 
-Last activity: 2026-03-25 - Completed quick task 260325-ntq: 修复Dashboard中输入框会侵入左右边界，输入框宽度约为窗口1/3而不是铺满
-Stopped at: Completed 64-01-PLAN.md
+Last activity: 2026-03-25 - Milestone v2.0.4 kickoff
+Stopped at: Defining requirements
 Resume file: None
 
 ### Quick Tasks Completed
