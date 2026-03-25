@@ -1,13 +1,13 @@
 .chat-input-container {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
     display: flex;
     gap: 0.75rem;
     padding: 1rem;
-    background: #1a1b2e;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(26, 27, 46, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    max-width: 680px;
+    margin: 0 auto;
+    width: 100%;
 }
 
 textarea {
@@ -15,11 +15,12 @@ textarea {
     background: rgba(255, 255, 255, 0.05);
     color: #e0e0e0;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    border-radius: 6px;
     padding: 0.75rem;
     font-family: inherit;
     font-size: 0.95rem;
     resize: none;
+    min-height: 72px;
     max-height: 200px;
     overflow-y: auto;
 }
