@@ -319,7 +319,7 @@
 | 62. Connection Deletion UX | v2.0.3 | 2/2 | Complete | 2026-03-24 |
 | 63. Module Descriptions | v2.0.3 | 1/1 | Complete | 2026-03-24 |
 | 64. Port Hover Tooltips | v2.0.3 | 1/1 | Complete | 2026-03-24 |
-| 65. Memory Schema Migration | v2.0.4 | 0/TBD | Not started | - |
+| 65. Memory Schema Migration | 1/3 | In Progress|  | - |
 | 66. Platform Persistence | v2.0.4 | 0/TBD | Not started | - |
 | 67. Memory Tools & Sedimentation | v2.0.4 | 0/TBD | Not started | - |
 | 68. Memory Visibility | v2.0.4 | 0/TBD | Not started | - |

@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 65 context gathered
-last_updated: "2026-03-25T16:27:10.679Z"
-last_activity: 2026-03-25 — Roadmap created for v2.0.4 (6 phases, 36 requirements)
+status: unknown
+stopped_at: Completed 65-01-PLAN.md (data model records)
+last_updated: "2026-03-25T16:54:46.501Z"
+last_activity: 2026-03-25 - Roadmap created for v2.0.4
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 1
 ---
 
 # Project State: OpenAnima
@@ -24,16 +23,12 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-25)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 65 — Memory Schema Migration
+**Current focus:** Phase 65 — memory-schema-migration
 
 ## Current Position
 
-Phase: 65 of 70 (Memory Schema Migration) — first phase of v2.0.4
-Plan: --
-Status: Ready to plan
-Last activity: 2026-03-25 — Roadmap created for v2.0.4 (6 phases, 36 requirements)
-
-Progress: [░░░░░░░░░░] 0%
+Phase: 65 (memory-schema-migration) — EXECUTING
+Plan: 1 of 3
 
 ## Performance Metrics
 
@@ -44,6 +39,10 @@ Progress: [░░░░░░░░░░] 0%
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
+
+- [Phase 65-memory-schema-migration]: All new record properties use defaults (string.Empty/Fact/1.0/false) so existing construction sites compile without modification
+- [Phase 65-memory-schema-migration]: FromUri/ToUri kept on MemoryEdge for backward compat; Plan 03 will populate via SQL JOIN
+- [Phase 65-memory-schema-migration]: Busy Timeout=5000 only on production constructor; raw/test constructor unchanged
 
 ### Key Design Discussions (from milestone kickoff)
 
@@ -66,8 +65,8 @@ None.
 ## Session Continuity
 
 Last activity: 2026-03-25 - Roadmap created for v2.0.4
-Stopped at: Phase 65 context gathered
-Resume file: .planning/phases/65-memory-schema-migration/65-CONTEXT.md
+Stopped at: Completed 65-01-PLAN.md (data model records)
+Resume file: None
 
 ### Quick Tasks Completed
 
@@ -77,3 +76,4 @@ Resume file: .planning/phases/65-memory-schema-migration/65-CONTEXT.md
 | `260323-ox4` | 2026-03-23 | Redesign dialogs to rectangular and fix sidebar overlap |
 | `260325-ncp` | 2026-03-25 | Dashboard Chat input box - center and make rectangular |
 | `260325-ntq` | 2026-03-25 | Dashboard input box width correction |
+| Phase 65-memory-schema-migration P01 | 4 | 5 tasks | 5 files |

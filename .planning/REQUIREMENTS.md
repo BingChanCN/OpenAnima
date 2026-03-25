@@ -12,7 +12,7 @@ Requirements for Intelligent Memory & Persistence milestone. Each maps to roadma
 - [ ] **PERS-01**: Wiring layout (pan/zoom/scale) persists across application restarts per Anima
 - [ ] **PERS-02**: Chat history persists across application restarts per Anima with scrollback
 - [ ] **PERS-03**: Chat history UI restore is separate from LLM context restore (last N messages only, default 10, configurable)
-- [ ] **PERS-04**: SQLite connections include Busy Timeout=5000 to prevent concurrent write failures
+- [x] **PERS-04**: SQLite connections include Busy Timeout=5000 to prevent concurrent write failures
 
 ### Chat Resilience
 
@@ -23,13 +23,13 @@ Requirements for Intelligent Memory & Persistence milestone. Each maps to roadma
 
 ### Memory Architecture
 
-- [ ] **MEMA-01**: Memory data model fully split into four tables: Nodes (UUID identity), Memories (versioned content), Edges (relationships), Paths (URI routing)
-- [ ] **MEMA-02**: Node identity (UUID) is stable and independent from content — content updates create new Memory rows, not new Nodes
-- [ ] **MEMA-03**: Edges are first-class entities with parent_uuid, child_uuid, priority, disclosure trigger, weight, and bidirectional flag
-- [ ] **MEMA-04**: Paths provide domain://path URI routing to Edges, supporting future alias capability
+- [x] **MEMA-01**: Memory data model fully split into four tables: Nodes (UUID identity), Memories (versioned content), Edges (relationships), Paths (URI routing)
+- [x] **MEMA-02**: Node identity (UUID) is stable and independent from content — content updates create new Memory rows, not new Nodes
+- [x] **MEMA-03**: Edges are first-class entities with parent_uuid, child_uuid, priority, disclosure trigger, weight, and bidirectional flag
+- [x] **MEMA-04**: Paths provide domain://path URI routing to Edges, supporting future alias capability
 - [ ] **MEMA-05**: Schema migration from existing memory_nodes/memory_edges to four-table model in a single atomic transaction (BEGIN/COMMIT)
 - [ ] **MEMA-06**: Existing memory data fully migrated to new schema without loss (verified by migration test)
-- [ ] **MEMA-07**: Nodes support node_type and display_name columns for graph organization
+- [x] **MEMA-07**: Nodes support node_type and display_name columns for graph organization
 - [ ] **MEMA-08**: IMemoryGraph interface updated for four-table model with backward-compatible method signatures where possible
 
 ### Memory Recall
@@ -100,18 +100,18 @@ Requirements for Intelligent Memory & Persistence milestone. Each maps to roadma
 | PERS-01 | Phase 66 | Pending |
 | PERS-02 | Phase 66 | Pending |
 | PERS-03 | Phase 66 | Pending |
-| PERS-04 | Phase 65 | Pending |
+| PERS-04 | Phase 65 | Complete |
 | CHAT-01 | Phase 69 | Pending |
 | CHAT-02 | Phase 69 | Pending |
 | CHAT-03 | Phase 69 | Pending |
 | CHAT-04 | Phase 69 | Pending |
-| MEMA-01 | Phase 65 | Pending |
-| MEMA-02 | Phase 65 | Pending |
-| MEMA-03 | Phase 65 | Pending |
-| MEMA-04 | Phase 65 | Pending |
+| MEMA-01 | Phase 65 | Complete |
+| MEMA-02 | Phase 65 | Complete |
+| MEMA-03 | Phase 65 | Complete |
+| MEMA-04 | Phase 65 | Complete |
 | MEMA-05 | Phase 65 | Pending |
 | MEMA-06 | Phase 65 | Pending |
-| MEMA-07 | Phase 65 | Pending |
+| MEMA-07 | Phase 65 | Complete |
 | MEMA-08 | Phase 65 | Pending |
 | MEMR-01 | Phase 70 | Pending |
 | MEMR-02 | Phase 70 | Pending |
