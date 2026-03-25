@@ -27,8 +27,8 @@ Requirements for Intelligent Memory & Persistence milestone. Each maps to roadma
 - [x] **MEMA-02**: Node identity (UUID) is stable and independent from content — content updates create new Memory rows, not new Nodes
 - [x] **MEMA-03**: Edges are first-class entities with parent_uuid, child_uuid, priority, disclosure trigger, weight, and bidirectional flag
 - [x] **MEMA-04**: Paths provide domain://path URI routing to Edges, supporting future alias capability
-- [ ] **MEMA-05**: Schema migration from existing memory_nodes/memory_edges to four-table model in a single atomic transaction (BEGIN/COMMIT)
-- [ ] **MEMA-06**: Existing memory data fully migrated to new schema without loss (verified by migration test)
+- [x] **MEMA-05**: Schema migration from existing memory_nodes/memory_edges to four-table model in a single atomic transaction (BEGIN/COMMIT)
+- [x] **MEMA-06**: Existing memory data fully migrated to new schema without loss (verified by migration test)
 - [x] **MEMA-07**: Nodes support node_type and display_name columns for graph organization
 - [x] **MEMA-08**: IMemoryGraph interface updated for four-table model with backward-compatible method signatures where possible
 
@@ -109,8 +109,8 @@ Requirements for Intelligent Memory & Persistence milestone. Each maps to roadma
 | MEMA-02 | Phase 65 | Complete |
 | MEMA-03 | Phase 65 | Complete |
 | MEMA-04 | Phase 65 | Complete |
-| MEMA-05 | Phase 65 | Pending |
-| MEMA-06 | Phase 65 | Pending |
+| MEMA-05 | Phase 65 | Complete |
+| MEMA-06 | Phase 65 | Complete |
 | MEMA-07 | Phase 65 | Complete |
 | MEMA-08 | Phase 65 | Complete |
 | MEMR-01 | Phase 70 | Pending |

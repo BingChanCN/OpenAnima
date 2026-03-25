@@ -32,7 +32,9 @@ Plan: 1 of 3
 
 ## Performance Metrics
 
-(New milestone — no metrics yet. Prior: 64 phases, 149 plans across 14 milestones.)
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 65-memory-schema-migration | P02 | 11min | 4 | 4 |
 
 ## Accumulated Context
 
@@ -45,6 +47,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 65-memory-schema-migration]: Busy Timeout=5000 only on production constructor; raw/test constructor unchanged
 - [Phase 65-memory-schema-migration]: GetContentHistoryAsync returns MemoryContent list DESC (newest first), replaces GetSnapshotsAsync
 - [Phase 65-memory-schema-migration]: AddEdgeAsync silently returns if source or target UUID cannot be resolved from URI
+- [Phase 65-02]: MigrateToFourTableModelAsync must run BEFORE SchemaScript (new indexes reference parent_uuid which fails against old table)
+- [Phase 65-02]: Snapshots inserted first (lower IDs), current content inserted last (highest ID) so ORDER BY id DESC LIMIT 1 returns latest version
 
 ### Key Design Discussions (from milestone kickoff)
 
@@ -66,8 +70,8 @@ None.
 
 ## Session Continuity
 
-Last activity: 2026-03-25 - Roadmap created for v2.0.4
-Stopped at: Completed 65-03-PLAN.md (MemoryGraph four-table schema rewrite)
+Last activity: 2026-03-26 - Phase 65 Plan 02 complete
+Stopped at: Completed 65-02-PLAN.md (RunDbInitializer schema migration)
 Resume file: None
 
 ### Quick Tasks Completed
@@ -79,4 +83,5 @@ Resume file: None
 | `260325-ncp` | 2026-03-25 | Dashboard Chat input box - center and make rectangular |
 | `260325-ntq` | 2026-03-25 | Dashboard input box width correction |
 | Phase 65-memory-schema-migration P01 | 4 | 5 tasks | 5 files |
+| Phase 65 P02 | 2026-03-26 | RunDbInitializer schema migration + atomic migration |
 | Phase 65 P03 | 7 | 4 tasks | 7 files |
