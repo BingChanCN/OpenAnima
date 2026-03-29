@@ -218,7 +218,11 @@
   4. Agent can list memory nodes by URI prefix via `memory_list` — enabling self-aware navigation of its own knowledge graph
   5. All memory tool operations publish MemoryOperationPayload events on the EventBus for downstream consumers (visibility, logging)
   6. Sedimentation extracts bilingual (Chinese + English) keywords and broader trigger conditions, with input capped at last 20 messages
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 67-01-PLAN.md — Soft-delete infrastructure (deprecated column, SoftDeleteNodeAsync, MemoryOperationPayload)
+- [ ] 67-02-PLAN.md — Memory CRUD tools (memory_create, memory_update, memory_delete, memory_list)
+- [ ] 67-03-PLAN.md — Sedimentation quality (bilingual prompt, 20-message cap, DisclosureMatcher OR-split)
 
 ### Phase 68: Memory Visibility
 **Goal**: Users can see exactly when and how the agent creates, updates, or deletes memories directly in the chat interface
@@ -324,7 +328,7 @@
 | 64. Port Hover Tooltips | v2.0.3 | 1/1 | Complete | 2026-03-24 |
 | 65. Memory Schema Migration | v2.0.4 | 3/3 | Complete | 2026-03-25 |
 | 66. Platform Persistence | v2.0.4 | 3/3 | Complete | 2026-03-29 |
-| 67. Memory Tools & Sedimentation | v2.0.4 | 0/TBD | Not started | - |
+| 67. Memory Tools & Sedimentation | v2.0.4 | 0/3 | Not started | - |
 | 68. Memory Visibility | v2.0.4 | 0/TBD | Not started | - |
 | 69. Background Chat Execution | v2.0.4 | 0/TBD | Not started | - |
 | 70. LLM-Guided Graph Exploration | v2.0.4 | 0/TBD | Not started | - |
