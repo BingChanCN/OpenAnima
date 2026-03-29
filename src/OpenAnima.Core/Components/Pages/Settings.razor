@@ -7,10 +7,11 @@
 @inject IStringLocalizer<SharedResources> L
 @inject IJSRuntime JS
 @inject LLMProviderRegistryService ProviderRegistry
-@inject IAnimaContext AnimaContext
-@inject IAnimaModuleConfigService ConfigService
+@inject IModuleContext AnimaContext
+@inject IModuleConfigStore ConfigService
 @inject ILLMProviderRegistry LlmRegistry
 @inject IAnimaRuntimeManager AnimaManager
+@inject ChatContextManager ChatContextManager
 @implements IDisposable
 
 <div class="settings-container">
@@ -110,6 +111,30 @@
             }
         }
     </div>
+
+    <div class="settings-section card">
+        <h2 class="section-title">LLM Context Settings</h2>
+        <p class="section-description">Configure the token budget for chat history sent to the LLM. Full chat history is always preserved locally.</p>
+
+        <div class="setting-row">
+            <label class="setting-label" for="token-budget-input">LLM Context Token Budget</label>
+            <div class="setting-input-group">
+                <input id="token-budget-input"
+                       type="number"
+                       class="token-budget-input"
+                       min="1000"
+                       max="128000"
+                       step="500"
+                       value="@_tokenBudget"
+                       @onchange="HandleTokenBudgetChanged" />
+                <span class="input-hint">tokens (1000-128000)</span>
+            </div>
+            <p class="setting-help-text">
+                The token budget limits how much of your chat history is sent to the LLM.
+                Keeping this reasonable prevents context window overflow while preserving full scrollback.
+            </p>
+        </div>
+    </div>
 </div>
 
 <ProviderDialog IsVisible="_showProviderDialog"
@@ -151,12 +176,18 @@
     private bool _sedimentSaved;
     private CancellationTokenSource? _savedIndicatorCts;
 
+    // Token budget state
+    private int _tokenBudget = 4000;
+
     protected override async Task OnInitializedAsync()
     {
         await ProviderRegistry.InitializeAsync();
         _providers = new List<LLMProviderRecord>(ProviderRegistry.GetAllProviderRecords());
         AnimaContext.ActiveAnimaChanged += OnActiveAnimaChanged;
         LoadSedimentConfig();
+
+        // Load current token budget
+        _tokenBudget = ChatContextManager.LLMContextBudget;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -371,6 +402,16 @@
             await InvokeAsync(StateHasChanged);
         }
         catch (TaskCanceledException) { }
+    }
+
+    private async Task HandleTokenBudgetChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var budget))
+        {
+            _tokenBudget = budget;
+            ChatContextManager.LLMContextBudget = budget;
+            // Token budget is updated immediately in the service
+        }
     }
 
     private int CountAffectedModules(string providerSlug)
