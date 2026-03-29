@@ -54,6 +54,12 @@ public static class RunServiceExtensions
             var logger = provider.GetRequiredService<ILogger<ChatDbInitializer>>();
             return new ChatDbInitializer(factory, logger);
         });
+        services.AddSingleton(provider =>
+        {
+            var factory = provider.GetRequiredService<ChatDbConnectionFactory>();
+            var logger = provider.GetRequiredService<ILogger<ChatHistoryService>>();
+            return new ChatHistoryService(factory, logger);
+        });
 
         // Viewport persistence service
         var configDirectory = Path.Combine(dataRoot, "configs");
