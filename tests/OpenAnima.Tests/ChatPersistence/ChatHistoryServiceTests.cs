@@ -23,7 +23,7 @@ public class ChatHistoryServiceTests : IAsyncLifetime
     {
         // Generate unique in-memory database name for this test instance
         _dbName = $"ChatHistoryTest_{Guid.NewGuid():N}";
-        var connStr = $"Data Source={_dbName};Mode=Memory;Cache=Shared;Busy Timeout=5000";
+        var connStr = $"Data Source={_dbName};Mode=Memory;Cache=Shared";
 
         // Keep a connection alive so the in-memory database persists between operations
         _keepAlive = new SqliteConnection(connStr);
@@ -35,8 +35,8 @@ public class ChatHistoryServiceTests : IAsyncLifetime
     /// </summary>
     public async Task InitializeAsync()
     {
-        var connStr = $"Data Source={_dbName};Mode=Memory;Cache=Shared;Busy Timeout=5000";
-        _factory = new ChatDbConnectionFactory(connStr);
+        var connStr = $"Data Source={_dbName};Mode=Memory;Cache=Shared";
+        _factory = new ChatDbConnectionFactory(connStr, isRaw: true);
         _service = new ChatHistoryService(_factory, new NullLogger<ChatHistoryService>());
 
         // Initialize database schema
