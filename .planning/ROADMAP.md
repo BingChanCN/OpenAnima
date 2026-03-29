@@ -328,7 +328,7 @@ Plans:
 | 64. Port Hover Tooltips | v2.0.3 | 1/1 | Complete | 2026-03-24 |
 | 65. Memory Schema Migration | v2.0.4 | 3/3 | Complete | 2026-03-25 |
 | 66. Platform Persistence | v2.0.4 | 3/3 | Complete | 2026-03-29 |
-| 67. Memory Tools & Sedimentation | v2.0.4 | 3/3 | Complete   | 2026-03-29 |
+| 67. Memory Tools & Sedimentation | v2.0.4 | 3/3 | Complete    | 2026-03-29 |
 | 68. Memory Visibility | v2.0.4 | 0/TBD | Not started | - |
 | 69. Background Chat Execution | v2.0.4 | 0/TBD | Not started | - |
 | 70. LLM-Guided Graph Exploration | v2.0.4 | 0/TBD | Not started | - |
