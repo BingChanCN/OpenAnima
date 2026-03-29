@@ -174,7 +174,7 @@
 **Milestone Goal:** Overhaul the memory system with graph-based architecture, LLM-guided recall, and first-person memory CRUD; fix platform persistence and chat resilience.
 
 - [x] **Phase 65: Memory Schema Migration** - Four-table data model split with atomic migration and SQLite hardening (completed 2026-03-25)
-- [x] **Phase 66: Platform Persistence** - Wiring layout and chat history survive application restarts (2/3 plans complete, P03 TBD)
+- [x] **Phase 66: Platform Persistence** - Wiring layout and chat history survive application restarts (completed 2026-03-29, 3/3 plans)
 - [ ] **Phase 67: Memory Tools & Sedimentation** - First-person memory CRUD tools and improved sedimentation quality
 - [ ] **Phase 68: Memory Visibility** - Memory operations displayed as tool cards and summary chips in chat
 - [ ] **Phase 69: Background Chat Execution** - LLM streaming survives page navigation with buffer replay
@@ -205,7 +205,7 @@
 **Plans**:
   - [x] P01: Infrastructure (ChatDbConnectionFactory, ChatDbInitializer, ViewportStateService) — 2026-03-29
   - [x] P02: Integration (ChatHistoryService, chat restore, viewport restore, token budget) — 2026-03-29
-  - [ ] P03: Sedimentation Integration (TBD)
+  - [x] P03: Verification & Integration Testing (Unit + integration tests, 39 tests, 701/701 pass) — 2026-03-29
 
 ### Phase 67: Memory Tools & Sedimentation
 **Goal**: Agent can autonomously create, update, soft-delete, and list its own memory nodes with improved bilingual sedimentation quality
@@ -322,15 +322,15 @@
 | 62. Connection Deletion UX | v2.0.3 | 2/2 | Complete | 2026-03-24 |
 | 63. Module Descriptions | v2.0.3 | 1/1 | Complete | 2026-03-24 |
 | 64. Port Hover Tooltips | v2.0.3 | 1/1 | Complete | 2026-03-24 |
-| 65. Memory Schema Migration | 3/3 | Complete    | 2026-03-25 | - |
-| 66. Platform Persistence | v2.0.4 | 0/TBD | Not started | - |
+| 65. Memory Schema Migration | v2.0.4 | 3/3 | Complete | 2026-03-25 |
+| 66. Platform Persistence | v2.0.4 | 3/3 | Complete | 2026-03-29 |
 | 67. Memory Tools & Sedimentation | v2.0.4 | 0/TBD | Not started | - |
 | 68. Memory Visibility | v2.0.4 | 0/TBD | Not started | - |
 | 69. Background Chat Execution | v2.0.4 | 0/TBD | Not started | - |
 | 70. LLM-Guided Graph Exploration | v2.0.4 | 0/TBD | Not started | - |
 
-**Total shipped: 64 phases, 149 plans across 14 milestones**
-**v2.0.4 in progress: 6 phases (65-70), 36 requirements**
+**Total shipped: 66 phases, 152 plans across 14 milestones**
+**v2.0.4 in progress: 4 phases (67-70), 24 requirements remaining**
 
 ---
-*Last updated: 2026-03-25 -- v2.0.4 roadmap created*
+*Last updated: 2026-03-29 -- Phase 66 Platform Persistence complete*
