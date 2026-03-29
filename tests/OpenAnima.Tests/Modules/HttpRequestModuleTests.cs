@@ -38,7 +38,7 @@ public class HttpRequestModuleTests
     /// <summary>
     /// Config service that returns a fixed dictionary for a given module.
     /// </summary>
-    private sealed class TestConfigService : IAnimaModuleConfigService
+    private sealed class TestConfigService : IModuleConfigStore
     {
         private readonly Dictionary<string, string> _config;
 
@@ -72,7 +72,7 @@ public class HttpRequestModuleTests
     private record ModuleFixture(
         HttpRequestModule Module,
         EventBus EventBus,
-        IAnimaModuleConfigService ConfigService);
+        IModuleConfigStore ConfigService);
 
     private static async Task<ModuleFixture> CreateModuleAsync(
         IHttpClientFactory factory,
@@ -80,7 +80,7 @@ public class HttpRequestModuleTests
     {
         var eventBus = CreateEventBus();
         var configService = config != null
-            ? (IAnimaModuleConfigService)new TestConfigService(config)
+            ? (IModuleConfigStore)new TestConfigService(config)
             : NullAnimaModuleConfigService.Instance;
         var animaContext = new AnimaContext();
         animaContext.SetActive("test-anima-id");

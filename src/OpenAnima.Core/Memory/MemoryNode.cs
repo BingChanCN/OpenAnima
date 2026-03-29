@@ -7,6 +7,9 @@ namespace OpenAnima.Core.Memory;
 /// </summary>
 public record MemoryNode
 {
+    /// <summary>Stable UUID primary key. Generated during migration or on first write.</summary>
+    public string Uuid { get; init; } = string.Empty;
+
     /// <summary>
     /// URI-style key for this node, e.g. "core://agent/identity" or "run://abc123/findings".
     /// Together with <see cref="AnimaId"/>, forms the primary key in memory_nodes.
@@ -15,6 +18,18 @@ public record MemoryNode
 
     /// <summary>Identifier of the Anima that owns this memory node.</summary>
     public string AnimaId { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Semantic type: System, Fact, Preference, Entity, Learning, Artifact.
+    /// Inferred from URI prefix during migration; explicitly settable on new nodes.
+    /// </summary>
+    public string NodeType { get; init; } = "Fact";
+
+    /// <summary>
+    /// Human-readable display name extracted from URI last segment during migration.
+    /// Optional for programmatic use.
+    /// </summary>
+    public string? DisplayName { get; init; }
 
     /// <summary>
     /// The text content stored in this node.
@@ -52,4 +67,10 @@ public record MemoryNode
 
     /// <summary>ISO 8601 UTC timestamp when this node was last updated.</summary>
     public string UpdatedAt { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Whether this node has been soft-deleted. Deprecated nodes are hidden from recall
+    /// but recoverable from /memory UI. Set via <c>IMemoryGraph.SoftDeleteNodeAsync</c>.
+    /// </summary>
+    public bool Deprecated { get; init; }
 }

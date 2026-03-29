@@ -1,7 +1,17 @@
 @page "/settings"
+@using OpenAnima.Core.Providers
+@using OpenAnima.Core.Anima
+@using OpenAnima.Core.Services
+@using OpenAnima.Contracts
 @inject LanguageService LanguageService
 @inject IStringLocalizer<SharedResources> L
 @inject IJSRuntime JS
+@inject LLMProviderRegistryService ProviderRegistry
+@inject IModuleContext AnimaContext
+@inject IModuleConfigStore ConfigService
+@inject ILLMProviderRegistry LlmRegistry
+@inject IAnimaRuntimeManager AnimaManager
+@inject ChatContextManager ChatContextManager
 @implements IDisposable
 
 <div class="settings-container">
@@ -20,16 +30,171 @@
             </select>
         </div>
     </div>
+
+    <div class="settings-section card">
+        <h2 class="section-title">@L["Providers.SectionTitle"]</h2>
+
+        @if (!_providers.Any())
+        {
+            <div class="empty-state">
+                <p class="empty-heading">@L["Providers.EmptyHeading"]</p>
+                <p class="empty-body text-muted">@L["Providers.EmptyBody"]</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var p in _providers)
+            {
+                <ProviderCard Provider="p"
+                              MaskedApiKey="@ProviderRegistry.GetMaskedApiKey(p.Slug)"
+                              OnEdit="OpenEditDialog"
+                              OnDisable="HandleDisable"
+                              OnEnable="HandleEnable"
+                              OnDelete="HandleDelete" />
+            }
+        }
+
+        <button class="btn btn-primary provider-add-btn" @onclick="OpenCreateDialog">
+            @L["Providers.AddProvider"]
+        </button>
+    </div>
+
+    <div class="settings-section card">
+        <h2 class="section-title">@L["Sedimentation.SectionTitle"]</h2>
+        <p class="section-description">@L["Sedimentation.Description"]</p>
+
+        @if (!LlmRegistry.GetAllProviders().Any(p => p.IsEnabled))
+        {
+            <p class="text-muted">@L["Sedimentation.NoProviders"]</p>
+        }
+        else
+        {
+            <div class="sediment-config-row">
+                <label class="setting-label">@L["Sedimentation.Provider"]</label>
+                <select class="sediment-select" value="@_sedimentProviderSlug" @onchange="HandleSedimentProviderChanged">
+                    <option value="">@L["Sedimentation.ProviderPlaceholder"]</option>
+                    @foreach (var provider in LlmRegistry.GetAllProviders().Where(p => p.IsEnabled))
+                    {
+                        <option value="@provider.Slug">
+                            @provider.DisplayName (@LlmRegistry.GetModels(provider.Slug).Count)
+                        </option>
+                    }
+                </select>
+            </div>
+
+            @if (_sedimentProviderDisabled)
+            {
+                <div class="warning-inline">@L["Sedimentation.ProviderDisabledWarning"]</div>
+            }
+
+            @if (!string.IsNullOrEmpty(_sedimentProviderSlug))
+            {
+                var models = LlmRegistry.GetModels(_sedimentProviderSlug);
+                <div class="sediment-config-row">
+                    <label class="setting-label">@L["Sedimentation.Model"]</label>
+                    <select class="sediment-select" value="@_sedimentModelId" @onchange="HandleSedimentModelChanged">
+                        <option value="">@L["Sedimentation.ModelPlaceholder"]</option>
+                        @foreach (var model in models)
+                        {
+                            var display = string.IsNullOrEmpty(model.DisplayAlias)
+                                ? model.ModelId
+                                : $"{model.ModelId} ({model.DisplayAlias})";
+                            <option value="@model.ModelId">@display</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            @if (_sedimentSaved)
+            {
+                <div class="saved-indicator">@L["Sedimentation.Saved"]</div>
+            }
+        }
+    </div>
+
+    <div class="settings-section card">
+        <h2 class="section-title">LLM Context Settings</h2>
+        <p class="section-description">Configure the token budget for chat history sent to the LLM. Full chat history is always preserved locally.</p>
+
+        <div class="setting-row">
+            <label class="setting-label" for="token-budget-input">LLM Context Token Budget</label>
+            <div class="setting-input-group">
+                <input id="token-budget-input"
+                       type="number"
+                       class="token-budget-input"
+                       min="1000"
+                       max="128000"
+                       step="500"
+                       value="@_tokenBudget"
+                       @onchange="HandleTokenBudgetChanged" />
+                <span class="input-hint">tokens (1000-128000)</span>
+            </div>
+            <p class="setting-help-text">
+                The token budget limits how much of your chat history is sent to the LLM.
+                Keeping this reasonable prevents context window overflow while preserving full scrollback.
+            </p>
+        </div>
+    </div>
 </div>
+
+<ProviderDialog IsVisible="_showProviderDialog"
+                EditTarget="_editingProvider"
+                OnSave="HandleProviderSave"
+                OnCancel="HandleProviderCancel" />
+
+<ConfirmDialog IsVisible="_showConfirmDialog"
+               Title="@_confirmTitle"
+               Message="@_confirmMessage"
+               ConfirmText="@_confirmActionText"
+               ConfirmButtonClass="@_confirmButtonClass"
+               OnConfirm="HandleConfirmed"
+               OnCancel="HandleConfirmCancelled" />
 
 @code {
     private string _selectedCulture = "zh-CN";
+
+    // Provider state
+    private List<LLMProviderRecord> _providers = new();
+    private bool _showProviderDialog;
+    private LLMProviderRecord? _editingProvider;
+
+    // Confirm dialog state
+    private bool _showConfirmDialog;
+    private string _confirmTitle = "";
+    private string _confirmMessage = "";
+    private string _confirmActionText = "";
+    private string _confirmButtonClass = "btn-danger";
+    private Func<Task>? _confirmAction;
+
+    // Pending lifecycle target
+    private string? _pendingLifecycleSlug;
+
+    // Sedimentation config state
+    private string _sedimentProviderSlug = "";
+    private string _sedimentModelId = "";
+    private bool _sedimentProviderDisabled;
+    private bool _sedimentSaved;
+    private CancellationTokenSource? _savedIndicatorCts;
+
+    // Token budget state
+    private int _tokenBudget = 4000;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ProviderRegistry.InitializeAsync();
+        _providers = new List<LLMProviderRecord>(ProviderRegistry.GetAllProviderRecords());
+        AnimaContext.ActiveAnimaChanged += OnActiveAnimaChanged;
+        LoadSedimentConfig();
+
+        // Load current token budget
+        _tokenBudget = ChatContextManager.LLMContextBudget;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            LanguageService.LanguageChanged += OnLanguageChanged;
+            LanguageService.LanguageChanged += OnLanguageServiceChanged;
             var saved = await JS.InvokeAsync<string?>("localStorage.getItem", "openanima-language");
             if (!string.IsNullOrEmpty(saved))
             {
@@ -52,14 +217,220 @@
         await JS.InvokeVoidAsync("localStorage.setItem", "openanima-language", culture);
     }
 
-    private void OnLanguageChanged()
+    private void OnLanguageServiceChanged()
     {
         _selectedCulture = LanguageService.Current.Name;
         InvokeAsync(StateHasChanged);
     }
 
+    // --- Provider dialog handlers ---
+
+    private void OpenCreateDialog()
+    {
+        _editingProvider = null;
+        _showProviderDialog = true;
+    }
+
+    private void OpenEditDialog(LLMProviderRecord provider)
+    {
+        _editingProvider = provider;
+        _showProviderDialog = true;
+    }
+
+    private async Task HandleProviderSave(ProviderDialogResult result)
+    {
+        if (result.IsNew)
+        {
+            var created = await ProviderRegistry.CreateProviderAsync(
+                result.Slug, result.DisplayName, result.BaseUrl, result.ApiKey);
+
+            foreach (var model in result.Models)
+                await ProviderRegistry.AddModelAsync(result.Slug, model);
+        }
+        else
+        {
+            await ProviderRegistry.UpdateProviderAsync(
+                result.Slug, result.DisplayName, result.BaseUrl, result.ApiKey);
+
+            // Reconcile models: remove all then re-add from dialog result
+            var existing = ProviderRegistry.GetAllProviderRecords()
+                .FirstOrDefault(p => p.Slug == result.Slug);
+            if (existing != null)
+            {
+                foreach (var model in existing.Models.ToList())
+                    await ProviderRegistry.RemoveModelAsync(result.Slug, model.ModelId);
+            }
+            foreach (var model in result.Models)
+                await ProviderRegistry.AddModelAsync(result.Slug, model);
+        }
+
+        _showProviderDialog = false;
+        _editingProvider = null;
+        await RefreshProviders();
+    }
+
+    private void HandleProviderCancel()
+    {
+        _showProviderDialog = false;
+        _editingProvider = null;
+    }
+
+    // --- Lifecycle handlers ---
+
+    private void HandleDisable(LLMProviderRecord provider)
+    {
+        _pendingLifecycleSlug = provider.Slug;
+        _confirmTitle = L["Providers.DisableConfirmTitle"];
+        _confirmMessage = string.Format(L["Providers.DisableConfirmMessage"], CountAffectedModules(provider.Slug));
+        _confirmActionText = L["Providers.Disable"];
+        _confirmButtonClass = "btn-secondary";
+        _confirmAction = async () =>
+        {
+            if (_pendingLifecycleSlug != null)
+                await ProviderRegistry.DisableProviderAsync(_pendingLifecycleSlug);
+        };
+        _showConfirmDialog = true;
+    }
+
+    private async Task HandleEnable(LLMProviderRecord provider)
+    {
+        await ProviderRegistry.EnableProviderAsync(provider.Slug);
+        await RefreshProviders();
+    }
+
+    private void HandleDelete(LLMProviderRecord provider)
+    {
+        _pendingLifecycleSlug = provider.Slug;
+        _confirmTitle = L["Providers.DeleteConfirmTitle"];
+        _confirmMessage = string.Format(L["Providers.DeleteConfirmMessage"], provider.Models.Count, CountAffectedModules(provider.Slug));
+        _confirmActionText = L["Providers.DeleteConfirmAction"];
+        _confirmButtonClass = "btn-danger";
+        _confirmAction = async () =>
+        {
+            if (_pendingLifecycleSlug != null)
+                await ProviderRegistry.DeleteProviderAsync(_pendingLifecycleSlug);
+        };
+        _showConfirmDialog = true;
+    }
+
+    private async Task HandleConfirmed()
+    {
+        if (_confirmAction != null)
+            await _confirmAction();
+
+        _showConfirmDialog = false;
+        _pendingLifecycleSlug = null;
+        _confirmAction = null;
+        await RefreshProviders();
+    }
+
+    private void HandleConfirmCancelled()
+    {
+        _showConfirmDialog = false;
+        _pendingLifecycleSlug = null;
+        _confirmAction = null;
+    }
+
+    private async Task RefreshProviders()
+    {
+        _providers = new List<LLMProviderRecord>(ProviderRegistry.GetAllProviderRecords());
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // --- Sedimentation config ---
+
+    private void LoadSedimentConfig()
+    {
+        if (string.IsNullOrEmpty(AnimaContext.ActiveAnimaId)) return;
+        var config = ConfigService.GetConfig(AnimaContext.ActiveAnimaId, "Sedimentation");
+        _sedimentProviderSlug = config.GetValueOrDefault("sedimentProviderSlug", "");
+        _sedimentModelId = config.GetValueOrDefault("sedimentModelId", "");
+
+        // Check if saved provider is now disabled
+        _sedimentProviderDisabled = false;
+        if (!string.IsNullOrEmpty(_sedimentProviderSlug))
+        {
+            var provider = LlmRegistry.GetProvider(_sedimentProviderSlug);
+            _sedimentProviderDisabled = provider == null || !provider.IsEnabled;
+        }
+    }
+
+    private void OnActiveAnimaChanged()
+    {
+        LoadSedimentConfig();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleSedimentProviderChanged(ChangeEventArgs e)
+    {
+        _sedimentProviderSlug = e.Value?.ToString() ?? "";
+        _sedimentModelId = ""; // cascade reset
+        _sedimentProviderDisabled = false;
+        await SaveSedimentConfigAsync();
+    }
+
+    private async Task HandleSedimentModelChanged(ChangeEventArgs e)
+    {
+        _sedimentModelId = e.Value?.ToString() ?? "";
+        await SaveSedimentConfigAsync();
+    }
+
+    private async Task SaveSedimentConfigAsync()
+    {
+        if (string.IsNullOrEmpty(AnimaContext.ActiveAnimaId)) return;
+        await ConfigService.SetConfigAsync(
+            AnimaContext.ActiveAnimaId,
+            "Sedimentation",
+            new Dictionary<string, string>
+            {
+                ["sedimentProviderSlug"] = _sedimentProviderSlug,
+                ["sedimentModelId"] = _sedimentModelId
+            });
+        await ShowSavedIndicator();
+    }
+
+    private async Task ShowSavedIndicator()
+    {
+        _savedIndicatorCts?.Cancel();
+        _savedIndicatorCts = new CancellationTokenSource();
+        _sedimentSaved = true;
+        StateHasChanged();
+        try
+        {
+            await Task.Delay(2000, _savedIndicatorCts.Token);
+            _sedimentSaved = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task HandleTokenBudgetChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var budget))
+        {
+            _tokenBudget = budget;
+            ChatContextManager.LLMContextBudget = budget;
+            // Token budget is updated immediately in the service
+        }
+    }
+
+    private int CountAffectedModules(string providerSlug)
+    {
+        int count = 0;
+        foreach (var anima in AnimaManager.GetAll())
+        {
+            var cfg = ConfigService.GetConfig(anima.Id, "LLMModule");
+            if (cfg.TryGetValue("llmProviderSlug", out var slug) && slug == providerSlug)
+                count++;
+        }
+        return count;
+    }
+
     public void Dispose()
     {
-        LanguageService.LanguageChanged -= OnLanguageChanged;
+        LanguageService.LanguageChanged -= OnLanguageServiceChanged;
+        AnimaContext.ActiveAnimaChanged -= OnActiveAnimaChanged;
+        _savedIndicatorCts?.Cancel();
+        _savedIndicatorCts?.Dispose();
     }
 }

@@ -4,13 +4,15 @@ using OpenAnima.Core.Anima;
 using OpenAnima.Core.Events;
 using OpenAnima.Core.LLM;
 using OpenAnima.Core.Modules;
+using OpenAnima.Core.Providers;
 using OpenAnima.Tests.TestHelpers;
 
 namespace OpenAnima.Tests.Unit;
 
 /// <summary>
-/// Verifies CONC-04: skip-when-busy semantics on module execution guards.
-/// A second concurrent invocation must be skipped (not queued) when the first is still running.
+/// Verifies LLMModule concurrency guard semantics.
+/// Prior to Phase 49: Wait(0) — second concurrent invocation was skipped (dropped).
+/// Phase 49 change: WaitAsync — concurrent invocations are serialized (queued), not dropped.
 /// </summary>
 public class ConcurrencyGuardTests
 {
@@ -18,13 +20,14 @@ public class ConcurrencyGuardTests
         => new(NullLogger<EventBus>.Instance);
 
     [Fact]
-    public async Task LLMModule_ConcurrentPrompts_SecondInvocationSkipped()
+    public async Task LLMModule_ConcurrentPrompts_BothInvocationsRunSerially()
     {
-        // Arrange
+        // Arrange — LLMModule now serializes concurrent calls via WaitAsync instead of dropping
         var eventBus = CreateEventBus();
-        var slowLlm = new SlowFakeLLMService(delayMs: 500);
+        var slowLlm = new SlowFakeLLMService(delayMs: 200);
         var module = new LLMModule(slowLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new AnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         // Act — fire two prompts concurrently
@@ -42,11 +45,11 @@ public class ConcurrencyGuardTests
                 Payload = "prompt2"
             }));
 
-        // Wait for first invocation to finish
+        // Wait for both serialized invocations to finish (2 × 200ms + buffer)
         await Task.Delay(1000);
 
-        // Assert — second invocation was skipped by the guard
-        Assert.Equal(1, slowLlm.CallCount);
+        // Assert — both invocations ran (serialized, not dropped)
+        Assert.Equal(2, slowLlm.CallCount);
 
         await module.ShutdownAsync();
     }
@@ -58,7 +61,8 @@ public class ConcurrencyGuardTests
         var eventBus = CreateEventBus();
         var slowLlm = new SlowFakeLLMService(delayMs: 100);
         var module = new LLMModule(slowLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new AnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         var responseTcs1 = new TaskCompletionSource<string>();

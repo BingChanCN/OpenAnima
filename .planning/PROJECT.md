@@ -1,14 +1,28 @@
 # OpenAnima
 
+## Current Milestone: v2.0.4 Intelligent Memory & Persistence
+
+**Goal:** Overhaul the memory system with graph-based architecture, LLM-guided recall, and first-person memory CRUD; fix platform persistence and chat resilience.
+
+**Target features:**
+- Memory data model refactor (Node/Memory/Edge/Path four-layer separation)
+- LLM-driven graph exploration recall (configurable model, dynamic depth)
+- First-person memory CRUD (AI decides what to remember)
+- Wiring layout and chat history persistence across restarts
+- Background chat execution (survives page navigation)
+- Memory operation visibility in chat interface
+
 ## Current State
 
-**Latest shipped:** Phase 48 artifact-memory-foundation (2026-03-21)
-**Milestones complete:** v1.0–v1.9 (10 milestones, 44 phases, 99 plans)
-**Next milestone:** v2.0 Structured Cognition Foundation (Phase 48 complete, Phase 49 next)
+**Latest shipped:** v2.0.3 Editor Experience (2026-03-24)
+**Current milestone:** v2.0.4 Intelligent Memory & Persistence
+**Milestones complete:** v1.0-v2.0.3 (14 milestones, 64 phases, 149 plans)
+**Codebase:** ~52,000 LOC (C#, Razor, CSS, JS) | 662 tests green
+**Phase 65 complete:** Memory schema migration — 4-table model (memory_nodes/UUID PK, memory_contents, memory_edges/UUID refs, memory_uri_paths), atomic migration with backup/rollback, MemoryGraph rewrite
 
 ## What This Is
 
-A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Users create multiple independent Anima instances — each with its own heartbeat, module wiring, chat interface, and configuration. Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based dashboard, visual drag-and-drop wiring editor, LLM-powered chat, and full Chinese/English internationalization.
+A local-first, modular AI agent platform for Windows that lets developers and non-technical users build their own "digital life forms / assistants." Users create multiple independent Anima instances — each with its own heartbeat, module wiring, chat interface, and configuration. Agents are proactive — they think, act, and initiate on their own — while remaining controllable through typed module interfaces and deterministic wiring. The platform provides a C# core runtime with a web-based dashboard, visual drag-and-drop wiring editor, LLM-powered chat with UI-driven provider/model registry, autonomous agent loop (tool calling with think-act-observe cycle), durable task runtime with workspace tools, run inspection with propagation chain visualization, provenance-backed memory graph with automatic recall and living memory sedimentation, graph-native workflow presets, and full Chinese/English internationalization.
 
 ## Core Value
 
@@ -130,25 +144,35 @@ Agents that proactively think and act on their own, while module connections rem
 - ✓ HeartbeatModule standalone PeriodicTimer signal source (BEAT-05) — v1.9
 - ✓ HeartbeatModule interval configurable via EditorConfigSidebar schema rendering (BEAT-06) — v1.9
 - ✓ ITickable interface removed — pure data-driven execution model — v1.9
+- ✓ Durable task runtime with stable run identity, SQLite persistence, resume/cancel lifecycle, and convergence bounds (RUN-01~05, CTRL-01~02) — v2.0
+- ✓ Workspace-aware developer tool surface: 12 file/git/shell tools + 3 memory tools with CommandBlacklistGuard safety (WORK-01~05) — v2.0
+- ✓ Run inspector with per-step timeline, inputs/outputs, errors, propagation chain visualization, and log correlation (OBS-01~04) — v2.0
+- ✓ Artifact store and provenance-backed memory graph with GlossaryIndex, DisclosureMatcher, and /memory UI (ART-01~02, MEM-01~03) — v2.0
+- ✓ Structured cognition workflows: JoinBarrier fan-in, PropagationId tracking, workflow presets, codebase analysis E2E (COG-01~04) — v2.0
+- ✓ Global LLM Provider registry with AES-GCM encrypted credentials, two-layer Provider > Model hierarchy, CRUD UI on Settings page (PROV-01~10) — v2.0.1
+- ✓ LLM module cascading provider/model dropdown selection with three-layer config precedence and manual fallback (LLMN-01~05) — v2.0.1
+- ✓ Automatic memory recall: boot injection, disclosure triggers, glossary keywords with ranked/deduped/bounded prompt injection (MEMR-01~05) — v2.0.1
+- ✓ Tool-aware memory: memory_recall and memory_link tools with XML descriptor injection (TOOL-01~04) — v2.0.1
+- ✓ Living memory sedimentation: auto-extraction from LLM exchanges into provenance-backed memory nodes with snapshot history (LIVM-01~04) — v2.0.1
+- ✓ Memory review surfaces: snapshot diff viewer, provenance inspection, relationship edge browsing on /memory (MEMUI-01~03) — v2.0.1
+- ✓ Agent loop core: ToolCallParser XML marker extraction, AgentToolDispatcher direct dispatch, bounded iteration loop with configurable limit (max 50), system prompt tool-call syntax injection, cancellation safety (LOOP-01~07) — v2.0.2
+- ✓ Tool call display: real-time collapsible tool cards in chat bubbles, "Used N tools" badge, per-event resettable timeout, send locking, cancel button (TCUI-01~04) — v2.0.2
+- ✓ Agent loop hardening: StepRecorder bracket steps (AgentLoop/AgentIteration), token budget management (70% of agentContextWindowSize), full-history sedimentation wiring with tool message truncation (HARD-01~03) — v2.0.2
+- ✓ Module i18n: localized display names in palette, node cards, and config sidebar with live language switching (EDUX-01) — v2.0.3
+- ✓ Module descriptions in config sidebar and palette hover tooltips (EDUX-02, EDUX-05) — v2.0.3
+- ✓ Connection deletion via right-click context menu and Delete key with focus guard (EDUX-03) — v2.0.3
+- ✓ Port hover tooltips with Chinese descriptions on all built-in module ports (EDUX-04) — v2.0.3
 
 ### Active
 
-- [x] Durable task runtime with stable run identity, persistence, resume/cancel, and convergence bounds — Validated in Phase 45: durable-task-runtime-foundation
-- [x] Workspace-aware developer tool surface for file search, git inspection, and bounded command execution — Validated in Phase 46: workspace-tool-surface
-- [x] Run inspector with per-step timeline, inputs/outputs, errors, and graph trigger visibility — Validated in Phase 47: run-inspection-observability
-- [ ] Artifact and provenance-backed memory foundation linked to runs and steps
-- [ ] Structured cognition workflow that analyzes a bound codebase and produces grounded report artifacts
-
-## Current Milestone: v2.0 Structured Cognition Foundation
-
-**Goal:** Turn the existing event-driven graph runtime into a usable long-running developer-agent foundation with durable runs, repo-grounded tooling, inspectable execution, and provenance-backed memory.
-
-**Target features:**
-- Durable task runtime and convergence control
-- Workspace-aware tool modules for repo inspection and bounded command execution
-- Run inspection and observability UI
-- Artifact store and provenance-backed memory retrieval
-- End-to-end structured cognition codebase analysis workflow
+- [ ] Memory data model refactored to Node/Memory/Edge/Path four-layer separation (inspired by Nocturne Memory)
+- [ ] LLM-driven graph exploration recall with configurable model and dynamic depth
+- [ ] First-person memory CRUD tools (create/update/delete/organize)
+- [ ] Improved sedimentation quality (bilingual keywords, broader triggers)
+- [ ] Wiring layout persists across application restarts
+- [ ] Chat history persists across application restarts
+- [ ] LLM execution continues in background when navigating away from chat
+- [ ] Memory operations (create/update) visible in chat interface in real-time
 
 ### Deferred
 
@@ -159,22 +183,25 @@ Agents that proactively think and act on their own, while module connections rem
 - [ ] User can search and filter modules by name (MODMGMT-06)
 - [ ] Propagation convergence control (TTL, energy decay, content-based dampening)
 - [ ] Dynamic port count (TextJoin fixed 3 ports limitation)
+- [ ] LLMProviderRegistryService.InitializeAsync at startup (currently self-heals on /settings visit)
+- [ ] LLMModelInfo.IsEnabled for model-level disabled rendering (provider-level disable covers primary case)
+- [ ] Edge management tools for LLM agent (memory_link tool exists but no UI-driven edge management)
 
 ### Future
 
+- Semantic code intelligence (symbol resolution, refactoring-grade analysis)
+- Story/narrative writing workflow presets
+- Higher-level agent templates and personas built on graph primitives
+- Vector/embedding memory retrieval alongside provenance-backed lexical retrieval
+- Explicit autonomy/permission profiles for destructive workspace mutations
+- Remote/distributed run execution workers
+- Module marketplace discovery, install, and update ecosystem
 - Tiered thinking loop (code heartbeat → fast model triage → deep model reasoning)
 - Language-agnostic module protocol with typed input/output interfaces
-- Dynamic module loading — download from marketplace and run without manual setup
-- C# modules loaded as in-process assemblies; other-language modules as packaged executables via IPC
-- Permission system with autonomy levels (manual / assist / auto)
-- Agent memory and conversation history persistence (beyond session)
 - Additional port types (Stream, Media, etc.) for richer module communication
 - Anima background execution (run in background while viewing different Anima)
 - Anima execution statistics (uptime, module execution count)
 - Module dependency resolution and auto-install
-- Module marketplace integration
-- Loop control module for iterative execution
-- Variable storage module for state persistence
 - Additional language support (Japanese, Korean, etc.)
 
 ### Out of Scope
@@ -190,45 +217,16 @@ Agents that proactively think and act on their own, while module connections rem
 
 ## Context
 
-Shipped v1.9 with ~27,500 LOC across all source files (C#, Razor, CSS, JS).
+Shipped v2.0.3 with ~52,000 LOC across all source files (C#, Razor, CSS, JS).
 Tech stack: .NET 8.0, Blazor Server, SignalR, OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3, Markdown.ColorCode, System.CommandLine 2.0.0-beta4, Microsoft.Extensions.Http.Resilience 8.7.0, Microsoft.Data.Sqlite 8.0.12, Dapper 2.1.72.
+Full test suite: 658/658 green.
 
-v1.9 delivered event-driven propagation engine:
-- WiringEngine replaced DAG topological sort with per-module SemaphoreSlim event-driven routing
-- Cyclic wiring topologies accepted — ConnectionGraph no longer rejects cycles
-- HeartbeatModule refactored to standalone PeriodicTimer with config-driven interval
-- ITickable interface removed from Contracts — pure data-driven execution
-- ModuleSchemaService + EditorConfigSidebar schema-aware rendering for IModuleConfigSchema modules
-- Full test suite: 429/429 green
-
-v2.0 Phase 45 delivered durable task runtime foundation:
-- Domain types: RunState, StepStatus, RunDescriptor, StepRecord, RunResult, ConvergenceCheckResult, RunStateEvent
-- SQLite persistence via IRunRepository with Dapper
-- RunService lifecycle engine (create/start/complete/fail/resume)
-- ConvergenceGuard with configurable step budgets and restore-on-resume
-- StepRecorder with hash-based dedup and SignalR push
-- RunRecoveryService for startup recovery of interrupted runs
-- /runs UI page with 5 shared Blazor components and real-time SignalR updates
-- 35 new unit tests (429 total)
-
-v2.0 Phase 46 delivered workspace tool surface:
-- 12 workspace tools: file_read, file_write, directory_list, file_search, grep_search, git_status, git_diff, git_log, git_show, git_commit, git_checkout, shell_exec
-- IWorkspaceTool interface with ToolDescriptor self-description and ToolResult structured envelopes
-- CommandBlacklistGuard for shell_exec safety (blocks rm -rf, format, shutdown, etc.)
-- WorkspaceToolModule orchestrator with DI wiring and port registration
-- Git tools return parsed structured JSON (not raw git output)
-- All tools validate paths within workspace root
-
-v2.0 Phase 47 delivered run inspection and observability:
-- RunDetail page at /runs/{RunId} with run overview, mixed chronological timeline, accordion step detail
-- PropagationColorAssigner for deterministic chain color coding
-- StepTimelineRow with expand/collapse, error display, propagation chain highlighting
-- StateEventRow for state transition visualization
-- TimelineFilterBar with module/status/chain dropdowns
-- Propagation chain causality: click chain ID to filter timeline, highlight/dim related entries
-- Real-time SignalR push updates for step completion and state changes
-- WiringEngine/RunService BeginScope log correlation
-- 11 new unit tests (322 total across test files)
+v2.0.3 delivered editor experience improvements:
+- Module i18n foundation: 15 Module.DisplayName.* resx keys (zh-CN/en-US) with live language switching across palette, node cards, and config sidebar; dual-language search in palette; invariant names preserved for wiring storage
+- Connection deletion UX: Fixed DeleteSelected() two-step connection ID parsing, JS interop isActiveElementEditable focus guard, ConnectionContextMenu component with right-click delete and localized label
+- Module descriptions: 15 Module.Description.* resx keys wired into EditorConfigSidebar description field and ModulePalette hover tooltips with ResourceNotFound fallback
+- Port hover tooltips: 39 Port.Description.* resx keys with browser-native SVG title tooltips on all input/output port circles; HttpRequestModule body port direction disambiguation
+- 70 total i18n keys added across 3 resource files with zero namespace collisions
 
 Known tech debt:
 - ANIMA-08: Global IEventBus singleton kept for DI — full per-Anima module instances deferred
@@ -236,7 +234,12 @@ Known tech debt:
 - ILLMService remains in Core (ChatMessageInput moved to Contracts but ILLMService depends on LLMResult + streaming)
 - Schema mismatch between CLI and Runtime (extended manifest fields)
 - TextJoin fixed 3 input ports — static port system limitation
-- Startup ordering: WiringInitializationService starts before AnimaInitializationService — first HeartbeatModule tick uses 100ms fallback (self-corrects on tick 2)
+- LLMProviderRegistryService.InitializeAsync not called at startup (self-heals on /settings visit)
+- LLMModelInfo has no IsEnabled field — model-level disabled rendering deferred
+- 26+ pre-existing CS0618 deprecation warnings for IAnimaContext/IAnimaModuleConfigService
+- HARD-03 cancel iteration step leak: in-flight AgentIteration bracket step not closed on cancellation (low severity)
+- Silent fallback when agentEnabled=true but _workspaceToolModule=null — no log warning
+- Multi-Anima agent event cross-contamination risk (pre-existing ANIMA-08 limitation)
 
 ## Key Decisions
 
@@ -324,6 +327,42 @@ Known tech debt:
 | ModuleSchemaService static type map + IServiceProvider | Avoids reflection scanning; DI-based resolution for built-in + external modules | ✓ Good — v1.9 |
 | Schema defaults merged into _currentConfig on load | Auto-save not triggered on load, only on user edits — no spurious persistence | ✓ Good — v1.9 |
 | Raw kvp fallback in EditorConfigSidebar | Non-schema modules continue working unchanged — backward compatible | ✓ Good — v1.9 |
+| SQLite + Dapper for run persistence | Lightweight embedded DB, no external dependency; Dapper for clean SQL mapping | ✓ Good — v2.0 |
+| ConvergenceGuard per-run step budgets | Configurable max steps with restore-on-resume; prevents infinite loops | ✓ Good — v2.0 |
+| IHubContext optional injection | SignalR push nullable in RunService/StepRecorder — testable without hub | ✓ Good — v2.0 |
+| CommandBlacklistGuard (blacklist model) | All commands allowed except blocked list — simpler than whitelist for dev tools | ✓ Good — v2.0 |
+| IWorkspaceTool stateless with per-call workspace root | Tools are stateless, workspace bound per-call not per-instance | ✓ Good — v2.0 |
+| 12-char hex artifact IDs | Lower collision probability than 8-char step IDs across runs | ✓ Good — v2.0 |
+| Aho-Corasick for GlossaryIndex | Single-pass multi-keyword matching with failure link propagation | ✓ Good — v2.0 |
+| DisclosureMatcher static method | No instance state — callers pass nodes and context | ✓ Good — v2.0 |
+| JoinBarrierModule double-check pattern | Fast-path count check before Wait(0) guard, re-check after acquiring | ✓ Good — v2.0 |
+| LLMModule WaitAsync for workflow branches | Serializes concurrent calls instead of Wait(0) drop — correctness for workflow fan-out | ✓ Good — v2.0 |
+| WorkflowPresetService presetsDir constructor arg | Testable preset loading with pragma_table_info migration check | ✓ Good — v2.0 |
+| Preset JSON as Content Include in csproj | No manual copy step at runtime — CopyToOutputDirectory Always | ✓ Good — v2.0 |
+| AES-GCM + PBKDF2 for API key encryption | Machine-fingerprint derived key; authenticated encryption prevents tampering | ✓ Good — v2.0.1 |
+| Write-only API key field via @oninput | Never @bind — prevents stored key from leaking to DOM | ✓ Good — v2.0.1 |
+| Three-layer LLM config precedence | Provider-backed > manual > global — deterministic resolution, manual fallback preserved | ✓ Good — v2.0.1 |
+| CascadingDropdown ConfigFieldType | Two-tier provider/model rendering in EditorConfigSidebar without new component | ✓ Good — v2.0.1 |
+| __manual__ sentinel for manual LLM config | Explicit bypass marker instead of null/empty ambiguity | ✓ Good — v2.0.1 |
+| Dictionary dedup by URI for recall | Single RecalledNode per memory URI; glossary keywords joined in reason string | ✓ Good — v2.0.1 |
+| Boot recall seeded before Disclosure | byUri dictionary starts with Boot entries so type/priority preserved through merge | ✓ Good — v2.0.1 |
+| XML system message for memory injection | <system-memory> block at message[0]; routing before memory before conversation | ✓ Good — v2.0.1 |
+| SedimentationService llmCallOverride constructor param | Tests inject fake delegate without mocking OpenAI SDK internals | ✓ Good — v2.0.1 |
+| Fire-and-forget sedimentation with CancellationToken.None | Snapshot capture + background Task.Run; isolated from LLM call lifecycle | ✓ Good — v2.0.1 |
+| Lazy<IStepRecorder> in BootMemoryInjector | Breaks DI circular dependency surfaced during visual verification | ✓ Good — v2.0.1 |
+| Provenance section expanded by default | Most relevant context on node selection; History/Relationships collapsed | ✓ Good — v2.0.1 |
+| CountAffectedModules for provider impact | Scans all Anima module configs by provider slug for real impact counts | ✓ Good — v2.0.1 |
+| XML text markers for tool calls | `<tool_call>` / `<param>` — consistent with existing `<route>` convention, provider-agnostic | ✓ Good — v2.0.2 |
+| Direct tool dispatch (no EventBus) | AgentToolDispatcher calls IWorkspaceTool.ExecuteAsync directly — prevents semaphore deadlock | ✓ Good — v2.0.2 |
+| Agent loop as LLMModule internal concern | RunAgentLoopAsync is private; WiringEngine/ChatOutputModule receive only final clean response | ✓ Good — v2.0.2 |
+| Hard iteration ceiling (max 50) | Never configurable to 0 or unbounded — default 10, server-side Math.Min clamp | ✓ Good — v2.0.2 |
+| Per-event resettable 60s timeout | _agentTimeoutCts replaced (not extended) on each tool call event — 60s from last activity | ✓ Good — v2.0.2 |
+| Token budget 70% of agentContextWindowSize | Oldest assistant+tool pairs dropped; truncation notice inserted before removal to stay anchored | ✓ Good — v2.0.2 |
+| agentContextWindowSize floor clamped to 1000 | Math.Max prevents zero-budget pathology from misconfigured small values | ✓ Good — v2.0.2 |
+| ResourceNotFound fallback for module display names | Missing .resx key returns class name instead of throwing — safe for external plugins | ✓ Good — v2.0.3 |
+| SVG `<title>` for port tooltips | Browser-native, zero JS, auto-dismisses on mousedown so drag-to-connect unaffected | ✓ Good — v2.0.3 |
+| Two-step split for connection ID parsing | `->` first then `:` on each half — unambiguous and mirrors SelectConnection() construction | ✓ Good — v2.0.3 |
+| JS interop focus guard for Delete key | `isActiveElementEditable` checks activeElement tag before allowing keyboard deletion | ✓ Good — v2.0.3 |
 
 ## Constraints
 
@@ -334,4 +373,4 @@ Known tech debt:
 - **User experience**: Non-technical users must be able to assemble agents without writing code
 
 ---
-*Last updated: 2026-03-21 after completing Phase 47 run-inspection-observability*
+*Last updated: 2026-03-25 after v2.0.4 milestone start*

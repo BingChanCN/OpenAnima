@@ -1,0 +1,48 @@
+@using OpenAnima.Core.Workflows
+@inject IStringLocalizer<SharedResources> L
+
+<div class="form-field">
+    <label for="launch-preset">@L["WorkflowPreset.Label"]</label>
+    <select id="launch-preset"
+            @onchange="HandleChange"
+            style="width: 100%; padding: 8px 16px; background: var(--surface-dark); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 14px; font-family: var(--font-family);">
+        <option value="">@L["WorkflowPreset.NoneManual"]</option>
+        @foreach (var preset in Presets)
+        {
+            <option value="@preset.Name">@preset.DisplayName</option>
+        }
+    </select>
+    @if (!string.IsNullOrEmpty(SelectedPreset))
+    {
+        <span style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; display: block;">
+            @GetDescription(SelectedPreset)
+        </span>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<WorkflowPresetInfo> Presets { get; set; } = [];
+
+    [Parameter]
+    public string? SelectedPreset { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> OnPresetSelected { get; set; }
+
+    private async Task HandleChange(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        SelectedPreset = string.IsNullOrEmpty(value) ? null : value;
+        await OnPresetSelected.InvokeAsync(SelectedPreset);
+    }
+
+    private string GetDescription(string presetName)
+    {
+        return presetName switch
+        {
+            "preset-codebase-analysis" => L["WorkflowPreset.CodebaseAnalysisDescription"],
+            _ => L["WorkflowPreset.DefaultDescription"]
+        };
+    }
+}

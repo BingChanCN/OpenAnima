@@ -1,7 +1,9 @@
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
+using OpenAnima.Core.Anima;
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Services;
+using OpenAnima.Core.ViewportPersistence;
 using OpenAnima.Core.Wiring;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -12,18 +14,21 @@ public class EditorStateServiceTests
     private readonly EditorStateService _service;
     private readonly TestPortRegistry _portRegistry;
     private readonly TestConfigurationLoader _configLoader;
-    private readonly TestWiringEngine _wiringEngine;
 
     public EditorStateServiceTests()
     {
         _portRegistry = new TestPortRegistry();
         _configLoader = new TestConfigurationLoader();
-        _wiringEngine = new TestWiringEngine();
+        var viewportService = new ViewportStateService(
+            Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()),
+            new NullLogger<ViewportStateService>());
         _service = new EditorStateService(
             _portRegistry,
             _configLoader,
-            NullLogger<EditorStateService>.Instance,
-            _wiringEngine
+            new TestAnimaRuntimeManager(),
+            new TestAnimaContext(),
+            viewportService,
+            NullLogger<EditorStateService>.Instance
         );
     }
 
@@ -288,6 +293,87 @@ public class EditorStateServiceTests
         Assert.Null(_service.GetConnectionRejection());
     }
 
+    [Fact]
+    public void DeleteSelected_RemovesSelectedConnection()
+    {
+        // Arrange: 2 nodes, 1 connection
+        var node1 = new ModuleNode { ModuleId = "mod1", ModuleName = "ModuleA", Position = new VisualPosition { X = 0, Y = 0 }, Size = new VisualSize(200, 100) };
+        var node2 = new ModuleNode { ModuleId = "mod2", ModuleName = "ModuleB", Position = new VisualPosition { X = 300, Y = 0 }, Size = new VisualSize(200, 100) };
+        var connection = new PortConnection { SourceModuleId = "mod1", SourcePortName = "output", TargetModuleId = "mod2", TargetPortName = "input" };
+        var config = new WiringConfiguration
+        {
+            Name = "test",
+            Nodes = new List<ModuleNode> { node1, node2 },
+            Connections = new List<PortConnection> { connection }
+        };
+        _service.LoadConfiguration(config);
+
+        // Act
+        _service.SelectConnection("mod1", "output", "mod2", "input", false);
+        _service.DeleteSelected();
+
+        // Assert
+        Assert.Empty(_service.Configuration.Connections);
+    }
+
+    [Fact]
+    public void DeleteSelected_PreservesUnselectedConnections()
+    {
+        // Arrange: 3 nodes, 2 connections (mod1->mod2, mod2->mod3)
+        var node1 = new ModuleNode { ModuleId = "mod1", ModuleName = "ModuleA", Position = new VisualPosition { X = 0, Y = 0 }, Size = new VisualSize(200, 100) };
+        var node2 = new ModuleNode { ModuleId = "mod2", ModuleName = "ModuleB", Position = new VisualPosition { X = 300, Y = 0 }, Size = new VisualSize(200, 100) };
+        var node3 = new ModuleNode { ModuleId = "mod3", ModuleName = "ModuleC", Position = new VisualPosition { X = 600, Y = 0 }, Size = new VisualSize(200, 100) };
+        var conn1 = new PortConnection { SourceModuleId = "mod1", SourcePortName = "output", TargetModuleId = "mod2", TargetPortName = "input" };
+        var conn2 = new PortConnection { SourceModuleId = "mod2", SourcePortName = "output", TargetModuleId = "mod3", TargetPortName = "input" };
+        var config = new WiringConfiguration
+        {
+            Name = "test",
+            Nodes = new List<ModuleNode> { node1, node2, node3 },
+            Connections = new List<PortConnection> { conn1, conn2 }
+        };
+        _service.LoadConfiguration(config);
+
+        // Act: select only the first connection
+        _service.SelectConnection("mod1", "output", "mod2", "input", false);
+        _service.DeleteSelected();
+
+        // Assert: only mod2->mod3 remains
+        Assert.Single(_service.Configuration.Connections);
+        var remaining = _service.Configuration.Connections.Single();
+        Assert.Equal("mod2", remaining.SourceModuleId);
+        Assert.Equal("mod3", remaining.TargetModuleId);
+    }
+
+    [Fact]
+    public void DeleteSelected_RemovesMultipleSelectedConnections()
+    {
+        // Arrange: 3 nodes, 3 connections
+        var node1 = new ModuleNode { ModuleId = "mod1", ModuleName = "ModuleA", Position = new VisualPosition { X = 0, Y = 0 }, Size = new VisualSize(200, 100) };
+        var node2 = new ModuleNode { ModuleId = "mod2", ModuleName = "ModuleB", Position = new VisualPosition { X = 300, Y = 0 }, Size = new VisualSize(200, 100) };
+        var node3 = new ModuleNode { ModuleId = "mod3", ModuleName = "ModuleC", Position = new VisualPosition { X = 600, Y = 0 }, Size = new VisualSize(200, 100) };
+        var conn1 = new PortConnection { SourceModuleId = "mod1", SourcePortName = "output", TargetModuleId = "mod2", TargetPortName = "input" };
+        var conn2 = new PortConnection { SourceModuleId = "mod2", SourcePortName = "output", TargetModuleId = "mod3", TargetPortName = "input" };
+        var conn3 = new PortConnection { SourceModuleId = "mod1", SourcePortName = "output", TargetModuleId = "mod3", TargetPortName = "input" };
+        var config = new WiringConfiguration
+        {
+            Name = "test",
+            Nodes = new List<ModuleNode> { node1, node2, node3 },
+            Connections = new List<PortConnection> { conn1, conn2, conn3 }
+        };
+        _service.LoadConfiguration(config);
+
+        // Act: select 2 of the 3 connections (addToSelection=true for second)
+        _service.SelectConnection("mod1", "output", "mod2", "input", false);
+        _service.SelectConnection("mod2", "output", "mod3", "input", true);
+        _service.DeleteSelected();
+
+        // Assert: only conn3 (mod1->mod3) remains
+        Assert.Single(_service.Configuration.Connections);
+        var remaining = _service.Configuration.Connections.Single();
+        Assert.Equal("mod1", remaining.SourceModuleId);
+        Assert.Equal("mod3", remaining.TargetModuleId);
+    }
+
     // Test helper classes
     private class TestPortRegistry : IPortRegistry
     {
@@ -306,12 +392,28 @@ public class EditorStateServiceTests
         public Task DeleteAsync(string configName, CancellationToken ct = default) => Task.CompletedTask;
     }
 
-    private class TestWiringEngine : IWiringEngine
+    private class TestAnimaRuntimeManager : IAnimaRuntimeManager
     {
-        public bool IsLoaded => false;
-        public WiringConfiguration? GetCurrentConfiguration() => null;
-        public void LoadConfiguration(WiringConfiguration config) { }
-        public Task ExecuteAsync(CancellationToken ct = default, ISet<string>? skipModuleIds = null) => Task.CompletedTask;
-        public void UnloadConfiguration() { }
+        public event Action? StateChanged { add { } remove { } }
+        public event Action? WiringConfigurationChanged { add { } remove { } }
+        public IReadOnlyList<AnimaDescriptor> GetAll() => new List<AnimaDescriptor>();
+        public AnimaDescriptor? GetById(string id) => null;
+        public Task<AnimaDescriptor> CreateAsync(string name, CancellationToken ct = default) => Task.FromResult(new AnimaDescriptor());
+        public Task DeleteAsync(string id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task RenameAsync(string id, string newName, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<AnimaDescriptor> CloneAsync(string id, CancellationToken ct = default) => Task.FromResult(new AnimaDescriptor());
+        public Task InitializeAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public AnimaRuntime? GetRuntime(string animaId) => null;
+        public AnimaRuntime GetOrCreateRuntime(string animaId) => throw new NotSupportedException();
+        public void NotifyWiringConfigurationChanged() { }
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        public void Dispose() { }
+    }
+
+    private class TestAnimaContext : IActiveAnimaContext
+    {
+        public string ActiveAnimaId => "test-anima";
+        public event Action? ActiveAnimaChanged { add { } remove { } }
+        public void SetActive(string animaId) { }
     }
 }

@@ -1,25 +1,29 @@
 @using OpenAnima.Core.Memory
+@using OpenAnima.Core.RunPersistence
+@using OpenAnima.Core.Runs
 @inject IStringLocalizer<SharedResources> L
+@inject IMemoryGraph MemoryGraphService
+@inject IRunRepository RunRepository
 
 <div class="node-card">
     <div class="node-uri-pill">@Node.Uri</div>
 
-    <label class="field-label">Content</label>
+    <label class="field-label">@L["MemoryPage.ContentLabel"]</label>
     <textarea class="node-content-input"
               @bind="EditContent"
               @bind:event="oninput"
               rows="8"
-              aria-label="Memory node content for @Node.Uri"></textarea>
+              aria-label="@L["Memory.ContentAria", Node.Uri]"></textarea>
 
-    <label class="field-label">Disclosure Trigger</label>
+    <label class="field-label">@L["Memory.DisclosureTrigger"]</label>
     <input class="node-trigger-input"
            type="text"
            @bind="EditTrigger"
            @bind:event="oninput"
-           placeholder="e.g. when user mentions project X"
-           aria-label="Disclosure trigger for @Node.Uri" />
+           placeholder="@L["Memory.DisclosureTriggerPlaceholder"]"
+           aria-label="@L["Memory.DisclosureTriggerAria", Node.Uri]" />
 
-    <label class="field-label">Keywords (glossary)</label>
+    <label class="field-label">@L["Memory.KeywordsGlossary"]</label>
     <div class="keyword-tags">
         @foreach (var kw in _keywords)
         {
@@ -27,7 +31,7 @@
                 @kw
                 <button class="keyword-remove"
                         @onclick="() => RemoveKeyword(kw)"
-                        aria-label="Remove keyword @kw">×</button>
+                        aria-label="@L["Memory.RemoveKeywordAria", kw]">×</button>
             </span>
         }
         <input class="keyword-add-input"
@@ -35,46 +39,257 @@
                @bind="_newKeyword"
                @bind:event="oninput"
                @onkeydown="HandleKeywordKeyDown"
-               placeholder="+ add keyword"
-               aria-label="Add keyword" />
+               placeholder="@L["Memory.AddKeywordPlaceholder"]"
+               aria-label="@L["Memory.AddKeywordAria"]" />
     </div>
 
-    <label class="field-label">Provenance</label>
-    <div class="node-provenance">
-        @if (Node.SourceStepId != null || Node.SourceArtifactId != null)
-        {
-            <span>Source:</span>
-            @if (Node.SourceStepId != null)
-            {
-                <span class="provenance-value">Step @Node.SourceStepId</span>
-            }
-            @if (Node.SourceArtifactId != null)
-            {
-                <span>·</span>
-                <span class="provenance-value">Artifact @Node.SourceArtifactId</span>
-            }
-        }
-        <div class="node-timestamps">
-            Created: @FormatTimestamp(Node.CreatedAt) · Updated: @FormatTimestamp(Node.UpdatedAt)
-        </div>
+    <!-- ═══ Provenance Section (default expanded) ═══ -->
+    <div class="section-header @(_provenanceExpanded ? "expanded" : "")"
+         role="button"
+         tabindex="0"
+         aria-expanded="@_provenanceExpanded"
+         aria-controls="provenance-section"
+         @onclick="() => _provenanceExpanded = !_provenanceExpanded"
+         @onkeydown="HandleProvenanceKeyDown">
+        <span class="section-chevron">&#x25B6;</span>
+        <span class="section-title">@L["Memory.Provenance"]</span>
     </div>
+    @if (_provenanceExpanded)
+    {
+        <div id="provenance-section" class="section-content" aria-hidden="false">
+            @if (Node.SourceStepId != null || Node.SourceArtifactId != null)
+            {
+                <div class="provenance-row">
+                    <span>@L["Memory.Source"]</span>
+                    @if (Node.SourceStepId != null)
+                    {
+                        <span class="provenance-value">@L["Common.Step"] @Node.SourceStepId</span>
+                    }
+                    @if (Node.SourceArtifactId != null)
+                    {
+                        <span class="provenance-separator">·</span>
+                        <span class="provenance-value">@L["Artifact.Title"] @Node.SourceArtifactId</span>
+                    }
+                </div>
+                @if (Node.SourceStepId != null)
+                {
+                    <button class="btn-text-link"
+                            @onclick="ToggleStepDetails"
+                            aria-expanded="@_stepDetailsExpanded">
+                        @(_stepDetailsExpanded ? L["Memory.HideStepDetails"] : L["Memory.ShowStepDetails"])
+                    </button>
+                    @if (_stepDetailsExpanded && _stepDetails != null)
+                    {
+                        <div class="step-detail-block">
+                            <div class="step-detail-row"><span class="step-label">@L["Common.Module"]:</span> <span>@_stepDetails.ModuleName</span></div>
+                            <div class="step-detail-row"><span class="step-label">@L["Common.Status"]:</span> <span class="step-status step-status-@_stepDetails.Status.ToLowerInvariant()">@_stepDetails.Status</span></div>
+                            <div class="step-detail-row"><span class="step-label">@L["Common.Occurred"]:</span> <span>@FormatTimestamp(_stepDetails.OccurredAt)</span></div>
+                            @if (_stepDetails.DurationMs.HasValue)
+                            {
+                                <div class="step-detail-row"><span class="step-label">@L["Common.Duration"]:</span> <span>@(_stepDetails.DurationMs)ms</span></div>
+                            }
+                            @if (!string.IsNullOrEmpty(_stepDetails.OutputSummary))
+                            {
+                                <div class="step-detail-row">
+                                    <span class="step-label">@L["Common.Output"]:</span>
+                                    <pre class="step-output">@Truncate(_stepDetails.OutputSummary, 200)</pre>
+                                </div>
+                            }
+                        </div>
+                    }
+                    @if (_stepDetailsExpanded && _stepFetchError)
+                    {
+                        <div class="section-error">@L["Memory.ProvenanceStepError"]</div>
+                    }
+                }
+            }
+            else
+            {
+                <div class="provenance-manual">
+                    <span class="provenance-manual-icon">&#x270E;</span>
+                    <span>@L["Memory.ManuallyCreated"]</span>
+                </div>
+            }
+            <div class="node-timestamps">
+                @L["Common.Created"]: @FormatTimestamp(Node.CreatedAt) · @L["Common.Updated"]: @FormatTimestamp(Node.UpdatedAt)
+            </div>
+        </div>
+    }
+
+    <!-- ═══ Snapshot History Section (default collapsed) ═══ -->
+    <div class="section-header @(_snapshotHistoryExpanded ? "expanded" : "")"
+         role="button"
+         tabindex="0"
+         aria-expanded="@_snapshotHistoryExpanded"
+         aria-controls="snapshot-section"
+         @onclick="ToggleSnapshotHistory"
+         @onkeydown="HandleSnapshotKeyDown">
+        <span class="section-chevron">&#x25B6;</span>
+        <span class="section-title">@L["Memory.SnapshotHistory"]</span>
+    </div>
+    @if (_snapshotHistoryExpanded)
+    {
+        <div id="snapshot-section" class="section-content" aria-hidden="false" role="list">
+            @if (_snapshots.Count == 0)
+            {
+                <div class="section-empty">@L["Memory.EmptySnapshots"]</div>
+            }
+            else
+            {
+                @for (int i = 0; i < _snapshots.Count; i++)
+                {
+                    var snapshot = _snapshots[i];
+                    var isExpanded = _expandedSnapshotId == snapshot.Id;
+                    var newerContent = i == 0 ? Node.Content : _snapshots[i - 1].Content;
+
+                    <div class="snapshot-entry" role="listitem">
+                        <div class="snapshot-row">
+                            <span class="snapshot-timestamp">@FormatTimestamp(snapshot.CreatedAt)</span>
+                            <span class="snapshot-preview">@Truncate(snapshot.Content, 60)</span>
+                            <button class="btn-text-link"
+                                    @onclick="() => _expandedSnapshotId = isExpanded ? null : snapshot.Id">
+                                @(isExpanded ? L["Memory.HideDiff"] : L["Memory.ShowDiff"])
+                            </button>
+                        </div>
+                        @if (isExpanded)
+                        {
+                            <div class="diff-block">
+                                @foreach (var line in LineDiff.Compute(snapshot.Content, newerContent))
+                                {
+                                    <div class="diff-line diff-line-@line.Kind.ToString().ToLowerInvariant()">@line.Line</div>
+                                }
+                            </div>
+                            <button class="btn-restore"
+                                    @onclick="() => RequestRestore(snapshot)"
+                                    aria-label="@L["Memory.RestoreSnapshotAria", FormatTimestamp(snapshot.CreatedAt)]">
+                                @L["Memory.RestoreButton"]
+                            </button>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    }
+
+    <!-- ═══ Relationships Section (default collapsed) ═══ -->
+    <div class="section-header @(_relationshipsExpanded ? "expanded" : "")"
+         role="button"
+         tabindex="0"
+         aria-expanded="@_relationshipsExpanded"
+         aria-controls="relationships-section"
+         @onclick="ToggleRelationships"
+         @onkeydown="HandleRelationshipsKeyDown">
+        <span class="section-chevron">&#x25B6;</span>
+        <span class="section-title">@L["Memory.Relationships"]</span>
+    </div>
+    @if (_relationshipsExpanded)
+    {
+        <div id="relationships-section" class="section-content" aria-hidden="false">
+            @if (_edgeFetchError)
+            {
+                <div class="section-error">@L["Memory.ProvenanceEdgeError"]</div>
+            }
+            else
+            {
+                <div class="edge-subgroup-label">@L["Memory.Outgoing"]</div>
+                @if (_outgoingEdges.Count == 0)
+                {
+                    <div class="section-empty">@L["Memory.EmptyOutgoing"]</div>
+                }
+                else
+                {
+                    <div role="list">
+                        @foreach (var edge in _outgoingEdges)
+                        {
+                            <div class="edge-row" role="listitem">
+                                <span class="edge-this-node">@L["Memory.ThisNode"]</span>
+                                <span class="edge-arrow">&#x2192;</span>
+                                <span class="edge-uri-wrapper"
+                                      @onmouseover="() => _tooltipUri = edge.ToUri"
+                                      @onmouseout="() => _tooltipUri = null">
+                                    <button class="edge-uri-link"
+                                            @onclick="() => NavigateToNode(edge.ToUri)"
+                                            aria-label="@L["Memory.NavigateToAria", edge.ToUri]">
+                                        @edge.ToUri
+                                    </button>
+                                    @if (_tooltipUri == edge.ToUri && _nodeContentCache.TryGetValue(edge.ToUri, out var outTip))
+                                    {
+                                        <div class="edge-tooltip" role="tooltip">@Truncate(outTip, 100)</div>
+                                    }
+                                </span>
+                                <span class="edge-label-badge">@edge.Label</span>
+                                <span class="edge-date">@FormatTimestamp(edge.CreatedAt)</span>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="edge-subgroup-label" style="margin-top: 8px;">@L["Memory.Incoming"]</div>
+                @if (_incomingEdges.Count == 0)
+                {
+                    <div class="section-empty">@L["Memory.EmptyIncoming"]</div>
+                }
+                else
+                {
+                    <div role="list">
+                        @foreach (var edge in _incomingEdges)
+                        {
+                            <div class="edge-row" role="listitem">
+                                <span class="edge-uri-wrapper"
+                                      @onmouseover="() => _tooltipUri = edge.FromUri"
+                                      @onmouseout="() => _tooltipUri = null">
+                                    <button class="edge-uri-link"
+                                            @onclick="() => NavigateToNode(edge.FromUri)"
+                                            aria-label="@L["Memory.NavigateToAria", edge.FromUri]">
+                                        @edge.FromUri
+                                    </button>
+                                    @if (_tooltipUri == edge.FromUri && _nodeContentCache.TryGetValue(edge.FromUri, out var inTip))
+                                    {
+                                        <div class="edge-tooltip" role="tooltip">@Truncate(inTip, 100)</div>
+                                    }
+                                </span>
+                                <span class="edge-arrow">&#x2192;</span>
+                                <span class="edge-this-node">@L["Memory.ThisNode"]</span>
+                                <span class="edge-label-badge">@edge.Label</span>
+                                <span class="edge-date">@FormatTimestamp(edge.CreatedAt)</span>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    }
 
     <div class="node-actions">
         <button class="btn-save"
                 @onclick="OnSave"
-                aria-label="Save changes to @Node.Uri">
-            Save Changes
+                aria-label="@L["Memory.SaveChangesAria", Node.Uri]">
+            @L["Memory.SaveChanges"]
         </button>
         <button class="btn-danger"
                 @onclick="OnDeleteClick"
-                aria-label="Delete memory node @Node.Uri">
-            Delete Node
+                aria-label="@L["Memory.DeleteNodeAria", Node.Uri]">
+            @L["Memory.DeleteNode"]
         </button>
     </div>
 
     @if (_showSaveFlash)
     {
-        <div class="save-flash">Saved</div>
+        <div class="save-flash">@(_isRestoreFlash ? L["Memory.RestoreFlash"] : L["Memory.Saved"])</div>
+    }
+
+    @if (_showRestoreConfirm && _pendingRestoreSnapshot != null)
+    {
+        <div class="confirm-overlay" @onclick="CancelRestore">
+            <div class="confirm-dialog" @onclick:stopPropagation="true">
+                <h3>@L["Memory.RestoreConfirmTitle"]</h3>
+                <p>@L["Memory.RestoreConfirmBody"]</p>
+                <div class="confirm-actions">
+                    <button class="btn-restore-confirm" @onclick="ExecuteRestore">@L["Memory.RestoreConfirmAction"]</button>
+                    <button class="btn-cancel" @onclick="CancelRestore">@L["Memory.RestoreConfirmCancel"]</button>
+                </div>
+            </div>
+        </div>
     }
 </div>
 
@@ -82,18 +297,64 @@
     [Parameter] public MemoryNode Node { get; set; } = default!;
     [Parameter] public EventCallback<MemoryNode> OnSaveNode { get; set; }
     [Parameter] public EventCallback<string> OnDeleteNode { get; set; }
+    [Parameter] public EventCallback<string> OnNavigateToUri { get; set; }
 
     private string EditContent { get; set; } = "";
     private string? EditTrigger { get; set; }
     private List<string> _keywords = new();
     private string _newKeyword = "";
     private bool _showSaveFlash;
+    private bool _isRestoreFlash;
+
+    // Provenance section
+    private bool _provenanceExpanded = true;
+    private StepRecord? _stepDetails;
+    private bool _stepDetailsExpanded;
+    private bool _stepFetchError;
+
+    // Snapshot History section
+    private bool _snapshotHistoryExpanded;
+    private bool _snapshotsLoaded;
+    private IReadOnlyList<MemoryContent> _snapshots = Array.Empty<MemoryContent>();
+    private int? _expandedSnapshotId;
+    private bool _showRestoreConfirm;
+    private MemoryContent? _pendingRestoreSnapshot;
+
+    // Relationships section
+    private bool _relationshipsExpanded;
+    private bool _edgesLoaded;
+    private IReadOnlyList<MemoryEdge> _outgoingEdges = Array.Empty<MemoryEdge>();
+    private IReadOnlyList<MemoryEdge> _incomingEdges = Array.Empty<MemoryEdge>();
+    private Dictionary<string, string> _nodeContentCache = new();
+    private string? _tooltipUri;
+    private bool _edgeFetchError;
 
     protected override void OnParametersSet()
     {
         EditContent = Node.Content;
         EditTrigger = Node.DisclosureTrigger;
         _keywords = ParseKeywords(Node.Keywords);
+
+        // Reset section state on node switch
+        _provenanceExpanded = true;
+        _stepDetails = null;
+        _stepDetailsExpanded = false;
+        _stepFetchError = false;
+
+        _snapshotHistoryExpanded = false;
+        _snapshotsLoaded = false;
+        _snapshots = Array.Empty<MemoryContent>();
+        _expandedSnapshotId = null;
+        _showRestoreConfirm = false;
+        _pendingRestoreSnapshot = null;
+
+        _relationshipsExpanded = false;
+        _edgesLoaded = false;
+        _outgoingEdges = Array.Empty<MemoryEdge>();
+        _incomingEdges = Array.Empty<MemoryEdge>();
+        _nodeContentCache = new();
+        _tooltipUri = null;
+        _edgeFetchError = false;
     }
 
     private static List<string> ParseKeywords(string? json)
@@ -122,8 +383,153 @@
         }
     }
 
+    // ── Section keyboard handlers ──
+
+    private void HandleProvenanceKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == " ") _provenanceExpanded = !_provenanceExpanded;
+    }
+
+    private async Task HandleSnapshotKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == " ") await ToggleSnapshotHistory();
+    }
+
+    private async Task HandleRelationshipsKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == " ") await ToggleRelationships();
+    }
+
+    // ── Snapshot History ──
+
+    private async Task ToggleSnapshotHistory()
+    {
+        _snapshotHistoryExpanded = !_snapshotHistoryExpanded;
+        if (_snapshotHistoryExpanded && !_snapshotsLoaded)
+        {
+            _snapshots = await MemoryGraphService.GetContentHistoryAsync(Node.AnimaId, Node.Uri);
+            _snapshotsLoaded = true;
+        }
+    }
+
+    // ── Provenance ──
+
+    private async Task ToggleStepDetails()
+    {
+        _stepDetailsExpanded = !_stepDetailsExpanded;
+        if (_stepDetailsExpanded && _stepDetails == null && Node.SourceStepId != null)
+        {
+            try
+            {
+                _stepDetails = await RunRepository.GetStepByIdAsync(Node.SourceStepId);
+                if (_stepDetails == null) _stepFetchError = true;
+            }
+            catch
+            {
+                _stepFetchError = true;
+            }
+        }
+    }
+
+    // ── Relationships ──
+
+    private async Task ToggleRelationships()
+    {
+        _relationshipsExpanded = !_relationshipsExpanded;
+        if (_relationshipsExpanded && !_edgesLoaded)
+        {
+            try
+            {
+                _outgoingEdges = await MemoryGraphService.GetEdgesAsync(Node.AnimaId, Node.Uri);
+                _incomingEdges = await MemoryGraphService.GetIncomingEdgesAsync(Node.AnimaId, Node.Uri);
+                _edgesLoaded = true;
+
+                // Pre-fetch counterpart node content for tooltips
+                var counterpartUris = _outgoingEdges.Select(e => e.ToUri)
+                    .Concat(_incomingEdges.Select(e => e.FromUri))
+                    .Distinct()
+                    .Where(uri => uri != Node.Uri);
+
+                var fetchTasks = counterpartUris.Select(async uri =>
+                {
+                    var node = await MemoryGraphService.GetNodeAsync(Node.AnimaId, uri);
+                    if (node != null) _nodeContentCache[uri] = node.Content;
+                });
+                await Task.WhenAll(fetchTasks);
+            }
+            catch
+            {
+                _edgeFetchError = true;
+            }
+        }
+    }
+
+    private async Task NavigateToNode(string uri)
+    {
+        await OnNavigateToUri.InvokeAsync(uri);
+    }
+
+    // ── Restore ──
+
+    private void RequestRestore(MemoryContent snapshot)
+    {
+        _pendingRestoreSnapshot = snapshot;
+        _showRestoreConfirm = true;
+    }
+
+    private void CancelRestore()
+    {
+        _showRestoreConfirm = false;
+        _pendingRestoreSnapshot = null;
+    }
+
+    private async Task ExecuteRestore()
+    {
+        if (_pendingRestoreSnapshot == null) return;
+
+        var restored = Node with
+        {
+            Content = _pendingRestoreSnapshot.Content,
+            UpdatedAt = DateTimeOffset.UtcNow.ToString("O")
+        };
+        await OnSaveNode.InvokeAsync(restored);
+
+        _showRestoreConfirm = false;
+        _pendingRestoreSnapshot = null;
+
+        // Reset snapshots so they reload with the new state
+        _snapshotsLoaded = false;
+        if (_snapshotHistoryExpanded)
+        {
+            _snapshots = await MemoryGraphService.GetContentHistoryAsync(Node.AnimaId, Node.Uri);
+            _snapshotsLoaded = true;
+        }
+
+        // Show restore flash
+        _isRestoreFlash = true;
+        _showSaveFlash = true;
+        _ = HideRestoreFlash();
+    }
+
+    private async Task HideRestoreFlash()
+    {
+        await Task.Delay(1500);
+        _showSaveFlash = false;
+        _isRestoreFlash = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ── Helpers ──
+
+    private static string Truncate(string? text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        return text.Length <= maxLength ? text : text[..maxLength] + "...";
+    }
+
     private async Task OnSave()
     {
+        _isRestoreFlash = false;
         var updated = Node with
         {
             Content = EditContent,

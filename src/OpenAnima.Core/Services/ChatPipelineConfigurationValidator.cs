@@ -25,7 +25,7 @@ public static class ChatPipelineConfigurationValidator
             sourceModuleName == ChatInputModuleName &&
             targetModuleName == LlmModuleName &&
             connection.SourcePortName == "userMessage" &&
-            connection.TargetPortName == "prompt");
+            (connection.TargetPortName == "prompt" || connection.TargetPortName == "messages"));
 
         if (!hasInputToLlm)
             return false;

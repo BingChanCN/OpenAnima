@@ -1,4 +1,5 @@
 @using OpenAnima.Contracts
+@using OpenAnima.Core.ChatPersistence
 @using OpenAnima.Core.Events
 @using OpenAnima.Core.LLM
 @using OpenAnima.Core.Modules
@@ -8,14 +9,18 @@
 @implements IAsyncDisposable
 @inject ChatInputModule _chatInputModule
 @inject ChatOutputModule _chatOutputModule
+@inject IEventBus EventBus
 @inject ChatContextManager _contextManager
 @inject ChatSessionState _chatSessionState
 @inject IAnimaRuntimeManager _animaRuntimeManager
-@inject IAnimaContext _animaContext
+@inject IModuleContext _animaContext
 @inject NavigationManager _navigation
 @inject IJSRuntime JS
 @inject IStringLocalizer<SharedResources> L
 @inject LanguageService LangSvc
+@inject IModuleConfig _moduleConfigService
+@inject ChatHistoryService _chatHistoryService
+@inject ILoggerFactory LoggerFactory
 
 <div class="chat-panel">
     @if (!IsPipelineConfigured())
@@ -39,7 +44,7 @@
         {
             @foreach (var message in Messages)
             {
-                <ChatMessage Role="@message.Role" Content="@message.Content" IsStreaming="@message.IsStreaming" />
+                <ChatMessage Role="@message.Role" Content="@message.Content" IsStreaming="@message.IsStreaming" ToolCalls="@message.ToolCalls" />
             }
             @if (!_isGenerating && Messages.Count > 0 && Messages.Last().Role == "assistant")
             {
@@ -54,21 +59,37 @@
         OutputTokens="@_contextManager.TotalOutputTokens"
         CurrentContextTokens="@_contextManager.CurrentContextTokens"
         MaxContextTokens="@_contextManager.MaxContextTokens" />
-    <ChatInput OnSend="SendMessage" IsDisabled="@(_isGenerating || IsContextLimitReached() || !IsPipelineConfigured())" />
+    <div class="chat-input-wrapper">
+        <ChatInput OnSend="SendMessage"
+                   IsDisabled="@(_isGenerating || IsContextLimitReached() || !IsPipelineConfigured())"
+                   IsAgentRunning="@(_isGenerating && _isAgentMode)"
+                   OnCancel="CancelAgentExecution" />
+    </div>
 </div>
 
 @code {
     private bool _isGenerating;
+    private bool _isAgentMode;
     private CancellationTokenSource _generationCts = new();
+    private CancellationTokenSource? _agentTimeoutCts;
     private TaskCompletionSource<string>? _pendingAssistantResponse;
+    private IDisposable? _llmErrorSubscription;
+    private IDisposable? _toolCallStartedSubscription;
+    private IDisposable? _toolCallCompletedSubscription;
     private List<ChatSessionMessage> Messages => _chatSessionState.Messages;
 
     protected override void OnInitialized()
     {
         _contextManager.OnStateChanged += HandleContextManagerChanged;
         _chatOutputModule.OnMessageReceived += HandleChatOutputReceived;
+        _llmErrorSubscription = EventBus.Subscribe<string>("LLMModule.port.error", HandleLlmErrorAsync);
+        _toolCallStartedSubscription = EventBus.Subscribe<ToolCallStartedPayload>(
+            "LLMModule.tool_call.started", HandleToolCallStartedAsync);
+        _toolCallCompletedSubscription = EventBus.Subscribe<ToolCallCompletedPayload>(
+            "LLMModule.tool_call.completed", HandleToolCallCompletedAsync);
         LangSvc.LanguageChanged += OnLanguageChanged;
         _animaContext.ActiveAnimaChanged += OnAnimaChanged;
+        _animaRuntimeManager.WiringConfigurationChanged += OnWiringConfigurationChanged;
     }
 
     private void HandleContextManagerChanged()
@@ -81,12 +102,115 @@
     private void OnAnimaChanged()
     {
         _chatSessionState.Messages.Clear();
+        _ = RestoreChatHistoryAsync();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RestoreChatHistoryAsync()
+    {
+        var activeAnimaId = _animaContext.ActiveAnimaId;
+        if (string.IsNullOrEmpty(activeAnimaId))
+            return;
+
+        try
+        {
+            var messages = await _chatHistoryService.LoadHistoryAsync(activeAnimaId, CancellationToken.None);
+            _chatSessionState.Messages.Clear();
+            _chatSessionState.Messages.AddRange(messages);
+
+            // Auto-scroll to bottom
+            await JS.InvokeVoidAsync("scrollChatToBottom", "chat-messages");
+        }
+        catch (Exception ex)
+        {
+            var logger = LoggerFactory?.CreateLogger<ChatPanel>();
+            logger?.LogError(ex, "Failed to restore chat history for Anima {AnimaId}", activeAnimaId);
+        }
+    }
+
+    private void OnWiringConfigurationChanged()
+    {
+        // Re-evaluate IsPipelineConfigured() after editor auto-save updates the WiringEngine.
+        // Without this, ChatPanel would remain in "not configured" state even after a valid
+        // pipeline is saved, because the render only happens when explicitly triggered.
         InvokeAsync(StateHasChanged);
     }
 
     private void HandleChatOutputReceived(string assistantText)
     {
         _pendingAssistantResponse?.TrySetResult(assistantText);
+    }
+
+    private Task HandleLlmErrorAsync(ModuleEvent<string> evt, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(evt.Payload))
+        {
+            _pendingAssistantResponse?.TrySetResult($"LLM error: {evt.Payload}");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task HandleToolCallStartedAsync(ModuleEvent<ToolCallStartedPayload> evt, CancellationToken ct)
+    {
+        var current = Messages.LastOrDefault(m => m.Role == "assistant" && m.IsStreaming);
+        if (current != null)
+        {
+            current.ToolCalls.Add(new ToolCallInfo
+            {
+                ToolName = evt.Payload.ToolName,
+                Parameters = evt.Payload.Parameters,
+                Status = ToolCallStatus.Running
+            });
+            ResetAgentTimeout();
+        }
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandleToolCallCompletedAsync(ModuleEvent<ToolCallCompletedPayload> evt, CancellationToken ct)
+    {
+        var current = Messages.LastOrDefault(m => m.Role == "assistant" && m.IsStreaming);
+        if (current != null)
+        {
+            var info = current.ToolCalls.LastOrDefault(t =>
+                t.ToolName == evt.Payload.ToolName && t.Status == ToolCallStatus.Running);
+            if (info != null)
+            {
+                info.ResultSummary = evt.Payload.ResultSummary;
+                info.Status = evt.Payload.Success ? ToolCallStatus.Success : ToolCallStatus.Failed;
+            }
+            ResetAgentTimeout();
+        }
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private void ResetAgentTimeout()
+    {
+        if (_agentTimeoutCts != null)
+        {
+            try { _agentTimeoutCts.Cancel(); } catch { }
+            try { _agentTimeoutCts.Dispose(); } catch { }
+        }
+        _agentTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        // Re-register cancellation: when this timeout fires, cancel the generation CTS
+        _agentTimeoutCts.Token.Register(() =>
+        {
+            try { _generationCts.Cancel(); } catch { }
+        });
+    }
+
+    private bool IsAgentModeEnabled()
+    {
+        var activeId = _animaContext.ActiveAnimaId;
+        if (activeId == null) return false;
+        var config = _moduleConfigService.GetConfig(activeId, "LLMModule");
+        return config.TryGetValue("agentEnabled", out var val) &&
+               bool.TryParse(val, out var enabled) && enabled;
+    }
+
+    private void CancelAgentExecution()
+    {
+        _generationCts.Cancel();
     }
 
     private bool IsContextLimitReached()
@@ -154,6 +278,21 @@
 
         var messageTokenCount = _contextManager.CountTokens(userMessage);
         _contextManager.UpdateAfterSend(messageTokenCount);
+
+        // Persist user message to chat database
+        var activeAnimaId = _animaContext.ActiveAnimaId;
+        if (!string.IsNullOrEmpty(activeAnimaId))
+        {
+            await _chatHistoryService.StoreMessageAsync(
+                activeAnimaId,
+                role: "user",
+                content: userMessage,
+                toolCalls: new(),
+                inputTokens: messageTokenCount,
+                outputTokens: 0,
+                CancellationToken.None);
+        }
+
         var eventBusSend = GetActiveEventBus();
         if (eventBusSend != null)
             await eventBusSend.PublishAsync(new ModuleEvent<MessageSentPayload>
@@ -211,28 +350,59 @@
         ResetGenerationCancellation();
 
         _isGenerating = true;
+        _isAgentMode = IsAgentModeEnabled();
         await InvokeAsync(StateHasChanged);
 
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_generationCts.Token, timeoutCts.Token);
-
-        var responseTask = CreatePendingAssistantResponse(linkedCts.Token);
+        CancellationTokenSource? timeoutCts = null;
+        CancellationTokenSource? linkedCts = null;
 
         try
         {
+            if (_isAgentMode)
+            {
+                _agentTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                _agentTimeoutCts.Token.Register(() =>
+                {
+                    try { _generationCts.Cancel(); } catch { }
+                });
+                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_generationCts.Token);
+            }
+            else
+            {
+                timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_generationCts.Token, timeoutCts.Token);
+            }
+
+            var responseTask = CreatePendingAssistantResponse(linkedCts.Token);
+
             await _chatInputModule.SendMessageAsync(prompt, linkedCts.Token);
             var assistantResponse = await responseTask;
 
             assistantMessage.Content = assistantResponse;
             assistantMessage.IsStreaming = false;
 
+            // Persist assistant message to chat database
+            var activeAnimaId = _animaContext.ActiveAnimaId;
+            if (!string.IsNullOrEmpty(activeAnimaId))
+            {
+                var outputTokens = _contextManager.CountTokens(assistantResponse);
+                await _chatHistoryService.StoreMessageAsync(
+                    activeAnimaId,
+                    role: "assistant",
+                    content: assistantResponse,
+                    toolCalls: assistantMessage.ToolCalls,
+                    inputTokens: 0,
+                    outputTokens: outputTokens,
+                    CancellationToken.None);
+            }
+
             await UpdateAfterResponseAsync(prompt, assistantResponse);
             await InvokeAsync(StateHasChanged);
             await ScrollToBottomIfNeededAsync();
         }
-        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !_generationCts.IsCancellationRequested)
+        catch (OperationCanceledException) when (!_isAgentMode && timeoutCts != null && timeoutCts.IsCancellationRequested && !_generationCts.IsCancellationRequested)
         {
-            assistantMessage.Content = "No response arrived from the module pipeline. Open the editor and verify ChatInputModule → LLMModule → ChatOutputModule wiring.";
+            assistantMessage.Content = "No response arrived from the module pipeline. Open the editor and verify ChatInputModule \u2192 LLMModule \u2192 ChatOutputModule wiring.";
             assistantMessage.IsStreaming = false;
             await InvokeAsync(StateHasChanged);
         }
@@ -246,6 +416,15 @@
         {
             _pendingAssistantResponse = null;
             _isGenerating = false;
+            _isAgentMode = false;
+            linkedCts?.Dispose();
+            timeoutCts?.Dispose();
+            if (_agentTimeoutCts != null)
+            {
+                try { _agentTimeoutCts.Cancel(); } catch { }
+                try { _agentTimeoutCts.Dispose(); } catch { }
+                _agentTimeoutCts = null;
+            }
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -307,9 +486,18 @@
     public ValueTask DisposeAsync()
     {
         _chatOutputModule.OnMessageReceived -= HandleChatOutputReceived;
+        _llmErrorSubscription?.Dispose();
+        _toolCallStartedSubscription?.Dispose();
+        _toolCallCompletedSubscription?.Dispose();
+        if (_agentTimeoutCts != null)
+        {
+            try { _agentTimeoutCts.Cancel(); } catch { }
+            try { _agentTimeoutCts.Dispose(); } catch { }
+        }
         _contextManager.OnStateChanged -= HandleContextManagerChanged;
         LangSvc.LanguageChanged -= OnLanguageChanged;
         _animaContext.ActiveAnimaChanged -= OnAnimaChanged;
+        _animaRuntimeManager.WiringConfigurationChanged -= OnWiringConfigurationChanged;
 
         _generationCts.Cancel();
         _generationCts.Dispose();

@@ -19,7 +19,7 @@ public class RunDbConnectionFactory
     /// <param name="dbPath">Absolute or relative path to the SQLite database file.</param>
     public RunDbConnectionFactory(string dbPath)
     {
-        _connectionString = $"Data Source={dbPath}";
+        _connectionString = $"Data Source={dbPath};Busy Timeout=5000";
     }
 
     /// <summary>

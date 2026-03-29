@@ -2,34 +2,34 @@
 @using OpenAnima.Core.Memory
 @using OpenAnima.Core.Anima
 @inject IMemoryGraph MemoryGraphService
-@inject IAnimaContext AnimaContext
+@inject IModuleContext AnimaContext
 @inject IStringLocalizer<SharedResources> L
 
 <div class="memory-page">
     <div class="memory-header">
-        <h1 class="memory-title">Memory</h1>
-        <button class="btn-new-node" @onclick="StartNewNode">+ New Node</button>
+        <h1 class="memory-title">@L["MemoryPage.Title"]</h1>
+        <button class="btn-new-node" @onclick="StartNewNode">+ @L["MemoryPage.NewNode"]</button>
     </div>
 
     <div class="memory-filter">
         <input type="text"
                class="uri-search-input"
-               placeholder="Search by URI path..."
+               placeholder="@L["MemoryPage.SearchPlaceholder"]"
                @bind="_searchFilter"
                @bind:event="oninput" />
         @if (!string.IsNullOrEmpty(_searchFilter))
         {
-            <button class="search-clear" @onclick="ClearSearch" aria-label="Clear search">×</button>
+            <button class="search-clear" @onclick="ClearSearch" aria-label="@L["MemoryPage.ClearSearch"]">×</button>
         }
     </div>
 
     <div class="memory-layout">
-        <div class="uri-tree-panel" role="tree" aria-label="Memory URI tree">
+        <div class="uri-tree-panel" role="tree" aria-label="@L["MemoryPage.UriTreeAria"]">
             @if (_treeNodes.Count == 0)
             {
                 <div class="empty-state">
-                    <h3>No memory nodes yet</h3>
-                    <p>Create a node to start building this Anima's memory graph.</p>
+                    <h3>@L["MemoryPage.EmptyHeading"]</h3>
+                    <p>@L["MemoryPage.EmptyBody"]</p>
                 </div>
             }
             else
@@ -51,23 +51,23 @@
             @if (_isCreatingNew)
             {
                 <div class="new-node-form">
-                    <label class="field-label">URI</label>
+                    <label class="field-label">@L["MemoryPage.UriLabel"]</label>
                     <input type="text"
                            class="new-node-uri-input"
                            @bind="_newUri"
                            @bind:event="oninput"
-                           placeholder="e.g. core://agent/identity"
+                           placeholder="@L["MemoryPage.NewUriPlaceholder"]"
                            @ref="_uriInputRef"
-                           aria-label="New memory node URI" />
-                    <label class="field-label">Content</label>
+                           aria-label="@L["MemoryPage.NewUriAria"]" />
+                    <label class="field-label">@L["MemoryPage.ContentLabel"]</label>
                     <textarea class="new-node-content-input"
                               @bind="_newContent"
                               @bind:event="oninput"
                               rows="6"
-                              aria-label="New memory node content"></textarea>
+                              aria-label="@L["MemoryPage.NewContentAria"]"></textarea>
                     <div class="new-node-actions">
-                        <button class="btn-create" @onclick="CreateNewNode">Create Node</button>
-                        <button class="btn-cancel" @onclick="CancelNewNode">Cancel</button>
+                        <button class="btn-create" @onclick="CreateNewNode">@L["MemoryPage.CreateNode"]</button>
+                        <button class="btn-cancel" @onclick="CancelNewNode">@L["MemoryPage.Cancel"]</button>
                     </div>
                 </div>
             }
@@ -75,12 +75,13 @@
             {
                 <MemoryNodeCard Node="_selectedNode"
                                 OnSaveNode="SaveNode"
-                                OnDeleteNode="ConfirmDelete" />
+                                OnDeleteNode="ConfirmDelete"
+                                OnNavigateToUri="SelectNode" />
             }
             else
             {
                 <div class="no-selection">
-                    Select a memory node to view or edit.
+                    @L["MemoryPage.NoSelection"]
                 </div>
             }
         </div>
@@ -91,11 +92,11 @@
 {
     <div class="confirm-overlay" @onclick="CancelDelete">
         <div class="confirm-dialog" @onclick:stopPropagation="true">
-            <h3>Delete memory node?</h3>
-            <p>This will permanently remove the node and all its edges. This cannot be undone.</p>
+            <h3>@L["MemoryPage.DeleteConfirmTitle"]</h3>
+            <p>@L["MemoryPage.DeleteConfirmBody"]</p>
             <div class="confirm-actions">
-                <button class="btn-danger" @onclick="ExecuteDelete">Delete Node</button>
-                <button class="btn-cancel" @onclick="CancelDelete">Keep Node</button>
+                <button class="btn-danger" @onclick="ExecuteDelete">@L["MemoryPage.DeleteConfirmAction"]</button>
+                <button class="btn-cancel" @onclick="CancelDelete">@L["MemoryPage.DeleteConfirmCancel"]</button>
             </div>
         </div>
     </div>
@@ -127,7 +128,8 @@
     {
         var animaId = AnimaContext.ActiveAnimaId;
         if (animaId == null) return;
-        _treeNodes = (await MemoryGraphService.GetAllNodesAsync(animaId)).OrderBy(n => n.Uri).ToList();
+        // includeDeprecated: true — /memory UI shows deprecated nodes for recovery purposes
+        _treeNodes = (await MemoryGraphService.GetAllNodesAsync(animaId, includeDeprecated: true)).OrderBy(n => n.Uri).ToList();
     }
 
     private async Task SelectNode(string uri)

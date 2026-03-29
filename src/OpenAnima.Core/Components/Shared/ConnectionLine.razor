@@ -7,6 +7,8 @@
       fill="none"
       pointer-events="@(IsPreview ? "none" : "stroke")"
       @onclick="HandleClick"
+      @oncontextmenu="HandleContextMenu"
+      @oncontextmenu:preventDefault
       class="@(IsPreview ? "" : "cursor-pointer")" />
 
 <!-- Visible bezier curve -->
@@ -37,6 +39,9 @@
     [Parameter]
     public EventCallback OnClick { get; set; }
 
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
+
     private string _pathData = "";
 
     protected override void OnParametersSet()
@@ -56,6 +61,14 @@
         if (!IsPreview && OnClick.HasDelegate)
         {
             await OnClick.InvokeAsync();
+        }
+    }
+
+    private async Task HandleContextMenu(MouseEventArgs e)
+    {
+        if (!IsPreview && OnContextMenu.HasDelegate)
+        {
+            await OnContextMenu.InvokeAsync(e);
         }
     }
 }

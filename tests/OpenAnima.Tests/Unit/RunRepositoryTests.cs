@@ -210,6 +210,83 @@ public class RunRepositoryTests : IDisposable
         Assert.Equal(3, count);
     }
 
+    // --- WorkflowPreset persistence ---
+
+    [Fact]
+    public async Task CreateRunAsync_PersistsWorkflowPreset_AndGetRunByIdAsyncReturnsIt()
+    {
+        var descriptor = new RunDescriptor
+        {
+            RunId = "run-preset1",
+            AnimaId = "anima01",
+            Objective = "Preset test",
+            WorkspaceRoot = "/workspace/test",
+            MaxSteps = null,
+            MaxWallSeconds = null,
+            CreatedAt = DateTimeOffset.UtcNow,
+            CurrentState = RunState.Created,
+            WorkflowPreset = "preset-codebase-analysis"
+        };
+        await _repository.CreateRunAsync(descriptor);
+
+        var result = await _repository.GetRunByIdAsync("run-preset1");
+
+        Assert.NotNull(result);
+        Assert.Equal("preset-codebase-analysis", result!.WorkflowPreset);
+    }
+
+    [Fact]
+    public async Task GetRunByIdAsync_ReturnsNullWorkflowPreset_ForRunsWithoutPreset()
+    {
+        // A run created without a workflow preset should return null for WorkflowPreset
+        var descriptor = MakeDescriptor("run-preset2");
+        await _repository.CreateRunAsync(descriptor);
+
+        var result = await _repository.GetRunByIdAsync("run-preset2");
+
+        Assert.NotNull(result);
+        Assert.Null(result!.WorkflowPreset);
+    }
+
+    // --- GetStepByIdAsync ---
+
+    [Fact]
+    public async Task GetStepByIdAsync_ExistingStep_ReturnsStep()
+    {
+        var run = MakeDescriptor("run-step-lookup");
+        await _repository.CreateRunAsync(run);
+
+        var step = new StepRecord
+        {
+            StepId = "step0001",
+            RunId = "run-step-lookup",
+            PropagationId = "prop01",
+            ModuleName = "TestModule",
+            Status = "Completed",
+            InputSummary = "test input",
+            OutputSummary = "test output",
+            DurationMs = 42,
+            OccurredAt = DateTimeOffset.UtcNow.ToString("O")
+        };
+        await _repository.AppendStepEventAsync(step);
+
+        var result = await _repository.GetStepByIdAsync("step0001");
+
+        Assert.NotNull(result);
+        Assert.Equal("step0001", result!.StepId);
+        Assert.Equal("run-step-lookup", result.RunId);
+        Assert.Equal("TestModule", result.ModuleName);
+        Assert.Equal("Completed", result.Status);
+        Assert.Equal(42, result.DurationMs);
+    }
+
+    [Fact]
+    public async Task GetStepByIdAsync_NonExistent_ReturnsNull()
+    {
+        var result = await _repository.GetStepByIdAsync("nonexistent-step");
+        Assert.Null(result);
+    }
+
     // --- Helpers ---
 
     private static RunDescriptor MakeDescriptor(string runId) => new()

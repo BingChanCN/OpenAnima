@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Core.Memory;
 using OpenAnima.Core.RunPersistence;
+using OpenAnima.Core.Runs;
 using OpenAnima.Core.Tools;
 
 namespace OpenAnima.Tests.Unit;
@@ -222,7 +223,7 @@ public class MemoryModuleTests : IDisposable
         var spyRecorder = new SpyStepRecorder();
         var injector = new BootMemoryInjector(
             _graph,
-            spyRecorder,
+            new Lazy<IStepRecorder>(spyRecorder),
             NullLogger<BootMemoryInjector>.Instance);
 
         // Act: inject for anima with no boot nodes
@@ -243,7 +244,7 @@ public class MemoryModuleTests : IDisposable
         var spyRecorder = new SpyStepRecorder();
         var injector = new BootMemoryInjector(
             _graph,
-            spyRecorder,
+            new Lazy<IStepRecorder>(spyRecorder),
             NullLogger<BootMemoryInjector>.Instance);
 
         // Act

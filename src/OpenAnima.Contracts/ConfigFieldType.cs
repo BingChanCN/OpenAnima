@@ -29,5 +29,11 @@ public enum ConfigFieldType
     Dropdown,
 
     /// <summary>A floating-point or decimal numeric input.</summary>
-    Number
+    Number,
+
+    /// <summary>
+    /// A two-tier cascading dropdown backed by ILLMProviderRegistry.
+    /// First tier: Provider selection. Second tier: Model selection scoped to chosen provider.
+    /// </summary>
+    CascadingDropdown
 }

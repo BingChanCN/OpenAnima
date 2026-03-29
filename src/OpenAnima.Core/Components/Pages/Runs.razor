@@ -1,28 +1,32 @@
 @page "/runs"
 @using OpenAnima.Core.Runs
 @using OpenAnima.Core.Anima
+@using OpenAnima.Core.Wiring
+@using OpenAnima.Core.Workflows
 @inject IRunService RunService
-@inject IAnimaContext AnimaContext
+@inject IModuleContext AnimaContext
+@inject IAnimaRuntimeManager RuntimeManager
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResources> L
+@inject WorkflowPresetService PresetService
 @implements IAsyncDisposable
 
-<h1 class="page-title">Runs</h1>
+<h1 class="page-title">@L["Runs.Title"]</h1>
 
-<RunLaunchPanel OnStartRun="HandleStartRun" />
+<RunLaunchPanel OnStartRun="HandleStartRun" Presets="@_presets" />
 
 @if (_startError != null)
 {
     <span class="error-inline">@_startError</span>
 }
 
-<h2 class="section-title">Run History</h2>
+<h2 class="section-title">@L["Runs.History"]</h2>
 
 @if (_runs.Count == 0)
 {
     <div class="empty-state">
-        <h3>No runs yet</h3>
-        <p>Start a run to begin tracking long-running graph execution.</p>
+        <h3>@L["Runs.EmptyHeading"]</h3>
+        <p>@L["Runs.EmptyBody"]</p>
     </div>
 }
 else
@@ -39,9 +43,9 @@ else
 }
 
 <ConfirmDialog IsVisible="@_showCancelConfirm"
-               Title="Cancel Run?"
-               Message="This will stop the run permanently. Completed steps are preserved, but the run cannot be resumed after cancellation."
-               ConfirmText="Cancel Run"
+               Title="@L["Runs.CancelConfirmTitle"]"
+               Message="@L["Runs.CancelConfirmMessage"]"
+               ConfirmText="@L["Runs.CancelConfirmAction"]"
                ConfirmButtonClass="btn-danger"
                OnConfirm="HandleCancelConfirm"
                OnCancel="HandleCancelDismiss" />
@@ -54,9 +58,11 @@ else
     private bool _showCancelConfirm;
     private string? _cancelTargetRunId;
     private string? _startError;
+    private IReadOnlyList<WorkflowPresetInfo> _presets = [];
 
     protected override async Task OnInitializedAsync()
     {
+        _presets = PresetService.ListPresets();
         _runs = (await RunService.GetAllRunsAsync()).ToList();
 
         foreach (var run in _runs)
@@ -98,18 +104,35 @@ else
         await _hubConnection.StartAsync();
     }
 
-    private async Task HandleStartRun((string objective, string workspace, int? maxSteps, int? maxWallSeconds) args)
+    private async Task HandleStartRun((string objective, string workspace, int? maxSteps, int? maxWallSeconds, string? workflowPreset) args)
     {
         _startError = null;
         var animaId = AnimaContext.ActiveAnimaId;
-        var result = await RunService.StartRunAsync(animaId, args.objective, args.workspace, args.maxSteps, args.maxWallSeconds);
+        if (string.IsNullOrWhiteSpace(animaId))
+        {
+            _startError = L["Runs.NoActiveAnima"];
+            return;
+        }
+
+        // Load preset wiring config into the engine before starting the run
+        if (!string.IsNullOrEmpty(args.workflowPreset))
+        {
+            var config = await PresetService.LoadPresetAsync(args.workflowPreset);
+            if (config != null)
+            {
+                var runtime = RuntimeManager.GetRuntime(animaId);
+                runtime?.WiringEngine.LoadConfiguration(config);
+            }
+        }
+
+        var result = await RunService.StartRunAsync(animaId, args.objective, args.workspace, args.maxSteps, args.maxWallSeconds, args.workflowPreset);
         if (result.IsSuccess)
         {
             _runs = (await RunService.GetAllRunsAsync()).ToList();
         }
         else
         {
-            _startError = result.Message ?? "Failed to start run.";
+            _startError = result.Message ?? L["Runs.StartFailed"];
             throw new InvalidOperationException(_startError);
         }
     }

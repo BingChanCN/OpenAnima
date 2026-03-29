@@ -6,6 +6,7 @@ using OpenAnima.Core.LLM;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Wiring;
+using OpenAnima.Core.Providers;
 using OpenAnima.Tests.TestHelpers;
 
 namespace OpenAnima.Tests.Integration;
@@ -26,7 +27,8 @@ public class ModulePipelineIntegrationTests
 
         var chatInput = new ChatInputModule(eventBus, NullLogger<ChatInputModule>.Instance);
         var llmModule = new LLMModule(fakeLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new AnimaContext());
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance);
         var chatOutput = new ChatOutputModule(eventBus, NullLogger<ChatOutputModule>.Instance);
 
         // Set up port routing: ChatInput.userMessage -> LLM.prompt
@@ -98,7 +100,8 @@ public class ModulePipelineIntegrationTests
 
         var chatInput = new ChatInputModule(eventBus, NullLogger<ChatInputModule>.Instance);
         var llmModule = new LLMModule(failingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new AnimaContext());
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance);
         var chatOutput = new ChatOutputModule(eventBus, NullLogger<ChatOutputModule>.Instance);
 
         // Set up port routing
@@ -160,7 +163,8 @@ public class ModulePipelineIntegrationTests
         var wiringEngine = new WiringEngine(eventBus, portRegistry, logger: NullLogger<WiringEngine>.Instance);
         var chatInput = new ChatInputModule(eventBus, NullLogger<ChatInputModule>.Instance);
         var llmModule = new LLMModule(fakeLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new AnimaContext());
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance);
         var chatOutput = new ChatOutputModule(eventBus, NullLogger<ChatOutputModule>.Instance);
 
         var config = new WiringConfiguration

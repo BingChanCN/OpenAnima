@@ -7,9 +7,11 @@ using OpenAnima.Core.RunPersistence;
 namespace OpenAnima.Core.Memory;
 
 /// <summary>
-/// SQLite-backed implementation of <see cref="IMemoryGraph"/>.
+/// SQLite-backed implementation of <see cref="IMemoryGraph"/> using the four-table schema:
+/// memory_nodes (UUID PK), memory_contents (versioned content), memory_edges (UUID refs),
+/// memory_uri_paths (URI routing layer).
 /// Each operation opens a new connection (WAL mode handles concurrency).
-/// Snapshot versioning: on each update, old content is snapshotted; up to 10 snapshots retained per URI.
+/// Content versioning: each update appends a new memory_contents row; up to 10 retained per node.
 /// Glossary cache is per-Anima and invalidated on write/delete.
 /// </summary>
 public class MemoryGraph : IMemoryGraph
@@ -33,70 +35,58 @@ public class MemoryGraph : IMemoryGraph
         await using var conn = _factory.CreateConnection();
         await conn.OpenAsync(ct);
 
-        // Check if node already exists
-        var existing = await conn.QueryFirstOrDefaultAsync<MemoryNode>(
-            """
-            SELECT uri AS Uri, anima_id AS AnimaId, content AS Content,
-                   disclosure_trigger AS DisclosureTrigger, keywords AS Keywords,
-                   source_artifact_id AS SourceArtifactId, source_step_id AS SourceStepId,
-                   created_at AS CreatedAt, updated_at AS UpdatedAt
-            FROM memory_nodes
-            WHERE uri = @Uri AND anima_id = @AnimaId
-            """,
+        // Resolve existing node by URI
+        var existingUuid = await conn.QueryFirstOrDefaultAsync<string>(
+            "SELECT node_uuid FROM memory_uri_paths WHERE uri = @Uri AND anima_id = @AnimaId",
             new { node.Uri, node.AnimaId });
 
-        if (existing != null)
+        var now = DateTimeOffset.UtcNow.ToString("O");
+
+        if (existingUuid != null)
         {
-            // Snapshot the old content before overwriting
+            // Node exists: update timestamp, add new content version
             await conn.ExecuteAsync(
-                "INSERT INTO memory_snapshots (uri, anima_id, content, snapshot_at) VALUES (@Uri, @AnimaId, @Content, @SnapshotAt)",
-                new { existing.Uri, existing.AnimaId, existing.Content, SnapshotAt = DateTimeOffset.UtcNow.ToString("O") });
+                "UPDATE memory_nodes SET updated_at = @UpdatedAt WHERE uuid = @Uuid",
+                new { UpdatedAt = now, Uuid = existingUuid });
 
-            // Prune snapshots to last 10 per (uri, anima_id)
             await conn.ExecuteAsync(
-                """
-                DELETE FROM memory_snapshots
-                WHERE uri = @Uri AND anima_id = @AnimaId
-                  AND id NOT IN (
-                    SELECT id FROM memory_snapshots
-                    WHERE uri = @Uri AND anima_id = @AnimaId
-                    ORDER BY id DESC LIMIT 10
-                  )
-                """,
-                new { node.Uri, node.AnimaId });
+                @"INSERT INTO memory_contents (node_uuid, anima_id, content, disclosure_trigger, keywords, source_artifact_id, source_step_id, created_at)
+                  VALUES (@NodeUuid, @AnimaId, @Content, @DisclosureTrigger, @Keywords, @SourceArtifactId, @SourceStepId, @CreatedAt)",
+                new { NodeUuid = existingUuid, node.AnimaId, node.Content, node.DisclosureTrigger, node.Keywords, node.SourceArtifactId, node.SourceStepId, CreatedAt = now });
 
-            // Update the node
+            // Prune to last 10 content versions per node
             await conn.ExecuteAsync(
-                """
-                UPDATE memory_nodes
-                SET content = @Content,
-                    disclosure_trigger = @DisclosureTrigger,
-                    keywords = @Keywords,
-                    source_artifact_id = @SourceArtifactId,
-                    source_step_id = @SourceStepId,
-                    updated_at = @UpdatedAt
-                WHERE uri = @Uri AND anima_id = @AnimaId
-                """,
-                new
-                {
-                    node.Content, node.DisclosureTrigger, node.Keywords,
-                    node.SourceArtifactId, node.SourceStepId, node.UpdatedAt,
-                    node.Uri, node.AnimaId
-                });
+                @"DELETE FROM memory_contents
+                  WHERE node_uuid = @NodeUuid AND anima_id = @AnimaId
+                    AND id NOT IN (
+                      SELECT id FROM memory_contents
+                      WHERE node_uuid = @NodeUuid AND anima_id = @AnimaId
+                      ORDER BY id DESC LIMIT 10
+                    )",
+                new { NodeUuid = existingUuid, node.AnimaId });
         }
         else
         {
+            // New node: generate UUID, create node + content + URI path
+            var uuid = string.IsNullOrEmpty(node.Uuid) ? Guid.NewGuid().ToString("D") : node.Uuid;
+            var nodeType = string.IsNullOrEmpty(node.NodeType) || node.NodeType == "Fact"
+                ? InferNodeType(node.Uri) : node.NodeType;
+            var displayName = node.DisplayName ?? ExtractDisplayName(node.Uri);
+
             await conn.ExecuteAsync(
-                """
-                INSERT INTO memory_nodes
-                    (uri, anima_id, content, disclosure_trigger, keywords, source_artifact_id, source_step_id, created_at, updated_at)
-                VALUES
-                    (@Uri, @AnimaId, @Content, @DisclosureTrigger, @Keywords, @SourceArtifactId, @SourceStepId, @CreatedAt, @UpdatedAt)
-                """,
-                node);
+                "INSERT INTO memory_nodes (uuid, anima_id, node_type, display_name, created_at, updated_at) VALUES (@Uuid, @AnimaId, @NodeType, @DisplayName, @CreatedAt, @UpdatedAt)",
+                new { Uuid = uuid, node.AnimaId, NodeType = nodeType, DisplayName = displayName, CreatedAt = node.CreatedAt ?? now, UpdatedAt = now });
+
+            await conn.ExecuteAsync(
+                @"INSERT INTO memory_contents (node_uuid, anima_id, content, disclosure_trigger, keywords, source_artifact_id, source_step_id, created_at)
+                  VALUES (@NodeUuid, @AnimaId, @Content, @DisclosureTrigger, @Keywords, @SourceArtifactId, @SourceStepId, @CreatedAt)",
+                new { NodeUuid = uuid, node.AnimaId, node.Content, node.DisclosureTrigger, node.Keywords, node.SourceArtifactId, node.SourceStepId, CreatedAt = now });
+
+            await conn.ExecuteAsync(
+                "INSERT INTO memory_uri_paths (uri, node_uuid, anima_id, created_at) VALUES (@Uri, @NodeUuid, @AnimaId, @CreatedAt)",
+                new { node.Uri, NodeUuid = uuid, node.AnimaId, CreatedAt = now });
         }
 
-        // Invalidate glossary cache for this Anima — keywords may have changed
         _glossaryCache.TryRemove(node.AnimaId, out _);
     }
 
@@ -107,15 +97,42 @@ public class MemoryGraph : IMemoryGraph
         await conn.OpenAsync(ct);
 
         return await conn.QueryFirstOrDefaultAsync<MemoryNode>(
-            """
-            SELECT uri AS Uri, anima_id AS AnimaId, content AS Content,
-                   disclosure_trigger AS DisclosureTrigger, keywords AS Keywords,
-                   source_artifact_id AS SourceArtifactId, source_step_id AS SourceStepId,
-                   created_at AS CreatedAt, updated_at AS UpdatedAt
-            FROM memory_nodes
-            WHERE anima_id = @animaId AND uri = @uri
-            """,
+            @"SELECT n.uuid AS Uuid, p.uri AS Uri, n.anima_id AS AnimaId,
+                     n.node_type AS NodeType, n.display_name AS DisplayName,
+                     c.content AS Content, c.disclosure_trigger AS DisclosureTrigger,
+                     c.keywords AS Keywords, c.source_artifact_id AS SourceArtifactId,
+                     c.source_step_id AS SourceStepId,
+                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt,
+                     n.deprecated AS Deprecated
+              FROM memory_uri_paths p
+              JOIN memory_nodes n ON p.node_uuid = n.uuid
+              LEFT JOIN memory_contents c ON c.node_uuid = n.uuid AND c.anima_id = n.anima_id
+                  AND c.id = (SELECT MAX(id) FROM memory_contents WHERE node_uuid = n.uuid AND anima_id = n.anima_id)
+              WHERE p.uri = @uri AND p.anima_id = @animaId AND n.deprecated = 0",
             new { animaId, uri });
+    }
+
+    /// <inheritdoc/>
+    public async Task<MemoryNode?> GetNodeByUuidAsync(string uuid, CancellationToken ct = default)
+    {
+        await using var conn = _factory.CreateConnection();
+        await conn.OpenAsync(ct);
+
+        // Note: NO deprecated filter here — needed for node recovery in /memory UI
+        return await conn.QueryFirstOrDefaultAsync<MemoryNode>(
+            @"SELECT n.uuid AS Uuid, p.uri AS Uri, n.anima_id AS AnimaId,
+                     n.node_type AS NodeType, n.display_name AS DisplayName,
+                     c.content AS Content, c.disclosure_trigger AS DisclosureTrigger,
+                     c.keywords AS Keywords, c.source_artifact_id AS SourceArtifactId,
+                     c.source_step_id AS SourceStepId,
+                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt,
+                     n.deprecated AS Deprecated
+              FROM memory_nodes n
+              LEFT JOIN memory_uri_paths p ON p.node_uuid = n.uuid
+              LEFT JOIN memory_contents c ON c.node_uuid = n.uuid AND c.anima_id = n.anima_id
+                  AND c.id = (SELECT MAX(id) FROM memory_contents WHERE node_uuid = n.uuid AND anima_id = n.anima_id)
+              WHERE n.uuid = @uuid",
+            new { uuid });
     }
 
     /// <inheritdoc/>
@@ -125,39 +142,68 @@ public class MemoryGraph : IMemoryGraph
         await conn.OpenAsync(ct);
 
         var rows = await conn.QueryAsync<MemoryNode>(
-            """
-            SELECT uri AS Uri, anima_id AS AnimaId, content AS Content,
-                   disclosure_trigger AS DisclosureTrigger, keywords AS Keywords,
-                   source_artifact_id AS SourceArtifactId, source_step_id AS SourceStepId,
-                   created_at AS CreatedAt, updated_at AS UpdatedAt
-            FROM memory_nodes
-            WHERE anima_id = @animaId AND uri LIKE @Prefix || '%'
-            ORDER BY uri
-            """,
+            @"SELECT n.uuid AS Uuid, p.uri AS Uri, n.anima_id AS AnimaId,
+                     n.node_type AS NodeType, n.display_name AS DisplayName,
+                     c.content AS Content, c.disclosure_trigger AS DisclosureTrigger,
+                     c.keywords AS Keywords, c.source_artifact_id AS SourceArtifactId,
+                     c.source_step_id AS SourceStepId,
+                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt,
+                     n.deprecated AS Deprecated
+              FROM memory_uri_paths p
+              JOIN memory_nodes n ON p.node_uuid = n.uuid
+              LEFT JOIN memory_contents c ON c.node_uuid = n.uuid AND c.anima_id = n.anima_id
+                  AND c.id = (SELECT MAX(id) FROM memory_contents WHERE node_uuid = n.uuid AND anima_id = n.anima_id)
+              WHERE p.anima_id = @animaId AND p.uri LIKE @Prefix || '%' AND n.deprecated = 0
+              ORDER BY p.uri",
             new { animaId, Prefix = uriPrefix });
 
         return rows.ToList();
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<MemoryNode>> GetAllNodesAsync(string animaId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<MemoryNode>> GetAllNodesAsync(string animaId, bool includeDeprecated = false, CancellationToken ct = default)
     {
         await using var conn = _factory.CreateConnection();
         await conn.OpenAsync(ct);
 
+        var deprecatedFilter = includeDeprecated ? string.Empty : " AND n.deprecated = 0";
+
         var rows = await conn.QueryAsync<MemoryNode>(
-            """
-            SELECT uri AS Uri, anima_id AS AnimaId, content AS Content,
-                   disclosure_trigger AS DisclosureTrigger, keywords AS Keywords,
-                   source_artifact_id AS SourceArtifactId, source_step_id AS SourceStepId,
-                   created_at AS CreatedAt, updated_at AS UpdatedAt
-            FROM memory_nodes
-            WHERE anima_id = @animaId
-            ORDER BY uri
-            """,
+            $@"SELECT n.uuid AS Uuid, p.uri AS Uri, n.anima_id AS AnimaId,
+                     n.node_type AS NodeType, n.display_name AS DisplayName,
+                     c.content AS Content, c.disclosure_trigger AS DisclosureTrigger,
+                     c.keywords AS Keywords, c.source_artifact_id AS SourceArtifactId,
+                     c.source_step_id AS SourceStepId,
+                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt,
+                     n.deprecated AS Deprecated
+              FROM memory_nodes n
+              JOIN memory_uri_paths p ON p.node_uuid = n.uuid AND p.anima_id = n.anima_id
+              LEFT JOIN memory_contents c ON c.node_uuid = n.uuid AND c.anima_id = n.anima_id
+                  AND c.id = (SELECT MAX(id) FROM memory_contents WHERE node_uuid = n.uuid AND anima_id = n.anima_id)
+              WHERE n.anima_id = @animaId{deprecatedFilter}
+              ORDER BY p.uri",
             new { animaId });
 
         return rows.ToList();
+    }
+
+    /// <inheritdoc/>
+    public async Task SoftDeleteNodeAsync(string animaId, string uri, CancellationToken ct = default)
+    {
+        await using var conn = _factory.CreateConnection();
+        await conn.OpenAsync(ct);
+
+        var uuid = await conn.QueryFirstOrDefaultAsync<string>(
+            "SELECT node_uuid FROM memory_uri_paths WHERE uri = @uri AND anima_id = @animaId",
+            new { uri, animaId });
+
+        if (uuid == null) return;
+
+        await conn.ExecuteAsync(
+            "UPDATE memory_nodes SET deprecated = 1, updated_at = @Now WHERE uuid = @uuid",
+            new { uuid, Now = DateTimeOffset.UtcNow.ToString("O") });
+
+        _glossaryCache.TryRemove(animaId, out _);
     }
 
     /// <inheritdoc/>
@@ -166,22 +212,27 @@ public class MemoryGraph : IMemoryGraph
         await using var conn = _factory.CreateConnection();
         await conn.OpenAsync(ct);
 
-        // Delete all edges referencing this node (as source or target)
-        await conn.ExecuteAsync(
-            "DELETE FROM memory_edges WHERE anima_id = @animaId AND (from_uri = @uri OR to_uri = @uri)",
-            new { animaId, uri });
-
-        // Delete all snapshots
-        await conn.ExecuteAsync(
-            "DELETE FROM memory_snapshots WHERE uri = @uri AND anima_id = @animaId",
+        // Resolve UUID from URI
+        var uuid = await conn.QueryFirstOrDefaultAsync<string>(
+            "SELECT node_uuid FROM memory_uri_paths WHERE uri = @uri AND anima_id = @animaId",
             new { uri, animaId });
 
-        // Delete the node itself
-        await conn.ExecuteAsync(
-            "DELETE FROM memory_nodes WHERE uri = @uri AND anima_id = @animaId",
-            new { uri, animaId });
+        if (uuid == null) return;
 
-        // Invalidate glossary cache
+        // Cascade delete: edges, contents, uri_paths, then node
+        await conn.ExecuteAsync(
+            "DELETE FROM memory_edges WHERE anima_id = @animaId AND (parent_uuid = @uuid OR child_uuid = @uuid)",
+            new { animaId, uuid });
+        await conn.ExecuteAsync(
+            "DELETE FROM memory_contents WHERE node_uuid = @uuid AND anima_id = @animaId",
+            new { uuid, animaId });
+        await conn.ExecuteAsync(
+            "DELETE FROM memory_uri_paths WHERE node_uuid = @uuid AND anima_id = @animaId",
+            new { uuid, animaId });
+        await conn.ExecuteAsync(
+            "DELETE FROM memory_nodes WHERE uuid = @uuid",
+            new { uuid });
+
         _glossaryCache.TryRemove(animaId, out _);
     }
 
@@ -191,9 +242,30 @@ public class MemoryGraph : IMemoryGraph
         await using var conn = _factory.CreateConnection();
         await conn.OpenAsync(ct);
 
+        // Resolve UUIDs from URIs if not already set
+        var parentUuid = edge.ParentUuid;
+        var childUuid = edge.ChildUuid;
+
+        if (string.IsNullOrEmpty(parentUuid))
+        {
+            parentUuid = await conn.QueryFirstOrDefaultAsync<string>(
+                "SELECT node_uuid FROM memory_uri_paths WHERE uri = @Uri AND anima_id = @AnimaId",
+                new { Uri = edge.FromUri, edge.AnimaId });
+            if (parentUuid == null) return; // Source node not found
+        }
+
+        if (string.IsNullOrEmpty(childUuid))
+        {
+            childUuid = await conn.QueryFirstOrDefaultAsync<string>(
+                "SELECT node_uuid FROM memory_uri_paths WHERE uri = @Uri AND anima_id = @AnimaId",
+                new { Uri = edge.ToUri, edge.AnimaId });
+            if (childUuid == null) return; // Target node not found
+        }
+
         await conn.ExecuteAsync(
-            "INSERT INTO memory_edges (anima_id, from_uri, to_uri, label, created_at) VALUES (@AnimaId, @FromUri, @ToUri, @Label, @CreatedAt)",
-            edge);
+            @"INSERT INTO memory_edges (anima_id, parent_uuid, child_uuid, label, priority, weight, bidirectional, disclosure_trigger, created_at)
+              VALUES (@AnimaId, @ParentUuid, @ChildUuid, @Label, @Priority, @Weight, @Bidirectional, @DisclosureTrigger, @CreatedAt)",
+            new { edge.AnimaId, ParentUuid = parentUuid, ChildUuid = childUuid, edge.Label, edge.Priority, edge.Weight, Bidirectional = edge.Bidirectional ? 1 : 0, edge.DisclosureTrigger, edge.CreatedAt });
     }
 
     /// <inheritdoc/>
@@ -203,14 +275,41 @@ public class MemoryGraph : IMemoryGraph
         await conn.OpenAsync(ct);
 
         var rows = await conn.QueryAsync<MemoryEdge>(
-            """
-            SELECT id AS Id, anima_id AS AnimaId, from_uri AS FromUri,
-                   to_uri AS ToUri, label AS Label, created_at AS CreatedAt
-            FROM memory_edges
-            WHERE anima_id = @animaId AND from_uri = @fromUri
-            ORDER BY id
-            """,
+            @"SELECT e.id AS Id, e.anima_id AS AnimaId,
+                     e.parent_uuid AS ParentUuid, e.child_uuid AS ChildUuid,
+                     pp.uri AS FromUri, cp.uri AS ToUri,
+                     e.label AS Label, e.priority AS Priority, e.weight AS Weight,
+                     e.bidirectional AS Bidirectional, e.disclosure_trigger AS DisclosureTrigger,
+                     e.created_at AS CreatedAt
+              FROM memory_edges e
+              JOIN memory_uri_paths pp ON pp.node_uuid = e.parent_uuid AND pp.anima_id = e.anima_id
+              JOIN memory_uri_paths cp ON cp.node_uuid = e.child_uuid AND cp.anima_id = e.anima_id
+              WHERE e.anima_id = @animaId AND pp.uri = @fromUri
+              ORDER BY e.id",
             new { animaId, fromUri });
+
+        return rows.ToList();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<MemoryEdge>> GetIncomingEdgesAsync(string animaId, string toUri, CancellationToken ct = default)
+    {
+        await using var conn = _factory.CreateConnection();
+        await conn.OpenAsync(ct);
+
+        var rows = await conn.QueryAsync<MemoryEdge>(
+            @"SELECT e.id AS Id, e.anima_id AS AnimaId,
+                     e.parent_uuid AS ParentUuid, e.child_uuid AS ChildUuid,
+                     pp.uri AS FromUri, cp.uri AS ToUri,
+                     e.label AS Label, e.priority AS Priority, e.weight AS Weight,
+                     e.bidirectional AS Bidirectional, e.disclosure_trigger AS DisclosureTrigger,
+                     e.created_at AS CreatedAt
+              FROM memory_edges e
+              JOIN memory_uri_paths pp ON pp.node_uuid = e.parent_uuid AND pp.anima_id = e.anima_id
+              JOIN memory_uri_paths cp ON cp.node_uuid = e.child_uuid AND cp.anima_id = e.anima_id
+              WHERE e.anima_id = @animaId AND cp.uri = @toUri
+              ORDER BY e.id",
+            new { animaId, toUri });
 
         return rows.ToList();
     }
@@ -222,33 +321,39 @@ public class MemoryGraph : IMemoryGraph
         await conn.OpenAsync(ct);
 
         var rows = await conn.QueryAsync<MemoryNode>(
-            """
-            SELECT uri AS Uri, anima_id AS AnimaId, content AS Content,
-                   disclosure_trigger AS DisclosureTrigger, keywords AS Keywords,
-                   source_artifact_id AS SourceArtifactId, source_step_id AS SourceStepId,
-                   created_at AS CreatedAt, updated_at AS UpdatedAt
-            FROM memory_nodes
-            WHERE anima_id = @animaId AND disclosure_trigger IS NOT NULL
-            ORDER BY uri
-            """,
+            @"SELECT n.uuid AS Uuid, p.uri AS Uri, n.anima_id AS AnimaId,
+                     n.node_type AS NodeType, n.display_name AS DisplayName,
+                     c.content AS Content, c.disclosure_trigger AS DisclosureTrigger,
+                     c.keywords AS Keywords, c.source_artifact_id AS SourceArtifactId,
+                     c.source_step_id AS SourceStepId,
+                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt,
+                     n.deprecated AS Deprecated
+              FROM memory_nodes n
+              JOIN memory_uri_paths p ON p.node_uuid = n.uuid AND p.anima_id = n.anima_id
+              JOIN memory_contents c ON c.node_uuid = n.uuid AND c.anima_id = n.anima_id
+                  AND c.id = (SELECT MAX(id) FROM memory_contents WHERE node_uuid = n.uuid AND anima_id = n.anima_id)
+              WHERE n.anima_id = @animaId AND c.disclosure_trigger IS NOT NULL AND n.deprecated = 0
+              ORDER BY p.uri",
             new { animaId });
 
         return rows.ToList();
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<MemorySnapshot>> GetSnapshotsAsync(string animaId, string uri, CancellationToken ct = default)
+    public async Task<IReadOnlyList<MemoryContent>> GetContentHistoryAsync(string animaId, string uri, CancellationToken ct = default)
     {
         await using var conn = _factory.CreateConnection();
         await conn.OpenAsync(ct);
 
-        var rows = await conn.QueryAsync<MemorySnapshot>(
-            """
-            SELECT id AS Id, uri AS Uri, anima_id AS AnimaId, content AS Content, snapshot_at AS SnapshotAt
-            FROM memory_snapshots
-            WHERE uri = @uri AND anima_id = @animaId
-            ORDER BY id DESC
-            """,
+        var rows = await conn.QueryAsync<MemoryContent>(
+            @"SELECT c.id AS Id, c.node_uuid AS NodeUuid, c.anima_id AS AnimaId,
+                     c.content AS Content, c.disclosure_trigger AS DisclosureTrigger,
+                     c.keywords AS Keywords, c.source_artifact_id AS SourceArtifactId,
+                     c.source_step_id AS SourceStepId, c.created_at AS CreatedAt
+              FROM memory_contents c
+              JOIN memory_uri_paths p ON p.node_uuid = c.node_uuid AND p.anima_id = c.anima_id
+              WHERE p.uri = @uri AND p.anima_id = @animaId
+              ORDER BY c.id DESC",
             new { uri, animaId });
 
         return rows.ToList();
@@ -257,7 +362,7 @@ public class MemoryGraph : IMemoryGraph
     /// <inheritdoc/>
     public async Task RebuildGlossaryAsync(string animaId, CancellationToken ct = default)
     {
-        var nodes = await GetAllNodesAsync(animaId, ct);
+        var nodes = await GetAllNodesAsync(animaId, false, ct);
         var entries = new List<(string Keyword, string Uri)>();
 
         foreach (var node in nodes)
@@ -290,5 +395,26 @@ public class MemoryGraph : IMemoryGraph
             return Array.Empty<(string, string)>();
 
         return index.FindMatches(content);
+    }
+
+    // ── Private helpers ────────────────────────────────────────────────────────
+
+    private static string InferNodeType(string uri)
+    {
+        if (uri.StartsWith("core://", StringComparison.Ordinal)) return "System";
+        if (uri.StartsWith("sediment://fact/", StringComparison.Ordinal)) return "Fact";
+        if (uri.StartsWith("sediment://preference/", StringComparison.Ordinal)) return "Preference";
+        if (uri.StartsWith("sediment://entity/", StringComparison.Ordinal)) return "Entity";
+        if (uri.StartsWith("sediment://learning/", StringComparison.Ordinal)) return "Learning";
+        if (uri.StartsWith("run://", StringComparison.Ordinal)) return "Artifact";
+        return "Fact";
+    }
+
+    private static string ExtractDisplayName(string uri)
+    {
+        var lastSlash = uri.LastIndexOf('/');
+        return lastSlash >= 0 && lastSlash < uri.Length - 1
+            ? uri[(lastSlash + 1)..]
+            : uri;
     }
 }

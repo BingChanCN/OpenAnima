@@ -5,6 +5,7 @@ using OpenAnima.Core.Anima;
 using OpenAnima.Core.Events;
 using OpenAnima.Core.LLM;
 using OpenAnima.Core.Modules;
+using OpenAnima.Core.Providers;
 using OpenAnima.Tests.TestHelpers;
 
 namespace OpenAnima.Tests.Modules;
@@ -27,7 +28,8 @@ public class ModuleTests
         var eventBus = CreateEventBus();
         var mockLlm = new FakeLLMService("Hello back!");
         var module = new LLMModule(mockLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new AnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         Assert.Equal(ModuleExecutionState.Idle, module.GetState());
@@ -61,7 +63,8 @@ public class ModuleTests
         var eventBus = CreateEventBus();
         var mockLlm = new FakeLLMService(throwError: true);
         var module = new LLMModule(mockLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new AnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         // Act — publish prompt; handler will throw
@@ -79,6 +82,38 @@ public class ModuleTests
         // Assert — EventBus swallows the exception, but module state should be Error
         Assert.Equal(ModuleExecutionState.Error, module.GetState());
         Assert.NotNull(module.GetLastError());
+
+        await module.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task LLMModule_WhenLlmServiceReturnsFailure_PublishesErrorPort()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var mockLlm = new FakeLLMService(error: "Invalid API key. Check your LLM configuration.");
+        var module = new LLMModule(mockLlm, eventBus, NullLogger<LLMModule>.Instance,
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
+        await module.InitializeAsync();
+
+        var errorTcs = new TaskCompletionSource<string>();
+        eventBus.Subscribe<string>(
+            "LLMModule.port.error",
+            (evt, ct) => { errorTcs.TrySetResult(evt.Payload); return Task.CompletedTask; });
+
+        // Act
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "LLMModule.port.prompt",
+            SourceModuleId = "test",
+            Payload = "Hello"
+        });
+
+        // Assert
+        var error = await WaitWithTimeout(errorTcs.Task, TimeSpan.FromSeconds(5));
+        Assert.Equal("Invalid API key. Check your LLM configuration.", error);
+        Assert.Equal(ModuleExecutionState.Completed, module.GetState());
 
         await module.ShutdownAsync();
     }
@@ -189,17 +224,21 @@ public class ModuleTests
     {
         private readonly string? _response;
         private readonly bool _throwError;
+        private readonly string? _error;
 
-        public FakeLLMService(string? response = null, bool throwError = false)
+        public FakeLLMService(string? response = null, bool throwError = false, string? error = null)
         {
             _response = response;
             _throwError = throwError;
+            _error = error;
         }
 
         public Task<LLMResult> CompleteAsync(IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
         {
             if (_throwError)
                 throw new InvalidOperationException("LLM service error");
+            if (_error != null)
+                return Task.FromResult(new LLMResult(false, null, _error));
             return Task.FromResult(new LLMResult(true, _response, null));
         }
 

@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
+using OpenAnima.Core.Memory;
 using OpenAnima.Core.Runs;
 using OpenAnima.Core.RunPersistence;
 
@@ -27,9 +28,15 @@ public class RunServiceTests : IAsyncDisposable
         _factory = new RunDbConnectionFactory(DbConnectionString, isRaw: true);
         _initializer = new RunDbInitializer(_factory);
         _repository = new RunRepository(_factory);
+
+        var fakeGraph = new FakeMemoryGraph();
+        var fakeStepRecorder = new FakeStepRecorder();
+        var bootMemoryInjector = new BootMemoryInjector(fakeGraph, new Lazy<IStepRecorder>(fakeStepRecorder), NullLogger<BootMemoryInjector>.Instance);
+
         _service = new RunService(
             _repository,
             NullLogger<RunService>.Instance,
+            bootMemoryInjector,
             hubContext: null);
 
         _initializer.EnsureCreatedAsync().GetAwaiter().GetResult();
@@ -257,5 +264,33 @@ public class RunServiceTests : IAsyncDisposable
         var all = await _service.GetAllRunsAsync();
 
         Assert.True(all.Count >= 2);
+    }
+
+    // --- WorkflowPreset ---
+
+    [Fact]
+    public async Task StartRunAsync_WithWorkflowPreset_StoresPresetInRunDescriptor()
+    {
+        var result = await _service.StartRunAsync(
+            "anima-preset-01", "Preset objective", "/workspace",
+            workflowPreset: "preset-codebase-analysis");
+
+        Assert.True(result.IsSuccess);
+
+        var descriptor = await _repository.GetRunByIdAsync(result.RunId!);
+        Assert.NotNull(descriptor);
+        Assert.Equal("preset-codebase-analysis", descriptor!.WorkflowPreset);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_WithoutWorkflowPreset_StoresNullInRunDescriptor()
+    {
+        var result = await _service.StartRunAsync("anima-preset-02", "Manual objective", "/workspace");
+
+        Assert.True(result.IsSuccess);
+
+        var descriptor = await _repository.GetRunByIdAsync(result.RunId!);
+        Assert.NotNull(descriptor);
+        Assert.Null(descriptor!.WorkflowPreset);
     }
 }

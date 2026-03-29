@@ -63,6 +63,69 @@ public class DisclosureMatcherTests
         Assert.Empty(results);
     }
 
+    // --- DisclosureMatcher: multi-scenario OR-split ---
+
+    [Fact]
+    public void Match_MultiScenarioTrigger_MatchesAnySubTrigger()
+    {
+        var nodes = new[]
+        {
+            new MemoryNode { Uri = "core://test/or1", AnimaId = "a", Content = "c",
+                DisclosureTrigger = "discusses architecture OR asks about design patterns" }
+        };
+
+        var results = DisclosureMatcher.Match(nodes, "I want to asks about design patterns for my project");
+
+        Assert.Single(results);
+        Assert.Equal("core://test/or1", results[0].Uri);
+    }
+
+    [Fact]
+    public void Match_MultiScenarioTrigger_NoSubTriggerMatches_Excluded()
+    {
+        var nodes = new[]
+        {
+            new MemoryNode { Uri = "core://test/or2", AnimaId = "a", Content = "c",
+                DisclosureTrigger = "discusses cooking OR asks about recipes" }
+        };
+
+        var results = DisclosureMatcher.Match(nodes, "I want to discuss architecture");
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Match_SinglePhraseTrigger_StillWorks()
+    {
+        // Backward compatibility: single-phrase trigger without OR should still work
+        var nodes = new[]
+        {
+            new MemoryNode { Uri = "core://test/or3", AnimaId = "a", Content = "c",
+                DisclosureTrigger = "project architecture" }
+        };
+
+        var results = DisclosureMatcher.Match(nodes, "tell me about project architecture");
+
+        Assert.Single(results);
+        Assert.Equal("core://test/or3", results[0].Uri);
+    }
+
+    [Fact]
+    public void Match_MultiScenarioTrigger_ChineseSubTrigger()
+    {
+        // Chinese sub-trigger should match Chinese context
+        var nodes = new[]
+        {
+            new MemoryNode { Uri = "core://test/or4", AnimaId = "a", Content = "c",
+                DisclosureTrigger = "discusses architecture OR 讨论架构" }
+        };
+
+        var results = DisclosureMatcher.Match(nodes, "我想讨论架构设计");
+
+        Assert.Single(results);
+        Assert.Equal("core://test/or4", results[0].Uri);
+    }
+
     // --- GlossaryIndex ---
 
     [Fact]

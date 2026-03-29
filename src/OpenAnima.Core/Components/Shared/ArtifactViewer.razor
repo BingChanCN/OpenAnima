@@ -6,8 +6,8 @@
 
 @if (_artifact != null)
 {
-    <section class="artifact-section" role="region" aria-label="Artifact: @FileName">
-        <label class="artifact-label">Artifact</label>
+    <section class="artifact-section" role="region" aria-label="@L["Artifact.SectionAria", FileName]">
+        <label class="artifact-label">@L["Artifact.Title"]</label>
         <div class="artifact-block">
             <div class="artifact-header">
                 <span class="mime-badge">@_artifact.MimeType</span>
@@ -35,37 +35,37 @@
             @if (_isTruncated && !_isExpanded)
             {
                 <button class="expand-btn" @onclick="LoadFullContent"
-                        aria-label="View full content of @FileName">
+                        aria-label="@L["Artifact.ViewFullContentAria", FileName]">
                     @TruncationNotice
                 </button>
             }
             else if (_isExpanded)
             {
                 <button class="expand-btn" @onclick="CollapseContent"
-                        aria-label="Collapse content of @FileName">
-                    收起
+                        aria-label="@L["Artifact.CollapseContentAria", FileName]">
+                    @L["Common.Collapse"]
                 </button>
             }
             @if (_loadError != null)
             {
                 <div class="artifact-error">
-                    <span>Failed to load artifact content. Try refreshing the page or check the run logs.</span>
-                    <button class="retry-btn" @onclick="LoadArtifact">Retry</button>
+                    <span>@L["Artifact.LoadError"]</span>
+                    <button class="retry-btn" @onclick="LoadArtifact">@L["Common.Retry"]</button>
                 </div>
             }
         </div>
         <div class="artifact-provenance">
-            Source:
+            @L["Artifact.Provenance"]
             <a href="@($"/runs/{_artifact.RunId}#step-{_artifact.StepId}")"
                class="provenance-link"
-               aria-label="View step @_artifact.StepId">
-                Step @_artifact.StepId
+               aria-label="@L["Artifact.ViewStepAria", _artifact.StepId]">
+                @L["Common.Step"] @_artifact.StepId
             </a>
             &middot;
             <a href="@($"/runs/{_artifact.RunId}")"
                class="provenance-link"
-               aria-label="View run @_artifact.RunId">
-                Run @_artifact.RunId
+               aria-label="@L["Artifact.ViewRunAria", _artifact.RunId]">
+                @L["Common.Run"] @_artifact.RunId
             </a>
         </div>
     </section>
@@ -86,7 +86,7 @@
     private const int MaxPreviewBytes = 10 * 1024; // 10KB
 
     private string FileName => _artifact?.FilePath.Split('/').Last() ?? "";
-    private string TruncationNotice => $"Showing first {_previewLineCount} lines — 查看完整内容";
+    private string TruncationNotice => L["Artifact.PreviewNotice", _previewLineCount];
     private int _previewLineCount;
 
     protected override async Task OnParametersSetAsync()

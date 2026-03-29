@@ -6,7 +6,9 @@ namespace OpenAnima.Core.Services;
 /// Manages per-Anima module configuration with JSON persistence.
 /// Each Anima has independent configuration per module stored in data/animas/{id}/module-configs/{moduleId}.json.
 /// </summary>
+#pragma warning disable CS0618
 public class AnimaModuleConfigService : IAnimaModuleConfigService, IAsyncDisposable
+#pragma warning restore CS0618
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

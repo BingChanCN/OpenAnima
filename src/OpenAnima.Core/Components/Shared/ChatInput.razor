@@ -2,17 +2,26 @@
 @inject LanguageService LangSvc
 @implements IDisposable
 
-<div class="chat-input-container">
+<div class="chat-input-container" style="width:36%;min-width:18rem;margin:0 auto;border-radius:24px">
     <textarea
         id="chat-input"
-        rows="1"
-        placeholder="@L["Chat.Placeholder"]"
+        rows="3"
+        placeholder="@(IsAgentRunning ? L["Chat.AgentRunning"] : L["Chat.Placeholder"])"
         @oninput="OnInput"
         disabled="@IsDisabled">
     </textarea>
-    <button class="send-btn" @onclick="OnClickSend" disabled="@(_isEmpty || IsDisabled)">
-        ▶
-    </button>
+    @if (IsAgentRunning)
+    {
+        <button class="cancel-btn" @onclick="OnClickCancel" title="@L["Chat.CancelExecution"]">
+            &#9632;
+        </button>
+    }
+    else
+    {
+        <button class="send-btn" @onclick="OnClickSend" disabled="@(_isEmpty || IsDisabled)">
+            ▶
+        </button>
+    }
 </div>
 
 @code {
@@ -24,6 +33,12 @@
 
     [Parameter]
     public bool IsDisabled { get; set; }
+
+    [Parameter]
+    public bool IsAgentRunning { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
 
     private bool _isEmpty = true;
     private DotNetObjectReference<ChatInput>? _dotNetRef;
@@ -54,6 +69,11 @@
     private async Task OnClickSend()
     {
         await DoSend();
+    }
+
+    private async Task OnClickCancel()
+    {
+        await OnCancel.InvokeAsync();
     }
 
     private async Task DoSend()

@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Core.Hubs;
+using OpenAnima.Core.Memory;
 using OpenAnima.Core.RunPersistence;
 
 namespace OpenAnima.Core.Runs;
@@ -17,6 +18,7 @@ public class RunService : IRunService
     private readonly IRunRepository _repository;
     private readonly ILogger<RunService> _logger;
     private readonly IHubContext<RuntimeHub, IRuntimeClient>? _hubContext;
+    private readonly BootMemoryInjector _bootMemoryInjector;
 
     /// <summary>Active run contexts keyed by runId.</summary>
     private readonly ConcurrentDictionary<string, RunContext> _activeRuns = new();
@@ -35,10 +37,12 @@ public class RunService : IRunService
     public RunService(
         IRunRepository repository,
         ILogger<RunService> logger,
+        BootMemoryInjector bootMemoryInjector,
         IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _bootMemoryInjector = bootMemoryInjector ?? throw new ArgumentNullException(nameof(bootMemoryInjector));
         _hubContext = hubContext;
     }
 
@@ -49,6 +53,7 @@ public class RunService : IRunService
         string workspaceRoot,
         int? maxSteps = null,
         int? maxWallSeconds = null,
+        string? workflowPreset = null,
         CancellationToken ct = default)
     {
         var runId = Guid.NewGuid().ToString("N")[..8];
@@ -63,7 +68,8 @@ public class RunService : IRunService
             MaxSteps = maxSteps,
             MaxWallSeconds = maxWallSeconds,
             CreatedAt = now,
-            CurrentState = RunState.Created
+            CurrentState = RunState.Created,
+            WorkflowPreset = workflowPreset
         };
 
         // Persist Created row + initial Created state event
@@ -78,6 +84,9 @@ public class RunService : IRunService
 
         _activeRuns[runId] = context;
         _animaActiveRunMap[animaId] = runId;
+
+        // Inject boot memories after run is active (StepRecorder needs GetActiveRun to return non-null)
+        await _bootMemoryInjector.InjectBootMemoriesAsync(animaId, ct);
 
         using (_logger.BeginScope(new Dictionary<string, object?> { ["RunId"] = runId }))
         {

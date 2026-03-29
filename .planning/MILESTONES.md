@@ -1,5 +1,95 @@
 # Milestones
 
+## v2.0.3 Editor Experience (Shipped: 2026-03-24)
+
+**Phases:** 61-64 | **Plans:** 6 | **Tasks:** 13 | **LOC:** +7,819 lines across 49 files
+**Git range:** cfbf2cc..8cdf5d9 | **Timeline:** 2026-03-24 (1 day)
+
+**Delivered:** Full Chinese/English editor experience — localized module display names, module descriptions in sidebar and palette tooltips, port hover tooltips with Chinese descriptions, and connection deletion via right-click context menu and Delete key with focus guard.
+
+**Key accomplishments:**
+
+- Module i18n foundation: 15 Module.DisplayName.* resx keys with live language switching across palette, node cards, and config sidebar; dual-language search in palette
+- Connection deletion UX: Fixed DeleteSelected() parsing, added JS interop focus guard, ConnectionContextMenu component with right-click delete and localized label
+- Module descriptions: 15 Module.Description.* resx keys wired into EditorConfigSidebar description field and ModulePalette hover tooltips with ResourceNotFound fallback
+- Port hover tooltips: 39 Port.Description.* resx keys with SVG `<title>` tooltips on all input/output port circles, HttpRequestModule body port direction disambiguation
+- 70 i18n keys added total across 3 resource files (DisplayName + Description + Port.Description + Editor.Connection.Delete) — zero namespace collisions
+- Test suite: 658/658 green, zero regressions across all 4 phases
+
+**Tech debt (accepted):** 3 items — ConnectionContextMenu.razor missing EnsureThreadCulture() call (non-functional consistency gap), Phase 62 browser UX human verification pending, plan key count documentation inconsistency. See v2.0.3-MILESTONE-AUDIT.md.
+
+**Archive:** [milestones/v2.0.3-ROADMAP.md](milestones/v2.0.3-ROADMAP.md) | [milestones/v2.0.3-REQUIREMENTS.md](milestones/v2.0.3-REQUIREMENTS.md) | [milestones/v2.0.3-MILESTONE-AUDIT.md](milestones/v2.0.3-MILESTONE-AUDIT.md)
+
+---
+
+## v2.0.2 Chat Agent Loop (Shipped: 2026-03-23)
+
+**Phases:** 58-60 | **Plans:** 5 | **Tasks:** 11 | **LOC:** +7,385 lines across 46 files
+**Git range:** feat(58-01)..docs(60-01) | **Timeline:** 2026-03-22 → 2026-03-23 (1 day)
+
+**Delivered:** Agent loop closing the think-act-observe cycle — LLMModule autonomously parses tool calls, dispatches to workspace tools, injects results, and re-calls the LLM until completion, with real-time tool call cards in chat, token budget management, bracket step recording in Run inspector, and full-history sedimentation to memory.
+
+**Key accomplishments:**
+
+- Agent loop core: ToolCallParser (compiled regex XML marker extraction), AgentToolDispatcher (direct dispatch bypassing EventBus), bounded iteration loop in LLMModule with configurable limit (max 50), cancellation safety, and system prompt tool-call syntax injection
+- Tool call display: real-time collapsible tool cards in assistant chat bubbles with three-state status icons (spinner/check/X), "Used N tools" badge, localized strings (en-US/zh-CN)
+- Agent UI controls: per-event resettable 60s timeout, send locking during agent execution, cancel button transformation in ChatInput
+- Token budget management: 70% of agentContextWindowSize guard with oldest assistant+tool pair dropping, truncation notice insertion, configurable context window size (default 128K)
+- Bracket step recording: AgentLoop/AgentIteration bracket steps in StepRecorder with PropagationId chaining, visible in Run inspector with CSS semantic classes
+- Full-history sedimentation: memory graph receives complete tool call reasoning chains with 500-char tool content truncation in BuildExtractionMessages
+- Test suite: 654/654 green (61 new agent/hardening tests), zero regressions
+
+**Tech debt (accepted):** 8 items — HARD-03 cancel iteration step leak (low severity), silent fallback when _workspaceToolModule=null, multi-Anima event cross-contamination risk (pre-existing ANIMA-08), human verification pending for 3 UI items. See v2.0.2-MILESTONE-AUDIT.md.
+
+**Archive:** [milestones/v2.0.2-ROADMAP.md](milestones/v2.0.2-ROADMAP.md) | [milestones/v2.0.2-REQUIREMENTS.md](milestones/v2.0.2-REQUIREMENTS.md) | [milestones/v2.0.2-MILESTONE-AUDIT.md](milestones/v2.0.2-MILESTONE-AUDIT.md)
+
+---
+
+## v2.0.1 Provider Registry & Living Memory (Shipped: 2026-03-23)
+
+**Phases:** 50-57 | **Plans:** 16 | **Tasks:** ~30 | **LOC:** ~2,000 C# added (+26,600 insertions)
+**Git range:** feat(50-01)..docs(phase-57) | **Timeline:** 2026-03-22 → 2026-03-23 (2 days)
+
+**Delivered:** UI-driven LLM provider registry with encrypted credentials, automatic memory recall pipeline with bounded prompt injection, tool-aware memory operations, living memory sedimentation with provenance-backed snapshot history, and memory review surfaces — enabling agents to accumulate and reuse knowledge safely.
+
+**Key accomplishments:**
+
+- Global LLM Provider Registry with AES-GCM encrypted API key storage, full CRUD UI on Settings page, connection testing, and safe disable/delete with impact surfacing
+- LLM module cascading provider/model dropdown selection with three-layer config precedence (provider-backed > manual > global) and manual fallback
+- Automatic memory recall pipeline: boot injection at run start, disclosure trigger matching, glossary keyword matching (Aho-Corasick) — ranked, deduplicated, bounded XML prompt injection
+- Tool-aware memory operations: memory_recall and memory_link IWorkspaceTools with XML descriptor injection into LLM system messages
+- Living memory sedimentation: fire-and-forget LLM extraction of stable knowledge into provenance-backed memory nodes with snapshot versioning
+- Memory review surfaces on /memory: snapshot history diff viewer (LCS line-level), provenance StepRecord expansion, relationship edge browsing with clickable navigation
+- Full test suite: 603/603 green, zero regressions across all 8 phases
+
+**Tech debt (accepted):** 6 items — LLMProviderRegistryService.InitializeAsync not called at startup (self-heals on /settings visit), LLMModelInfo lacks IsEnabled field (provider-level disable covers primary case), 4 sets of human UI verification pending. See v2.0.1-MILESTONE-AUDIT.md.
+
+**Archive:** [milestones/v2.0.1-ROADMAP.md](milestones/v2.0.1-ROADMAP.md) | [milestones/v2.0.1-REQUIREMENTS.md](milestones/v2.0.1-REQUIREMENTS.md) | [milestones/v2.0.1-MILESTONE-AUDIT.md](milestones/v2.0.1-MILESTONE-AUDIT.md)
+
+---
+
+## v2.0 Structured Cognition Foundation (Shipped: 2026-03-21)
+
+**Phases:** 45-49 | **Plans:** 18 | **Tasks:** ~40 | **LOC:** ~11,234 C# added (+11,234 insertions)
+**Git range:** feat(45-01)..feat(49-03) | **Timeline:** 2026-03-20 → 2026-03-21 (2 days)
+
+**Delivered:** Structured cognition developer-agent foundation — durable task runtime with SQLite persistence and convergence control, 15 workspace and memory tools for repo-grounded execution, run inspector with propagation chain visualization, provenance-backed artifact and memory graph, and graph-native workflow presets for end-to-end codebase analysis.
+
+**Key accomplishments:**
+
+- Durable task runtime with SQLite persistence, run lifecycle engine (create/start/pause/resume/cancel/fail), convergence guard with configurable step budgets, and /runs UI page with real-time SignalR updates
+- 12 workspace tools (file_read, file_write, directory_list, file_search, grep_search, git_status, git_diff, git_log, git_show, git_commit, git_checkout, shell_exec) + 3 memory tools with CommandBlacklistGuard safety
+- Run inspector at /runs/{RunId} with mixed chronological timeline, accordion step detail, PropagationColorAssigner chain visualization, TimelineFilterBar, and click-to-highlight causality tracing
+- Artifact store with ArtifactFileWriter path safety and provenance-backed memory graph with GlossaryIndex (Aho-Corasick), DisclosureMatcher, snapshot versioning, and /memory UI page
+- Graph-native structured cognition: JoinBarrierModule fan-in, PropagationId carry-through, WorkflowPresetService with codebase analysis preset, WorkflowProgressBar, and WorkflowPresetSelector UI
+- Full test suite: 495/495 green, zero regressions across all 5 phases
+
+**Tech debt (accepted):** 11 items — BootMemoryInjector not called from run-start path, GetToolDescriptors() not consumed by LLM, WorkflowProgressBar imprecise fraction, SUMMARY frontmatter documentation gaps, pre-existing CS0618 warnings. See v2.0-MILESTONE-AUDIT.md.
+
+**Archive:** [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md) | [milestones/v2.0-REQUIREMENTS.md](milestones/v2.0-REQUIREMENTS.md) | [milestones/v2.0-MILESTONE-AUDIT.md](milestones/v2.0-MILESTONE-AUDIT.md)
+
+---
+
 ## v1.9 Event-Driven Propagation Engine (Shipped: 2026-03-20)
 
 **Phases:** 42-44 | **Plans:** 6 | **Tasks:** 12 | **LOC:** ~2,457 C# added (+3,270 insertions)
@@ -8,6 +98,7 @@
 **Delivered:** Event-driven propagation engine — modules execute on data arrival with output fan-out, cyclic topologies supported, HeartbeatModule refactored to standalone timer with config-schema-driven sidebar rendering.
 
 **Key accomplishments:**
+
 - Replaced DAG topological sort with event-driven per-module SemaphoreSlim routing — modules execute immediately on data arrival, output fans out to all connected downstream ports
 - Cyclic wiring topologies accepted — ConnectionGraph no longer rejects cycles, enabling feedback loops in module networks
 - HeartbeatModule refactored to standalone PeriodicTimer with config-driven interval (50ms floor) — no longer drives WiringEngine execution loop

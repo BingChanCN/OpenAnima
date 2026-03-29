@@ -2,6 +2,52 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v2.0.2 — Chat Agent Loop
+
+**Shipped:** 2026-03-23
+**Phases:** 3 | **Plans:** 5 | **Commits:** ~18
+
+### What Was Built
+- ToolCallParser: compiled regex XML marker extraction from LLM output, handles unclosed tags, multiline params, multiple calls
+- AgentToolDispatcher: direct IWorkspaceTool dispatch (bypassing EventBus to prevent semaphore deadlock), output truncation at 8000 chars
+- LLMModule agent loop: RunAgentLoopAsync with bounded iteration (default 10, max 50), system prompt tool-call syntax block, CancellationToken propagation
+- Tool call display: ToolCallInfo model with three-state status, EventBus event publishing, collapsible tool cards in ChatMessage.razor, "Used N tools" badge
+- Agent UI controls: per-event resettable 60s timeout, send locking, ChatInput cancel button transformation
+- Token budget management: 70% of agentContextWindowSize guard, oldest pair dropping, truncation notice anchoring
+- Bracket step recording: AgentLoop/AgentIteration steps in StepRecorder with PropagationId chaining
+- Full-history sedimentation: tool role messages included with 500-char content truncation
+
+### What Worked
+- Tight 3-phase linear dependency chain (58→59→60) shipped in a single day with zero regressions
+- TDD approach for ToolCallParser and AgentToolDispatcher — tests written first, implementation driven by failing tests
+- Direct tool dispatch decision (locked in STATE.md before Phase 58) eliminated entire class of semaphore deadlock bugs
+- FormatDetector pattern reuse — ToolCallParser mirrors existing static compiled-regex approach, reducing design time
+- Auto-fix pattern for cascading test failures (schema count, DI container resolution) kept momentum without manual debugging
+
+### What Was Inefficient
+- Token budget tests required discovering that repeated-character strings (new string('A', 500)) tokenize to very few BPE tokens — needed diverse vocabulary content for realistic counts
+- FakeRunService added to hardeningTests because NullRunService returns "No active run" short strings — test infrastructure gap
+- 59-02-SUMMARY.md missing requirements_completed frontmatter for TCUI-03/04 — SUMMARY metadata discipline still inconsistent
+
+### Patterns Established
+- Agent loop as internal module concern: RunAgentLoopAsync is private to LLMModule; external consumers see only final response
+- CancellationTokenSource replacement pattern: dispose old CTS, create new CTS on each event — used for per-event resettable timeouts
+- SpyStepRecorder with incrementing stepId strings: enables PropagationId chain assertion without a real IRunService
+- Bracket step pattern: outer step + per-iteration inner steps + RecordStepCompleteAsync on all exit paths (success, cancel, error)
+
+### Key Lessons
+1. Direct dispatch (bypassing EventBus) is the right pattern for agent tool execution — prevents semaphore re-entrance that would deadlock the module execution model
+2. Token budget tests need realistic content (diverse vocabulary) — artificial repeated characters compress to minimal BPE tokens and don't trigger budget thresholds
+3. Single-day milestone delivery is achievable for 3-phase scopes with locked decisions and linear dependencies — total elapsed ~40 minutes of agent execution
+4. CSS semantic classes (agent-loop-bracket, agent-iteration) from RowClass computed property is cleaner than JavaScript class injection for timeline visual hierarchy
+
+### Cost Observations
+- Model mix: ~80% sonnet (executor), ~10% haiku (research), ~10% opus (planning/audit)
+- Sessions: 1 session, ~1 day
+- Notable: Fastest milestone by wall clock — 3 phases / 5 plans / 11 tasks in a single day; locked decisions from STATE.md eliminated planning overhead
+
+---
+
 ## Milestone: v1.9 — Event-Driven Propagation Engine
 
 **Shipped:** 2026-03-20
@@ -207,10 +253,155 @@
 
 ---
 
+## Milestone: v2.0 — Structured Cognition Foundation
+
+**Shipped:** 2026-03-21
+**Phases:** 5 | **Plans:** 18 | **Commits:** 48
+
+### What Was Built
+- Durable task runtime: RunDescriptor/StepRecord/RunStateEvent domain types, SQLite persistence via IRunRepository with Dapper, RunService lifecycle engine, ConvergenceGuard step budgets, StepRecorder with hash-based dedup, RunRecoveryService, /runs UI page with 5 shared components and SignalR real-time
+- Workspace tool surface: 12 tools (file_read, file_write, directory_list, file_search, grep_search, git_status, git_diff, git_log, git_show, git_commit, git_checkout, shell_exec) + IWorkspaceTool interface + CommandBlacklistGuard + WorkspaceToolModule orchestrator
+- Run inspector: RunDetail page with mixed chronological timeline, StepTimelineRow accordion, PropagationColorAssigner chain visualization, TimelineFilterBar with module/status/chain dropdowns, click-to-highlight causality
+- Artifact & memory: ArtifactStore SQLite+filesystem, ArtifactFileWriter with path safety, MemoryGraph with GlossaryIndex (Aho-Corasick), DisclosureMatcher, snapshot versioning, 3 memory tools, BootMemoryInjector, /memory UI page
+- Structured cognition: JoinBarrierModule fan-in with double-check semaphore, PropagationId carry-through in StepRecorder, LLMModule WaitAsync serialization, WorkflowPresetService with DB migration, codebase analysis preset JSON, WorkflowProgressBar + WorkflowPresetSelector UI
+
+### What Worked
+- 5-phase linear dependency chain (45→46→47→48→49) executed cleanly in 2 days — largest milestone by plan count (18) with fastest per-plan velocity
+- Each phase boundary was a clean capability addition consumed by the next — RunRepository → WorkspaceTools → RunDetail → ArtifactStore → WorkflowPresets
+- SQLite + Dapper per-operation connection pattern established in Phase 45, reused consistently in ArtifactStore and MemoryGraph — no connection lifecycle bugs
+- PropagationId carry-through via ConcurrentDictionary (same pattern as _stepAnimaIds) — pattern reuse reduces implementation risk
+- 495/495 tests green at milestone end — zero regressions despite 125 files changed and 11,234 insertions
+
+### What Was Inefficient
+- BootMemoryInjector registered in DI but never called from run-start path — integration gap caught by audit, accepted as tech debt
+- GetToolDescriptors() declared on IWorkspaceTool but never consumed by LLMModule — tool schema injection not wired
+- SUMMARY frontmatter missing requirements_completed for 5 of 25 requirements (WORK-02/03/04, OBS-04, COG-01) — documentation gap persists from v1.8 pattern
+- WorkflowProgressBar uses raw step count as numerator vs node count denominator — imprecise fraction, accepted for v2.0
+- Nyquist VALIDATION.md exists for 4/5 phases but none are compliant (wave_0 incomplete); Phase 46 missing entirely
+
+### Patterns Established
+- Per-operation SQLite connections with WAL mode for concurrent access — RunRepository, ArtifactStore, MemoryGraph all follow this
+- IWorkspaceTool stateless interface with per-call workspaceRoot — tools don't hold workspace state
+- Double-check semaphore guard: fast-path count check before Wait(0), re-check after acquiring — JoinBarrierModule fan-in
+- WaitAsync for workflow branch serialization vs Wait(0) skip-when-busy — LLMModule needs correctness over throughput in workflow context
+- Preset JSON as Content Include in csproj with CopyToOutputDirectory Always — no manual copy step
+- 12-char hex IDs for artifacts vs 8-char for steps — lower collision probability for cross-run references
+
+### Key Lessons
+1. Linear dependency chains (A→B→C→D→E) execute faster than broad parallel phases — each phase builds directly on the previous, minimizing context switching
+2. SQLite WAL + per-operation connections is the right pattern for embedded persistence — zero connection management bugs across 3 independent stores
+3. SUMMARY frontmatter requirements_completed gap is a systemic issue (v1.8, v1.9, v2.0) — needs automation or executor-level enforcement
+4. Integration gaps (BootMemoryInjector, GetToolDescriptors) emerge when phases are designed independently — cross-phase wiring review at roadmap creation would catch these
+5. Nyquist validation strategy continues to be partially adopted — consider making it a mandatory plan step rather than optional phase artifact
+
+### Cost Observations
+- Model mix: ~65% sonnet (executor), ~25% haiku (research), ~10% opus (planning/audit)
+- Sessions: ~4 sessions across 2 days
+- Notable: 18 plans in 2 days is fastest delivery rate — 9 plans/day vs previous best of ~6 plans/day (v1.7)
+
+---
+
+## Milestone: v2.0.1 — Provider Registry & Living Memory
+
+**Shipped:** 2026-03-23
+**Phases:** 8 | **Plans:** 16 | **Commits:** 115
+
+### What Was Built
+- Global LLM Provider Registry: ILLMProviderRegistry contract, LLMProviderRegistryService with AES-GCM encrypted credentials, full CRUD Settings UI (ProviderCard/ProviderDialog/ProviderModelList/ProviderImpactList), connection testing with 30s timeout
+- LLM module configuration: IModuleConfigSchema with CascadingDropdown field type, three-layer config precedence, auto-clear on deleted provider/model, EditorConfigSidebar LLM-specific cascading dropdown rendering
+- Automatic memory recall: IMemoryRecallService with boot injection (core:// prefix), DisclosureMatcher trigger matching, GlossaryIndex keyword matching, ranked/deduped/bounded RecalledMemoryResult, XML <system-memory> injection in LLMModule
+- Memory tools: MemoryRecallTool + MemoryLinkTool as IWorkspaceTools with XML tool descriptor injection via BuildToolDescriptorBlock
+- Living memory sedimentation: ISedimentationService with fire-and-forget LLM extraction, JSON keyword normalization, provenance-backed MemoryNode writing with snapshot versioning
+- Sedimentation LLM config: Settings page Living Memory section with cascading provider/model dropdowns for sedimentation pipeline activation
+- Memory review surfaces: Three collapsible MemoryNodeCard sections (Provenance, Snapshot History, Relationships) with LineDiff, restore confirmation, edge navigation
+- Integration wiring: Boot recall in RecallAsync, CountAffectedModules for real impact counts, SUMMARY metadata gap closure
+
+### What Worked
+- Tight phasing: 6 initial phases (50-55) designed at roadmap creation, 2 gap closure phases (56-57) added after audit — clean gap identification and resolution
+- Audit-driven gap closure: First audit found 3/31 unsatisfied requirements + 3 integration gaps; Phases 56-57 closed all gaps before milestone completion
+- Consistent DI patterns: ILLMProviderRegistry, IMemoryRecallService, ISedimentationService all followed established singleton + optional constructor param patterns
+- Fire-and-forget sedimentation: Task.Run with CancellationToken.None and snapshot-captured values — clean isolation from LLM call lifecycle
+- 603/603 tests green with zero regressions across 8 phases — 34 new tests added during milestone
+
+### What Was Inefficient
+- SUMMARY frontmatter one_liner field null for all 16 summaries — summary-extract tool returned null for all, required manual accomplishment extraction
+- LLMProviderRegistryService.InitializeAsync ordering dependency — providers empty until user visits /settings (self-heals but bad UX on first launch)
+- Nyquist compliance partial: 5/8 phases have draft VALIDATION.md (all non-compliant), 3 phases missing entirely — systemic gap continues
+- Phase 56 and 57 planned without discuss-phase — directly created after audit gap identification, but could have benefited from targeted questioning
+- Two-day milestone execution compressed 8 phases into very dense sessions — higher context pressure than spreading over 3+ days
+
+### Patterns Established
+- AES-GCM + PBKDF2 machine-fingerprint key derivation for local secret encryption — reusable for any future credential storage
+- CascadingDropdown ConfigFieldType: Two-tier select rendering in EditorConfigSidebar driven by IModuleConfigSchema field metadata
+- __manual__ sentinel: Explicit bypass marker for manual LLM config path — avoids null/empty ambiguity
+- Boot recall seeded before Disclosure/Glossary: byUri dictionary starts with Boot entries, merge preserves type/priority
+- Fire-and-forget sedimentation: snapshot + Task.Run + CancellationToken.None — pattern for background work after LLM calls
+
+### Key Lessons
+1. Audit-driven gap closure (audit → identify gaps → add phases → re-audit) is the most effective way to ensure milestone completeness — v2.0.1 went from 28/31 to 31/31 requirements
+2. LLMProviderRegistryService.InitializeAsync ordering should have been wired into IHostedService from the start — deferred startup initialization creates subtle UX gaps
+3. SUMMARY one_liner frontmatter needs to be populated during execution — automated extraction fails when the field is missing
+4. Provider registry CRUD pattern (card list → dialog → impact check → confirm) is reusable for any entity management UI
+5. Three-layer config precedence (registry-backed > manual > global) is a clean pattern for gradual migration from legacy config
+
+### Cost Observations
+- Model mix: ~60% sonnet (executor), ~30% haiku (research), ~10% opus (planning/audit)
+- Sessions: ~4 sessions across 2 days
+- Notable: 8 phases / 16 plans in 2 days — 8 plans/day matches v2.0's record pace; gap closure phases (56-57) took <30min combined
+
+---
+
+## Milestone: v2.0.3 — Editor Experience
+
+**Shipped:** 2026-03-24
+**Phases:** 4 | **Plans:** 6 | **Commits:** ~30
+
+### What Was Built
+- Module i18n foundation: 15 Module.DisplayName.* resx keys with live language switching across palette, node cards, and config sidebar; dual-language search in palette
+- Connection deletion UX: Fixed DeleteSelected() two-step connection ID parsing, JS interop isActiveElementEditable focus guard, ConnectionContextMenu component with right-click delete
+- Module descriptions: 15 Module.Description.* resx keys wired into EditorConfigSidebar description field and ModulePalette hover tooltips
+- Port hover tooltips: 39 Port.Description.* resx keys with browser-native SVG title tooltips on all port circles; HttpRequestModule body port direction disambiguation
+- 70 i18n keys added total across 3 resource files with zero namespace collisions
+
+### What Worked
+- 4-phase milestone completed in a single day with zero regressions (658/658 tests green)
+- Consistent i18n pattern (IStringLocalizer + ResourceNotFound fallback + LanguageChanged subscription) scaled cleanly across all 4 phases
+- Browser-native SVG `<title>` for port tooltips eliminated JS complexity entirely — auto-dismisses on mousedown preserving drag-to-connect
+- ConnectionContextMenu followed ModuleContextMenu pattern exactly — visual consistency and reduced design time
+- Integration checker confirmed all 12 cross-phase exports wired correctly with zero orphaned exports
+
+### What Was Inefficient
+- SUMMARY frontmatter missing `requirements-completed` field for phases 63 and 64 — metadata discipline still inconsistent (recurring issue from v2.0.1/v2.0.2)
+- Phase 62 VERIFICATION status `human_needed` — browser UX scenarios cannot be confirmed statically, 5 items remain pending
+- Nyquist VALIDATION.md missing for all 4 phases — validation discipline not yet routine for UI-focused phases
+
+### Patterns Established
+- Module.DisplayName.* / Module.Description.* / Port.Description.* resx key namespace convention for all editor i18n
+- ResourceNotFound fallback pattern: check `localized.ResourceNotFound` before using value, fall back to class name or empty string
+- LanguageChanged subscription pattern: inject LangSvc, subscribe in OnInitialized, call EnsureThreadCulture() + StateHasChanged(), unsubscribe in Dispose
+- JS interop focus guard: `editorCanvas.isActiveElementEditable` checks INPUT/TEXTAREA/SELECT/contentEditable before keyboard mutations
+- ConnectionContextMenu pattern: backdrop div for outside-click close, fixed positioning from MouseEventArgs.ClientX/ClientY
+
+### Key Lessons
+1. Browser-native SVG elements (`<title>`) are preferred over JS solutions for tooltips — simpler, zero maintenance, compatible with drag gestures
+2. i18n key namespaces (Module.DisplayName.*, Module.Description.*, Port.Description.*) should be planned upfront to avoid collision risk as the keyspace grows
+3. SUMMARY frontmatter `requirements-completed` field should be enforced by the executor — recurring omission across 3 milestones now
+
+### Cost Observations
+- Model mix: ~80% sonnet (execution), ~20% opus (audit, verification)
+- Sessions: 1 (single-day completion)
+- Notable: 4 phases in 1 day (~24 min total execution time across 6 plans) — fastest milestone per-phase delivery
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Commits | Phases | Notable Patterns |
 |-----------|---------|--------|------------------|
+| v2.0.3 | ~30 | 4 | Module i18n, connection deletion UX, module descriptions, port tooltips, 70 resx keys |
+| v2.0.2 | ~18 | 3 | Agent loop, tool call display, token budget, bracket steps, full-history sedimentation |
+| v2.0.1 | 115 | 8 | Provider registry, memory recall pipeline, sedimentation, review surfaces |
+| v2.0 | 48 | 5 | Durable runs, workspace tools, run inspector, memory graph, workflow presets |
 | v1.9 | ~15 | 3 | Event-driven propagation, cycle support, schema-first config |
 | v1.8 | 45 | 4 | PluginLoader DI, ChatMessageInput migration, IModuleStorage, ContextModule |
 | v1.7 | ~40 | 6 | ActivityChannelHost, Contracts expansion, module decoupling |
@@ -235,6 +426,10 @@
 | v1.7 | ~23,734 | ActivityChannelHost, SemaphoreSlim skip, [StatelessModule] | 5 |
 | v1.8 | ~25,015 | ContractsTypeMap DI, bound service injection, semaphore priority | 7 |
 | v1.9 | ~27,500 | Event-driven propagation, ITickable removal, schema-first sidebar | 6 |
+| v2.0 | ~41,773 | SQLite WAL stores, IWorkspaceTool, JoinBarrier, Aho-Corasick glossary, workflow presets | 11 |
+| v2.0.1 | ~44,700 | AES-GCM encryption, CascadingDropdown, memory recall pipeline, sedimentation, review surfaces | 6 |
+| v2.0.2 | ~52,000 | XML tool call markers, direct tool dispatch, bounded iteration, bracket steps, CTS replacement | 8 |
+| v2.0.3 | ~52,000 | ResourceNotFound i18n fallback, SVG title port tooltips, JS focus guard, resx namespace convention | 3 |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -246,3 +441,7 @@
 6. Update tracking tables immediately after plan completion — stale docs create audit noise (v1.6 lesson)
 7. SDK validation via a real external module is the most effective API surface verification — catches binding gaps that unit tests miss (v1.8 lesson)
 8. Gap closure plans are healthy — catching issues in verification and fixing in a dedicated plan is better than ignoring (v1.8 lesson)
+9. Linear phase dependency chains deliver faster than broad parallel phases — each builds directly on previous with minimal context switching (v2.0 lesson)
+10. SQLite WAL + per-operation connections is the reliable embedded persistence pattern — zero connection bugs across 3 independent stores (v2.0 lesson)
+11. Audit-driven gap closure (audit → gaps → add phases → re-audit) is the most effective milestone completeness strategy — v2.0.1 went from 28/31 to 31/31 requirements (v2.0.1 lesson)
+12. Fire-and-forget background work after LLM calls should use snapshot-captured values + CancellationToken.None — isolates background work from caller lifecycle (v2.0.1 lesson)

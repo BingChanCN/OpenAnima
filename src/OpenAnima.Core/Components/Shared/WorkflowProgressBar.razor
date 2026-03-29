@@ -1,0 +1,48 @@
+@if (TotalNodes > 0)
+{
+    var pct = (double)CompletedNodes / TotalNodes * 100;
+    <div class="workflow-progress">
+        <div class="workflow-progress-track"
+             role="progressbar"
+             aria-valuenow="@CompletedNodes"
+             aria-valuemin="0"
+             aria-valuemax="@TotalNodes"
+             aria-label="Workflow progress: @CompletedNodes of @TotalNodes nodes completed">
+            <div class="workflow-progress-fill @(pct >= 80 ? "workflow-warning" : "")"
+                 style="width: @(Math.Min(100, (int)pct))%"></div>
+        </div>
+        <span class="workflow-progress-label">@CompletedNodes / @TotalNodes nodes completed</span>
+    </div>
+}
+
+<style>
+    .workflow-progress { margin-top: 8px; }
+    .workflow-progress-track {
+        height: 4px;
+        background: var(--border-color);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    .workflow-progress-fill {
+        height: 100%;
+        background: var(--success-color);
+        transition: width 0.3s;
+        border-radius: 2px;
+    }
+    .workflow-progress-fill.workflow-warning { background: var(--warning-color); }
+    .workflow-progress-label {
+        font-size: 12px;
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+        margin-top: 2px;
+        display: block;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int CompletedNodes { get; set; }
+
+    [Parameter]
+    public int TotalNodes { get; set; }
+}

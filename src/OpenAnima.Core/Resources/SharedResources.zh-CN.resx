@@ -431,4 +431,811 @@
   <data name="RunDetail.LongTimelineBanner" xml:space="preserve">
     <value>显示全部 {0} 个步骤。使用筛选缩小范围。</value>
   </data>
+  <data name="Providers.SectionTitle" xml:space="preserve">
+    <value>LLM 提供商</value>
+  </data>
+  <data name="Providers.AddProvider" xml:space="preserve">
+    <value>添加提供商</value>
+  </data>
+  <data name="Providers.EmptyHeading" xml:space="preserve">
+    <value>尚未配置提供商</value>
+  </data>
+  <data name="Providers.EmptyBody" xml:space="preserve">
+    <value>添加提供商以开始使用注册表支持的 LLM 模块。</value>
+  </data>
+  <data name="Providers.ModelCount" xml:space="preserve">
+    <value>{0} 个模型</value>
+  </data>
+  <data name="Providers.DisabledLabel" xml:space="preserve">
+    <value>已禁用</value>
+  </data>
+  <data name="Providers.EditProvider" xml:space="preserve">
+    <value>编辑提供商</value>
+  </data>
+  <data name="Providers.SaveProvider" xml:space="preserve">
+    <value>保存提供商</value>
+  </data>
+  <data name="Providers.DiscardChanges" xml:space="preserve">
+    <value>放弃更改</value>
+  </data>
+  <data name="Providers.CloseDialog" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="Providers.DeleteProvider" xml:space="preserve">
+    <value>删除提供商</value>
+  </data>
+  <data name="Providers.Disable" xml:space="preserve">
+    <value>禁用</value>
+  </data>
+  <data name="Providers.Enable" xml:space="preserve">
+    <value>启用</value>
+  </data>
+  <data name="Providers.TestConnection" xml:space="preserve">
+    <value>测试连接</value>
+  </data>
+  <data name="Providers.TestSuccess" xml:space="preserve">
+    <value>连接成功</value>
+  </data>
+  <data name="Providers.TestFailed" xml:space="preserve">
+    <value>连接失败: {0}</value>
+  </data>
+  <data name="Providers.ApiKeyPlaceholder" xml:space="preserve">
+    <value>粘贴 API 密钥...</value>
+  </data>
+  <data name="Providers.ApiKeyEditHint" xml:space="preserve">
+    <value>清除并重新输入以替换密钥</value>
+  </data>
+  <data name="Providers.ModelId" xml:space="preserve">
+    <value>模型 ID</value>
+  </data>
+  <data name="Providers.ModelAlias" xml:space="preserve">
+    <value>显示别名（可选）</value>
+  </data>
+  <data name="Providers.AddModel" xml:space="preserve">
+    <value>添加模型</value>
+  </data>
+  <data name="Providers.RemoveModel" xml:space="preserve">
+    <value>移除模型</value>
+  </data>
+  <data name="Providers.DisableConfirmTitle" xml:space="preserve">
+    <value>禁用提供商？</value>
+  </data>
+  <data name="Providers.DisableConfirmMessage" xml:space="preserve">
+    <value>这将使 {0} 个 LLM 模块标记为不可用。它们将保留选择但在提供商重新启用前无法运行。</value>
+  </data>
+  <data name="Providers.DeleteConfirmTitle" xml:space="preserve">
+    <value>删除提供商？</value>
+  </data>
+  <data name="Providers.DeleteConfirmMessage" xml:space="preserve">
+    <value>这将永久删除此提供商和 {0} 个模型。{1} 个 LLM 模块将显示其选择为不可用。</value>
+  </data>
+  <data name="Providers.DeleteConfirmAction" xml:space="preserve">
+    <value>删除提供商</value>
+  </data>
+  <data name="Providers.ValidationNameRequired" xml:space="preserve">
+    <value>提供商名称为必填项。</value>
+  </data>
+  <data name="Providers.ValidationUrlRequired" xml:space="preserve">
+    <value>基础 URL 为必填项。</value>
+  </data>
+  <data name="Providers.ValidationUrlFormat" xml:space="preserve">
+    <value>请输入有效的 URL（例如 https://api.openai.com）。</value>
+  </data>
+  <data name="Providers.ValidationModelIdRequired" xml:space="preserve">
+    <value>模型 ID 为必填项。</value>
+  </data>
+  <data name="Providers.ValidationModelIdDuplicate" xml:space="preserve">
+    <value>已存在具有此 ID 的模型。</value>
+  </data>
+  <data name="Editor.LLM.Provider" xml:space="preserve">
+    <value>提供商</value>
+  </data>
+  <data name="Editor.LLM.ProviderPlaceholder" xml:space="preserve">
+    <value>请选择 Provider</value>
+  </data>
+  <data name="Editor.LLM.ManualOption" xml:space="preserve">
+    <value>手动配置</value>
+  </data>
+  <data name="Editor.LLM.Model" xml:space="preserve">
+    <value>模型</value>
+  </data>
+  <data name="Editor.LLM.ModelPlaceholder" xml:space="preserve">
+    <value>请选择 Model</value>
+  </data>
+  <data name="Editor.LLM.ProviderDisabledWarning" xml:space="preserve">
+    <value>该提供商已禁用，保存的选择仍有效但不会被使用</value>
+  </data>
+  <data name="Editor.LLM.ModelNotSelectedWarning" xml:space="preserve">
+    <value>未选择模型，保存后此模块将无法运行</value>
+  </data>
+  <data name="Editor.LLM.ManualHint" xml:space="preserve">
+    <value>手动配置将覆盖全局设置，但优先级低于已选择的提供商</value>
+  </data>
+  <data name="Editor.LLM.ApiUrl" xml:space="preserve">
+    <value>API 地址</value>
+  </data>
+  <data name="Editor.LLM.ApiKey" xml:space="preserve">
+    <value>API 密钥</value>
+  </data>
+  <data name="Editor.LLM.ModelName" xml:space="preserve">
+    <value>模型名称</value>
+  </data>
+  <data name="Editor.LLM.NoProvidersRegistered" xml:space="preserve">
+    <value>尚无已注册的提供商，请前往设置添加</value>
+  </data>
+  <data name="Memory.SnapshotHistory" xml:space="preserve">
+    <value>快照历史</value>
+  </data>
+  <data name="Memory.Provenance" xml:space="preserve">
+    <value>来源</value>
+  </data>
+  <data name="Memory.Relationships" xml:space="preserve">
+    <value>关联关系</value>
+  </data>
+  <data name="Memory.Outgoing" xml:space="preserve">
+    <value>出边</value>
+  </data>
+  <data name="Memory.Incoming" xml:space="preserve">
+    <value>入边</value>
+  </data>
+  <data name="Memory.ManuallyCreated" xml:space="preserve">
+    <value>手动创建</value>
+  </data>
+  <data name="Memory.RestoreButton" xml:space="preserve">
+    <value>恢复到此版本</value>
+  </data>
+  <data name="Memory.ShowDiff" xml:space="preserve">
+    <value>显示差异</value>
+  </data>
+  <data name="Memory.HideDiff" xml:space="preserve">
+    <value>隐藏差异</value>
+  </data>
+  <data name="Memory.ShowStepDetails" xml:space="preserve">
+    <value>显示详情</value>
+  </data>
+  <data name="Memory.HideStepDetails" xml:space="preserve">
+    <value>隐藏详情</value>
+  </data>
+  <data name="Memory.EmptySnapshots" xml:space="preserve">
+    <value>暂无历史快照。</value>
+  </data>
+  <data name="Memory.EmptyOutgoing" xml:space="preserve">
+    <value>暂无出边关系。</value>
+  </data>
+  <data name="Memory.EmptyIncoming" xml:space="preserve">
+    <value>暂无入边关系。</value>
+  </data>
+  <data name="Memory.RestoreConfirmTitle" xml:space="preserve">
+    <value>恢复到此版本？</value>
+  </data>
+  <data name="Memory.RestoreConfirmBody" xml:space="preserve">
+    <value>当前内容将保存为快照，并被此版本替换。</value>
+  </data>
+  <data name="Memory.RestoreConfirmAction" xml:space="preserve">
+    <value>恢复</value>
+  </data>
+  <data name="Memory.RestoreConfirmCancel" xml:space="preserve">
+    <value>保留当前</value>
+  </data>
+  <data name="Memory.RestoreFlash" xml:space="preserve">
+    <value>已恢复</value>
+  </data>
+  <data name="Memory.ProvenanceStepError" xml:space="preserve">
+    <value>无法加载步骤详情，请尝试选择其他节点后重新查看。</value>
+  </data>
+  <data name="Memory.ProvenanceEdgeError" xml:space="preserve">
+    <value>无法加载关系，请刷新页面重试。</value>
+  </data>
+  <data name="Sedimentation.SectionTitle" xml:space="preserve">
+    <value>活体记忆</value>
+  </data>
+  <data name="Sedimentation.Description" xml:space="preserve">
+    <value>选择为当前 Anima 的自动记忆沉淀提供支持的 LLM 提供商和模型。</value>
+  </data>
+  <data name="Sedimentation.Provider" xml:space="preserve">
+    <value>提供商</value>
+  </data>
+  <data name="Sedimentation.ProviderPlaceholder" xml:space="preserve">
+    <value>-- 选择提供商 --</value>
+  </data>
+  <data name="Sedimentation.Model" xml:space="preserve">
+    <value>模型</value>
+  </data>
+  <data name="Sedimentation.ModelPlaceholder" xml:space="preserve">
+    <value>-- 选择模型 --</value>
+  </data>
+  <data name="Sedimentation.ProviderDisabledWarning" xml:space="preserve">
+    <value>所选提供商已禁用，沉淀功能将在重新启用后激活。</value>
+  </data>
+  <data name="Sedimentation.Saved" xml:space="preserve">
+    <value>已保存</value>
+  </data>
+  <data name="Sedimentation.NoProviders" xml:space="preserve">
+    <value>尚未注册提供商，请先在上方添加。</value>
+  </data>
+  <data name="Chat.ToolCountBadge" xml:space="preserve">
+    <value>已使用 {0} 个工具</value>
+  </data>
+  <data name="Chat.AgentRunning" xml:space="preserve">
+    <value>Agent 正在运行...</value>
+  </data>
+  <data name="Chat.CancelExecution" xml:space="preserve">
+    <value>取消执行</value>
+  </data>
+  <data name="Module.DisplayName.LLMModule" xml:space="preserve">
+    <value>LLM</value>
+  </data>
+  <data name="Module.DisplayName.ChatInputModule" xml:space="preserve">
+    <value>聊天输入</value>
+  </data>
+  <data name="Module.DisplayName.ChatOutputModule" xml:space="preserve">
+    <value>聊天输出</value>
+  </data>
+  <data name="Module.DisplayName.HeartbeatModule" xml:space="preserve">
+    <value>心跳</value>
+  </data>
+  <data name="Module.DisplayName.FixedTextModule" xml:space="preserve">
+    <value>固定文本</value>
+  </data>
+  <data name="Module.DisplayName.TextJoinModule" xml:space="preserve">
+    <value>文本拼接</value>
+  </data>
+  <data name="Module.DisplayName.TextSplitModule" xml:space="preserve">
+    <value>文本分割</value>
+  </data>
+  <data name="Module.DisplayName.ConditionalBranchModule" xml:space="preserve">
+    <value>条件分支</value>
+  </data>
+  <data name="Module.DisplayName.AnimaInputPortModule" xml:space="preserve">
+    <value>Anima 输入端口</value>
+  </data>
+  <data name="Module.DisplayName.AnimaOutputPortModule" xml:space="preserve">
+    <value>Anima 输出端口</value>
+  </data>
+  <data name="Module.DisplayName.AnimaRouteModule" xml:space="preserve">
+    <value>Anima 路由</value>
+  </data>
+  <data name="Module.DisplayName.HttpRequestModule" xml:space="preserve">
+    <value>HTTP 请求</value>
+  </data>
+  <data name="Module.DisplayName.JoinBarrierModule" xml:space="preserve">
+    <value>汇合屏障</value>
+  </data>
+  <data name="Module.DisplayName.MemoryModule" xml:space="preserve">
+    <value>记忆</value>
+  </data>
+  <data name="Module.DisplayName.WorkspaceToolModule" xml:space="preserve">
+    <value>工作区工具</value>
+  </data>
+  <data name="Module.Description.LLMModule" xml:space="preserve">
+    <value>连接大语言模型 API，支持流式文本生成和多轮对话</value>
+  </data>
+  <data name="Module.Description.ChatInputModule" xml:space="preserve">
+    <value>接收用户在聊天界面输入的消息</value>
+  </data>
+  <data name="Module.Description.ChatOutputModule" xml:space="preserve">
+    <value>将处理结果输出到聊天界面显示给用户</value>
+  </data>
+  <data name="Module.Description.HeartbeatModule" xml:space="preserve">
+    <value>按设定的时间间隔周期性地发送心跳信号</value>
+  </data>
+  <data name="Module.Description.FixedTextModule" xml:space="preserve">
+    <value>输出预先配置的固定文本内容</value>
+  </data>
+  <data name="Module.Description.TextJoinModule" xml:space="preserve">
+    <value>将多个文本输入拼接为一个字符串</value>
+  </data>
+  <data name="Module.Description.TextSplitModule" xml:space="preserve">
+    <value>按分隔符将文本拆分为多个部分</value>
+  </data>
+  <data name="Module.Description.ConditionalBranchModule" xml:space="preserve">
+    <value>根据条件表达式将数据路由到不同的输出端口</value>
+  </data>
+  <data name="Module.Description.AnimaInputPortModule" xml:space="preserve">
+    <value>从其他 Anima 接收跨 Anima 路由的输入数据</value>
+  </data>
+  <data name="Module.Description.AnimaOutputPortModule" xml:space="preserve">
+    <value>向其他 Anima 发送跨 Anima 路由的输出数据</value>
+  </data>
+  <data name="Module.Description.AnimaRouteModule" xml:space="preserve">
+    <value>将消息路由到目标 Anima 的指定端口</value>
+  </data>
+  <data name="Module.Description.HttpRequestModule" xml:space="preserve">
+    <value>发送 HTTP 请求并返回响应内容</value>
+  </data>
+  <data name="Module.Description.JoinBarrierModule" xml:space="preserve">
+    <value>等待所有输入端口都收到数据后再触发输出</value>
+  </data>
+  <data name="Module.Description.MemoryModule" xml:space="preserve">
+    <value>为 LLM 提供长期记忆的存储、检索和沉淀功能</value>
+  </data>
+  <data name="Module.Description.WorkspaceToolModule" xml:space="preserve">
+    <value>为 LLM Agent 提供工具调用能力，如文件读写和搜索</value>
+  </data>
+  <data name="Port.Description.LLMModule.messages" xml:space="preserve">
+    <value>聊天消息历史</value>
+  </data>
+  <data name="Port.Description.LLMModule.prompt" xml:space="preserve">
+    <value>系统提示词</value>
+  </data>
+  <data name="Port.Description.LLMModule.response" xml:space="preserve">
+    <value>LLM 生成的回复</value>
+  </data>
+  <data name="Port.Description.LLMModule.error" xml:space="preserve">
+    <value>失败时的错误信息</value>
+  </data>
+  <data name="Port.Description.ChatInputModule.userMessage" xml:space="preserve">
+    <value>用户聊天消息</value>
+  </data>
+  <data name="Port.Description.ChatOutputModule.displayText" xml:space="preserve">
+    <value>显示在聊天界面的文本</value>
+  </data>
+  <data name="Port.Description.HeartbeatModule.tick" xml:space="preserve">
+    <value>周期性心跳信号</value>
+  </data>
+  <data name="Port.Description.FixedTextModule.trigger" xml:space="preserve">
+    <value>触发文本输出</value>
+  </data>
+  <data name="Port.Description.FixedTextModule.output" xml:space="preserve">
+    <value>固定文本内容</value>
+  </data>
+  <data name="Port.Description.TextJoinModule.input1" xml:space="preserve">
+    <value>第一个文本输入</value>
+  </data>
+  <data name="Port.Description.TextJoinModule.input2" xml:space="preserve">
+    <value>第二个文本输入</value>
+  </data>
+  <data name="Port.Description.TextJoinModule.input3" xml:space="preserve">
+    <value>第三个文本输入</value>
+  </data>
+  <data name="Port.Description.TextJoinModule.output" xml:space="preserve">
+    <value>拼接后的文本</value>
+  </data>
+  <data name="Port.Description.TextSplitModule.input" xml:space="preserve">
+    <value>待分割的文本</value>
+  </data>
+  <data name="Port.Description.TextSplitModule.output" xml:space="preserve">
+    <value>分割后的文本</value>
+  </data>
+  <data name="Port.Description.ConditionalBranchModule.input" xml:space="preserve">
+    <value>待判断的数据</value>
+  </data>
+  <data name="Port.Description.ConditionalBranchModule.true" xml:space="preserve">
+    <value>条件为真时的输出</value>
+  </data>
+  <data name="Port.Description.ConditionalBranchModule.false" xml:space="preserve">
+    <value>条件为假时的输出</value>
+  </data>
+  <data name="Port.Description.AnimaInputPortModule.request" xml:space="preserve">
+    <value>来自其他 Anima 的请求</value>
+  </data>
+  <data name="Port.Description.AnimaOutputPortModule.response" xml:space="preserve">
+    <value>发往其他 Anima 的响应</value>
+  </data>
+  <data name="Port.Description.AnimaRouteModule.request" xml:space="preserve">
+    <value>待路由的消息</value>
+  </data>
+  <data name="Port.Description.AnimaRouteModule.trigger" xml:space="preserve">
+    <value>触发路由发送</value>
+  </data>
+  <data name="Port.Description.AnimaRouteModule.response" xml:space="preserve">
+    <value>路由返回的数据</value>
+  </data>
+  <data name="Port.Description.AnimaRouteModule.error" xml:space="preserve">
+    <value>路由错误信息</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.body.Input" xml:space="preserve">
+    <value>请求体内容</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.trigger" xml:space="preserve">
+    <value>触发发送请求</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.body.Output" xml:space="preserve">
+    <value>响应体内容</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.statusCode" xml:space="preserve">
+    <value>HTTP 状态码</value>
+  </data>
+  <data name="Port.Description.HttpRequestModule.error" xml:space="preserve">
+    <value>请求错误信息</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.input_1" xml:space="preserve">
+    <value>第一个屏障输入</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.input_2" xml:space="preserve">
+    <value>第二个屏障输入</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.input_3" xml:space="preserve">
+    <value>第三个屏障输入</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.input_4" xml:space="preserve">
+    <value>第四个屏障输入</value>
+  </data>
+  <data name="Port.Description.JoinBarrierModule.output" xml:space="preserve">
+    <value>所有输入就绪后的输出</value>
+  </data>
+  <data name="Port.Description.MemoryModule.query" xml:space="preserve">
+    <value>记忆查询文本</value>
+  </data>
+  <data name="Port.Description.MemoryModule.write" xml:space="preserve">
+    <value>写入记忆的内容</value>
+  </data>
+  <data name="Port.Description.MemoryModule.result" xml:space="preserve">
+    <value>记忆查询结果</value>
+  </data>
+  <data name="Port.Description.WorkspaceToolModule.invoke" xml:space="preserve">
+    <value>工具调用请求</value>
+  </data>
+  <data name="Port.Description.WorkspaceToolModule.result" xml:space="preserve">
+    <value>工具执行结果</value>
+  </data>
+  <data name="Run.StopReasonPrefix" xml:space="preserve">
+    <value>运行已暂停：</value>
+  </data>
+  <data name="MainLayout.ExpandSidebar" xml:space="preserve">
+    <value>展开侧边栏</value>
+  </data>
+  <data name="MainLayout.CollapseSidebar" xml:space="preserve">
+    <value>收起侧边栏</value>
+  </data>
+  <data name="MainLayout.ToggleSidebar" xml:space="preserve">
+    <value>切换侧边栏</value>
+  </data>
+  <data name="MainLayout.MainNavigation" xml:space="preserve">
+    <value>主导航</value>
+  </data>
+  <data name="MainLayout.Navigation" xml:space="preserve">
+    <value>导航</value>
+  </data>
+  <data name="MainLayout.ToggleMenu" xml:space="preserve">
+    <value>切换菜单</value>
+  </data>
+  <data name="Runs.Title" xml:space="preserve">
+    <value>运行</value>
+  </data>
+  <data name="Runs.History" xml:space="preserve">
+    <value>运行历史</value>
+  </data>
+  <data name="Runs.EmptyHeading" xml:space="preserve">
+    <value>暂无运行记录</value>
+  </data>
+  <data name="Runs.EmptyBody" xml:space="preserve">
+    <value>启动一个运行以开始跟踪长时间图执行。</value>
+  </data>
+  <data name="Runs.CancelConfirmTitle" xml:space="preserve">
+    <value>取消运行？</value>
+  </data>
+  <data name="Runs.CancelConfirmMessage" xml:space="preserve">
+    <value>这将永久停止该运行。已完成的步骤会被保留，但运行在取消后无法恢复。</value>
+  </data>
+  <data name="Runs.CancelConfirmAction" xml:space="preserve">
+    <value>取消运行</value>
+  </data>
+  <data name="Runs.StartFailed" xml:space="preserve">
+    <value>启动运行失败。</value>
+  </data>
+  <data name="Runs.NoActiveAnima" xml:space="preserve">
+    <value>当前未选中 Anima。</value>
+  </data>
+  <data name="RunLaunch.NewRun" xml:space="preserve">
+    <value>新建运行</value>
+  </data>
+  <data name="RunLaunch.Objective" xml:space="preserve">
+    <value>目标</value>
+  </data>
+  <data name="RunLaunch.ObjectivePlaceholder" xml:space="preserve">
+    <value>描述这个运行需要完成什么</value>
+  </data>
+  <data name="RunLaunch.WorkspaceRoot" xml:space="preserve">
+    <value>工作区根目录</value>
+  </data>
+  <data name="RunLaunch.WorkspacePlaceholder" xml:space="preserve">
+    <value>/path/to/repository</value>
+  </data>
+  <data name="RunLaunch.MaxStepsOptional" xml:space="preserve">
+    <value>最大步骤数（可选）</value>
+  </data>
+  <data name="RunLaunch.MaxWallSecondsOptional" xml:space="preserve">
+    <value>最大墙钟时间（秒，可选）</value>
+  </data>
+  <data name="RunLaunch.Start" xml:space="preserve">
+    <value>启动运行</value>
+  </data>
+  <data name="RunLaunch.ObjectiveRequired" xml:space="preserve">
+    <value>目标不能为空</value>
+  </data>
+  <data name="RunLaunch.WorkspaceRequired" xml:space="preserve">
+    <value>工作区根目录不能为空</value>
+  </data>
+  <data name="RunLaunch.MaxStepsPositive" xml:space="preserve">
+    <value>最大步骤数必须为正数</value>
+  </data>
+  <data name="RunLaunch.MaxWallSecondsPositive" xml:space="preserve">
+    <value>最大墙钟时间必须为正数</value>
+  </data>
+  <data name="RunLaunch.StartFailed" xml:space="preserve">
+    <value>启动运行失败，请检查工作区路径后重试。</value>
+  </data>
+  <data name="WorkflowPreset.Label" xml:space="preserve">
+    <value>工作流模板</value>
+  </data>
+  <data name="WorkflowPreset.NoneManual" xml:space="preserve">
+    <value>无 - 手动连线</value>
+  </data>
+  <data name="WorkflowPreset.CodebaseAnalysisDescription" xml:space="preserve">
+    <value>扫描工作区，运行 4 条并行 LLM 分析分支，并汇总生成 Markdown 报告。</value>
+  </data>
+  <data name="WorkflowPreset.DefaultDescription" xml:space="preserve">
+    <value>工作流模板</value>
+  </data>
+  <data name="RunCard.StepCount" xml:space="preserve">
+    <value>{0} 步</value>
+  </data>
+  <data name="RunCard.Pause" xml:space="preserve">
+    <value>暂停运行</value>
+  </data>
+  <data name="RunCard.PauseAria" xml:space="preserve">
+    <value>暂停运行 {0}</value>
+  </data>
+  <data name="RunCard.Resume" xml:space="preserve">
+    <value>恢复运行</value>
+  </data>
+  <data name="RunCard.ResumeAria" xml:space="preserve">
+    <value>恢复运行 {0}</value>
+  </data>
+  <data name="RunCard.Cancel" xml:space="preserve">
+    <value>取消运行</value>
+  </data>
+  <data name="RunCard.CancelAria" xml:space="preserve">
+    <value>取消运行 {0}</value>
+  </data>
+  <data name="RunState.Aria" xml:space="preserve">
+    <value>运行状态：{0}</value>
+  </data>
+  <data name="RunState.Starting" xml:space="preserve">
+    <value>启动中</value>
+  </data>
+  <data name="RunState.Running" xml:space="preserve">
+    <value>运行中</value>
+  </data>
+  <data name="RunState.Paused" xml:space="preserve">
+    <value>已暂停</value>
+  </data>
+  <data name="RunState.Completed" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="RunState.Cancelled" xml:space="preserve">
+    <value>已取消</value>
+  </data>
+  <data name="RunState.Failed" xml:space="preserve">
+    <value>已失败</value>
+  </data>
+  <data name="RunState.Interrupted" xml:space="preserve">
+    <value>已中断</value>
+  </data>
+  <data name="RunDetail.Loading" xml:space="preserve">
+    <value>加载中...</value>
+  </data>
+  <data name="RunDetail.BudgetSteps" xml:space="preserve">
+    <value>步</value>
+  </data>
+  <data name="RunDetail.BudgetSeconds" xml:space="preserve">
+    <value>秒</value>
+  </data>
+  <data name="RunDetail.Step.PropagationPrefix" xml:space="preserve">
+    <value>传播链：</value>
+  </data>
+  <data name="RunDetail.Step.FilterPropagationAria" xml:space="preserve">
+    <value>按传播链 {0} 筛选</value>
+  </data>
+  <data name="RunDetail.Step.FilterPropagationSummaryAria" xml:space="preserve">
+    <value>按传播链 {0} 筛选</value>
+  </data>
+  <data name="MemoryPage.Title" xml:space="preserve">
+    <value>记忆</value>
+  </data>
+  <data name="MemoryPage.NewNode" xml:space="preserve">
+    <value>新建节点</value>
+  </data>
+  <data name="MemoryPage.SearchPlaceholder" xml:space="preserve">
+    <value>按 URI 路径搜索...</value>
+  </data>
+  <data name="MemoryPage.ClearSearch" xml:space="preserve">
+    <value>清除搜索</value>
+  </data>
+  <data name="MemoryPage.UriTreeAria" xml:space="preserve">
+    <value>记忆 URI 树</value>
+  </data>
+  <data name="MemoryPage.EmptyHeading" xml:space="preserve">
+    <value>暂无记忆节点</value>
+  </data>
+  <data name="MemoryPage.EmptyBody" xml:space="preserve">
+    <value>创建一个节点以开始构建这个 Anima 的记忆图。</value>
+  </data>
+  <data name="MemoryPage.UriLabel" xml:space="preserve">
+    <value>URI</value>
+  </data>
+  <data name="MemoryPage.NewUriPlaceholder" xml:space="preserve">
+    <value>例如 core://agent/identity</value>
+  </data>
+  <data name="MemoryPage.NewUriAria" xml:space="preserve">
+    <value>新记忆节点 URI</value>
+  </data>
+  <data name="MemoryPage.ContentLabel" xml:space="preserve">
+    <value>内容</value>
+  </data>
+  <data name="MemoryPage.NewContentAria" xml:space="preserve">
+    <value>新记忆节点内容</value>
+  </data>
+  <data name="MemoryPage.CreateNode" xml:space="preserve">
+    <value>创建节点</value>
+  </data>
+  <data name="MemoryPage.Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="MemoryPage.NoSelection" xml:space="preserve">
+    <value>选择一个记忆节点以查看或编辑。</value>
+  </data>
+  <data name="MemoryPage.DeleteConfirmTitle" xml:space="preserve">
+    <value>删除记忆节点？</value>
+  </data>
+  <data name="MemoryPage.DeleteConfirmBody" xml:space="preserve">
+    <value>这将永久删除该节点及其所有边，此操作无法撤销。</value>
+  </data>
+  <data name="MemoryPage.DeleteConfirmAction" xml:space="preserve">
+    <value>删除节点</value>
+  </data>
+  <data name="MemoryPage.DeleteConfirmCancel" xml:space="preserve">
+    <value>保留节点</value>
+  </data>
+  <data name="Memory.ContentAria" xml:space="preserve">
+    <value>{0} 的记忆节点内容</value>
+  </data>
+  <data name="Memory.DisclosureTrigger" xml:space="preserve">
+    <value>触发条件</value>
+  </data>
+  <data name="Memory.DisclosureTriggerPlaceholder" xml:space="preserve">
+    <value>例如：当用户提到项目 X 时</value>
+  </data>
+  <data name="Memory.DisclosureTriggerAria" xml:space="preserve">
+    <value>{0} 的触发条件</value>
+  </data>
+  <data name="Memory.KeywordsGlossary" xml:space="preserve">
+    <value>关键词（术语表）</value>
+  </data>
+  <data name="Memory.RemoveKeywordAria" xml:space="preserve">
+    <value>删除关键词 {0}</value>
+  </data>
+  <data name="Memory.AddKeywordPlaceholder" xml:space="preserve">
+    <value>+ 添加关键词</value>
+  </data>
+  <data name="Memory.AddKeywordAria" xml:space="preserve">
+    <value>添加关键词</value>
+  </data>
+  <data name="Memory.Source" xml:space="preserve">
+    <value>来源：</value>
+  </data>
+  <data name="Memory.SaveChanges" xml:space="preserve">
+    <value>保存更改</value>
+  </data>
+  <data name="Memory.SaveChangesAria" xml:space="preserve">
+    <value>保存对 {0} 的更改</value>
+  </data>
+  <data name="Memory.DeleteNode" xml:space="preserve">
+    <value>删除节点</value>
+  </data>
+  <data name="Memory.DeleteNodeAria" xml:space="preserve">
+    <value>删除记忆节点 {0}</value>
+  </data>
+  <data name="Memory.Saved" xml:space="preserve">
+    <value>已保存</value>
+  </data>
+  <data name="Memory.RestoreSnapshotAria" xml:space="preserve">
+    <value>从 {0} 恢复快照</value>
+  </data>
+  <data name="Memory.ThisNode" xml:space="preserve">
+    <value>当前节点</value>
+  </data>
+  <data name="Memory.NavigateToAria" xml:space="preserve">
+    <value>跳转到 {0}</value>
+  </data>
+  <data name="Artifact.SectionAria" xml:space="preserve">
+    <value>制品：{0}</value>
+  </data>
+  <data name="Artifact.Title" xml:space="preserve">
+    <value>制品</value>
+  </data>
+  <data name="Artifact.ViewFullContentAria" xml:space="preserve">
+    <value>查看 {0} 的完整内容</value>
+  </data>
+  <data name="Artifact.CollapseContentAria" xml:space="preserve">
+    <value>收起 {0} 的内容</value>
+  </data>
+  <data name="Artifact.LoadError" xml:space="preserve">
+    <value>加载制品内容失败，请刷新页面或检查运行日志。</value>
+  </data>
+  <data name="Artifact.Provenance" xml:space="preserve">
+    <value>来源：</value>
+  </data>
+  <data name="Artifact.ViewStepAria" xml:space="preserve">
+    <value>查看步骤 {0}</value>
+  </data>
+  <data name="Artifact.ViewRunAria" xml:space="preserve">
+    <value>查看运行 {0}</value>
+  </data>
+  <data name="Artifact.PreviewNotice" xml:space="preserve">
+    <value>显示前 {0} 行。查看完整内容</value>
+  </data>
+  <data name="Providers.AffectedSingle" xml:space="preserve">
+    <value>LLM 模块将受影响。</value>
+  </data>
+  <data name="Providers.AffectedPlural" xml:space="preserve">
+    <value>LLM 模块将受影响。</value>
+  </data>
+  <data name="Common.CopyToClipboard" xml:space="preserve">
+    <value>复制到剪贴板</value>
+  </data>
+  <data name="Common.Collapse" xml:space="preserve">
+    <value>收起</value>
+  </data>
+  <data name="Common.Retry" xml:space="preserve">
+    <value>重试</value>
+  </data>
+  <data name="Common.Step" xml:space="preserve">
+    <value>步骤</value>
+  </data>
+  <data name="Common.Run" xml:space="preserve">
+    <value>运行</value>
+  </data>
+  <data name="Common.Module" xml:space="preserve">
+    <value>模块</value>
+  </data>
+  <data name="Common.Status" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="Common.Occurred" xml:space="preserve">
+    <value>发生时间</value>
+  </data>
+  <data name="Common.Duration" xml:space="preserve">
+    <value>持续时间</value>
+  </data>
+  <data name="Common.Output" xml:space="preserve">
+    <value>输出</value>
+  </data>
+  <data name="Common.Created" xml:space="preserve">
+    <value>创建于</value>
+  </data>
+  <data name="Common.Updated" xml:space="preserve">
+    <value>更新于</value>
+  </data>
+  <data name="Connection.Connected" xml:space="preserve">
+    <value>已连接</value>
+  </data>
+  <data name="Connection.Reconnecting" xml:space="preserve">
+    <value>重新连接中...</value>
+  </data>
+  <data name="Connection.Disconnected" xml:space="preserve">
+    <value>已断开</value>
+  </data>
+  <data name="Anima.ListTitle" xml:space="preserve">
+    <value>Anima 列表</value>
+  </data>
+  <data name="TokenUsage.Tokens" xml:space="preserve">
+    <value>令牌</value>
+  </data>
+  <data name="TokenUsage.Input" xml:space="preserve">
+    <value>输入</value>
+  </data>
+  <data name="TokenUsage.Output" xml:space="preserve">
+    <value>输出</value>
+  </data>
+  <data name="TokenUsage.Total" xml:space="preserve">
+    <value>总计</value>
+  </data>
+  <data name="TokenUsage.Context" xml:space="preserve">
+    <value>上下文</value>
+  </data>
+  <data name="Editor.Connection.Delete" xml:space="preserve">
+    <value>删除连接</value>
+  </data>
 </root>

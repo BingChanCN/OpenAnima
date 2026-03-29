@@ -1,4 +1,4 @@
-namespace OpenAnima.Core.Resources;
+namespace OpenAnima.Core;
 
 /// <summary>
 /// Marker class for IStringLocalizer&lt;SharedResources&gt; resource lookup.

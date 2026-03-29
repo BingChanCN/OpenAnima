@@ -156,8 +156,9 @@ public class WiringEngine : IWiringEngine
                     try
                     {
                         var inputSummary = evt.Payload?.ToString();
+                        var propagationId = Guid.NewGuid().ToString("N")[..8];
                         var stepId = _stepRecorder != null
-                            ? await _stepRecorder.RecordStepStartAsync(_animaId, targetModuleRuntimeName, inputSummary, propagationId: null, ct)
+                            ? await _stepRecorder.RecordStepStartAsync(_animaId, targetModuleRuntimeName, inputSummary, propagationId, ct)
                             : null;
                         using (_logger.BeginScope(new Dictionary<string, object?>
                         {
@@ -194,8 +195,9 @@ public class WiringEngine : IWiringEngine
                     try
                     {
                         var inputSummary = evt.Payload.ToString();
+                        var propagationId = Guid.NewGuid().ToString("N")[..8];
                         var stepId = _stepRecorder != null
-                            ? await _stepRecorder.RecordStepStartAsync(_animaId, targetModuleRuntimeName, inputSummary, propagationId: null, ct)
+                            ? await _stepRecorder.RecordStepStartAsync(_animaId, targetModuleRuntimeName, inputSummary, propagationId, ct)
                             : null;
                         using (_logger.BeginScope(new Dictionary<string, object?>
                         {
@@ -233,8 +235,9 @@ public class WiringEngine : IWiringEngine
                     try
                     {
                         var inputSummary = evt.Payload?.ToString();
+                        var propagationId = Guid.NewGuid().ToString("N")[..8];
                         var stepId = _stepRecorder != null
-                            ? await _stepRecorder.RecordStepStartAsync(_animaId, targetModuleRuntimeName, inputSummary, propagationId: null, ct)
+                            ? await _stepRecorder.RecordStepStartAsync(_animaId, targetModuleRuntimeName, inputSummary, propagationId, ct)
                             : null;
                         using (_logger.BeginScope(new Dictionary<string, object?>
                         {

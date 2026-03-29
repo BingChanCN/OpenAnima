@@ -14,6 +14,7 @@ public interface IRunService
     /// <param name="workspaceRoot">Absolute path of the workspace directory bound to this run.</param>
     /// <param name="maxSteps">Optional step-count budget. Null means no limit.</param>
     /// <param name="maxWallSeconds">Optional wall-clock time budget in seconds. Null means no limit.</param>
+    /// <param name="workflowPreset">Optional preset name if run was started from a workflow template.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A <see cref="RunResult"/> with <c>IsSuccess=true</c> and the new <c>RunId</c>, or a failure result.</returns>
     Task<RunResult> StartRunAsync(
@@ -22,6 +23,7 @@ public interface IRunService
         string workspaceRoot,
         int? maxSteps = null,
         int? maxWallSeconds = null,
+        string? workflowPreset = null,
         CancellationToken ct = default);
 
     /// <summary>

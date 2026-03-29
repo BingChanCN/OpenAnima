@@ -1,8 +1,9 @@
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Wiring;
+using OpenAnima.Core.ViewportPersistence;
 using OpenAnima.Contracts.Ports;
 using OpenAnima.Contracts;
-using Microsoft.Extensions.Logging;
+using OpenAnima.Core.Anima;
 
 namespace OpenAnima.Core.Services;
 
@@ -18,19 +19,25 @@ public class EditorStateService
 
     private readonly IPortRegistry _portRegistry;
     private readonly IConfigurationLoader _configLoader;
-    private readonly IWiringEngine? _wiringEngine;
+    private readonly IAnimaRuntimeManager _animaRuntimeManager;
+    private readonly IModuleContext _animaContext;
     private readonly ILogger<EditorStateService> _logger;
+    private readonly ViewportStateService _viewportStateService;
     private CancellationTokenSource? _autoSaveDebounce;
 
     public EditorStateService(
         IPortRegistry portRegistry,
         IConfigurationLoader configLoader,
-        ILogger<EditorStateService> logger,
-        IWiringEngine? wiringEngine = null)
+        IAnimaRuntimeManager animaRuntimeManager,
+        IModuleContext animaContext,
+        ViewportStateService viewportStateService,
+        ILogger<EditorStateService> logger)
     {
         _portRegistry = portRegistry;
         _configLoader = configLoader;
-        _wiringEngine = wiringEngine;
+        _animaRuntimeManager = animaRuntimeManager;
+        _animaContext = animaContext;
+        _viewportStateService = viewportStateService ?? throw new ArgumentNullException(nameof(viewportStateService));
         _logger = logger;
     }
     // Canvas transform
@@ -298,13 +305,18 @@ public class EditorStateService
         // Remove explicitly selected connections
         foreach (var connId in SelectedConnectionIds)
         {
-            var parts = connId.Split(new[] { ":", "->", ":" }, StringSplitOptions.None);
-            if (parts.Length == 4)
+            var halves = connId.Split("->");
+            if (halves.Length == 2)
             {
-                connections = connections
-                    .Where(c => !(c.SourceModuleId == parts[0] && c.SourcePortName == parts[1] &&
-                                 c.TargetModuleId == parts[2] && c.TargetPortName == parts[3]))
-                    .ToList();
+                var sourceParts = halves[0].Split(':');
+                var targetParts = halves[1].Split(':');
+                if (sourceParts.Length == 2 && targetParts.Length == 2)
+                {
+                    connections = connections
+                        .Where(c => !(c.SourceModuleId == sourceParts[0] && c.SourcePortName == sourceParts[1] &&
+                                     c.TargetModuleId == targetParts[0] && c.TargetPortName == targetParts[1]))
+                        .ToList();
+                }
             }
         }
 
@@ -322,6 +334,8 @@ public class EditorStateService
     {
         PanX = panX;
         PanY = panY;
+        // Trigger viewport save with debounce
+        TriggerViewportSave();
         // No NotifyStateChanged — caller (HandleMouseMove) controls render throttling
     }
 
@@ -331,7 +345,21 @@ public class EditorStateService
     public void UpdateScale(double scale)
     {
         Scale = Math.Clamp(scale, 0.1, 3.0);
+        // Trigger viewport save with debounce
+        TriggerViewportSave();
         NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Triggers an async viewport save with debounce to avoid excessive file writes.
+    /// </summary>
+    private void TriggerViewportSave()
+    {
+        var activeId = _animaContext.ActiveAnimaId;
+        if (activeId != null)
+        {
+            _viewportStateService.TriggerSaveViewport(activeId, Scale, PanX, PanY);
+        }
     }
 
     /// <summary>
@@ -507,6 +535,8 @@ public class EditorStateService
 
     /// <summary>
     /// Triggers auto-save with 500ms debounce to avoid excessive saves during rapid changes.
+    /// Also updates the active Anima's WiringEngine in-memory so re-navigation to the editor
+    /// restores the current configuration (not just the startup snapshot).
     /// </summary>
     private async void TriggerAutoSave()
     {
@@ -526,11 +556,23 @@ public class EditorStateService
                 Configuration = Configuration with { Name = "default" };
             }
 
-            // Save configuration
+            // Save configuration to disk
             await _configLoader.SaveAsync(Configuration, _autoSaveDebounce.Token);
 
-            // Reload into wiring engine to keep it in sync (optional — per-Anima engine may not be available)
-            _wiringEngine?.LoadConfiguration(Configuration);
+            // Keep the active Anima's WiringEngine in sync so Editor.razor reads the
+            // current configuration on re-navigation (not the stale startup snapshot).
+            var activeId = _animaContext.ActiveAnimaId;
+            if (activeId != null)
+            {
+                var runtime = _animaRuntimeManager.GetRuntime(activeId);
+                if (runtime != null)
+                {
+                    runtime.WiringEngine.LoadConfiguration(Configuration);
+                    // Notify subscribers (e.g. ChatPanel) that the wiring config changed
+                    // so they can re-evaluate IsPipelineConfigured() without requiring a restart.
+                    _animaRuntimeManager.NotifyWiringConfigurationChanged();
+                }
+            }
 
             _logger.LogDebug("Auto-saved configuration: {ConfigName}", Configuration.Name);
         }

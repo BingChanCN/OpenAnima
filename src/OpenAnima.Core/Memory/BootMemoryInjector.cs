@@ -11,12 +11,12 @@ namespace OpenAnima.Core.Memory;
 public class BootMemoryInjector
 {
     private readonly IMemoryGraph _memoryGraph;
-    private readonly IStepRecorder _stepRecorder;
+    private readonly Lazy<IStepRecorder> _stepRecorder;
     private readonly ILogger<BootMemoryInjector> _logger;
 
     public BootMemoryInjector(
         IMemoryGraph memoryGraph,
-        IStepRecorder stepRecorder,
+        Lazy<IStepRecorder> stepRecorder,
         ILogger<BootMemoryInjector> logger)
     {
         _memoryGraph = memoryGraph ?? throw new ArgumentNullException(nameof(memoryGraph));
@@ -42,10 +42,10 @@ public class BootMemoryInjector
         _logger.LogInformation("Injecting {Count} boot memories for Anima {AnimaId}", bootNodes.Count, animaId);
         foreach (var node in bootNodes)
         {
-            var stepId = await _stepRecorder.RecordStepStartAsync(
+            var stepId = await _stepRecorder.Value.RecordStepStartAsync(
                 animaId, "BootMemory", $"Boot: {node.Uri}", null, ct);
             var summary = node.Content.Length > 500 ? node.Content[..500] : node.Content;
-            await _stepRecorder.RecordStepCompleteAsync(stepId, "BootMemory", summary, ct);
+            await _stepRecorder.Value.RecordStepCompleteAsync(stepId, "BootMemory", summary, ct);
         }
     }
 }

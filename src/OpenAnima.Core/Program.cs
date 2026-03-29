@@ -66,6 +66,9 @@ builder.Services.AddScoped<ChatSessionState>();
 // --- Register Anima services ---
 builder.Services.AddAnimaServices();
 
+// --- Register LLM provider registry ---
+builder.Services.AddProviderServices();
+
 // --- Register wiring services ---
 builder.Services.AddWiringServices();
 
@@ -84,7 +87,7 @@ builder.Services.AddHostedService<AnimaInitializationService>();
 builder.Services.AddHostedService<OpenAnimaHostedService>();
 
 // --- Register i18n services ---
-builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.AddLocalization();
 builder.Services.AddSingleton<LanguageService>();
 
 // --- Add Blazor Server ---

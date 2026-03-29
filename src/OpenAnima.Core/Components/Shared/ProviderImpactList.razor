@@ -1,0 +1,17 @@
+@inject IStringLocalizer<SharedResources> L
+
+<div class="impact-panel">
+    <span class="impact-count">@AffectedModuleCount</span>
+    @if (AffectedModuleCount == 1)
+    {
+        <span> @L["Providers.AffectedSingle"]</span>
+    }
+    else
+    {
+        <span> @L["Providers.AffectedPlural"]</span>
+    }
+</div>
+
+@code {
+    [Parameter] public int AffectedModuleCount { get; set; }
+}

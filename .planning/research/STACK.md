@@ -1,182 +1,350 @@
 # Stack Research
 
-**Domain:** OpenAnima v2.0 Structured Cognition Foundation — local-first structured-cognition runtime for long-running developer agents
-**Researched:** 2026-03-20
+**Domain:** OpenAnima v2.0.4 Intelligent Memory & Persistence
+**Researched:** 2026-03-25
 **Confidence:** HIGH
 
-## Recommended Stack
+## Context
 
-### Core Technologies
+This is a subsequent-milestone stack update. The existing validated stack is:
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| .NET | 8.0 LTS | Core runtime, hosting, async execution, module platform | Already validated across v1.0–v1.9, matches current architecture, and avoids framework churn while v2.0 is still defining core agent behavior. |
-| Blazor Server + SignalR | 8.0.x | Local-first control plane, live graph state, task/run inspection UI | Existing stack already supports real-time runtime visibility; v2.0 should deepen observability instead of rebuilding the shell. |
-| `System.Threading.Channels` + `SemaphoreSlim` | .NET 8 BCL | In-process scheduling, queueing, backpressure, per-node serialization | Already proven in `ActivityChannelHost` and `WiringEngine`; extend this model for long-running task lanes rather than introducing a new orchestration framework. |
-| Microsoft.Data.Sqlite | 10.0.5 | Persistent task/run/event/artifact metadata store | Best fit for single-user, local-first, developer workstation product: transactional, embedded, zero-ops, easy backup, and enough structure for resumable tasks. |
-| OpenTelemetry.Extensions.Hosting | 1.15.0 | Unified tracing/metrics/log correlation | Standard path to make multi-node execution understandable without inventing a custom telemetry system. |
-| ripgrep + Git | 15.1.0 / 2.53.0 | Codebase search, repo history, diff grounding, developer-task primitives | Fastest path to a genuinely useful developer agent. Reuse mature external tools instead of building a custom file-analysis engine first. |
+- .NET 8.0, Blazor Server, SignalR 8.0.x
+- OpenAI SDK 2.8.0, SharpToken 2.0.4, Markdig 0.41.3
+- Microsoft.Data.Sqlite 8.0.12, Dapper 2.1.72
+- Microsoft.Extensions.Http.Resilience 8.7.0
+- System.CommandLine 2.0.0-beta4 (CLI only)
 
-### Supporting Libraries
+**The question is not "what stack to use" — it is "what, if anything, to add or change for the five new feature areas."**
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| OpenTelemetry.Instrumentation.AspNetCore | 1.15.1 | Host-level request and server instrumentation | Use when correlating UI actions, runtime API calls, and background execution into one trace. |
-| OpenTelemetry.Exporter.Console | 1.15.0 | Local trace inspection during development | Use first while designing spans/events; add an OTLP exporter later only if the local debug surface becomes insufficient. |
-| SQLite FTS5 | bundled via SQLite native bundle | Lexical retrieval over notes, artifacts, summaries, and memory records | Use for v2.0 memory/search foundation before adding embeddings or a vector database. |
-| System.Text.Json | .NET 8 BCL | Persisting task snapshots, artifacts, summaries, and lightweight indices | Use for append-only event payloads and structured artifact manifests on disk. |
-| Microsoft.Extensions.Logging | existing | Structured logs during rollout of tracing | Use as the bridge layer while OpenTelemetry coverage grows; keep logs correlated to task/run IDs. |
+The five areas under investigation:
+1. Graph-based memory data model (Node/Memory/Edge/Path four-layer, URI routing, aliases, version chains)
+2. LLM-guided graph exploration recall (configurable model, parallel branch exploration, dynamic depth)
+3. Wiring layout + chat history persistence across app restarts
+4. Background LLM execution surviving Blazor page navigation
+5. Real-time memory operation visibility in chat UI
 
-### Development Tools
+---
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| `rg` / ripgrep | Fast codebase and file-content search | Shell out with explicit timeouts; capture plain-text output; do not rely on colored or interactive output. |
-| `git` | Repo state, diff, blame, commit-range grounding | Use read-oriented commands for autonomous analysis loops; mutating commands should remain explicit user actions. |
-| `dotnet build` / `dotnet test` | Verification for developer-agent tasks | Treat as first-class tool modules with structured result capture, duration, exit code, and artifact output. |
+## Recommended Stack Additions
 
-## Baseline to Keep
+### No New NuGet Packages Required
 
-v2.0 should extend the runtime primitives already validated in the codebase, not replace them.
+All five feature areas can be implemented entirely using primitives already present in the stack. Verification against each area below explains why.
 
-| Existing Primitive | Evidence | Why It Should Stay |
-|--------------------|----------|--------------------|
-| Event-driven fan-out routing | `src/OpenAnima.Core/Wiring/WiringEngine.cs` | Already supports cyclic topologies, payload isolation, and per-target serialization — this is the correct base for structure-driven cognition. |
-| Per-Anima named activity channels | `src/OpenAnima.Core/Channels/ActivityChannelHost.cs` | Already provides serial execution lanes, queue depth warning, and tick coalescing — ideal base for task/run scheduling and backpressure telemetry. |
-| Per-module / per-Anima file storage | `src/OpenAnima.Core/Services/ModuleStorageService.cs` | v2.0 does not need to invent persistence from scratch; it needs indexing, metadata, and lifecycle semantics on top of existing storage. |
-| Editor runtime state surface | `src/OpenAnima.Core/Services/EditorStateService.cs` | Existing per-node running/error display is a good seed for richer run inspection, failure forensics, and timeline UI. |
+---
 
-## Recommended Runtime Additions
+## Feature-by-Feature Stack Analysis
 
-### 1. SQLite-backed run model
+### 1. Graph-Based Memory Data Model Refactor
 
-Add a small embedded relational layer for durable execution state:
+**What needs to change:** The current `MemoryNode` record stores everything in a single flat table (`memory_nodes`). The new model separates concerns into four logical layers:
+- **Node** — structural identity: URI, aliases, type tag (e.g., `core://`, `sediment://`, `run://`), timestamps
+- **Memory** — content payload: the actual text stored in the node, version-chained via existing `memory_snapshots`
+- **Edge** — relationship: already exists in `memory_edges`; needs `weight` and `bidirectional` flag support
+- **Path** — navigation metadata: URI alias table for stable canonical references that survive URI renames
 
-- `task_runs` — long-running user task instances
-- `task_steps` — module/tool/route execution steps
-- `task_artifacts` — generated files, summaries, intermediate outputs
-- `task_events` — append-only timeline for replay/debugging
-- `memory_records` — indexed notes/summaries/chunks for retrieval
+**What exists already:**
+- `memory_nodes`, `memory_edges`, `memory_snapshots` tables — already in SQLite via `RunDbInitializer`
+- `MemoryNode`, `MemoryEdge`, `MemorySnapshot` records — already in C#
+- `Dapper` for SQL mapping — already present; handles additive schema migrations via the existing `MigrateSchemaAsync` pattern (pragma_table_info check followed by `ALTER TABLE ... ADD COLUMN`)
+- URI-keyed primary key `(uri, anima_id)` — already in `memory_nodes`
 
-Why SQLite first:
-- single-user local app
-- crash recovery and resumability matter more than distributed scale
-- supports transactions for “step started / step finished / artifact written” state changes
-- can drive timeline UI and postmortem debugging without additional infrastructure
+**Recommended approach — additive SQLite schema migration (no new package):**
 
-### 2. Observability as product surface, not just logging
+Add columns to existing tables using the established `MigrateSchemaAsync` pattern:
 
-Instrument these span/event boundaries first:
+```sql
+-- memory_nodes additions
+ALTER TABLE memory_nodes ADD COLUMN node_type TEXT;          -- e.g. "core", "sediment", "run", "manual"
+ALTER TABLE memory_nodes ADD COLUMN display_name TEXT;       -- human-readable alias
+ALTER TABLE memory_nodes ADD COLUMN parent_uri TEXT;         -- optional parent for path hierarchy
 
-- user request accepted
-- task run created / resumed / cancelled / completed
-- module execution start / end / failure
-- route fan-out from one node to N downstream nodes
-- tool invocation start / end / exit code / timeout
-- memory lookup start / end / hit count
-- artifact write / read
+-- memory_edges additions
+ALTER TABLE memory_edges ADD COLUMN weight REAL;             -- optional edge weight
+ALTER TABLE memory_edges ADD COLUMN bidirectional INTEGER;   -- 0/1 boolean
 
-This turns the graph from “nodes that ran” into “why the system made this decision.”
-
-### 3. Tool-first developer workflow primitives
-
-For v2.0, the minimum useful developer-agent surface should be:
-
-- repo-aware file search via `rg`
-- repo state awareness via `git status`, `git diff`, `git log`
-- file read/write artifact pipeline
-- command execution with timeout, exit code, stdout/stderr capture
-- explicit workspace root abstraction per task run
-
-This is more important than adding new model tricks. A developer agent becomes useful when it can inspect, reason, act, and verify in a persistent loop.
-
-### 4. Memory foundation: lexical + artifact-based first
-
-Do **not** make vector memory the first dependency. For v2.0 foundation, memory should be:
-
-- persisted to local files + SQLite metadata
-- searchable by FTS5
-- attached to runs/tasks/artifacts with provenance
-- summarizable into stable notes
-- inspectable by the user
-
-This keeps memory deterministic and debuggable while the retrieval model is still evolving.
-
-## Installation
-
-```bash
-# Persistence + observability
- dotnet add "src/OpenAnima.Core/OpenAnima.Core.csproj" package Microsoft.Data.Sqlite --version 10.0.5
- dotnet add "src/OpenAnima.Core/OpenAnima.Core.csproj" package OpenTelemetry.Extensions.Hosting --version 1.15.0
- dotnet add "src/OpenAnima.Core/OpenAnima.Core.csproj" package OpenTelemetry.Instrumentation.AspNetCore --version 1.15.1
- dotnet add "src/OpenAnima.Core/OpenAnima.Core.csproj" package OpenTelemetry.Exporter.Console --version 1.15.0
-
-# External developer tools (example for Debian/Ubuntu; use OS equivalent elsewhere)
- sudo apt-get install ripgrep git
+-- New: uri_aliases table for stable name resolution
+CREATE TABLE IF NOT EXISTS memory_uri_aliases (
+    alias       TEXT NOT NULL,
+    anima_id    TEXT NOT NULL,
+    canonical_uri TEXT NOT NULL,
+    created_at  TEXT NOT NULL,
+    PRIMARY KEY (alias, anima_id)
+);
+CREATE INDEX IF NOT EXISTS idx_uri_aliases_anima ON memory_uri_aliases(anima_id);
 ```
+
+**Why additive migration (not EF Core):** The codebase already uses Dapper with a handwritten `MigrateSchemaAsync` pattern that checks `PRAGMA pragma_table_info` before calling `ALTER TABLE ADD COLUMN`. This is idempotent and restartable. SQLite's `ADD COLUMN` is O(1) — it modifies only the schema string, not table rows. No EF Core migration tooling needed.
+
+**Version chains:** Already handled by `memory_snapshots` (up to 10 snapshots per URI, pruned on write). The refactor enriches `MemoryNode` C# records with the new columns — `MemoryGraph.WriteNodeAsync` and `GetNodeAsync` need updated SQL projections but no new library.
+
+**Confidence:** HIGH — pattern is validated and already in use for `workflow_preset` column migration in `MigrateSchemaAsync`.
+
+---
+
+### 2. LLM-Guided Graph Exploration Recall
+
+**What needs to change:** The current `MemoryRecallService` does three flat queries (boot prefix, disclosure trigger, glossary keyword) and merges results. The new model requires graph traversal — starting from seed nodes identified by existing recall, then expanding along edges up to a configurable depth, potentially in parallel branches, using an LLM call to score which branches to follow.
+
+**What exists already:**
+- `IMemoryGraph.GetEdgesAsync` and `GetIncomingEdgesAsync` — already returns all edges from/to a URI; provides the traversal primitive
+- `IMemoryGraph.GetNodeAsync` — single-node fetch by URI
+- `SedimentationService` — already demonstrates the pattern: fire a configurable secondary LLM call using the provider/model config system, independent of the main LLM module
+- OpenAI SDK 2.8.0 — already used for the secondary sedimentation LLM call; same pattern applies to recall scoring
+- `System.Threading.Channels` (part of .NET 8 BCL, no NuGet needed) — already used for `ActivityChannelHost`; suitable for parallel branch exploration queue
+- `Task.WhenAll` — standard .NET BCL for parallel async branch expansion
+
+**Recommended approach — pure BCL, no new package:**
+
+Graph BFS/DFS traversal in .NET 8 needs only a `Queue<string>` (BFS) or `Stack<string>` (DFS) and a `HashSet<string>` visited set. For parallel branch exploration:
+
+```csharp
+// Parallel branch expansion using Task.WhenAll
+var branchTasks = seedUris.Select(uri => ExpandBranchAsync(uri, maxDepth, ct));
+var branchResults = await Task.WhenAll(branchTasks);
+```
+
+For LLM-guided scoring of which branches to follow, use the same pattern as `SedimentationService.CallProductionLlmAsync` — resolve provider/model from config, create a `ChatClient` instance, call `CompleteChatAsync`. No new SDK surface needed.
+
+**Dynamic depth:** A configurable `recallMaxDepth` key in the LLMModule config dict (same pattern as `agentEnabled`, `agentMaxIterations`) passed to `MemoryRecallService.RecallAsync`.
+
+**Parallel branch limit:** Use a `SemaphoreSlim` to cap concurrency (same pattern as `WiringEngine` per-module semaphores). Default concurrency cap of 3 parallel branches prevents runaway LLM calls.
+
+**Why not use a graph database (Neo4j, etc.):** The memory graph is small (hundreds to low thousands of nodes per Anima). SQLite with edge queries is sufficient at this scale. Adding a graph database dependency would require a separate server process, conflicting with the "local-first, no external processes" constraint. The existing `memory_edges` + Dapper edge queries (`GetEdgesAsync`) provide BFS/DFS at acceptable cost.
+
+**Confidence:** HIGH — existing `SedimentationService` pattern validates the secondary LLM call approach; existing `IMemoryGraph` provides traversal primitives.
+
+---
+
+### 3. Wiring Layout + Chat History Persistence Across App Restarts
+
+**What needs to change:**
+
+**3a. Wiring layout persistence:** `WiringConfiguration` (containing `Nodes`, `Connections`, and `VisualPosition`/`VisualSize` per node) is already saved to JSON by `ConfigurationLoader.SaveAsync`. The `.lastconfig` sentinel file tracks the last active configuration name. On restart, `ConfigurationLoader` loads this configuration into the `WiringEngine`. The pan/zoom state (`Scale`, `PanX`, `PanY`) is NOT currently persisted — it resets to default on every app restart.
+
+**3b. Chat history persistence:** `ChatSessionState` is registered `AddScoped` — scoped to the Blazor circuit lifetime. It survives page navigation within a session but is wiped on app restart because scoped services are disposed when the circuit ends. Chat messages are not currently written to SQLite.
+
+**What exists already:**
+- `WiringConfiguration` JSON persistence — already working for nodes/connections/positions via `ConfigurationLoader`. Pan/zoom requires an additive field in the persisted JSON (or a separate sidecar file).
+- `RunDbInitializer.MigrateSchemaAsync` — the established pattern for adding SQLite columns without disrupting existing data
+- `System.Text.Json` — already used by `ConfigurationLoader` for `WiringConfiguration` serialization
+- `ChatSessionState` singleton pattern is one DI lifetime change away from surviving restarts (but then requires per-Anima scoping)
+
+**Recommended approach for pan/zoom persistence:**
+
+Add `pan_zoom` JSON blob as a sidecar file per Anima alongside the existing `.json` config files, OR add `panX`, `panY`, `scale` fields to `WiringConfiguration` record and save them in the existing JSON. The latter is simpler — these are already properties of `EditorStateService` and the record supports `with { }` updates.
+
+```csharp
+// WiringConfiguration additions (no schema change needed, just new C# fields)
+[JsonPropertyName("panX")] public double PanX { get; init; } = 0;
+[JsonPropertyName("panY")] public double PanY { get; init; } = 0;
+[JsonPropertyName("scale")] public double Scale { get; init; } = 1.0;
+```
+
+`EditorStateService.TriggerAutoSave` already saves on every pan/zoom update via `EndNodeDrag`; extend it to capture `PanX`/`PanY`/`Scale` at save time.
+
+**Recommended approach for chat history persistence:**
+
+Add a `chat_messages` table to the existing SQLite database via `MigrateSchemaAsync`:
+
+```sql
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    anima_id    TEXT NOT NULL,
+    role        TEXT NOT NULL,          -- "user" | "assistant"
+    content     TEXT NOT NULL,
+    tool_calls  TEXT,                   -- JSON blob, nullable
+    occurred_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_anima ON chat_messages(anima_id, occurred_at);
+```
+
+`ChatSessionState` remains `AddScoped` for the in-memory fast path. On `OnInitializedAsync`, `ChatPanel` loads the last N messages from SQLite for the active Anima. After each completed exchange (user message + assistant response), append to `chat_messages`. Limit loaded history to the last 50 messages to avoid blowing context on restart.
+
+**Why not change `ChatSessionState` to singleton:** The `AddScoped` lifetime is correct for per-circuit state. Making it singleton would share messages across browser tabs (Blazor Server circuits). The right approach is to keep `ChatSessionState` scoped and seed it from SQLite on circuit initialization.
+
+**Confidence:** HIGH — both patterns are straightforward extensions of existing code with no new dependencies.
+
+---
+
+### 4. Background LLM Execution Surviving Blazor Page Navigation
+
+**What needs to change:** Currently, `ChatPanel.razor` owns the `CancellationTokenSource _generationCts` and the `_pendingAssistantResponse TaskCompletionSource`. When the user navigates away, `DisposeAsync` is called, which cancels `_generationCts`. The LLM call in `LLMModule.ExecuteAsync` receives the cancellation and stops. The execution does NOT survive navigation.
+
+**Root cause:** The generation lifecycle is scoped to the Blazor component. The component is disposed on navigation, which cancels the in-flight LLM call.
+
+**What exists already:**
+- `IHostedService` / `BackgroundService` — .NET 8 BCL, zero cost, already used for `OpenAnimaHostedService` and `AnimaInitializationService`
+- Singleton service pattern with `Action` events — already used by `AnimaContext.ActiveAnimaChanged` and `AnimaRuntimeManager.WiringConfigurationChanged` for cross-circuit push
+- `IHubContext<RuntimeHub, IRuntimeClient>` optional injection — already used in `RunService`/`StepRecorder` for SignalR push from singletons
+- `System.Threading.Channels.Channel<T>` — already used in `ActivityChannelHost`; suitable as the work queue for background LLM execution
+
+**Recommended approach — singleton `ChatExecutionService` (no new package):**
+
+Introduce a singleton `ChatExecutionService` that owns the LLM execution lifecycle. `ChatPanel` enqueues work (prompt + conversation history) into the service and subscribes to result events. When the user navigates away and `ChatPanel.DisposeAsync` fires, the service continues running because it is a singleton.
+
+```csharp
+// Singleton — survives component dispose
+public class ChatExecutionService
+{
+    private readonly Channel<ChatExecutionRequest> _queue =
+        Channel.CreateUnbounded<ChatExecutionRequest>(
+            new UnboundedChannelOptions { SingleReader = true });
+
+    // Fires on the thread pool when a result arrives; ChatPanel subscribes in OnInitialized
+    public event Action<string, ChatExecutionResult>? OnResultAvailable; // (animaId, result)
+
+    public void Enqueue(ChatExecutionRequest request) => _queue.Writer.TryWrite(request);
+}
+```
+
+`ChatPanel` replaces `await _chatInputModule.SendMessageAsync(...)` with `_chatExecutionService.Enqueue(...)`, subscribes to `OnResultAvailable`, and calls `InvokeAsync(StateHasChanged)` when a result arrives for the active Anima.
+
+If `ChatPanel` is not mounted (user navigated away), the result is buffered in the singleton until the user returns. On `OnInitializedAsync`, `ChatPanel` checks whether a pending result exists for the active Anima and renders it immediately.
+
+**Why not use the existing `WiringEngine` propagation for background execution:** The wiring engine runs LLM execution via the module semaphore system, which already runs independently of the UI circuit. The missing piece is only the result delivery path — the `ChatOutputModule.OnMessageReceived` event currently fires to `ChatPanel`'s subscribed handler. If `ChatPanel` is disposed, no subscriber exists. The singleton service solves the subscriber lifetime problem.
+
+**Per-event resettable timeout (TCUI-01 — already exists):** The 60-second per-event timeout in `ChatPanel` already uses `CancellationTokenSource` replacement, not extension. The background service should preserve this pattern: each LLM step or tool call event resets a 60-second timeout CancellationToken. If the user never returns and no events fire for 60 seconds, the background task self-cancels.
+
+**Confidence:** HIGH — `BackgroundService` + singleton event bridge is the documented .NET pattern for Blazor Server background tasks surviving navigation. The existing `AnimaContext.ActiveAnimaChanged` demonstrates the singleton event pattern works in this codebase.
+
+---
+
+### 5. Real-Time Memory Operation Visibility in Chat UI
+
+**What needs to change:** When the LLM uses `memory_recall` or `memory_write` tools (via `AgentToolDispatcher`), the current `ToolCallStartedPayload` / `ToolCallCompletedPayload` events show them as generic tool cards in the chat. Memory-specific operations need richer visual treatment: a distinct icon, a preview of what was written/recalled, and a type indicator ("recalled", "created", "updated").
+
+**What exists already:**
+- `ToolCallInfo` record with `ToolName`, `Parameters`, `ResultSummary`, `Status` — already covers the data structure
+- `ToolCallStatus.Running / Success / Failed` enum — already covers the state machine
+- `ChatMessage.razor` renders tool cards with collapsible expand/collapse — already handles up to N tool calls per message
+- `LLMModule.tool_call.started` / `LLMModule.tool_call.completed` EventBus events — already fired by `AgentToolDispatcher`; `ChatPanel` already subscribes to both
+
+**No new package needed.** The implementation is purely:
+
+1. In `ChatMessage.razor`: detect tool names matching `memory_*` pattern and apply a distinct CSS class or icon (e.g., a diamond symbol vs. the generic tool icon). This is a pure Razor/CSS change.
+
+2. In `ToolCallInfo` record: add a nullable `ToolCategory` enum (`General`, `Memory`, `File`, `Shell`) so `ChatMessage.razor` can render category-specific icons without string matching in the template.
+
+3. In `AgentToolDispatcher`: when dispatching memory tools, populate `ToolCallStartedPayload.Parameters` with a `"preview"` key containing the first 80 chars of the content being written, so the tool card shows a content preview before the LLM call completes.
+
+**Why not add a dedicated `MemoryEventBus` event type:** The existing `ToolCallStartedPayload` / `ToolCallCompletedPayload` bus events are sufficient. Introducing a parallel memory event type would require `ChatPanel` to subscribe to additional events and maintain separate state — higher complexity for no functional gain.
+
+**Confidence:** HIGH — all required primitives exist; only CSS class additions and minor C# record changes needed.
+
+---
+
+## Summary: All Changes Are Pure Code — No New Dependencies
+
+| Feature Area | New Code Needed | New NuGet Package? |
+|---|---|---|
+| 1. Graph data model refactor | Additive `ALTER TABLE ADD COLUMN` in `MigrateSchemaAsync`, updated Dapper projections in `MemoryGraph`, new `memory_uri_aliases` table | None |
+| 2. LLM-guided graph exploration | BFS/DFS using `Queue<string>` + `HashSet<string>`, `Task.WhenAll` for parallel branches, secondary LLM call via existing `ChatClient` pattern | None |
+| 3. Wiring layout persistence | Add `PanX`/`PanY`/`Scale` fields to `WiringConfiguration` JSON | None |
+| 3. Chat history persistence | Add `chat_messages` table via `MigrateSchemaAsync`, seed `ChatSessionState` on circuit init | None |
+| 4. Background LLM execution | Singleton `ChatExecutionService` with `Channel<T>` queue + `Action<>` result event | None |
+| 5. Memory UI visibility | Add `ToolCategory` to `ToolCallInfo`, `memory_*` CSS in `ChatMessage.razor`, preview in `AgentToolDispatcher` | None |
+
+---
+
+## What NOT to Add
+
+| Avoid | Why | Use Instead |
+|---|---|---|
+| Neo4j, Amazon Neptune, FalkorDB, or any graph database | Requires a separate process/server, conflicts with local-first constraint. Memory graph is small (hundreds of nodes per Anima) — SQLite edges with `GetEdgesAsync` are adequate. Neo4j .NET Driver adds 3-4 MB and a connection string; cost exceeds benefit at this scale. | Existing `memory_edges` table with `IMemoryGraph.GetEdgesAsync` |
+| Entity Framework Core | Already decided against in v2.0 (SQLite + Dapper decision). EF Core migrations add 6 MB and a tooling dependency. The existing `MigrateSchemaAsync` pattern with `PRAGMA pragma_table_info` handles additive migrations identically. | Existing `MigrateSchemaAsync` pattern in `RunDbInitializer` |
+| MediatR for background execution events | Already using direct C# `Action<>` events for `ActiveAnimaChanged` and `WiringConfigurationChanged`. MediatR adds indirection and package weight without benefit for the single-consumer notification pattern needed here. | `Action<>` events on singleton service + `InvokeAsync(StateHasChanged)` |
+| Blazor WASM migration | The background execution problem is a Blazor Server architecture concern. WASM would solve it differently but is not the platform. Blazor Server with singleton services is the correct solution. | Singleton `ChatExecutionService` |
+| Redis / Azure SignalR Service | Single-user local-first app; multi-server backplane is not relevant. All "multi-client" needs are just multi-tab single-user, handled by per-Anima scoping. | Existing SignalR hub + `IHubContext` optional injection |
+| TPL Dataflow (`System.Threading.Tasks.Dataflow`) | `Channel<T>` is lighter and already in use via `ActivityChannelHost`. Dataflow adds control flow pipeline features not needed here. The background execution queue needs only write + read, which `Channel.CreateUnbounded<T>` provides. | `System.Threading.Channels.Channel<T>` (BCL, already used) |
+| LiteDB, RavenDB, or other embedded document stores | SQLite + Dapper already handles all persistence needs. A second embedded database adds cognitive overhead and potential file locking issues. The additive migration pattern scales cleanly for new tables/columns. | Existing `RunDbConnectionFactory` + `RunDbInitializer` |
+| vector/embedding store (Qdrant, Milvus, Chroma) | Vector search is listed as "Future" in `PROJECT.md`. The current milestone uses URI routing + keyword matching + LLM-guided graph traversal — no embedding distance needed. Adding a vector store now is premature. | Existing `GlossaryIndex` (Aho-Corasick) + new LLM-guided BFS |
+
+---
 
 ## Alternatives Considered
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| Microsoft.Data.Sqlite | PostgreSQL | Use PostgreSQL only if OpenAnima later becomes multi-user, remote-worker, or network-synchronized. That is not v2.0’s foundation problem. |
-| OpenTelemetry | Custom ad-hoc logs only | Use logs-only for tiny local debugging spikes, but not as the milestone observability foundation. Logs alone will not explain multi-node execution paths. |
-| ripgrep + git | Custom in-process code indexer | Use a custom indexer only after real evidence that external CLI tooling is the bottleneck. For v2.0 it is faster and safer to reuse mature tools. |
-| Channels + `SemaphoreSlim` | Temporal / Orleans / actor frameworks | Use a workflow/actor framework only when execution crosses process or machine boundaries. v2.0 is still single-machine, local-first, and graph-native. |
-| SQLite FTS5 memory foundation | Vector database | Use vector retrieval later if lexical/artifact retrieval proves insufficient. v2.0 first needs inspectable, deterministic memory records with provenance. |
+| Recommended | Alternative | Why Not |
+|---|---|---|
+| `ALTER TABLE ADD COLUMN` via existing `MigrateSchemaAsync` | New separate SQLite file for graph metadata | Two database files complicate `RunDbConnectionFactory`, introduce two WAL journals, and split related data that is already co-located. Single file with additive columns is simpler and consistent. |
+| BFS/DFS using `Queue<string>` + `Task.WhenAll` for parallel branches | `System.Threading.Tasks.Parallel.ForEachAsync` | `Parallel.ForEachAsync` is designed for CPU-bound work. Async LLM calls (I/O-bound) are better expressed as `Task.WhenAll` with a `SemaphoreSlim` concurrency cap — the pattern already used in `WiringEngine` for module execution. |
+| Singleton `ChatExecutionService` with `Channel<T>` queue | `IBackgroundTaskQueue` pattern (ASP.NET Core sample) | The ASP.NET Core sample uses a `BackgroundService` consuming from a channel, which adds a layer of indirection for no benefit here. A direct singleton with a channel reader loop is equivalent, less abstracted, and consistent with the existing `ActivityChannelHost` pattern in the codebase. |
+| Pan/zoom in `WiringConfiguration` JSON (existing file) | Separate `.layout` sidecar JSON file | `WiringConfiguration` already serializes to `{configName}.json` via `ConfigurationLoader`. Adding three double fields (`panX`, `panY`, `scale`) to the same JSON requires no new file paths, no new save/load code paths, and no new sentinel files. Sidecar approach adds a second file to track per configuration. |
+| `ToolCategory` enum on `ToolCallInfo` | String matching in `ChatMessage.razor` (`tool.ToolName.StartsWith("memory_")`) | String matching in the template mixes display logic and tool naming convention. If tool names change, the template breaks silently. An enum from the dispatch layer is more robust and explicitly typed. |
 
-## What NOT to Use
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| Kafka / RabbitMQ / Redis Streams | Adds distributed-systems complexity to a single-user local product and obscures debugging early in the product lifecycle. | Existing in-process channels + SQLite durability |
-| Neo4j / graph database for cognition graph | The live cognition graph already exists in wiring/configuration. Adding a second graph persistence model now would duplicate concepts before execution semantics stabilize. | Current wiring model + SQLite run/event tables |
-| Vector DB as the first memory layer | Premature for a foundation milestone; makes retrieval less transparent and harder to debug before memory semantics are locked. | File artifacts + SQLite metadata + FTS5 |
-| Bespoke code-search engine | Reinvents functionality that `rg` and `git` already provide extremely well. | External CLI tools wrapped by safe tool modules |
-| Prompt-only “reflect harder” loops as the main cognition mechanism | Conflicts with the user goal of structure-driven cognition emerging from graph topology and module interaction. | Observable multi-node task loops driven by wiring, state, and tools |
-
-## Stack Patterns by Variant
-
-**If v2.0 remains single-user, local-first, and developer-oriented:**
-- Use SQLite + file artifacts + FTS5 + OpenTelemetry + `rg`/`git`
-- Because this yields the shortest path to a usable product with durable task state and transparent debugging
-
-**If semantic code understanding becomes critical for C# repositories later in v2.x:**
-- Add Roslyn/LSP-based semantic indexing beside the `rg` baseline
-- Because lexical search is the right default, but semantic symbol graphs become valuable for refactoring-quality analysis
-
-**If future milestones introduce remote workers or multi-machine execution:**
-- Promote persistence to PostgreSQL and export telemetry through OTLP to a collector/backend
-- Because process boundaries then become a real systems problem; they are not yet a v2.0 requirement
+---
 
 ## Version Compatibility
 
-| Package A | Compatible With | Notes |
-|-----------|-----------------|-------|
-| `.NET 8.0` | `SignalR 8.0.x` | Keep major versions aligned; do not repeat the earlier SignalR major-version mismatch problem. |
-| `OpenTelemetry.Extensions.Hosting 1.15.0` | `net8.0` host apps | Recommended host integration package for runtime telemetry in the current stack. |
-| `OpenTelemetry.Instrumentation.AspNetCore 1.15.1` | ASP.NET Core / Blazor Server host on .NET 8 | Use with the existing web host to correlate UI actions and server-side execution. |
-| `Microsoft.Data.Sqlite 10.0.5` | `net8.0` | Official package supports .NET 8; default native bundle includes FTS5/JSON1 support. |
-| `ripgrep 15.1.0` | external CLI on developer workstation | Treat as an optional system capability checked at runtime, not a hard NuGet dependency. |
-| `git 2.53.0` | external CLI on developer workstation | Same pattern as ripgrep: capability-detected tool module, not embedded library dependency. |
+| Package | Current Version | Change? | Notes |
+|---|---|---|---|
+| .NET 8.0 | 8.0.x | None | All patterns used (Channel<T>, Task.WhenAll, Queue<T>, HashSet<T>, IHostedService) are stable BCL |
+| Microsoft.Data.Sqlite | 8.0.12 | None | `ALTER TABLE ADD COLUMN` and `CREATE TABLE IF NOT EXISTS` work correctly at this version |
+| Dapper | 2.1.72 | None | Multi-column SQL projections via column aliases confirmed working for all existing tables |
+| OpenAI SDK | 2.8.0 | None | Secondary LLM calls via `ChatClient.CompleteChatAsync` already validated in `SedimentationService` |
+| SignalR | 8.0.x | None | Must stay matched to .NET 8 runtime; no change needed (critical compatibility constraint from v1.1) |
+| System.Threading.Channels | BCL (.NET 8) | None | No NuGet package needed; already in use via `ActivityChannelHost` |
+
+---
+
+## Integration Points Summary
+
+| Component | Current State | Required Change |
+|---|---|---|
+| `RunDbInitializer.MigrateSchemaAsync` | Checks/adds `workflow_preset` column | Add checks for `node_type`, `display_name`, `parent_uri` on `memory_nodes`; `weight`, `bidirectional` on `memory_edges`; create `memory_uri_aliases` table |
+| `MemoryNode` C# record | `Uri`, `AnimaId`, `Content`, `DisclosureTrigger`, `Keywords`, `SourceArtifactId`, `SourceStepId`, `CreatedAt`, `UpdatedAt` | Add `NodeType`, `DisplayName`, `ParentUri` optional properties |
+| `MemoryEdge` C# record | `Id`, `AnimaId`, `FromUri`, `ToUri`, `Label`, `CreatedAt` | Add `Weight` (nullable double), `Bidirectional` (bool) |
+| `IMemoryGraph` + `MemoryGraph` | Flat queries only | Add `GetAdjacentNodesAsync(animaId, uri, depth, ct)` for BFS traversal; update SQL projections for new columns |
+| `MemoryRecallService` | Boot + Disclosure + Glossary three-pass flat recall | Add optional fourth pass: LLM-guided BFS from seed set, depth-limited, with `SemaphoreSlim` concurrency cap |
+| `WiringConfiguration` record | `Name`, `Version`, `Nodes`, `Connections` | Add `PanX`, `PanY`, `Scale` double properties (JSON-serializable, default 0/0/1.0) |
+| `EditorStateService.TriggerAutoSave` | Saves `Configuration` JSON | Also capture `PanX`/`PanY`/`Scale` from editor state into `Configuration` before saving |
+| `RunDbInitializer` | No `chat_messages` table | Add `chat_messages` table via `MigrateSchemaAsync` |
+| `ChatSessionState` | `AddScoped`, in-memory only | Remains `AddScoped`; `ChatPanel.OnInitializedAsync` seeds from `chat_messages` SQLite query for active Anima |
+| `ChatPanel.razor` | Owns generation lifecycle; disposes on navigation | Extract LLM dispatch to singleton `ChatExecutionService`; subscribe to result event; call `InvokeAsync(StateHasChanged)` on result |
+| New: `ChatExecutionService` (singleton) | Does not exist | Singleton service with `Channel<ChatExecutionRequest>` queue, `Action<string, ChatExecutionResult> OnResultAvailable` event |
+| `ToolCallInfo` | `ToolName`, `Parameters`, `ResultSummary`, `Status`, `IsExpanded` | Add `ToolCategory` enum property |
+| `AgentToolDispatcher` | Dispatches tool calls, fires EventBus events | Populate `ToolCategory` on `ToolCallStartedPayload`; add `"preview"` to parameters for memory tools |
+| `ChatMessage.razor` | Generic tool card rendering | Apply category-specific CSS class/icon for `ToolCategory.Memory` |
+
+---
+
+## Installation
+
+No new packages required. All changes use existing stack.
+
+```bash
+# No dotnet add package commands needed.
+# All five feature areas are implemented using:
+# - System.Text.Json (BCL) for WiringConfiguration pan/zoom fields
+# - System.Threading.Channels (BCL) for ChatExecutionService work queue
+# - Task.WhenAll (BCL) for parallel graph branch exploration
+# - Microsoft.Data.Sqlite 8.0.12 + Dapper 2.1.72 (existing) for schema migrations
+# - OpenAI SDK 2.8.0 (existing) for secondary LLM calls in graph recall
+# - Blazor Server SignalR (existing) for real-time memory UI events
+```
+
+---
 
 ## Sources
 
-- Direct codebase inspection — `src/OpenAnima.Core/Wiring/WiringEngine.cs`, `src/OpenAnima.Core/Channels/ActivityChannelHost.cs`, `src/OpenAnima.Core/Services/ModuleStorageService.cs`, `src/OpenAnima.Core/Services/EditorStateService.cs`
-- `https://opentelemetry.io/docs/languages/dotnet/` — OpenTelemetry .NET overview and current guidance
-- `https://opentelemetry.io/docs/languages/dotnet/getting-started/` — starter package recommendations
-- `https://www.nuget.org/packages/OpenTelemetry.Extensions.Hosting` — current stable package version
-- `https://www.nuget.org/packages/OpenTelemetry.Instrumentation.AspNetCore` — current stable package version
-- `https://www.nuget.org/packages/OpenTelemetry.Exporter.Console` — current stable package version
-- `https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/` — official Microsoft.Data.Sqlite overview
-- `https://www.nuget.org/packages/Microsoft.Data.Sqlite` — current stable package version and target framework compatibility
-- `https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/custom-versions` — bundled SQLite features including FTS5
-- `https://www.sqlite.org/fts5.html` — official FTS5 reference
-- `https://github.com/BurntSushi/ripgrep` — official ripgrep docs and usage model
-- `https://github.com/BurntSushi/ripgrep/releases` — latest stable ripgrep release reference
-- `https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core` — .NET 8 support policy and lifecycle
+- Codebase inspection: `src/OpenAnima.Core/RunPersistence/RunDbInitializer.cs` — `MigrateSchemaAsync` pattern with `PRAGMA pragma_table_info` check + `ALTER TABLE ADD COLUMN`; confirmed idempotent and in production use
+- Codebase inspection: `src/OpenAnima.Core/Memory/MemoryGraph.cs` — existing `GetEdgesAsync`, `GetIncomingEdgesAsync` traversal primitives; confirmed Dapper projection pattern
+- Codebase inspection: `src/OpenAnima.Core/Memory/SedimentationService.cs` — secondary LLM call pattern via `OpenAI.ChatClient`; confirms feasibility of LLM-guided recall scoring
+- Codebase inspection: `src/OpenAnima.Core/Memory/MemoryRecallService.cs` — three-pass flat recall; confirms extension point for fourth BFS pass
+- Codebase inspection: `src/OpenAnima.Core/Services/ChatSessionState.cs` — `AddScoped`; confirmed wiped on circuit dispose (app restart)
+- Codebase inspection: `src/OpenAnima.Core/Program.cs` line 64 — `AddScoped<ChatSessionState>` confirmed
+- Codebase inspection: `src/OpenAnima.Core/Components/Shared/ChatPanel.razor` — `DisposeAsync` cancels `_generationCts`; confirms navigation disposes generation
+- Codebase inspection: `src/OpenAnima.Core/Services/EditorStateService.cs` — `TriggerAutoSave` and `LoadConfiguration`; pan/zoom state in service but not in serialized JSON
+- Codebase inspection: `src/OpenAnima.Core/Wiring/WiringConfiguration.cs` — `Name`, `Version`, `Nodes`, `Connections` only; no pan/zoom fields
+- Codebase inspection: `src/OpenAnima.Core/Channels/WorkItems.cs` + `ActivityChannelHost` — confirms `Channel.CreateUnbounded<T>` with `SingleReader=true` already in use
+- Codebase inspection: `src/OpenAnima.Core/DependencyInjection/AnimaServiceExtensions.cs` — singleton `AnimaContext.ActiveAnimaChanged` event pattern; confirms cross-circuit event delivery mechanism
+- Codebase inspection: `src/OpenAnima.Core/Components/Shared/ChatMessage.razor` — `ToolCallInfo` rendering; `ToolCallStatus` enum; confirms extension point for `ToolCategory`
+- WebSearch (HIGH confidence): BackgroundService + singleton pattern is the documented .NET recommended approach for Blazor Server background tasks surviving navigation — multiple official and community sources confirm (2025)
+- WebSearch (HIGH confidence): `System.Threading.Channels` `Channel<T>` is the current .NET 8 standard for producer-consumer work queues; confirmed faster than `BlockingCollection` and `TPL Dataflow` for simple queuing scenarios
+- WebSearch (MEDIUM confidence): SQLite `ALTER TABLE ADD COLUMN` is O(1) schema-only operation; confirmed no data copy required for additive column additions without NOT NULL constraints
+- WebSearch (LOW confidence — training data): BFS/DFS graph traversal using `Queue<string>` + `HashSet<string>` — standard algorithm, no library needed; parallel branches via `Task.WhenAll` with `SemaphoreSlim` concurrency cap
 
 ---
-*Stack research for: OpenAnima v2.0 Structured Cognition Foundation*
-*Researched: 2026-03-20*
+*Stack research for: OpenAnima v2.0.4 Intelligent Memory & Persistence*
+*Researched: 2026-03-25*
 *Confidence: HIGH*

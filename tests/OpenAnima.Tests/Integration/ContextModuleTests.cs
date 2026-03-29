@@ -361,7 +361,7 @@ public class ContextModuleTests : IDisposable
     private class FakeModuleContext(string animaId) : IModuleContext
     {
         public string ActiveAnimaId => animaId;
-        public event Action? ActiveAnimaChanged;
+        public event Action? ActiveAnimaChanged { add { } remove { } }
     }
 
     private class FakeModuleConfig(Dictionary<string, string> config) : IModuleConfig

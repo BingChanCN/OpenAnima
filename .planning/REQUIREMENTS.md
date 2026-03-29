@@ -1,125 +1,144 @@
-# Requirements: OpenAnima v2.0 Structured Cognition Foundation
+# Requirements: OpenAnima v2.0.4
 
-**Defined:** 2026-03-20
+**Defined:** 2026-03-25
 **Core Value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
 
-## v2.0 Requirements
+## v2.0.4 Requirements
 
-Requirements for the v2.0 milestone. Each requirement maps to a single roadmap phase.
+Requirements for Intelligent Memory & Persistence milestone. Each maps to roadmap phases.
 
-### Durable Task Runtime
+### Persistence
 
-- [x] **RUN-01**: User can start a durable task run with a stable run ID, explicit objective, and bound workspace root
-- [x] **RUN-02**: User can view run history and current run state after UI refresh or application restart
-- [x] **RUN-03**: User can resume an interrupted or paused run without losing completed step history
-- [x] **RUN-04**: User can cancel an active run and the system persists the terminal state
-- [x] **RUN-05**: Each run persists append-only step records with timestamps, status transitions, and owning module/tool identity
+- [ ] **PERS-01**: Wiring layout (pan/zoom/scale) persists across application restarts per Anima
+- [ ] **PERS-02**: Chat history persists across application restarts per Anima with scrollback
+- [ ] **PERS-03**: Chat history UI restore is separate from LLM context restore (last N messages only, default 10, configurable)
+- [x] **PERS-04**: SQLite connections include Busy Timeout=5000 to prevent concurrent write failures
 
-### Convergence Control
+### Chat Resilience
 
-- [x] **CTRL-01**: Each long-running or cyclic run enforces explicit execution budgets so it cannot continue indefinitely without bounds
-- [x] **CTRL-02**: System detects non-productive repeated execution patterns or idle stalls and halts with a recorded stop reason
+- [ ] **CHAT-01**: LLM streaming execution continues in background when user navigates away from Dashboard/chat
+- [ ] **CHAT-02**: User returning to chat sees complete response (stream buffer replay on component reattach)
+- [ ] **CHAT-03**: User can still cancel a background LLM execution from the chat interface
+- [ ] **CHAT-04**: Agent tool calls continue executing when user navigates away
 
-### Workspace Tool Surface
+### Memory Architecture
 
-- [x] **WORK-01**: Every tool step executes against an explicit workspace root rather than ambient process state
-- [x] **WORK-02**: Agent can inspect workspace files and search code/content through repo-grounded read/search tools
-- [x] **WORK-03**: Agent can inspect repository state through structured `git` status, diff, and log operations
-- [x] **WORK-04**: Agent can execute bounded workspace commands with timeout, exit code, stdout, and stderr capture
-- [x] **WORK-05**: Every tool result records workspace root and enough metadata for replay and audit
+- [x] **MEMA-01**: Memory data model fully split into four tables: Nodes (UUID identity), Memories (versioned content), Edges (relationships), Paths (URI routing)
+- [x] **MEMA-02**: Node identity (UUID) is stable and independent from content — content updates create new Memory rows, not new Nodes
+- [x] **MEMA-03**: Edges are first-class entities with parent_uuid, child_uuid, priority, disclosure trigger, weight, and bidirectional flag
+- [x] **MEMA-04**: Paths provide domain://path URI routing to Edges, supporting future alias capability
+- [x] **MEMA-05**: Schema migration from existing memory_nodes/memory_edges to four-table model in a single atomic transaction (BEGIN/COMMIT)
+- [x] **MEMA-06**: Existing memory data fully migrated to new schema without loss (verified by migration test)
+- [x] **MEMA-07**: Nodes support node_type and display_name columns for graph organization
+- [x] **MEMA-08**: IMemoryGraph interface updated for four-table model with backward-compatible method signatures where possible
 
-### Run Inspection & Observability
+### Memory Recall
 
-- [x] **OBS-01**: User can inspect a per-run timeline showing step start, completion, cancellation, and failure events
-- [x] **OBS-02**: User can inspect per-step inputs, outputs, errors, durations, and linked artifacts
-- [x] **OBS-03**: User can inspect why a node ran, including upstream trigger and downstream fan-out visibility
-- [x] **OBS-04**: Developer can correlate logs, traces, and tool events by run ID and step ID during debugging
+- [ ] **MEMR-01**: LLM-guided graph exploration recall as optional fourth pass in recall pipeline (after Boot/Disclosure/Glossary)
+- [ ] **MEMR-02**: Exploration starts from root/top-level nodes, LLM selects relevant branches based on conversation context
+- [ ] **MEMR-03**: Selected branches explored in parallel with configurable concurrency cap (default 3)
+- [ ] **MEMR-04**: Exploration depth is dynamically decided by LLM with hard ceiling (max 3 levels)
+- [ ] **MEMR-05**: User can configure which LLM model is used for memory exploration (new Settings entry)
+- [ ] **MEMR-06**: Graph exploration is opt-in per Anima (default disabled), enabled via module config
+- [ ] **MEMR-07**: Cross-depth visited HashSet prevents infinite loops on cyclic graphs
+- [ ] **MEMR-08**: Per-level candidate cap (.Take(20)) prevents cost explosion
+- [ ] **MEMR-09**: LLM-returned URIs validated against candidate set (hallucination guard)
 
-### Artifact & Memory Foundation
+### Memory Tools
 
-- [x] **ART-01**: System can persist intermediate notes, reports, and final outputs as durable artifacts linked to run and step records
-- [x] **ART-02**: User can inspect run artifacts from the run inspector with source linkage back to the generating step
-- [x] **MEM-01**: System can store retrieval records derived from artifacts with provenance metadata including source artifact, step, and timestamp
-- [x] **MEM-02**: Any memory injected into a run is inspectable and links back to its source artifact or step
-- [x] **MEM-03**: Retrieved memory can be used to ground downstream run decisions without relying on hidden session-only prompt state
+- [ ] **MEMT-01**: Agent can create new memory nodes via memory_create tool with specified path, content, and keywords
+- [ ] **MEMT-02**: Agent can update existing memory node content via memory_update tool
+- [x] **MEMT-03**: Agent can soft-delete memory nodes via memory_delete tool (deprecated flag, recoverable from /memory UI)
+- [ ] **MEMT-04**: Agent can list memory nodes by prefix via memory_list tool for self-aware memory management
+- [x] **MEMT-05**: All memory tools publish MemoryOperationPayload events for downstream visibility
 
-### Structured Cognition Workflows
+### Memory Sedimentation
 
-- [ ] **COG-01**: A graph-native run can activate multiple nodes in parallel and fan out through existing wiring during one long-running task
-- [ ] **COG-02**: A long-running run can route work through built-in modules, LLM modules, tool modules, and other Anima as part of one workflow
-- [ ] **COG-03**: User can run an end-to-end codebase analysis workflow against a bound workspace and receive a grounded final report artifact
-- [ ] **COG-04**: Structured cognition remains inspectable as visible graph execution rather than collapsing into a hidden single-prompt loop
+- [x] **MEMS-01**: Sedimentation prompt generates bilingual (Chinese + English) keywords for memory nodes
+- [x] **MEMS-02**: Sedimentation prompt generates broader trigger conditions (covers both introduction and query scenarios)
+- [x] **MEMS-03**: Sedimentation input capped at last 20 messages to control cost and focus
 
-## v2.x Deferred Requirements
+### Memory Visibility
 
-Deferred beyond the v2.0 milestone. Tracked here so roadmap scope stays disciplined.
+- [ ] **MEMV-01**: Explicit memory tool calls (create/update/delete) displayed as tool cards in chat bubbles (same pattern as workspace tools)
+- [ ] **MEMV-02**: Background sedimentation shows a single collapsed "N memories sedimented" summary chip in chat (not per-node)
+- [ ] **MEMV-03**: Memory tool cards have distinct visual treatment (ToolCategory.Memory CSS class) to differentiate from workspace tools
 
-### Advanced Code Understanding
+## v2.1+ Requirements (Deferred)
 
-- **SEM-01**: Agent can resolve symbols, references, and semantic code relationships beyond lexical search
-- **SEM-02**: Agent can use semantic code intelligence to support refactoring-grade analysis and suggestions
+### Memory Aliases
 
-### Workflow Expansion
+- **ALIAS-01**: Agent can create URI aliases for memory nodes via memory_alias tool
+- **ALIAS-02**: Same memory node accessible via multiple URI paths
 
-- **NARR-01**: User can launch a novel or mid-length story writing workflow preset
-- **TPL-01**: User can start from higher-level agent templates or personas built on top of graph primitives
+### Memory Versioning
 
-### Platform Expansion
+- **MVER-01**: Memory content updates create version chain (deprecated/migrated_to)
+- **MVER-02**: /memory UI shows version chain rollback capability
 
-- **VEC-01**: Memory retrieval can use embeddings/vector search in addition to provenance-backed lexical retrieval
-- **SAFE-01**: System provides explicit autonomy/permission profiles for destructive repository mutations
-- **DIST-01**: Runs can execute on remote or distributed workers beyond the local machine
-- **ECO-01**: User can discover, install, and update modules from a marketplace-style ecosystem
+### Embedding Recall
+
+- **EMBR-01**: Embedding-based semantic similarity as additional recall signal
+- **EMBR-02**: Vector store for memory node embeddings
 
 ## Out of Scope
 
-Explicitly excluded from v2.0 to prevent scope creep.
-
 | Feature | Reason |
 |---------|--------|
-| Prompt-only "deep think" mode | Conflicts with the milestone goal of structure-driven cognition and produces non-inspectable behavior |
-| Fully unrestricted autonomous shell/file mutation | Safety and control boundaries must remain explicit before destructive autonomy expands |
-| Vector-first memory stack | Provenance-backed artifact retrieval is the correct foundation before opaque recall mechanisms |
-| Marketplace/ecosystem expansion | Core developer-agent usefulness must be proven before platform expansion |
-| Remote/distributed worker architecture | v2.0 remains local-first and single-machine by design |
-| Novel-writing workflow preset | Developer-oriented codebase workflows are the milestone priority |
+| Incremental column-only migration | User chose full four-table split for v2.0.4 — accepting migration risk for clean architecture |
+| Vector/embedding memory store | Improve LLM-guided recall first; embedding is a future supplement, not replacement |
+| memory_alias tool | Requires Path routing layer beyond v2.0.4 scope |
+| Version chain rollback UI | Requires full memory_versions table with deprecation chain |
+| Auto-delete stale memories | Destroys user trust; only agent-initiated explicit delete |
+| Full chat history as LLM context on restart | Blows context budget; UI restore + limited context restore only |
+| Graph exploration on every message by default | Cost explosion; opt-in per Anima only |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RUN-01 | Phase 45 | Complete |
-| RUN-02 | Phase 45 | Complete |
-| RUN-03 | Phase 45 | Complete |
-| RUN-04 | Phase 45 | Complete |
-| RUN-05 | Phase 45 | Complete |
-| CTRL-01 | Phase 45 | Complete |
-| CTRL-02 | Phase 45 | Complete |
-| WORK-01 | Phase 46 | Complete |
-| WORK-02 | Phase 46 | Complete |
-| WORK-03 | Phase 46 | Complete |
-| WORK-04 | Phase 46 | Complete |
-| WORK-05 | Phase 46 | Complete |
-| OBS-01 | Phase 47 | Complete |
-| OBS-02 | Phase 47 | Complete |
-| OBS-03 | Phase 47 | Complete |
-| OBS-04 | Phase 47 | Complete |
-| ART-01 | Phase 48 | Complete |
-| ART-02 | Phase 48 | Complete |
-| MEM-01 | Phase 48 | Complete |
-| MEM-02 | Phase 48 | Complete |
-| MEM-03 | Phase 48 | Complete |
-| COG-01 | Phase 49 | Pending |
-| COG-02 | Phase 49 | Pending |
-| COG-03 | Phase 49 | Pending |
-| COG-04 | Phase 49 | Pending |
+| PERS-01 | Phase 66 | Pending |
+| PERS-02 | Phase 66 | Pending |
+| PERS-03 | Phase 66 | Pending |
+| PERS-04 | Phase 65 | Complete |
+| CHAT-01 | Phase 69 | Pending |
+| CHAT-02 | Phase 69 | Pending |
+| CHAT-03 | Phase 69 | Pending |
+| CHAT-04 | Phase 69 | Pending |
+| MEMA-01 | Phase 65 | Complete |
+| MEMA-02 | Phase 65 | Complete |
+| MEMA-03 | Phase 65 | Complete |
+| MEMA-04 | Phase 65 | Complete |
+| MEMA-05 | Phase 65 | Complete |
+| MEMA-06 | Phase 65 | Complete |
+| MEMA-07 | Phase 65 | Complete |
+| MEMA-08 | Phase 65 | Complete |
+| MEMR-01 | Phase 70 | Pending |
+| MEMR-02 | Phase 70 | Pending |
+| MEMR-03 | Phase 70 | Pending |
+| MEMR-04 | Phase 70 | Pending |
+| MEMR-05 | Phase 70 | Pending |
+| MEMR-06 | Phase 70 | Pending |
+| MEMR-07 | Phase 70 | Pending |
+| MEMR-08 | Phase 70 | Pending |
+| MEMR-09 | Phase 70 | Pending |
+| MEMT-01 | Phase 67 | Pending |
+| MEMT-02 | Phase 67 | Pending |
+| MEMT-03 | Phase 67 | Complete |
+| MEMT-04 | Phase 67 | Pending |
+| MEMT-05 | Phase 67 | Complete |
+| MEMS-01 | Phase 67 | Complete |
+| MEMS-02 | Phase 67 | Complete |
+| MEMS-03 | Phase 67 | Complete |
+| MEMV-01 | Phase 68 | Pending |
+| MEMV-02 | Phase 68 | Pending |
+| MEMV-03 | Phase 68 | Pending |
 
 **Coverage:**
-- v2.0 requirements: 25 total
-- Mapped to phases: 25
-- Unmapped: 0 ✓
-- Traceability validated against ROADMAP.md on 2026-03-20
+- v2.0.4 requirements: 36 total
+- Mapped to phases: 36
+- Unmapped: 0
 
 ---
-*Requirements defined: 2026-03-20 for milestone v2.0 Structured Cognition Foundation*
-*Last updated: 2026-03-20 after roadmap creation*
+*Requirements defined: 2026-03-25*
+*Last updated: 2026-03-25 after roadmap phase mapping*

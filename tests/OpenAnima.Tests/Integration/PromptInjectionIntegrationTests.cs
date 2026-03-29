@@ -7,6 +7,7 @@ using OpenAnima.Core.LLM;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Routing;
 using OpenAnima.Core.Services;
+using OpenAnima.Core.Providers;
 using OpenAnima.Tests.TestHelpers;
 
 namespace OpenAnima.Tests.Integration;
@@ -32,7 +33,8 @@ public class PromptInjectionIntegrationTests
         var eventBus = CreateEventBus();
         var capturingLlm = new CapturingFakeLlmService("Hello back!");
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new TestAnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new TestAnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         // Act
@@ -78,7 +80,8 @@ public class PromptInjectionIntegrationTests
 
         var animaContext = new TestAnimaContext { ActiveAnimaId = animaId };
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            configService, animaContext, router: router);
+            configService, animaContext,
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: router);
         await module.InitializeAsync();
 
         // Act
@@ -129,7 +132,8 @@ public class PromptInjectionIntegrationTests
 
         var animaContext = new TestAnimaContext { ActiveAnimaId = animaId };
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            configService, animaContext, router: router);
+            configService, animaContext,
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: router);
         await module.InitializeAsync();
 
         var responseTcs = new TaskCompletionSource<string>();
@@ -205,7 +209,8 @@ public class PromptInjectionIntegrationTests
 
         var animaContext = new TestAnimaContext { ActiveAnimaId = animaId };
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            configService, animaContext, router: router);
+            configService, animaContext,
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: router);
         await module.InitializeAsync();
 
         var requestTcs = new TaskCompletionSource<string>();
@@ -258,7 +263,8 @@ public class PromptInjectionIntegrationTests
 
         var animaContext = new TestAnimaContext { ActiveAnimaId = animaId };
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            configService, animaContext, router: router);
+            configService, animaContext,
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: router);
         await module.InitializeAsync();
 
         var errorTcs = new TaskCompletionSource<string>();
@@ -304,7 +310,8 @@ public class PromptInjectionIntegrationTests
 
         var animaContext = new TestAnimaContext { ActiveAnimaId = animaId };
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            configService, animaContext, router: router);
+            configService, animaContext,
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: router);
         await module.InitializeAsync();
 
         var responseTcs = new TaskCompletionSource<string>();
@@ -343,7 +350,8 @@ public class PromptInjectionIntegrationTests
         var eventBus = CreateEventBus();
         var capturingLlm = new CapturingFakeLlmService("original response");
         var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
-            NullAnimaModuleConfigService.Instance, new TestAnimaContext(), router: null);
+            NullAnimaModuleConfigService.Instance, new TestAnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
         await module.InitializeAsync();
 
         var responseTcs = new TaskCompletionSource<string>();
@@ -433,7 +441,7 @@ public class PromptInjectionIntegrationTests
     /// <summary>
     /// AnimaModuleConfigService that supports pre-set per-anima per-module configs for testing.
     /// </summary>
-    private class PresetAnimaModuleConfigService : IAnimaModuleConfigService
+    private class PresetAnimaModuleConfigService : IModuleConfigStore
     {
         private readonly Dictionary<string, Dictionary<string, string>> _configs = new();
 
@@ -506,13 +514,13 @@ public class PromptInjectionIntegrationTests
     }
 
     /// <summary>
-    /// Minimal IAnimaContext implementation for tests, with a settable ActiveAnimaId.
+    /// Minimal IActiveAnimaContext implementation for tests, with a settable ActiveAnimaId.
     /// The real AnimaContext (OpenAnima.Core.Anima.AnimaContext) uses SetActive() which
     /// is not convenient in test setup — this class is test-local.
     /// </summary>
-    private class TestAnimaContext : IAnimaContext
+    private class TestAnimaContext : IActiveAnimaContext
     {
-        public string? ActiveAnimaId { get; set; }
+        public string ActiveAnimaId { get; set; } = "";
 
         public event Action? ActiveAnimaChanged;
 

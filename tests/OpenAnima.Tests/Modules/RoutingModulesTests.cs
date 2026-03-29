@@ -836,7 +836,7 @@ public class RoutingModulesTests
     /// Stub config service that returns a fixed dictionary for all requests.
     /// Used to configure AnimaInputPortModule and AnimaOutputPortModule in tests.
     /// </summary>
-    private class StubAnimaModuleConfigService : IAnimaModuleConfigService
+    private class StubAnimaModuleConfigService : IModuleConfigStore
     {
         private readonly Dictionary<string, string> _config;
 
@@ -886,7 +886,9 @@ public class RoutingModulesTests
             => throw new NotImplementedException();
         public Task InitializeAsync(CancellationToken ct = default)
             => Task.CompletedTask;
-        public event Action? StateChanged;
+        public event Action? StateChanged { add { } remove { } }
+        public event Action? WiringConfigurationChanged { add { } remove { } }
+        public void NotifyWiringConfigurationChanged() { }
 
         public AnimaRuntime? GetRuntime(string animaId) => _runtime;
         public AnimaRuntime GetOrCreateRuntime(string animaId) => _runtime;

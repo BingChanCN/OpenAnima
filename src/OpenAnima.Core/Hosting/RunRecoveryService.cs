@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OpenAnima.Core.ChatPersistence;
 using OpenAnima.Core.RunPersistence;
 using OpenAnima.Core.Runs;
 
@@ -11,28 +12,33 @@ namespace OpenAnima.Core.Hosting;
 /// those runs are transition to <see cref="RunState.Interrupted"/> so they can be resumed by the user.
 /// Must run after schema initialization — uses <see cref="RunDbInitializer.EnsureCreatedAsync"/>
 /// to guarantee the schema exists before querying.
+/// Also ensures chat database is initialized for chat persistence.
 /// </summary>
 public class RunRecoveryService : IHostedService
 {
     private readonly IRunRepository _repository;
     private readonly RunDbInitializer _dbInitializer;
+    private readonly ChatDbInitializer _chatDbInitializer;
     private readonly ILogger<RunRecoveryService> _logger;
 
     public RunRecoveryService(
         IRunRepository repository,
         RunDbInitializer dbInitializer,
+        ChatDbInitializer chatDbInitializer,
         ILogger<RunRecoveryService> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _dbInitializer = dbInitializer ?? throw new ArgumentNullException(nameof(dbInitializer));
+        _chatDbInitializer = chatDbInitializer ?? throw new ArgumentNullException(nameof(chatDbInitializer));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc/>
     public async Task StartAsync(CancellationToken ct)
     {
-        // Ensure schema exists before querying (prevents first-boot race condition)
+        // Ensure schemas exist before querying (prevents first-boot race condition)
         await _dbInitializer.EnsureCreatedAsync();
+        await _chatDbInitializer.EnsureCreatedAsync(ct);
 
         var activeRuns = await _repository.GetRunsInStateAsync(RunState.Running, ct);
 

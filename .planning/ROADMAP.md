@@ -2,22 +2,26 @@
 
 ## Milestones
 
-- **v1.0 Core Platform** — Phases 1-2 (shipped 2026-02-21)
-- **v1.1 WebUI Dashboard** — Phases 3-7 (shipped 2026-02-23)
-- **v1.2 LLM Integration** — Phases 8-10 (shipped 2026-02-25)
-- **v1.3 Visual Wiring** — Phases 11-19 + 12.5 (shipped 2026-02-28)
-- **v1.4 Module SDK** — Phases 20-22 (shipped 2026-02-28)
-- **v1.5 Multi-Anima Architecture** — Phases 23-27 (shipped 2026-03-09)
-- **v1.6 Cross-Anima Routing** — Phases 28-31 (shipped 2026-03-14)
-- **v1.7 Runtime Foundation** — Phases 32-37 (shipped 2026-03-16)
-- **v1.8 SDK Runtime Parity** — Phases 38-41 (shipped 2026-03-18)
-- **v1.9 Event-Driven Propagation Engine** — Phases 42-44 (shipped 2026-03-20)
-- **v2.0 Structured Cognition Foundation** — Phases 45-49 (planned)
+- ✅ **v1.0 Core Platform** — Phases 1-2 (shipped 2026-02-21)
+- ✅ **v1.1 WebUI Dashboard** — Phases 3-7 (shipped 2026-02-23)
+- ✅ **v1.2 LLM Integration** — Phases 8-10 (shipped 2026-02-25)
+- ✅ **v1.3 Visual Wiring** — Phases 11-19 + 12.5 (shipped 2026-02-28)
+- ✅ **v1.4 Module SDK** — Phases 20-22 (shipped 2026-02-28)
+- ✅ **v1.5 Multi-Anima Architecture** — Phases 23-27 (shipped 2026-03-09)
+- ✅ **v1.6 Cross-Anima Routing** — Phases 28-31 (shipped 2026-03-14)
+- ✅ **v1.7 Runtime Foundation** — Phases 32-37 (shipped 2026-03-16)
+- ✅ **v1.8 SDK Runtime Parity** — Phases 38-41 (shipped 2026-03-18)
+- ✅ **v1.9 Event-Driven Propagation Engine** — Phases 42-44 (shipped 2026-03-20)
+- ✅ **v2.0 Structured Cognition Foundation** — Phases 45-49 (shipped 2026-03-21)
+- ✅ **v2.0.1 Provider Registry & Living Memory** — Phases 50-57 (shipped 2026-03-23)
+- ✅ **v2.0.2 Chat Agent Loop** — Phases 58-60 (shipped 2026-03-23)
+- ✅ **v2.0.3 Editor Experience** — Phases 61-64 (shipped 2026-03-24)
+- [ ] **v2.0.4 Intelligent Memory & Persistence** — Phases 65-70
 
 ## Phases
 
 <details>
-<summary>v1.0 Core Platform (Phases 1-2) — SHIPPED 2026-02-21</summary>
+<summary>✅ v1.0 Core Platform (Phases 1-2) — SHIPPED 2026-02-21</summary>
 
 - [x] Phase 1: Core Runtime (2/2 plans)
 - [x] Phase 2: Module System (3/3 plans)
@@ -25,7 +29,7 @@
 </details>
 
 <details>
-<summary>v1.1 WebUI Dashboard (Phases 3-7) — SHIPPED 2026-02-23</summary>
+<summary>✅ v1.1 WebUI Dashboard (Phases 3-7) — SHIPPED 2026-02-23</summary>
 
 - [x] Phase 3: Blazor Server Host (2/2 plans)
 - [x] Phase 4: Dashboard UI (2/2 plans)
@@ -36,7 +40,7 @@
 </details>
 
 <details>
-<summary>v1.2 LLM Integration (Phases 8-10) — SHIPPED 2026-02-25</summary>
+<summary>✅ v1.2 LLM Integration (Phases 8-10) — SHIPPED 2026-02-25</summary>
 
 - [x] Phase 8: LLM API Client (2/2 plans)
 - [x] Phase 9: Chat UI (2/2 plans)
@@ -45,7 +49,7 @@
 </details>
 
 <details>
-<summary>v1.3 Visual Wiring (Phases 11-19 + 12.5) — SHIPPED 2026-02-28</summary>
+<summary>✅ v1.3 Visual Wiring (Phases 11-19 + 12.5) — SHIPPED 2026-02-28</summary>
 
 - [x] Phase 11: Port Type System (3/3 plans)
 - [x] Phase 12: Wiring Engine (3/3 plans)
@@ -61,7 +65,7 @@
 </details>
 
 <details>
-<summary>v1.4 Module SDK (Phases 20-22) — SHIPPED 2026-02-28</summary>
+<summary>✅ v1.4 Module SDK (Phases 20-22) — SHIPPED 2026-02-28</summary>
 
 - [x] Phase 20: CLI Tool (3/3 plans)
 - [x] Phase 21: Pack & Validate (3/3 plans)
@@ -70,7 +74,7 @@
 </details>
 
 <details>
-<summary>v1.5 Multi-Anima Architecture (Phases 23-27) — SHIPPED 2026-03-09</summary>
+<summary>✅ v1.5 Multi-Anima Architecture (Phases 23-27) — SHIPPED 2026-03-09</summary>
 
 - [x] Phase 23: Multi-Anima Foundation (2/2 plans) — completed 2026-02-28
 - [x] Phase 24: Service Migration & i18n (3/3 plans) — completed 2026-02-28
@@ -81,7 +85,7 @@
 </details>
 
 <details>
-<summary>v1.6 Cross-Anima Routing (Phases 28-31) — SHIPPED 2026-03-14</summary>
+<summary>✅ v1.6 Cross-Anima Routing (Phases 28-31) — SHIPPED 2026-03-14</summary>
 
 - [x] Phase 28: Routing Infrastructure (2/2 plans) — completed 2026-03-11
 - [x] Phase 29: Routing Modules (2/2 plans) — completed 2026-03-13
@@ -91,7 +95,7 @@
 </details>
 
 <details>
-<summary>v1.7 Runtime Foundation (Phases 32-37) — SHIPPED 2026-03-16</summary>
+<summary>✅ v1.7 Runtime Foundation (Phases 32-37) — SHIPPED 2026-03-16</summary>
 
 - [x] Phase 32: Test Baseline (1/1 plan) — completed 2026-03-14
 - [x] Phase 33: Concurrency Fixes (1/1 plan) — completed 2026-03-14
@@ -103,7 +107,7 @@
 </details>
 
 <details>
-<summary>v1.8 SDK Runtime Parity (Phases 38-41) — SHIPPED 2026-03-18</summary>
+<summary>✅ v1.8 SDK Runtime Parity (Phases 38-41) — SHIPPED 2026-03-18</summary>
 
 - [x] Phase 38: PluginLoader DI Injection (3/3 plans) — completed 2026-03-17
 - [x] Phase 39: Contracts Type Migration and Structured Messages (2/2 plans) — completed 2026-03-18
@@ -113,7 +117,7 @@
 </details>
 
 <details>
-<summary>v1.9 Event-Driven Propagation Engine (Phases 42-44) — SHIPPED 2026-03-20</summary>
+<summary>✅ v1.9 Event-Driven Propagation Engine (Phases 42-44) — SHIPPED 2026-03-20</summary>
 
 - [x] Phase 42: Propagation Engine (3/3 plans) — completed 2026-03-19
 - [x] Phase 43: Heartbeat Refactor (2/2 plans) — completed 2026-03-19
@@ -121,101 +125,139 @@
 
 </details>
 
-### v2.0 Structured Cognition Foundation (Planned)
+<details>
+<summary>✅ v2.0 Structured Cognition Foundation (Phases 45-49) — SHIPPED 2026-03-21</summary>
 
-**Milestone Goal:** Turn the existing event-driven graph runtime into a usable long-running developer-agent foundation with durable runs, repo-grounded tooling, inspectable execution, and provenance-backed memory.
+- [x] Phase 45: Durable Task Runtime Foundation (3/3 plans) — completed 2026-03-20
+- [x] Phase 46: Workspace Tool Surface (4/4 plans) — completed 2026-03-20
+- [x] Phase 47: Run Inspection & Observability (3/3 plans) — completed 2026-03-21
+- [x] Phase 48: Artifact & Memory Foundation (5/5 plans) — completed 2026-03-21
+- [x] Phase 49: Structured Cognition Workflows (3/3 plans) — completed 2026-03-21
 
-**Coverage:** 25/25 v2.0 requirements mapped
+</details>
 
-- [x] **Phase 45: Durable Task Runtime Foundation** - Durable runs have stable identity, persisted state, resume/cancel lifecycle, and bounded execution. (completed 2026-03-20)
-- [x] **Phase 46: Workspace Tool Surface** - Runs can inspect and act on a bound repository through explicit workspace tools. (completed 2026-03-20)
-- [x] **Phase 47: Run Inspection & Observability** - Users can inspect timelines, step details, graph triggers, and correlated diagnostics for each run. (completed 2026-03-21)
-- [x] **Phase 48: Artifact & Memory Foundation** - Runs persist artifacts and provenance-backed retrieval records that stay inspectable. (completed 2026-03-21)
-- [ ] **Phase 49: Structured Cognition Workflows** - Graph-native workflows use tools, memory, and multi-node routing to deliver grounded codebase analysis.
+<details>
+<summary>✅ v2.0.1 Provider Registry & Living Memory (Phases 50-57) — SHIPPED 2026-03-23</summary>
+
+- [x] Phase 50: Provider Registry (3/3 plans) — completed 2026-03-22
+- [x] Phase 51: LLM Module Configuration (2/2 plans) — completed 2026-03-22
+- [x] Phase 52: Automatic Memory Recall (2/2 plans) — completed 2026-03-22
+- [x] Phase 53: Tool-Aware Memory Operations (2/2 plans) — completed 2026-03-22
+- [x] Phase 54: Living Memory Sedimentation (2/2 plans) — completed 2026-03-22
+- [x] Phase 55: Memory Review Surfaces (2/2 plans) — completed 2026-03-22
+- [x] Phase 56: Sedimentation LLM Configuration (1/1 plan) — completed 2026-03-22
+- [x] Phase 57: Integration Wiring & Metadata Fixes (2/2 plans) — completed 2026-03-22
+
+</details>
+
+<details>
+<summary>✅ v2.0.2 Chat Agent Loop (Phases 58-60) — SHIPPED 2026-03-23</summary>
+
+- [x] Phase 58: Agent Loop Core (2/2 plans) — completed 2026-03-23
+- [x] Phase 59: Tool Call Display and UI Wiring (2/2 plans) — completed 2026-03-23
+- [x] Phase 60: Hardening and Memory Integration (1/1 plan) — completed 2026-03-23
+
+</details>
+
+<details>
+<summary>✅ v2.0.3 Editor Experience (Phases 61-64) — SHIPPED 2026-03-24</summary>
+
+- [x] Phase 61: Module i18n Foundation (2/2 plans) — completed 2026-03-24
+- [x] Phase 62: Connection Deletion UX (2/2 plans) — completed 2026-03-24
+- [x] Phase 63: Module Descriptions (1/1 plan) — completed 2026-03-24
+- [x] Phase 64: Port Hover Tooltips (1/1 plan) — completed 2026-03-24
+
+</details>
+
+### v2.0.4 Intelligent Memory & Persistence (Phases 65-70)
+
+**Milestone Goal:** Overhaul the memory system with graph-based architecture, LLM-guided recall, and first-person memory CRUD; fix platform persistence and chat resilience.
+
+- [x] **Phase 65: Memory Schema Migration** - Four-table data model split with atomic migration and SQLite hardening (completed 2026-03-25)
+- [x] **Phase 66: Platform Persistence** - Wiring layout and chat history survive application restarts (completed 2026-03-29, 3/3 plans)
+- [ ] **Phase 67: Memory Tools & Sedimentation** - First-person memory CRUD tools and improved sedimentation quality
+- [ ] **Phase 68: Memory Visibility** - Memory operations displayed as tool cards and summary chips in chat
+- [ ] **Phase 69: Background Chat Execution** - LLM streaming survives page navigation with buffer replay
+- [ ] **Phase 70: LLM-Guided Graph Exploration** - Opt-in LLM-driven graph traversal recall with dynamic depth
 
 ## Phase Details
 
-### Phase 45: Durable Task Runtime Foundation
-**Goal**: Users can launch, stop, recover, and bound long-running graph runs with durable state.
-**Depends on**: Phase 44
-**Requirements**: RUN-01, RUN-02, RUN-03, RUN-04, RUN-05, CTRL-01, CTRL-02
+### Phase 65: Memory Schema Migration
+**Goal**: Memory data model fully split into four tables (Nodes/Memories/Edges/Paths) with stable node identity, first-class edges, and URI routing — all existing data migrated without loss
+**Depends on**: Phase 64 (v2.0.3 complete)
+**Requirements**: MEMA-01, MEMA-02, MEMA-03, MEMA-04, MEMA-05, MEMA-06, MEMA-07, MEMA-08, PERS-04
 **Success Criteria** (what must be TRUE):
-  1. User can start a run with a visible run ID, explicit objective, and bound workspace root.
-  2. User can refresh the UI or restart the application and still see active, completed, cancelled, and interrupted runs with their recorded step history.
-  3. User can resume a paused or interrupted run without losing previously completed steps.
-  4. User can cancel an active run and later inspect its persisted terminal state.
-  5. Long-running or cyclic runs stop when budgets are exhausted or repeated or idle patterns are detected, and the recorded stop reason is inspectable.
+  1. Application starts with four memory tables (memory_nodes, memory_contents, memory_edges, memory_uri_paths) present in SQLite, each with correct columns
+  2. Existing memory data from pre-migration schema appears intact after migration — no nodes lost, content preserved, edges maintained (verified by automated migration test)
+  3. Content updates to a memory node create new memory_contents rows while the node UUID remains stable (node identity independent from content)
+  4. IMemoryGraph consumers (recall, sedimentation, /memory UI) continue to function with updated interface — no runtime errors on existing workflows
+  5. All SQLite connections include Busy Timeout=5000, preventing write failures under concurrent access (sedimentation + tool writes)
+**Plans**: TBD
+
+### Phase 66: Platform Persistence
+**Goal**: Users return to their wiring editor and chat exactly where they left off after restarting the application
+**Depends on**: Phase 65 (SQLite busy timeout in place, schema migration pattern established)
+**Requirements**: PERS-01, PERS-02, PERS-03
+**Success Criteria** (what must be TRUE):
+  1. User restarts the application and the wiring editor opens with the same pan/zoom/scale viewport position as before shutdown — per Anima
+  2. User restarts the application and sees previous chat messages in scrollback — per Anima
+  3. Restored chat history feeds only the last N messages (default 4000 tokens, configurable) to the LLM context, not the full scrollback — preventing context budget explosion
+**Plans**:
+  - [x] P01: Infrastructure (ChatDbConnectionFactory, ChatDbInitializer, ViewportStateService) — 2026-03-29
+  - [x] P02: Integration (ChatHistoryService, chat restore, viewport restore, token budget) — 2026-03-29
+  - [x] P03: Verification & Integration Testing (Unit + integration tests, 39 tests, 701/701 pass) — 2026-03-29
+
+### Phase 67: Memory Tools & Sedimentation
+**Goal**: Agent can autonomously create, update, soft-delete, and list its own memory nodes with improved bilingual sedimentation quality
+**Depends on**: Phase 65 (four-table schema required for new memory operations)
+**Requirements**: MEMT-01, MEMT-02, MEMT-03, MEMT-04, MEMT-05, MEMS-01, MEMS-02, MEMS-03
+**Success Criteria** (what must be TRUE):
+  1. Agent can create a new memory node by calling `memory_create` with path, content, and keywords — the node appears on the /memory page
+  2. Agent can update an existing memory node's content via `memory_update` — the /memory page shows updated content while the node UUID remains the same
+  3. Agent can soft-delete a memory node via `memory_delete` — the node is hidden from recall but recoverable from the /memory UI (deprecated flag, not hard delete)
+  4. Agent can list memory nodes by URI prefix via `memory_list` — enabling self-aware navigation of its own knowledge graph
+  5. All memory tool operations publish MemoryOperationPayload events on the EventBus for downstream consumers (visibility, logging)
+  6. Sedimentation extracts bilingual (Chinese + English) keywords and broader trigger conditions, with input capped at last 20 messages
 **Plans**: 3 plans
 Plans:
-- [ ] 45-01-PLAN.md — Domain types and SQLite persistence layer
-- [ ] 45-02-PLAN.md — Run lifecycle engine, step recording, convergence control, DI wiring
-- [ ] 45-03-PLAN.md — Runs UI page with shared components and SignalR real-time updates
+- [x] 67-01-PLAN.md — Soft-delete infrastructure (deprecated column, SoftDeleteNodeAsync, MemoryOperationPayload)
+- [ ] 67-02-PLAN.md — Memory CRUD tools (memory_create, memory_update, memory_delete, memory_list)
+- [x] 67-03-PLAN.md — Sedimentation quality (bilingual prompt, 20-message cap, DisclosureMatcher OR-split)
 
-### Phase 46: Workspace Tool Surface
-**Goal**: Runs can safely inspect and execute repo-grounded actions against an explicit workspace.
-**Depends on**: Phase 45
-**Requirements**: WORK-01, WORK-02, WORK-03, WORK-04, WORK-05
+### Phase 68: Memory Visibility
+**Goal**: Users can see exactly when and how the agent creates, updates, or deletes memories directly in the chat interface
+**Depends on**: Phase 67 (memory tools must publish MemoryOperationPayload events)
+**Requirements**: MEMV-01, MEMV-02, MEMV-03
 **Success Criteria** (what must be TRUE):
-  1. User can bind a run to a specific workspace and every tool step reports that same workspace root.
-  2. User can inspect files and search code or content in the bound repository through structured read and search tools.
-  3. User can inspect repository state through structured git status, diff, and log results inside the run.
-  4. User can execute bounded workspace commands and inspect timeout status, exit code, stdout, and stderr for each command.
-  5. Tool results keep enough workspace and execution metadata for later replay and audit.
-**Plans**: 4 plans
-Plans:
-- [ ] 46-01-PLAN.md — Tool result types, blacklist guard, and tool descriptors
-- [ ] 46-02-PLAN.md — File tools (file_read, file_write, directory_list, file_search, grep_search)
-- [ ] 46-03-PLAN.md — Git tools (git_status, git_diff, git_log, git_show, git_commit, git_checkout) and shell_exec
-- [ ] 46-04-PLAN.md — WorkspaceToolModule orchestrator, DI wiring, and startup integration
+  1. Explicit memory tool calls (memory_create, memory_update, memory_delete) appear as collapsible tool cards in chat bubbles — same interaction pattern as existing workspace tool cards
+  2. Background sedimentation shows a single collapsed "N memories sedimented" summary chip in chat — not one card per sedimented node
+  3. Memory tool cards are visually distinguishable from workspace tool cards via a distinct CSS class (ToolCategory.Memory)
+**Plans**: TBD
 
-### Phase 47: Run Inspection & Observability
-**Goal**: Users and developers can explain what happened in a run from timeline to step-level causality.
-**Depends on**: Phase 46
-**Requirements**: OBS-01, OBS-02, OBS-03, OBS-04
+### Phase 69: Background Chat Execution
+**Goal**: LLM conversations continue running when the user navigates away from the chat page, and the user sees the complete response upon returning
+**Depends on**: Phase 66 (chat history persistence needed for final message storage), Phase 67 (tool call events survive navigation)
+**Requirements**: CHAT-01, CHAT-02, CHAT-03, CHAT-04
 **Success Criteria** (what must be TRUE):
-  1. User can open a run and inspect a chronological timeline of step start, completion, cancellation, and failure events.
-  2. User can inspect per-step inputs, outputs, errors, durations, and linked artifacts from the run timeline.
-  3. User can see why a node ran, including its upstream trigger and downstream fan-out path.
-  4. Developer can correlate logs, traces, and tool events by run ID and step ID during debugging.
-**Plans**: 3 plans
-Plans:
-- [ ] 47-01-PLAN.md — Test scaffolds, PropagationColorAssigner, RunCard nav, localization, ILogger.BeginScope
-- [ ] 47-02-PLAN.md — RunDetail page with overview, mixed timeline, accordion step detail, SignalR
-- [ ] 47-03-PLAN.md — Timeline filtering, propagation chain color grouping, click-highlight
+  1. User sends a message, navigates to another page (e.g., /settings), waits, navigates back — the assistant response is fully rendered in chat
+  2. User can see streaming tokens resume in real-time if they return to chat while the LLM is still generating
+  3. User can cancel an in-progress background LLM execution from the chat interface after navigating back
+  4. Agent tool calls (workspace and memory) continue executing to completion even when the user is on a different page
+**Plans**: TBD
 
-### Phase 48: Artifact & Memory Foundation
-**Goal**: Runs produce durable artifacts and provenance-backed retrieval records that can ground later work.
-**Depends on**: Phase 47
-**Requirements**: ART-01, ART-02, MEM-01, MEM-02, MEM-03
+### Phase 70: LLM-Guided Graph Exploration
+**Goal**: Memory recall can optionally use a secondary LLM to explore the graph from root nodes, selecting relevant branches based on conversation context for deeper recall precision
+**Depends on**: Phase 65 (four-table schema with edges), Phase 67 (memory tools populate graph), Phase 69 (stable execution model)
+**Requirements**: MEMR-01, MEMR-02, MEMR-03, MEMR-04, MEMR-05, MEMR-06, MEMR-07, MEMR-08, MEMR-09
 **Success Criteria** (what must be TRUE):
-  1. System stores intermediate notes, reports, and final outputs as durable artifacts linked to the run and generating step.
-  2. User can inspect a run's artifacts from the run inspector and trace each artifact back to its source step.
-  3. Any stored memory record shows provenance including source artifact, source step, and timestamp.
-  4. Any memory injected into a later run is inspectable and links back to its originating artifact or step.
-  5. Downstream runs can use retrieved memory as explicit grounding rather than hidden session-only prompt state.
-**Plans**: 5 plans
-Plans:
-- [ ] 48-01-PLAN.md — Artifact persistence layer (ArtifactRecord, IArtifactStore, DB schema, tests)
-- [ ] 48-02-PLAN.md — Memory graph persistence (MemoryNode/Edge/Snapshot, IMemoryGraph, GlossaryIndex, DisclosureMatcher, tests)
-- [ ] 48-03-PLAN.md — StepRecorder artifact hook, ArtifactViewer UI, DI wiring
-- [ ] 48-04-PLAN.md — MemoryModule, memory workspace tools, BootMemoryInjector, DI wiring
-- [ ] 48-05-PLAN.md — Memory graph page UI, MemoryNodeCard, nav link, localization
-
-### Phase 49: Structured Cognition Workflows
-**Goal**: Users can run visible, graph-native cognition workflows that analyze a workspace and deliver grounded results.
-**Depends on**: Phase 48
-**Requirements**: COG-01, COG-02, COG-03, COG-04
-**Success Criteria** (what must be TRUE):
-  1. A single long-running run can activate multiple nodes in parallel and fan out across existing wiring while remaining visible in the graph.
-  2. One workflow can route work through built-in modules, LLM modules, workspace tools, and other Anima under the same run.
-  3. User can run an end-to-end codebase analysis workflow against a bound workspace and receive a grounded final report artifact.
-  4. Structured cognition remains inspectable as graph execution, step history, and linked artifacts rather than a hidden single-prompt loop.
+  1. Graph exploration appears as an optional fourth pass in the recall pipeline (after Boot/Disclosure/Glossary) — disabled by default, enabled per Anima via module config
+  2. When enabled, the LLM starts from root/top-level nodes and selects relevant branches, exploring selected branches in parallel (configurable concurrency, default 3)
+  3. Exploration depth is dynamically decided by the LLM with a hard ceiling (max 3 levels) — the LLM can stop early if branches are not relevant
+  4. User can configure which LLM model is used for memory exploration in Settings — independent from the main chat LLM
+  5. Cyclic graphs do not cause infinite loops (cross-depth visited HashSet), per-level candidates are capped (.Take(20)), and LLM-returned URIs are validated against the candidate set (hallucination guard)
 **Plans**: TBD
 
 ## Progress
-
-**Execution Order:**
-45 → 46 → 47 → 48 → 49
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -264,13 +306,35 @@ Plans:
 | 42. Propagation Engine | v1.9 | 3/3 | Complete | 2026-03-19 |
 | 43. Heartbeat Refactor | v1.9 | 2/2 | Complete | 2026-03-19 |
 | 44. Config Schema Sidebar Integration | v1.9 | 1/1 | Complete | 2026-03-19 |
-| 45. Durable Task Runtime Foundation | 3/3 | Complete    | 2026-03-20 | - |
-| 46. Workspace Tool Surface | 4/4 | Complete    | 2026-03-20 | - |
-| 47. Run Inspection & Observability | 3/3 | Complete    | 2026-03-21 | - |
-| 48. Artifact & Memory Foundation | 5/5 | Complete    | 2026-03-21 | - |
-| 49. Structured Cognition Workflows | v2.0 | 0/TBD | Not started | - |
+| 45. Durable Task Runtime Foundation | v2.0 | 3/3 | Complete | 2026-03-20 |
+| 46. Workspace Tool Surface | v2.0 | 4/4 | Complete | 2026-03-20 |
+| 47. Run Inspection & Observability | v2.0 | 3/3 | Complete | 2026-03-21 |
+| 48. Artifact & Memory Foundation | v2.0 | 5/5 | Complete | 2026-03-21 |
+| 49. Structured Cognition Workflows | v2.0 | 3/3 | Complete | 2026-03-21 |
+| 50. Provider Registry | v2.0.1 | 3/3 | Complete | 2026-03-22 |
+| 51. LLM Module Configuration | v2.0.1 | 2/2 | Complete | 2026-03-22 |
+| 52. Automatic Memory Recall | v2.0.1 | 2/2 | Complete | 2026-03-22 |
+| 53. Tool-Aware Memory Operations | v2.0.1 | 2/2 | Complete | 2026-03-22 |
+| 54. Living Memory Sedimentation | v2.0.1 | 2/2 | Complete | 2026-03-22 |
+| 55. Memory Review Surfaces | v2.0.1 | 2/2 | Complete | 2026-03-22 |
+| 56. Sedimentation LLM Configuration | v2.0.1 | 1/1 | Complete | 2026-03-22 |
+| 57. Integration Wiring & Metadata Fixes | v2.0.1 | 2/2 | Complete | 2026-03-22 |
+| 58. Agent Loop Core | v2.0.2 | 2/2 | Complete | 2026-03-23 |
+| 59. Tool Call Display and UI Wiring | v2.0.2 | 2/2 | Complete | 2026-03-23 |
+| 60. Hardening and Memory Integration | v2.0.2 | 1/1 | Complete | 2026-03-23 |
+| 61. Module i18n Foundation | v2.0.3 | 2/2 | Complete | 2026-03-24 |
+| 62. Connection Deletion UX | v2.0.3 | 2/2 | Complete | 2026-03-24 |
+| 63. Module Descriptions | v2.0.3 | 1/1 | Complete | 2026-03-24 |
+| 64. Port Hover Tooltips | v2.0.3 | 1/1 | Complete | 2026-03-24 |
+| 65. Memory Schema Migration | v2.0.4 | 3/3 | Complete | 2026-03-25 |
+| 66. Platform Persistence | v2.0.4 | 3/3 | Complete | 2026-03-29 |
+| 67. Memory Tools & Sedimentation | v2.0.4 | 2/3 | In Progress|  |
+| 68. Memory Visibility | v2.0.4 | 0/TBD | Not started | - |
+| 69. Background Chat Execution | v2.0.4 | 0/TBD | Not started | - |
+| 70. LLM-Guided Graph Exploration | v2.0.4 | 0/TBD | Not started | - |
 
-**Total shipped: 44 phases, 99 plans across 10 milestones**
+**Total shipped: 66 phases, 152 plans across 14 milestones**
+**v2.0.4 in progress: 4 phases (67-70), 24 requirements remaining**
 
 ---
-*Last updated: 2026-03-21 — Phase 48 plans created*
+*Last updated: 2026-03-29 -- Phase 66 Platform Persistence complete*

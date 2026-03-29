@@ -43,4 +43,13 @@ window.editorCanvas = {
     var rect = element.getBoundingClientRect();
     return { left: rect.left, top: rect.top };
   },
+
+  isActiveElementEditable: function () {
+    var el = document.activeElement;
+    if (!el) return false;
+    var tag = el.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+    if (el.isContentEditable) return true;
+    return false;
+  },
 };

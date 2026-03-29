@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
 using OpenAnima.Contracts.Routing;
@@ -11,8 +12,11 @@ using OpenAnima.Core.Hosting;
 using OpenAnima.Core.LLM;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Ports;
+using OpenAnima.Core.Providers;
 using OpenAnima.Core.Routing;
+using OpenAnima.Core.Runs;
 using OpenAnima.Core.Services;
+using OpenAnima.Core.Tools;
 
 namespace OpenAnima.Tests.Integration;
 
@@ -27,6 +31,10 @@ public class ModuleRuntimeInitializationTests : IDisposable
     private readonly string _tempConfigDir;
     private readonly string _tempDataRoot;
 
+    /// <summary>
+    /// Module types resolvable from the test DI container (excludes WorkspaceToolModule which requires
+    /// IRunService/IStepRecorder/IWorkspaceTool not registered in the test setup).
+    /// </summary>
     private static readonly Type[] ExpectedBuiltInModuleTypes =
     {
         typeof(LLMModule),
@@ -34,6 +42,7 @@ public class ModuleRuntimeInitializationTests : IDisposable
         typeof(ChatOutputModule),
         typeof(HeartbeatModule),
         typeof(FixedTextModule),
+        typeof(JoinBarrierModule),
         typeof(TextJoinModule),
         typeof(TextSplitModule),
         typeof(ConditionalBranchModule),
@@ -42,6 +51,17 @@ public class ModuleRuntimeInitializationTests : IDisposable
         typeof(AnimaRouteModule),
         typeof(HttpRequestModule)
     };
+
+    /// <summary>
+    /// All module names registered in PortRegistry at startup (includes WorkspaceToolModule
+    /// whose ports ARE registered even though it requires extra DI services for construction).
+    /// </summary>
+    private static readonly string[] ExpectedRegisteredPortModuleNames =
+        ExpectedBuiltInModuleTypes
+            .Select(t => t.Name)
+            .Append("WorkspaceToolModule")
+            .OrderBy(name => name)
+            .ToArray();
 
     private static readonly string[] ExpectedBuiltInModuleNames =
         ExpectedBuiltInModuleTypes.Select(type => type.Name).OrderBy(name => name).ToArray();
@@ -63,23 +83,35 @@ public class ModuleRuntimeInitializationTests : IDisposable
         // Register the real config/context/router/runtime surfaces that built-in modules now require.
         var animasRoot = Path.Combine(_tempDataRoot, "animas");
         services.AddSingleton<AnimaContext>();
-        services.AddSingleton<IModuleContext>(sp => sp.GetRequiredService<AnimaContext>());
-        services.AddSingleton<IAnimaContext>(sp => sp.GetRequiredService<AnimaContext>());
+        services.AddSingleton<IActiveAnimaContext>(sp => sp.GetRequiredService<AnimaContext>());
+        services.AddSingleton<IModuleContext>(sp => sp.GetRequiredService<IActiveAnimaContext>());
         services.AddSingleton<AnimaModuleConfigService>(_ => new AnimaModuleConfigService(animasRoot));
-        services.AddSingleton<IModuleConfig>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
-        services.AddSingleton<IAnimaModuleConfigService>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
+        services.AddSingleton<IModuleConfigStore>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
+        services.AddSingleton<IModuleConfig>(sp => sp.GetRequiredService<IModuleConfigStore>());
         services.AddSingleton<IAnimaRuntimeManager>(sp =>
             new AnimaRuntimeManager(
                 animasRoot,
                 sp.GetRequiredService<ILogger<AnimaRuntimeManager>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
-                sp.GetRequiredService<IAnimaContext>()));
+                sp.GetRequiredService<IActiveAnimaContext>()));
         services.AddSingleton<ICrossAnimaRouter>(sp =>
             new CrossAnimaRouter(
                 sp.GetRequiredService<ILogger<CrossAnimaRouter>>(),
                 sp.GetRequiredService<IAnimaRuntimeManager>()));
 
+        // Register provider registry services needed by LLMModule (Phase 51)
+        var providersRoot = Path.Combine(_tempDataRoot, "providers");
+        services.AddSingleton<LLMProviderRegistryService>(_ =>
+            new LLMProviderRegistryService(providersRoot, NullLogger<LLMProviderRegistryService>.Instance));
+        services.AddSingleton<ILLMProviderRegistry>(sp =>
+            sp.GetRequiredService<LLMProviderRegistryService>());
+
         services.AddHttpClient("HttpRequest");
+
+        // Register fake IRunService and empty IWorkspaceTool collection for AgentToolDispatcher
+        // (Phase 58: AgentToolDispatcher is registered in AddWiringServices and requires these)
+        services.AddSingleton<IRunService>(new FakeRunService());
+        services.AddSingleton<IEnumerable<IWorkspaceTool>>(Array.Empty<IWorkspaceTool>());
 
         services.AddWiringServices(_tempConfigDir);
 
@@ -118,7 +150,7 @@ public class ModuleRuntimeInitializationTests : IDisposable
             .OrderBy(name => name)
             .ToArray();
 
-        Assert.Equal(ExpectedBuiltInModuleNames, registeredModuleNames);
+        Assert.Equal(ExpectedRegisteredPortModuleNames, registeredModuleNames);
 
         var llmPorts = registry.GetPorts("LLMModule");
         Assert.Equal(4, llmPorts.Count);
@@ -192,8 +224,8 @@ public class ModuleRuntimeInitializationTests : IDisposable
             .OrderBy(name => name)
             .ToArray();
 
-        Assert.Equal(ExpectedBuiltInModuleNames, registeredModuleNames);
-        Assert.Equal(12, registeredModuleNames.Length);
+        Assert.Equal(ExpectedRegisteredPortModuleNames, registeredModuleNames);
+        Assert.Equal(14, registeredModuleNames.Length);
 
         // Demo modules absent
         Assert.DoesNotContain(allPorts, p => p.ModuleName == "TextInput");
@@ -225,6 +257,32 @@ public class ModuleRuntimeInitializationTests : IDisposable
         }
 
         Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
+    }
+
+    /// <summary>Fake run service — AgentToolDispatcher requires it in DI (Phase 58) but tests don't exercise runs.</summary>
+    private class FakeRunService : IRunService
+    {
+        public RunContext? GetActiveRun(string animaId) => null;
+
+        public Task<RunResult> StartRunAsync(string animaId, string objective, string workspaceRoot,
+            int? maxSteps = null, int? maxWallSeconds = null, string? workflowPreset = null,
+            CancellationToken ct = default)
+            => Task.FromResult(RunResult.Ok("fake-run"));
+
+        public Task<RunResult> PauseRunAsync(string runId, string reason, CancellationToken ct = default)
+            => Task.FromResult(RunResult.Ok(runId));
+
+        public Task<RunResult> ResumeRunAsync(string runId, CancellationToken ct = default)
+            => Task.FromResult(RunResult.Ok(runId));
+
+        public Task<RunResult> CancelRunAsync(string runId, CancellationToken ct = default)
+            => Task.FromResult(RunResult.Ok(runId));
+
+        public Task<IReadOnlyList<RunDescriptor>> GetAllRunsAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<RunDescriptor>>(Array.Empty<RunDescriptor>());
+
+        public Task<RunDescriptor?> GetRunByIdAsync(string runId, CancellationToken ct = default)
+            => Task.FromResult<RunDescriptor?>(null);
     }
 
     /// <summary>Fake LLM service — LLMModule requires it in DI but tests don't exercise LLM calls.</summary>

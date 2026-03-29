@@ -1,6 +1,7 @@
 @using OpenAnima.Core.Runs
+@inject IStringLocalizer<SharedResources> L
 
-<span class="run-state-badge @_modifierClass" aria-label="Run state: @_label">@_label</span>
+<span class="run-state-badge @_modifierClass" aria-label="@L["RunState.Aria", _label]">@_label</span>
 
 <style>
     .run-state-badge {
@@ -46,13 +47,13 @@
 
     private string _label => State switch
     {
-        RunState.Created => "Starting",
-        RunState.Running => "Running",
-        RunState.Paused => "Paused",
-        RunState.Completed => "Completed",
-        RunState.Cancelled => "Cancelled",
-        RunState.Failed => "Failed",
-        RunState.Interrupted => "Interrupted",
+        RunState.Created => L["RunState.Starting"],
+        RunState.Running => L["RunState.Running"],
+        RunState.Paused => L["RunState.Paused"],
+        RunState.Completed => L["RunState.Completed"],
+        RunState.Cancelled => L["RunState.Cancelled"],
+        RunState.Failed => L["RunState.Failed"],
+        RunState.Interrupted => L["RunState.Interrupted"],
         _ => State.ToString()
     };
 

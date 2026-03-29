@@ -1,17 +1,21 @@
 @page "/editor"
 @using OpenAnima.Core.Services
+@using OpenAnima.Core.ViewportPersistence
 @using OpenAnima.Core.Wiring
 @using OpenAnima.Core.Ports
 @using OpenAnima.Core.Anima
 @using OpenAnima.Contracts
 @using OpenAnima.Contracts.Ports
+@using Microsoft.JSInterop
 @inject EditorStateService _state
 @inject IPortRegistry _portRegistry
 @inject IConfigurationLoader _configLoader
 @inject IAnimaRuntimeManager _animaRuntimeManager
-@inject IAnimaContext _animaContext
+@inject IModuleContext _animaContext
 @inject IStringLocalizer<SharedResources> L
 @inject LanguageService LangSvc
+@inject IJSRuntime JS
+@inject ViewportStateService _viewportStateService
 @implements IDisposable
 
 <div class="editor-container" tabindex="0" @onkeydown="HandleKeyDown">
@@ -30,6 +34,7 @@
         // Subscribe to state changes
         _state.OnStateChanged += HandleStateChanged;
         LangSvc.LanguageChanged += OnLanguageChanged;
+        _animaContext.ActiveAnimaChanged += OnAnimaChanged;
 
         // Load current configuration from active Anima's wiring engine if available
         var activeRuntime = _animaRuntimeManager.GetRuntime(_animaContext.ActiveAnimaId ?? "");
@@ -43,6 +48,27 @@
             // Start with empty configuration
             _state.LoadConfiguration(new WiringConfiguration { Name = "default" });
         }
+
+        // Load viewport state for the active Anima
+        _ = RestoreViewportAsync();
+    }
+
+    private async Task RestoreViewportAsync()
+    {
+        var activeAnimaId = _animaContext.ActiveAnimaId;
+        if (string.IsNullOrEmpty(activeAnimaId))
+            return;
+
+        var viewport = await _viewportStateService.LoadAsync(activeAnimaId);
+        _state.UpdatePan(viewport.PanX, viewport.PanY);
+        _state.UpdateScale(viewport.Scale);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnAnimaChanged()
+    {
+        // Reload viewport when switching to a different Anima
+        _ = RestoreViewportAsync();
     }
 
     private void HandleStateChanged()
@@ -56,11 +82,15 @@
 
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
-    private void HandleKeyDown(KeyboardEventArgs e)
+    private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Delete" || e.Key == "Backspace")
         {
-            _state.DeleteSelected();
+            var isEditing = await JS.InvokeAsync<bool>("editorCanvas.isActiveElementEditable");
+            if (!isEditing)
+            {
+                _state.DeleteSelected();
+            }
         }
         else if (e.Key == "Escape")
         {
@@ -72,5 +102,6 @@
     {
         _state.OnStateChanged -= HandleStateChanged;
         LangSvc.LanguageChanged -= OnLanguageChanged;
+        _animaContext.ActiveAnimaChanged -= OnAnimaChanged;
     }
 }

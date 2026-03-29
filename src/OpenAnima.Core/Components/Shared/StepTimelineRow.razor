@@ -50,17 +50,17 @@
                 <ArtifactViewer ArtifactRefId="@Step.ArtifactRefId" />
             }
             <div class="step-propagation">
-                Propagation chain: <a href="#"
-                                      @onclick="OnChainClick"
-                                      @onclick:preventDefault="true"
-                                      aria-label="Filter by propagation chain @Step.PropagationId">@Step.PropagationId</a>
+                @L["RunDetail.Step.PropagationPrefix"] <a href="#"
+                                                          @onclick="OnChainClick"
+                                                          @onclick:preventDefault="true"
+                                                          aria-label="@L["RunDetail.Step.FilterPropagationAria", Step.PropagationId]">@Step.PropagationId</a>
                 @if (!string.IsNullOrEmpty(Step.PropagationId))
                 {
                     <span> — </span>
                     <a @onclick="OnChainFilterShortcut"
                        @onclick:preventDefault="true"
                        href="#"
-                       aria-label="@($"Filter by propagation chain {Step.PropagationId}")">
+                       aria-label="@L["RunDetail.Step.FilterPropagationSummaryAria", Step.PropagationId]">
                         @L["RunDetail.Step.PropagationChain", Step.PropagationId[..Math.Min(8, Step.PropagationId.Length)], ChainStepCount]
                     </a>
                 }
@@ -80,7 +80,16 @@
     [Parameter] public EventCallback OnChainFilterShortcut { get; set; }
 
     private string ChainColor => PropagationColorAssigner.GetColor(Step.PropagationId);
-    private string RowClass => $"step-row {(IsExpanded ? "expanded" : "")} {(IsHighlighted ? "highlighted" : "")} {(IsDimmed ? "dimmed" : "")}".Trim();
+    private string RowClass
+    {
+        get
+        {
+            var bracket = Step.ModuleName == "AgentLoop" ? "agent-loop-bracket"
+                : Step.ModuleName.StartsWith("AgentIteration") ? "agent-iteration"
+                : "";
+            return $"step-row {bracket} {(IsExpanded ? "expanded" : "")} {(IsHighlighted ? "highlighted" : "")} {(IsDimmed ? "dimmed" : "")}".Trim();
+        }
+    }
     private string StatusIcon => Step.Status switch
     {
         "Completed" => "✓",

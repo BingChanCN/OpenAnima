@@ -36,4 +36,10 @@ public record RunDescriptor
     /// Never updated in place — re-query to get an up-to-date value.
     /// </summary>
     public RunState CurrentState { get; init; }
+
+    /// <summary>
+    /// Name of the workflow preset used to start this run, or null for manual wiring.
+    /// Used by WorkflowProgressBar to determine total expected node count.
+    /// </summary>
+    public string? WorkflowPreset { get; init; }
 }

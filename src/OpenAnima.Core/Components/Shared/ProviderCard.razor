@@ -1,0 +1,62 @@
+@using OpenAnima.Core.Providers
+@inject IStringLocalizer<SharedResources> L
+@inject LanguageService LangSvc
+@implements IDisposable
+
+<div class="card provider-card @(Provider.IsEnabled ? "" : "disabled")">
+    <div class="provider-card-info">
+        <span class="provider-name">@Provider.DisplayName</span>
+        <span class="provider-url text-muted">@Provider.BaseUrl</span>
+        <span class="provider-models text-muted">@string.Format(L["Providers.ModelCount"], Provider.Models.Count)</span>
+        <span class="masked-key">@MaskedApiKey</span>
+    </div>
+    <div class="provider-card-actions">
+        <span class="status-dot @(Provider.IsEnabled ? "enabled" : "disabled")"></span>
+        @if (!Provider.IsEnabled)
+        {
+            <span class="provider-disabled-label">@L["Providers.DisabledLabel"]</span>
+        }
+        <button class="btn btn-secondary" @onclick="() => OnEdit.InvokeAsync(Provider)">
+            @L["Providers.EditProvider"]
+        </button>
+        @if (Provider.IsEnabled)
+        {
+            <button class="btn btn-secondary" @onclick="() => OnDisable.InvokeAsync(Provider)">
+                @L["Providers.Disable"]
+            </button>
+        }
+        else
+        {
+            <button class="btn btn-secondary" @onclick="() => OnEnable.InvokeAsync(Provider)">
+                @L["Providers.Enable"]
+            </button>
+        }
+        @if (!Provider.IsEnabled || Provider.Models.Count == 0)
+        {
+            <button class="btn btn-secondary" @onclick="() => OnDelete.InvokeAsync(Provider)">
+                @L["Providers.DeleteProvider"]
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public LLMProviderRecord Provider { get; set; } = null!;
+    [Parameter] public string MaskedApiKey { get; set; } = "";
+    [Parameter] public EventCallback<LLMProviderRecord> OnEdit { get; set; }
+    [Parameter] public EventCallback<LLMProviderRecord> OnDisable { get; set; }
+    [Parameter] public EventCallback<LLMProviderRecord> OnEnable { get; set; }
+    [Parameter] public EventCallback<LLMProviderRecord> OnDelete { get; set; }
+
+    protected override void OnInitialized()
+    {
+        LangSvc.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        LangSvc.LanguageChanged -= OnLanguageChanged;
+    }
+}
