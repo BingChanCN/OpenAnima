@@ -300,8 +300,11 @@ public class FakeMemoryGraph : IMemoryGraph
     public Task WriteNodeAsync(MemoryNode node, CancellationToken ct = default) =>
         Task.CompletedTask;
 
-    public Task<IReadOnlyList<MemoryNode>> GetAllNodesAsync(string animaId, CancellationToken ct = default) =>
+    public Task<IReadOnlyList<MemoryNode>> GetAllNodesAsync(string animaId, bool includeDeprecated = false, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<MemoryNode>>([]);
+
+    public Task SoftDeleteNodeAsync(string animaId, string uri, CancellationToken ct = default) =>
+        Task.CompletedTask;
 
     public Task DeleteNodeAsync(string animaId, string uri, CancellationToken ct = default) =>
         Task.CompletedTask;

@@ -37,8 +37,17 @@ public interface IMemoryGraph
 
     /// <summary>
     /// Returns all nodes belonging to the given Anima.
+    /// By default, deprecated (soft-deleted) nodes are excluded.
+    /// Pass <c>includeDeprecated: true</c> to include them (used by /memory UI for recovery).
     /// </summary>
-    Task<IReadOnlyList<MemoryNode>> GetAllNodesAsync(string animaId, CancellationToken ct = default);
+    Task<IReadOnlyList<MemoryNode>> GetAllNodesAsync(string animaId, bool includeDeprecated = false, CancellationToken ct = default);
+
+    /// <summary>
+    /// Soft-deletes a node by setting deprecated=1. Node is hidden from recall but recoverable
+    /// from /memory UI via <see cref="GetAllNodesAsync"/> with <c>includeDeprecated: true</c>
+    /// or <see cref="GetNodeByUuidAsync"/>. No-op if URI not found.
+    /// </summary>
+    Task SoftDeleteNodeAsync(string animaId, string uri, CancellationToken ct = default);
 
     /// <summary>
     /// Deletes a node and all associated data: its edges (as source or target), its content

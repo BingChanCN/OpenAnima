@@ -128,7 +128,8 @@
     {
         var animaId = AnimaContext.ActiveAnimaId;
         if (animaId == null) return;
-        _treeNodes = (await MemoryGraphService.GetAllNodesAsync(animaId)).OrderBy(n => n.Uri).ToList();
+        // includeDeprecated: true — /memory UI shows deprecated nodes for recovery purposes
+        _treeNodes = (await MemoryGraphService.GetAllNodesAsync(animaId, includeDeprecated: true)).OrderBy(n => n.Uri).ToList();
     }
 
     private async Task SelectNode(string uri)

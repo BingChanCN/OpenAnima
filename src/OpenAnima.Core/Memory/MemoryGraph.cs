@@ -102,12 +102,13 @@ public class MemoryGraph : IMemoryGraph
                      c.content AS Content, c.disclosure_trigger AS DisclosureTrigger,
                      c.keywords AS Keywords, c.source_artifact_id AS SourceArtifactId,
                      c.source_step_id AS SourceStepId,
-                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt
+                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt,
+                     n.deprecated AS Deprecated
               FROM memory_uri_paths p
               JOIN memory_nodes n ON p.node_uuid = n.uuid
               LEFT JOIN memory_contents c ON c.node_uuid = n.uuid AND c.anima_id = n.anima_id
                   AND c.id = (SELECT MAX(id) FROM memory_contents WHERE node_uuid = n.uuid AND anima_id = n.anima_id)
-              WHERE p.uri = @uri AND p.anima_id = @animaId",
+              WHERE p.uri = @uri AND p.anima_id = @animaId AND n.deprecated = 0",
             new { animaId, uri });
     }
 
@@ -117,13 +118,15 @@ public class MemoryGraph : IMemoryGraph
         await using var conn = _factory.CreateConnection();
         await conn.OpenAsync(ct);
 
+        // Note: NO deprecated filter here — needed for node recovery in /memory UI
         return await conn.QueryFirstOrDefaultAsync<MemoryNode>(
             @"SELECT n.uuid AS Uuid, p.uri AS Uri, n.anima_id AS AnimaId,
                      n.node_type AS NodeType, n.display_name AS DisplayName,
                      c.content AS Content, c.disclosure_trigger AS DisclosureTrigger,
                      c.keywords AS Keywords, c.source_artifact_id AS SourceArtifactId,
                      c.source_step_id AS SourceStepId,
-                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt
+                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt,
+                     n.deprecated AS Deprecated
               FROM memory_nodes n
               LEFT JOIN memory_uri_paths p ON p.node_uuid = n.uuid
               LEFT JOIN memory_contents c ON c.node_uuid = n.uuid AND c.anima_id = n.anima_id
@@ -144,12 +147,13 @@ public class MemoryGraph : IMemoryGraph
                      c.content AS Content, c.disclosure_trigger AS DisclosureTrigger,
                      c.keywords AS Keywords, c.source_artifact_id AS SourceArtifactId,
                      c.source_step_id AS SourceStepId,
-                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt
+                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt,
+                     n.deprecated AS Deprecated
               FROM memory_uri_paths p
               JOIN memory_nodes n ON p.node_uuid = n.uuid
               LEFT JOIN memory_contents c ON c.node_uuid = n.uuid AND c.anima_id = n.anima_id
                   AND c.id = (SELECT MAX(id) FROM memory_contents WHERE node_uuid = n.uuid AND anima_id = n.anima_id)
-              WHERE p.anima_id = @animaId AND p.uri LIKE @Prefix || '%'
+              WHERE p.anima_id = @animaId AND p.uri LIKE @Prefix || '%' AND n.deprecated = 0
               ORDER BY p.uri",
             new { animaId, Prefix = uriPrefix });
 
@@ -157,27 +161,49 @@ public class MemoryGraph : IMemoryGraph
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<MemoryNode>> GetAllNodesAsync(string animaId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<MemoryNode>> GetAllNodesAsync(string animaId, bool includeDeprecated = false, CancellationToken ct = default)
     {
         await using var conn = _factory.CreateConnection();
         await conn.OpenAsync(ct);
 
+        var deprecatedFilter = includeDeprecated ? string.Empty : " AND n.deprecated = 0";
+
         var rows = await conn.QueryAsync<MemoryNode>(
-            @"SELECT n.uuid AS Uuid, p.uri AS Uri, n.anima_id AS AnimaId,
+            $@"SELECT n.uuid AS Uuid, p.uri AS Uri, n.anima_id AS AnimaId,
                      n.node_type AS NodeType, n.display_name AS DisplayName,
                      c.content AS Content, c.disclosure_trigger AS DisclosureTrigger,
                      c.keywords AS Keywords, c.source_artifact_id AS SourceArtifactId,
                      c.source_step_id AS SourceStepId,
-                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt
+                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt,
+                     n.deprecated AS Deprecated
               FROM memory_nodes n
               JOIN memory_uri_paths p ON p.node_uuid = n.uuid AND p.anima_id = n.anima_id
               LEFT JOIN memory_contents c ON c.node_uuid = n.uuid AND c.anima_id = n.anima_id
                   AND c.id = (SELECT MAX(id) FROM memory_contents WHERE node_uuid = n.uuid AND anima_id = n.anima_id)
-              WHERE n.anima_id = @animaId
+              WHERE n.anima_id = @animaId{deprecatedFilter}
               ORDER BY p.uri",
             new { animaId });
 
         return rows.ToList();
+    }
+
+    /// <inheritdoc/>
+    public async Task SoftDeleteNodeAsync(string animaId, string uri, CancellationToken ct = default)
+    {
+        await using var conn = _factory.CreateConnection();
+        await conn.OpenAsync(ct);
+
+        var uuid = await conn.QueryFirstOrDefaultAsync<string>(
+            "SELECT node_uuid FROM memory_uri_paths WHERE uri = @uri AND anima_id = @animaId",
+            new { uri, animaId });
+
+        if (uuid == null) return;
+
+        await conn.ExecuteAsync(
+            "UPDATE memory_nodes SET deprecated = 1, updated_at = @Now WHERE uuid = @uuid",
+            new { uuid, Now = DateTimeOffset.UtcNow.ToString("O") });
+
+        _glossaryCache.TryRemove(animaId, out _);
     }
 
     /// <inheritdoc/>
@@ -300,12 +326,13 @@ public class MemoryGraph : IMemoryGraph
                      c.content AS Content, c.disclosure_trigger AS DisclosureTrigger,
                      c.keywords AS Keywords, c.source_artifact_id AS SourceArtifactId,
                      c.source_step_id AS SourceStepId,
-                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt
+                     n.created_at AS CreatedAt, n.updated_at AS UpdatedAt,
+                     n.deprecated AS Deprecated
               FROM memory_nodes n
               JOIN memory_uri_paths p ON p.node_uuid = n.uuid AND p.anima_id = n.anima_id
               JOIN memory_contents c ON c.node_uuid = n.uuid AND c.anima_id = n.anima_id
                   AND c.id = (SELECT MAX(id) FROM memory_contents WHERE node_uuid = n.uuid AND anima_id = n.anima_id)
-              WHERE n.anima_id = @animaId AND c.disclosure_trigger IS NOT NULL
+              WHERE n.anima_id = @animaId AND c.disclosure_trigger IS NOT NULL AND n.deprecated = 0
               ORDER BY p.uri",
             new { animaId });
 
@@ -335,7 +362,7 @@ public class MemoryGraph : IMemoryGraph
     /// <inheritdoc/>
     public async Task RebuildGlossaryAsync(string animaId, CancellationToken ct = default)
     {
-        var nodes = await GetAllNodesAsync(animaId, ct);
+        var nodes = await GetAllNodesAsync(animaId, false, ct);
         var entries = new List<(string Keyword, string Uri)>();
 
         foreach (var node in nodes)
