@@ -324,6 +324,67 @@ public class SedimentationServiceTests : IDisposable
         Assert.Contains("sediment://fact/pre-existing", systemText);
     }
 
+    // ── 20-message cap (MEMS-03) ──────────────────────────────────────────────
+
+    [Fact]
+    public async Task SedimentAsync_MoreThan20Messages_CapsToLast20()
+    {
+        // Arrange: create 30 messages — the cap should pass only the last 20 to the LLM
+        var messages = Enumerable.Range(1, 30)
+            .Select(i => new ChatMessageInput("user", $"message {i}"))
+            .ToList<ChatMessageInput>();
+
+        IReadOnlyList<ChatMessage>? capturedMessages = null;
+        var service = MakeService((msgs, _) =>
+        {
+            capturedMessages = msgs;
+            return Task.FromResult("{\"extracted\":[],\"skipped_reason\":\"no new knowledge\"}");
+        });
+
+        // Act
+        await service.SedimentAsync("anima-s-cap", messages, "response", sourceStepId: null);
+
+        // Assert: conversation in user message contains at most 20 messages
+        Assert.NotNull(capturedMessages);
+        var userMsg = capturedMessages.OfType<UserChatMessage>().FirstOrDefault();
+        Assert.NotNull(userMsg);
+        var conversationText = userMsg.Content[0].Text;
+
+        // Last 20 messages (messages 11..30) should appear
+        Assert.Contains("message 30", conversationText);
+        Assert.Contains("message 11", conversationText);
+        // First 10 messages should NOT appear
+        Assert.DoesNotContain("message 1\n", conversationText);
+        Assert.DoesNotContain("message 10\n", conversationText);
+    }
+
+    [Fact]
+    public async Task SedimentAsync_ExactlyTwentyMessages_PassesAllThrough()
+    {
+        // Arrange: exactly 20 messages should pass unchanged
+        var messages = Enumerable.Range(1, 20)
+            .Select(i => new ChatMessageInput("user", $"msg {i}"))
+            .ToList<ChatMessageInput>();
+
+        IReadOnlyList<ChatMessage>? capturedMessages = null;
+        var service = MakeService((msgs, _) =>
+        {
+            capturedMessages = msgs;
+            return Task.FromResult("{\"extracted\":[],\"skipped_reason\":\"no new knowledge\"}");
+        });
+
+        // Act
+        await service.SedimentAsync("anima-s-exact20", messages, "response", sourceStepId: null);
+
+        // Assert: conversation contains all 20 messages
+        Assert.NotNull(capturedMessages);
+        var userMsg = capturedMessages.OfType<UserChatMessage>().FirstOrDefault();
+        Assert.NotNull(userMsg);
+        var conversationText = userMsg.Content[0].Text;
+        Assert.Contains("msg 1\n", conversationText);
+        Assert.Contains("msg 20\n", conversationText);
+    }
+
     // ── Content truncation in context ─────────────────────────────────────────
 
     [Fact]

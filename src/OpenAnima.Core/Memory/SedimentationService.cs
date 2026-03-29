@@ -26,7 +26,24 @@ public class SedimentationService : ISedimentationService
     };
 
     private const string ExtractionSystemPrompt = """
-        You are a memory extraction assistant. Given a conversation between a user and an AI assistant, extract stable, reusable knowledge: facts about the project, user preferences, named entities, or task learnings. Do NOT summarize the conversation or store ephemeral exchanges like greetings or acknowledgments.
+        You are a memory extraction assistant. Given a conversation between a user and an AI assistant,
+        extract stable, reusable knowledge: facts about the project, user preferences, named entities, or task learnings.
+        Do NOT summarize the conversation or store ephemeral exchanges like greetings or acknowledgments.
+
+        CRITICAL REQUIREMENTS:
+        1. Keywords MUST be bilingual when conversation contains Chinese:
+           - Include BOTH Chinese and English versions of each concept
+           - Example keywords: "architecture,架构,Blazor,设计模式,design patterns"
+           - For English-only conversations, English keywords are fine
+        2. Disclosure triggers must cover MULTIPLE scenarios separated by " OR ":
+           - A question about the topic
+           - Natural mention of the topic in conversation
+           - Related topics that would benefit from this knowledge
+           - Example: "discusses architecture OR asks about system design OR mentions component structure"
+        3. Each item must be ONE atomic, reusable knowledge point
+        4. Use "update" action and the existing URI when the knowledge refines an existing memory
+        5. Use "create" action with a descriptive ID when the knowledge is new
+        6. Do NOT store raw conversation text or summaries
 
         Return a JSON object with this exact schema:
         {
@@ -35,19 +52,12 @@ public class SedimentationService : ISedimentationService
               "action": "create" or "update",
               "uri": "sediment://fact/{id}" or "sediment://preference/{id}" or "sediment://entity/{id}" or "sediment://learning/{id}",
               "content": "single atomic knowledge statement",
-              "keywords": "comma,separated,keywords",
-              "disclosure_trigger": "single phrase that would trigger recall"
+              "keywords": "keyword1,关键词2,keyword3,关键词4",
+              "disclosure_trigger": "scenario1 OR scenario2 OR scenario3"
             }
           ],
           "skipped_reason": null or "explanation if nothing was extracted"
         }
-
-        Rules:
-        - Each item must be ONE atomic knowledge point
-        - Use "update" action and the existing URI when the knowledge refines an existing memory
-        - Use "create" action with a descriptive ID when the knowledge is new
-        - Set skipped_reason when the conversation contains no stable knowledge
-        - Do NOT store raw conversation text or summaries
         """;
 
     private readonly IMemoryGraph _memoryGraph;
@@ -97,6 +107,11 @@ public class SedimentationService : ISedimentationService
                 null,
                 ct) ?? Task.FromResult<string?>(null));
 
+            // MEMS-03: Cap input at last 20 messages to control cost and focus
+            var cappedMessages = messages.Count > 20
+                ? (IReadOnlyList<ChatMessageInput>)messages.Skip(messages.Count - 20).ToList()
+                : messages;
+
             // Query existing sediment nodes for merge context (cap at 50)
             var existingNodes = await _memoryGraph.QueryByPrefixAsync(animaId, "sediment://", ct);
             var contextNodes = existingNodes.Take(50).ToList();
@@ -105,7 +120,7 @@ public class SedimentationService : ISedimentationService
             var contextSummary = BuildContextSummary(contextNodes);
 
             // Build extraction prompt
-            var chatMessages = BuildExtractionMessages(messages, llmResponse, contextSummary);
+            var chatMessages = BuildExtractionMessages(cappedMessages, llmResponse, contextSummary);
 
             // Call extraction LLM
             string jsonResponse;
