@@ -22,6 +22,19 @@ public class ChatDbConnectionFactory
         _connectionString = $"Data Source={dbPath};Busy Timeout=5000";
     }
 
+    /// <summary>
+    /// Initializes a factory using a raw connection string.
+    /// Use this constructor for in-memory testing with a connection string such as
+    /// <c>Data Source=:memory:;Mode=Memory;Cache=Shared</c>.
+    /// </summary>
+    /// <param name="connectionString">The full SQLite connection string.</param>
+    /// <param name="isRaw">Pass <c>true</c> to use the connection string as-is without modification.</param>
+    public ChatDbConnectionFactory(string connectionString, bool isRaw)
+    {
+        _ = isRaw; // distinguishes overloads
+        _connectionString = connectionString;
+    }
+
     /// <summary>The connection string used to create connections.</summary>
     public string ConnectionString => _connectionString;
 

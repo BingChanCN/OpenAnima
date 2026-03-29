@@ -30,7 +30,7 @@ public class RunRecoveryServiceTests : IDisposable
         _repository = new RunRepository(_factory);
 
         var chatDbFactory = new OpenAnima.Core.ChatPersistence.ChatDbConnectionFactory(
-            "Data Source=:memory:;Busy Timeout=5000");
+            "Data Source=ChatHistoryTest;Mode=Memory;Cache=Shared", isRaw: true);
         var chatDbInitializer = new OpenAnima.Core.ChatPersistence.ChatDbInitializer(
             chatDbFactory, new NullLogger<OpenAnima.Core.ChatPersistence.ChatDbInitializer>());
 
