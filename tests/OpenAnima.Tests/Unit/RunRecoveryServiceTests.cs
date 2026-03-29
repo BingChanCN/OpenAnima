@@ -28,9 +28,16 @@ public class RunRecoveryServiceTests : IDisposable
         _factory = new RunDbConnectionFactory(DbConnectionString, isRaw: true);
         _initializer = new RunDbInitializer(_factory);
         _repository = new RunRepository(_factory);
+
+        var chatDbFactory = new OpenAnima.Core.ChatPersistence.ChatDbConnectionFactory(
+            "Data Source=:memory:;Busy Timeout=5000");
+        var chatDbInitializer = new OpenAnima.Core.ChatPersistence.ChatDbInitializer(
+            chatDbFactory, new NullLogger<OpenAnima.Core.ChatPersistence.ChatDbInitializer>());
+
         _service = new RunRecoveryService(
             _repository,
             _initializer,
+            chatDbInitializer,
             NullLogger<RunRecoveryService>.Instance);
 
         // Note: EnsureCreatedAsync is called by RunRecoveryService.StartAsync,

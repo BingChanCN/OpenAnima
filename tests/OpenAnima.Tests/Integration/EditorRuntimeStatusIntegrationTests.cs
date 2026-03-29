@@ -4,6 +4,7 @@ using OpenAnima.Contracts.Ports;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Services;
+using OpenAnima.Core.ViewportPersistence;
 using OpenAnima.Core.Wiring;
 
 namespace OpenAnima.Tests.Integration;
@@ -63,11 +64,15 @@ public class EditorRuntimeStatusIntegrationTests
 
     private static EditorStateService CreateEditorState()
     {
+        var viewportService = new ViewportStateService(
+            Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()),
+            new NullLogger<ViewportStateService>());
         return new EditorStateService(
             new TestPortRegistry(),
             new TestConfigurationLoader(),
             new TestAnimaRuntimeManager(),
             new TestAnimaContext(),
+            viewportService,
             NullLogger<EditorStateService>.Instance);
     }
 

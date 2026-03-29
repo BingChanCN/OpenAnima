@@ -3,6 +3,7 @@ using OpenAnima.Contracts.Ports;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Services;
+using OpenAnima.Core.ViewportPersistence;
 using OpenAnima.Core.Wiring;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -18,11 +19,15 @@ public class EditorStateServiceTests
     {
         _portRegistry = new TestPortRegistry();
         _configLoader = new TestConfigurationLoader();
+        var viewportService = new ViewportStateService(
+            Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()),
+            new NullLogger<ViewportStateService>());
         _service = new EditorStateService(
             _portRegistry,
             _configLoader,
             new TestAnimaRuntimeManager(),
             new TestAnimaContext(),
+            viewportService,
             NullLogger<EditorStateService>.Instance
         );
     }
