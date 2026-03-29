@@ -1,11 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenAnima.Core.Artifacts;
+using OpenAnima.Core.ChatPersistence;
 using OpenAnima.Core.Hosting;
 using OpenAnima.Core.Memory;
 using OpenAnima.Core.RunPersistence;
 using OpenAnima.Core.Runs;
 using OpenAnima.Core.Tools;
+using OpenAnima.Core.ViewportPersistence;
 using OpenAnima.Core.Workflows;
 
 namespace OpenAnima.Core.DependencyInjection;
@@ -42,6 +44,26 @@ public static class RunServiceExtensions
         services.AddSingleton(sp => new RunDbInitializer(
             sp.GetRequiredService<RunDbConnectionFactory>(),
             sp.GetRequiredService<ILogger<RunDbInitializer>>()));
+
+        // Chat persistence services
+        var chatDbPath = Path.Combine(dataRoot, "chat.db");
+        services.AddSingleton(provider => new ChatDbConnectionFactory(chatDbPath));
+        services.AddSingleton(provider =>
+        {
+            var factory = provider.GetRequiredService<ChatDbConnectionFactory>();
+            var logger = provider.GetRequiredService<ILogger<ChatDbInitializer>>();
+            return new ChatDbInitializer(factory, logger);
+        });
+
+        // Viewport persistence service
+        var configDirectory = Path.Combine(dataRoot, "configs");
+        Directory.CreateDirectory(configDirectory);
+        services.AddSingleton(provider =>
+        {
+            var logger = provider.GetRequiredService<ILogger<ViewportStateService>>();
+            return new ViewportStateService(configDirectory, logger);
+        });
+
         services.AddSingleton<IRunRepository, RunRepository>();
         services.AddSingleton<IRunService, RunService>();
         services.AddSingleton<IStepRecorder, StepRecorder>();
