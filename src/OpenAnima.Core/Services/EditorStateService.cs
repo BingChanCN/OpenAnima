@@ -1,9 +1,9 @@
 using OpenAnima.Core.Ports;
 using OpenAnima.Core.Wiring;
+using OpenAnima.Core.ViewportPersistence;
 using OpenAnima.Contracts.Ports;
 using OpenAnima.Contracts;
 using OpenAnima.Core.Anima;
-using Microsoft.Extensions.Logging;
 
 namespace OpenAnima.Core.Services;
 
@@ -22,6 +22,7 @@ public class EditorStateService
     private readonly IAnimaRuntimeManager _animaRuntimeManager;
     private readonly IModuleContext _animaContext;
     private readonly ILogger<EditorStateService> _logger;
+    private readonly ViewportStateService _viewportStateService;
     private CancellationTokenSource? _autoSaveDebounce;
 
     public EditorStateService(
@@ -29,12 +30,14 @@ public class EditorStateService
         IConfigurationLoader configLoader,
         IAnimaRuntimeManager animaRuntimeManager,
         IModuleContext animaContext,
+        ViewportStateService viewportStateService,
         ILogger<EditorStateService> logger)
     {
         _portRegistry = portRegistry;
         _configLoader = configLoader;
         _animaRuntimeManager = animaRuntimeManager;
         _animaContext = animaContext;
+        _viewportStateService = viewportStateService ?? throw new ArgumentNullException(nameof(viewportStateService));
         _logger = logger;
     }
     // Canvas transform
@@ -331,6 +334,8 @@ public class EditorStateService
     {
         PanX = panX;
         PanY = panY;
+        // Trigger viewport save with debounce
+        TriggerViewportSave();
         // No NotifyStateChanged — caller (HandleMouseMove) controls render throttling
     }
 
@@ -340,7 +345,21 @@ public class EditorStateService
     public void UpdateScale(double scale)
     {
         Scale = Math.Clamp(scale, 0.1, 3.0);
+        // Trigger viewport save with debounce
+        TriggerViewportSave();
         NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Triggers an async viewport save with debounce to avoid excessive file writes.
+    /// </summary>
+    private void TriggerViewportSave()
+    {
+        var activeId = _animaContext.ActiveAnimaId;
+        if (activeId != null)
+        {
+            _viewportStateService.TriggerSaveViewport(activeId, Scale, PanX, PanY);
+        }
     }
 
     /// <summary>
