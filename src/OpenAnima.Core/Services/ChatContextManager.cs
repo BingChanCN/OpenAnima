@@ -22,6 +22,7 @@ public class ChatContextManager
     private readonly IEventBus _eventBus;
     private readonly ILogger<ChatContextManager> _logger;
     private readonly object _lock = new();
+    private int _llmContextBudget = 4000;
 
     public int TotalInputTokens { get; private set; }
     public int TotalOutputTokens { get; private set; }
@@ -29,6 +30,28 @@ public class ChatContextManager
     public int MaxContextTokens { get; }
 
     public event Action? OnStateChanged;
+
+    /// <summary>
+    /// Gets or sets the token budget for LLM context. Truncation is applied when preparing messages for the LLM.
+    /// Default: 4000 tokens. Valid range: 1000-128000.
+    /// </summary>
+    public int LLMContextBudget
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _llmContextBudget;
+            }
+        }
+        set
+        {
+            lock (_lock)
+            {
+                _llmContextBudget = Math.Clamp(value, 1000, 128000);
+            }
+        }
+    }
 
     public ChatContextManager(
         TokenCounter tokenCounter,
@@ -123,5 +146,48 @@ public class ChatContextManager
     public int CountTokens(string text)
     {
         return _tokenCounter.CountTokens(text);
+    }
+
+    /// <summary>
+    /// Truncates chat history to fit within the LLM context budget.
+    /// Walks from the newest message backward, accumulating token counts until the budget is exceeded.
+    /// Returns messages in chronological order (oldest first after selection).
+    /// Full history is preserved in memory — this truncation is only for LLM consumption.
+    /// </summary>
+    /// <param name="fullHistory">Complete chat history from the UI.</param>
+    /// <returns>Truncated message list that fits within the LLM context budget.</returns>
+    public List<ChatSessionMessage> TruncateHistoryToContextBudget(List<ChatSessionMessage> fullHistory)
+    {
+        lock (_lock)
+        {
+            if (fullHistory.Count == 0)
+                return new();
+
+            int tokensBudget = _llmContextBudget;
+            int tokensUsed = 0;
+            var selectedMessages = new List<ChatSessionMessage>();
+
+            // Walk backward (newest to oldest)
+            for (int i = fullHistory.Count - 1; i >= 0; i--)
+            {
+                var msg = fullHistory[i];
+                int msgTokens = _tokenCounter.CountTokens(msg.Content);
+
+                if (tokensUsed + msgTokens > tokensBudget && selectedMessages.Count > 0)
+                {
+                    // Budget exceeded; keep what we have
+                    break;
+                }
+
+                selectedMessages.Insert(0, msg); // prepend to maintain chronological order
+                tokensUsed += msgTokens;
+            }
+
+            _logger.LogDebug(
+                "Truncated history: {FullCount} → {SelectedCount} messages, {Tokens} tokens",
+                fullHistory.Count, selectedMessages.Count, tokensUsed);
+
+            return selectedMessages;
+        }
     }
 }
