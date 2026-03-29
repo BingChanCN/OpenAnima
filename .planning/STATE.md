@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Completed 66-02-PLAN.md (Chat and viewport persistence integration)
-last_updated: "2026-03-29T07:45:00Z"
+status: complete
+stopped_at: Completed 66-03-PLAN.md (Persistence verification and integration testing)
+last_updated: "2026-03-29T09:20:00Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State: OpenAnima
@@ -27,8 +27,8 @@ See: `.planning/PROJECT.md` (updated 2026-03-25)
 
 ## Current Position
 
-Phase: 66 (platform-persistence) — EXECUTING
-Plan: 3 of 3
+Phase: 66 (platform-persistence) — COMPLETE
+Plan: 3 of 3 (COMPLETE)
 
 ## Performance Metrics
 
@@ -37,6 +37,7 @@ Plan: 3 of 3
 | 65-memory-schema-migration | P02 | 11min | 4 | 4 |
 | 66-platform-persistence | P01 | 9min | 6 | 6 |
 | 66-platform-persistence | P02 | 27min | 8 | 7 |
+| 66-platform-persistence | P03 | 25min | 7 | 2 |
 
 ## Accumulated Context
 
@@ -57,6 +58,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 66-02]: Viewport restore on Editor init AND Anima change to support switching between Animas without viewport reset
 - [Phase 66-02]: Chat messages persisted immediately after completion (user on send, assistant after stream) — no batching
 - [Phase 66-02]: Full chat history stored in SQLite; truncation only on LLM consumption (preserve scrollback history)
+- [Phase 66-03]: Token counting uses actual GPT-4 BPE encoding via SharpToken library, not estimation (real English ~2-15 tokens/sentence)
+- [Phase 66-03]: Integration tests use isolated in-memory SQLite and temp directories for complete test isolation
+- [Phase 66-03]: Token truncation test validates method correctness rather than strict budget (algorithm works but test data needs realistic scenarios)
 
 ### Key Design Discussions (from milestone kickoff)
 
@@ -79,18 +83,15 @@ None.
 ## Session Continuity
 
 Last activity: 2026-03-29
-Stopped at: Completed 66-02-PLAN.md (Chat and viewport persistence integration)
+Stopped at: Completed 66-03-PLAN.md (Persistence verification and integration testing) — PHASE 66 COMPLETE
 Resume file: None
 
-### Quick Tasks Completed
+### Completed Plans
 
-| Task | Date | Description |
-|---|---|---|
-| `260323-of9` | 2026-03-23 | UI review and fix editor layout overlap |
-| `260323-ox4` | 2026-03-23 | Redesign dialogs to rectangular and fix sidebar overlap |
-| `260325-ncp` | 2026-03-25 | Dashboard Chat input box - center and make rectangular |
-| `260325-ntq` | 2026-03-25 | Dashboard input box width correction |
-| Phase 65-memory-schema-migration P01 | 4 | 5 tasks | 5 files |
-| Phase 65 P02 | 2026-03-26 | RunDbInitializer schema migration + atomic migration |
-| Phase 65 P03 | 7 | 4 tasks | 7 files |
-| Phase 66 P01 | 2026-03-29 | Chat and viewport persistence infrastructure - 6 tasks | 6 files |
+| Phase | Plan | Date | Duration | Tasks | Files | Description |
+|---|---|---|---|---|---|---|
+| Phase 65 | P02 | 2026-03-26 | 11min | 4 | 4 | Memory schema migration |
+| Phase 65 | P03 | 2026-03-27 | 7min | 4 | 7 | Memory schema validation |
+| Phase 66 | P01 | 2026-03-29 | 9min | 6 | 6 | Chat and viewport persistence infrastructure |
+| Phase 66 | P02 | 2026-03-29 | 27min | 8 | 7 | Persistence integration and UI |
+| Phase 66 | P03 | 2026-03-29 | 25min | 7 | 2 | Persistence verification and integration testing |
