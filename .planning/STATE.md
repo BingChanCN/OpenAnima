@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0.4
 milestone_name: Intelligent Memory & Persistence
 status: Ready to execute
-stopped_at: Completed 67-03-PLAN.md (Bilingual prompt and OR-split DisclosureMatcher)
-last_updated: "2026-03-29T13:26:30.602Z"
+stopped_at: Completed 67-memory-tools-sedimentation-01-PLAN.md
+last_updated: "2026-03-29T13:27:48.397Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 6
@@ -39,6 +39,7 @@ Plan: 3 of 3
 | 66-platform-persistence | P02 | 27min | 8 | 7 |
 | 66-platform-persistence | P03 | 25min | 7 | 2 |
 | Phase 67-memory-tools-sedimentation P03 | 12min | 2 tasks | 4 files |
+| Phase 67-memory-tools-sedimentation P01 | 13 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 67-03]: Bilingual keywords required when conversation contains Chinese — BOTH Chinese and English forms in keywords field
 - [Phase 67-03]: Disclosure triggers use ' OR ' separator for multi-scenario matching — sedimentation LLM now generates 3+ scenarios per node
 - [Phase 67-03]: 20-message cap applied pre-extraction (last 20) — older messages rarely contain new stable knowledge
+- [Phase 67-01]: Dapper maps INTEGER 0/1 to bool via n.deprecated AS Deprecated alias — no custom type handler needed
+- [Phase 67-01]: GetAllNodesAsync default is includeDeprecated=false; /memory UI passes true for recovery; GetNodeByUuidAsync has no filter (recovery path)
 
 ### Key Design Discussions (from milestone kickoff)
 
@@ -87,7 +90,7 @@ None.
 ## Session Continuity
 
 Last activity: 2026-03-29
-Stopped at: Completed 67-03-PLAN.md (Bilingual prompt and OR-split DisclosureMatcher)
+Stopped at: Completed 67-memory-tools-sedimentation-01-PLAN.md
 Resume file: None
 
 ### Completed Plans

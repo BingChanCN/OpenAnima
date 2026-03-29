@@ -48,9 +48,9 @@ Requirements for Intelligent Memory & Persistence milestone. Each maps to roadma
 
 - [ ] **MEMT-01**: Agent can create new memory nodes via memory_create tool with specified path, content, and keywords
 - [ ] **MEMT-02**: Agent can update existing memory node content via memory_update tool
-- [ ] **MEMT-03**: Agent can soft-delete memory nodes via memory_delete tool (deprecated flag, recoverable from /memory UI)
+- [x] **MEMT-03**: Agent can soft-delete memory nodes via memory_delete tool (deprecated flag, recoverable from /memory UI)
 - [ ] **MEMT-04**: Agent can list memory nodes by prefix via memory_list tool for self-aware memory management
-- [ ] **MEMT-05**: All memory tools publish MemoryOperationPayload events for downstream visibility
+- [x] **MEMT-05**: All memory tools publish MemoryOperationPayload events for downstream visibility
 
 ### Memory Sedimentation
 
@@ -124,9 +124,9 @@ Requirements for Intelligent Memory & Persistence milestone. Each maps to roadma
 | MEMR-09 | Phase 70 | Pending |
 | MEMT-01 | Phase 67 | Pending |
 | MEMT-02 | Phase 67 | Pending |
-| MEMT-03 | Phase 67 | Pending |
+| MEMT-03 | Phase 67 | Complete |
 | MEMT-04 | Phase 67 | Pending |
-| MEMT-05 | Phase 67 | Pending |
+| MEMT-05 | Phase 67 | Complete |
 | MEMS-01 | Phase 67 | Complete |
 | MEMS-02 | Phase 67 | Complete |
 | MEMS-03 | Phase 67 | Complete |
