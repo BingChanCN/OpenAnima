@@ -174,7 +174,7 @@
 **Milestone Goal:** Overhaul the memory system with graph-based architecture, LLM-guided recall, and first-person memory CRUD; fix platform persistence and chat resilience.
 
 - [x] **Phase 65: Memory Schema Migration** - Four-table data model split with atomic migration and SQLite hardening (completed 2026-03-25)
-- [ ] **Phase 66: Platform Persistence** - Wiring layout and chat history survive application restarts
+- [x] **Phase 66: Platform Persistence** - Wiring layout and chat history survive application restarts (2/3 plans complete, P03 TBD)
 - [ ] **Phase 67: Memory Tools & Sedimentation** - First-person memory CRUD tools and improved sedimentation quality
 - [ ] **Phase 68: Memory Visibility** - Memory operations displayed as tool cards and summary chips in chat
 - [ ] **Phase 69: Background Chat Execution** - LLM streaming survives page navigation with buffer replay
@@ -201,8 +201,11 @@
 **Success Criteria** (what must be TRUE):
   1. User restarts the application and the wiring editor opens with the same pan/zoom/scale viewport position as before shutdown — per Anima
   2. User restarts the application and sees previous chat messages in scrollback — per Anima
-  3. Restored chat history feeds only the last N messages (default 10, configurable) to the LLM context, not the full scrollback — preventing context budget explosion
-**Plans**: TBD
+  3. Restored chat history feeds only the last N messages (default 4000 tokens, configurable) to the LLM context, not the full scrollback — preventing context budget explosion
+**Plans**:
+  - [x] P01: Infrastructure (ChatDbConnectionFactory, ChatDbInitializer, ViewportStateService) — 2026-03-29
+  - [x] P02: Integration (ChatHistoryService, chat restore, viewport restore, token budget) — 2026-03-29
+  - [ ] P03: Sedimentation Integration (TBD)
 
 ### Phase 67: Memory Tools & Sedimentation
 **Goal**: Agent can autonomously create, update, soft-delete, and list its own memory nodes with improved bilingual sedimentation quality

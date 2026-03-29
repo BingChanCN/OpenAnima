@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 66-01-PLAN.md (Chat and viewport persistence infrastructure)
-last_updated: "2026-03-29T07:10:36Z"
+stopped_at: Completed 66-02-PLAN.md (Chat and viewport persistence integration)
+last_updated: "2026-03-29T07:45:00Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State: OpenAnima
 
-**Last updated:** 2026-03-25
+**Last updated:** 2026-03-29
 **Current milestone:** v2.0.4 Intelligent Memory & Persistence
 
 ## Project Reference
@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-25)
 ## Current Position
 
 Phase: 66 (platform-persistence) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -36,6 +36,7 @@ Plan: 2 of 3
 |-------|------|----------|-------|-------|
 | 65-memory-schema-migration | P02 | 11min | 4 | 4 |
 | 66-platform-persistence | P01 | 9min | 6 | 6 |
+| 66-platform-persistence | P02 | 27min | 8 | 7 |
 
 ## Accumulated Context
 
@@ -51,6 +52,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 65-02]: MigrateToFourTableModelAsync must run BEFORE SchemaScript (new indexes reference parent_uuid which fails against old table)
 - [Phase 66-01]: Chat and viewport services registered in RunServiceExtensions (not AnimaServiceExtensions) for logical grouping with database factory
 - [Phase 65-02]: Snapshots inserted first (lower IDs), current content inserted last (highest ID) so ORDER BY id DESC LIMIT 1 returns latest version
+- [Phase 66-02]: ChatHistoryService stores full ToolCallInfo objects as JSON (not summaries) to enable Phase 68 memory visibility features
+- [Phase 66-02]: Token budget default 4000 tokens (~20% LLM context, ~20 typical messages) allows recent context without truncation thrashing
+- [Phase 66-02]: Viewport restore on Editor init AND Anima change to support switching between Animas without viewport reset
+- [Phase 66-02]: Chat messages persisted immediately after completion (user on send, assistant after stream) — no batching
+- [Phase 66-02]: Full chat history stored in SQLite; truncation only on LLM consumption (preserve scrollback history)
 
 ### Key Design Discussions (from milestone kickoff)
 
@@ -73,7 +79,7 @@ None.
 ## Session Continuity
 
 Last activity: 2026-03-29
-Stopped at: Completed 66-01-PLAN.md (Chat and viewport persistence infrastructure)
+Stopped at: Completed 66-02-PLAN.md (Chat and viewport persistence integration)
 Resume file: None
 
 ### Quick Tasks Completed
