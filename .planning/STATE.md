@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0.4
 milestone_name: Intelligent Memory & Persistence
-status: Ready to execute
-stopped_at: Completed 67-memory-tools-sedimentation-01-PLAN.md
-last_updated: "2026-03-29T13:27:48.397Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 67-02-PLAN.md
+last_updated: "2026-03-29T13:56:26.111Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State: OpenAnima
@@ -40,6 +40,7 @@ Plan: 3 of 3
 | 66-platform-persistence | P03 | 25min | 7 | 2 |
 | Phase 67-memory-tools-sedimentation P03 | 12min | 2 tasks | 4 files |
 | Phase 67-memory-tools-sedimentation P01 | 13 | 2 tasks | 8 files |
+| Phase 67-memory-tools-sedimentation P02 | 17 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 67-03]: 20-message cap applied pre-extraction (last 20) — older messages rarely contain new stable knowledge
 - [Phase 67-01]: Dapper maps INTEGER 0/1 to bool via n.deprecated AS Deprecated alias — no custom type handler needed
 - [Phase 67-01]: GetAllNodesAsync default is includeDeprecated=false; /memory UI passes true for recovery; GetNodeByUuidAsync has no filter (recovery path)
+- [Phase 67-02]: MemoryCreateTool uses 'path' parameter (not 'uri') matching plan spec — distinct from MemoryUpdateTool which uses 'uri' for existing nodes
+- [Phase 67-02]: MemoryUpdateTool retains existing keywords/disclosureTrigger when optional params not provided — non-destructive partial update semantics
+- [Phase 67-02]: All four memory CRUD tools publish MemoryOperationPayload('create'|'update'|'delete'|'list') for Phase 68 visibility
 
 ### Key Design Discussions (from milestone kickoff)
 
@@ -90,7 +94,7 @@ None.
 ## Session Continuity
 
 Last activity: 2026-03-29
-Stopped at: Completed 67-memory-tools-sedimentation-01-PLAN.md
+Stopped at: Completed 67-02-PLAN.md
 Resume file: None
 
 ### Completed Plans
