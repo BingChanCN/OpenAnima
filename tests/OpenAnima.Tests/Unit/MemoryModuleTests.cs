@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
+using OpenAnima.Contracts;
 using OpenAnima.Core.Memory;
 using OpenAnima.Core.RunPersistence;
 using OpenAnima.Core.Runs;
@@ -36,7 +37,7 @@ public class MemoryModuleTests : IDisposable
 
         _queryTool = new MemoryQueryTool(_graph);
         _writeTool = new MemoryWriteTool(_graph);
-        _deleteTool = new MemoryDeleteTool(_graph);
+        _deleteTool = new MemoryDeleteTool(_graph, new NoOpEventBus());
     }
 
     public void Dispose()
@@ -175,7 +176,7 @@ public class MemoryModuleTests : IDisposable
     // ── MemoryDeleteTool ─────────────────────────────────────────────────────
 
     [Fact]
-    public async Task MemoryDeleteTool_DeletesNode_ReturnsSuccess()
+    public async Task MemoryDeleteTool_SoftDeletesNode_ReturnsSuccess()
     {
         // Arrange: write a node first
         await _graph.WriteNodeAsync(MakeNode("core://todelete/node", "anima-d01"));
@@ -196,9 +197,15 @@ public class MemoryModuleTests : IDisposable
         Assert.True(result.Success, $"Expected success but got: {result.Data}");
         Assert.Equal("memory_delete", result.Tool);
 
-        // Verify node is gone
-        var gone = await _graph.GetNodeAsync("anima-d01", "core://todelete/node");
-        Assert.Null(gone);
+        // Soft-delete: node should NOT appear in regular prefix queries (deprecated=0 filter)
+        var activeNodes = await _graph.QueryByPrefixAsync("anima-d01", "core://todelete/");
+        Assert.Empty(activeNodes);
+
+        // But node IS still visible when includeDeprecated=true
+        var allNodes = await _graph.GetAllNodesAsync("anima-d01", includeDeprecated: true);
+        var deletedNode = allNodes.FirstOrDefault(n => n.Uri == "core://todelete/node");
+        Assert.NotNull(deletedNode);
+        Assert.True(deletedNode.Deprecated);
     }
 
     [Fact]
@@ -323,5 +330,30 @@ public class MemoryModuleTests : IDisposable
         {
             return Task.CompletedTask;
         }
+    }
+
+    /// <summary>No-op IEventBus for tests that don't need event verification.</summary>
+    private sealed class NoOpEventBus : IEventBus
+    {
+        public Task PublishAsync<TPayload>(ModuleEvent<TPayload> evt, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task<TResponse> SendAsync<TResponse>(string targetModuleId, object request, CancellationToken ct = default)
+            => Task.FromResult(default(TResponse)!);
+
+        public IDisposable Subscribe<TPayload>(
+            string eventName,
+            Func<ModuleEvent<TPayload>, CancellationToken, Task> handler,
+            Func<ModuleEvent<TPayload>, bool>? filter = null) => NullDisposable2.Instance;
+
+        public IDisposable Subscribe<TPayload>(
+            Func<ModuleEvent<TPayload>, CancellationToken, Task> handler,
+            Func<ModuleEvent<TPayload>, bool>? filter = null) => NullDisposable2.Instance;
+    }
+
+    private sealed class NullDisposable2 : IDisposable
+    {
+        public static readonly NullDisposable2 Instance = new();
+        public void Dispose() { }
     }
 }

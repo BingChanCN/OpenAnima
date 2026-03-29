@@ -86,9 +86,10 @@ public static class RunServiceExtensions
         services.AddSingleton<IMemoryRecallService, MemoryRecallService>();
 
         // Memory workspace tools (picked up by WorkspaceToolModule via IEnumerable<IWorkspaceTool>)
-        services.AddSingleton<IWorkspaceTool, MemoryQueryTool>();
-        services.AddSingleton<IWorkspaceTool, MemoryWriteTool>();
+        services.AddSingleton<IWorkspaceTool, MemoryCreateTool>();
+        services.AddSingleton<IWorkspaceTool, MemoryUpdateTool>();
         services.AddSingleton<IWorkspaceTool, MemoryDeleteTool>();
+        services.AddSingleton<IWorkspaceTool, MemoryListTool>();
         services.AddSingleton<IWorkspaceTool, MemoryRecallTool>();
         services.AddSingleton<IWorkspaceTool, MemoryLinkTool>();
 
