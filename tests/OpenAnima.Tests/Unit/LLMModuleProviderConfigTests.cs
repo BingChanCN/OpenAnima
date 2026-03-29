@@ -29,14 +29,16 @@ public class FakeLLMService : ILLMService
     }
 
     public async IAsyncEnumerable<string> StreamAsync(
-        IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+        IReadOnlyList<ChatMessageInput> messages,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
         await Task.CompletedTask;
         yield break;
     }
 
     public async IAsyncEnumerable<StreamingResult> StreamWithUsageAsync(
-        IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+        IReadOnlyList<ChatMessageInput> messages,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
         await Task.CompletedTask;
         yield break;
@@ -44,10 +46,10 @@ public class FakeLLMService : ILLMService
 }
 
 /// <summary>
-/// In-memory IAnimaModuleConfigService backed by a dict.
+/// In-memory IModuleConfigStore backed by a dict.
 /// Implements the SetConfigAsync(animaId, moduleId, dict) overload for auto-clear verification.
 /// </summary>
-public class FakeAnimaModuleConfigService : IAnimaModuleConfigService
+public class FakeAnimaModuleConfigService : IModuleConfigStore
 {
     // animaId -> moduleId -> config
     private readonly Dictionary<string, Dictionary<string, Dictionary<string, string>>> _store = new();
@@ -89,7 +91,7 @@ public class FakeModuleContext : IModuleContext
 {
     public FakeModuleContext(string animaId) => ActiveAnimaId = animaId;
     public string ActiveAnimaId { get; }
-    public event Action? ActiveAnimaChanged;
+    public event Action? ActiveAnimaChanged { add { } remove { } }
 }
 
 /// <summary>

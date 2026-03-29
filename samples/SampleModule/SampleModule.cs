@@ -5,12 +5,11 @@ namespace SampleModule;
 /// <summary>
 /// A sample module demonstrating the plugin system with event bus and heartbeat.
 /// </summary>
-public class SampleModule : IModule, ITickable
+public class SampleModule : IModule
 {
     public IModuleMetadata Metadata { get; } = new SampleModuleMetadata();
 
     private IEventBus? _eventBus;
-    private long _tickCount;
     private IDisposable? _subscription;
 
     // EventBus injected by host after loading
@@ -45,31 +44,6 @@ public class SampleModule : IModule, ITickable
         Console.WriteLine("SampleModule shutting down");
         _subscription?.Dispose();
         return Task.CompletedTask;
-    }
-
-    public async Task TickAsync(CancellationToken ct = default)
-    {
-        _tickCount++;
-
-        // Debug: show that tick is being called
-        if (_tickCount == 1 || _tickCount % 10 == 0)
-        {
-            Console.WriteLine($"[SampleModule] Tick #{_tickCount}");
-        }
-
-        // Publish heartbeat event every 10th tick to avoid spam
-        if (_tickCount % 10 == 0 && EventBus != null)
-        {
-            var evt = new ModuleEvent<string>
-            {
-                EventName = "SampleHeartbeat",
-                SourceModuleId = Metadata.Name,
-                Payload = $"Heartbeat #{_tickCount}"
-            };
-
-            await EventBus.PublishAsync(evt, ct);
-            Console.WriteLine($"[SampleModule] Published heartbeat event #{_tickCount}");
-        }
     }
 
     /// <summary>

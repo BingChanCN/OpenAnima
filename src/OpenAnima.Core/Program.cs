@@ -87,7 +87,7 @@ builder.Services.AddHostedService<AnimaInitializationService>();
 builder.Services.AddHostedService<OpenAnimaHostedService>();
 
 // --- Register i18n services ---
-builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.AddLocalization();
 builder.Services.AddSingleton<LanguageService>();
 
 // --- Add Blazor Server ---

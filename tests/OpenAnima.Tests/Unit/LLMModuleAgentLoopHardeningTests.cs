@@ -124,14 +124,16 @@ public class LLMModuleAgentLoopHardeningTests
         }
 
         public async IAsyncEnumerable<string> StreamAsync(
-            IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+            IReadOnlyList<ChatMessageInput> messages,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             await Task.CompletedTask;
             yield break;
         }
 
         public async IAsyncEnumerable<StreamingResult> StreamWithUsageAsync(
-            IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+            IReadOnlyList<ChatMessageInput> messages,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             await Task.CompletedTask;
             yield break;
@@ -139,9 +141,9 @@ public class LLMModuleAgentLoopHardeningTests
     }
 
     /// <summary>
-    /// IAnimaModuleConfigService that seeds agentEnabled, agentMaxIterations, and optional agentContextWindowSize.
+    /// IModuleConfigStore that seeds agentEnabled, agentMaxIterations, and optional agentContextWindowSize.
     /// </summary>
-    private class AgentConfigService : IAnimaModuleConfigService
+    private class AgentConfigService : IModuleConfigStore
     {
         private readonly Dictionary<string, string> _config;
 
@@ -294,7 +296,7 @@ public class LLMModuleAgentLoopHardeningTests
         SpyStepRecorder stepRecorder, SpySedimentationService sedimentationService)
         CreateHardeningModule(
             SequenceLlmService llmService,
-            IAnimaModuleConfigService configService,
+            IModuleConfigStore configService,
             SpyStepRecorder? stepRecorder = null,
             SpySedimentationService? sedimentationService = null,
             IWorkspaceTool[]? tools = null,

@@ -3,10 +3,10 @@ using OpenAnima.Core.Services;
 namespace OpenAnima.Tests.TestHelpers;
 
 /// <summary>
-/// Null implementation of IAnimaModuleConfigService for tests that don't need module config.
+/// Null implementation of IModuleConfigStore for tests that don't need module config.
 /// Always returns an empty configuration dictionary.
 /// </summary>
-public class NullAnimaModuleConfigService : IAnimaModuleConfigService
+public class NullAnimaModuleConfigService : IModuleConfigStore
 {
     public static readonly NullAnimaModuleConfigService Instance = new();
 

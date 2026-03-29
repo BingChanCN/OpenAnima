@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
+using OpenAnima.Contracts;
 using OpenAnima.Core.Hubs;
 using OpenAnima.Core.Modules;
 using OpenAnima.Core.Ports;
@@ -23,12 +24,13 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
     private readonly string _animasRoot;
     private readonly ILogger<AnimaRuntimeManager> _logger;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly IAnimaContext _animaContext;
+    private readonly IActiveAnimaContext _animaContext;
     private readonly IHubContext<RuntimeHub, IRuntimeClient>? _hubContext;
     private readonly ICrossAnimaRouter? _router;
     private readonly ChatInputModule? _chatInputModule;
     private readonly IStepRecorder? _stepRecorder;
     private readonly IPortRegistry? _portRegistry;
+    private readonly IEventBus? _wiringEventBus;
     private readonly Dictionary<string, AnimaDescriptor> _animas = new();
     private readonly Dictionary<string, AnimaRuntime> _runtimes = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -40,12 +42,13 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
         string animasRoot,
         ILogger<AnimaRuntimeManager> logger,
         ILoggerFactory loggerFactory,
-        IAnimaContext animaContext,
+        IActiveAnimaContext animaContext,
         IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null,
         ICrossAnimaRouter? router = null,
         ChatInputModule? chatInputModule = null,
         IStepRecorder? stepRecorder = null,
-        IPortRegistry? portRegistry = null)
+        IPortRegistry? portRegistry = null,
+        IEventBus? wiringEventBus = null)
     {
         _animasRoot = animasRoot;
         _logger = logger;
@@ -56,6 +59,7 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
         _chatInputModule = chatInputModule;
         _stepRecorder = stepRecorder;
         _portRegistry = portRegistry;
+        _wiringEventBus = wiringEventBus;
         Directory.CreateDirectory(_animasRoot);
     }
 
@@ -235,7 +239,7 @@ public class AnimaRuntimeManager : IAnimaRuntimeManager, IDisposable
         if (_runtimes.TryGetValue(animaId, out var existing))
             return existing;
 
-        var runtime = new AnimaRuntime(animaId, _loggerFactory, _hubContext, _stepRecorder, _portRegistry);
+        var runtime = new AnimaRuntime(animaId, _loggerFactory, _hubContext, _stepRecorder, _portRegistry, _wiringEventBus);
         _runtimes[animaId] = runtime;
 
         // Wire ChatInputModule to route through this runtime's chat channel

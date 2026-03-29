@@ -387,6 +387,7 @@ public class ContractsApiTests
     [Fact]
     public void DI_IModuleContext_And_IAnimaContext_Resolve_To_Same_Instance()
     {
+#pragma warning disable CS0618
         var services = new ServiceCollection();
         services.AddSingleton<AnimaContext>();
         services.AddSingleton<IModuleContext>(sp => sp.GetRequiredService<AnimaContext>());
@@ -399,11 +400,13 @@ public class ContractsApiTests
 
         // Same underlying singleton instance — same reference
         Assert.Same(asModuleContext, asAnimaContext);
+#pragma warning restore CS0618
     }
 
     [Fact]
     public async Task DI_IModuleConfig_And_IAnimaModuleConfigService_Resolve_To_Same_Instance()
     {
+#pragma warning disable CS0618
         var tempDir = Path.Combine(Path.GetTempPath(), $"contracts-api-di-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
@@ -426,6 +429,7 @@ public class ContractsApiTests
         {
             Directory.Delete(tempDir, recursive: true);
         }
+#pragma warning restore CS0618
     }
 
     // -----------------------------------------------------------------------

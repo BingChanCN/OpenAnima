@@ -83,17 +83,17 @@ public class ModuleRuntimeInitializationTests : IDisposable
         // Register the real config/context/router/runtime surfaces that built-in modules now require.
         var animasRoot = Path.Combine(_tempDataRoot, "animas");
         services.AddSingleton<AnimaContext>();
-        services.AddSingleton<IModuleContext>(sp => sp.GetRequiredService<AnimaContext>());
-        services.AddSingleton<IAnimaContext>(sp => sp.GetRequiredService<AnimaContext>());
+        services.AddSingleton<IActiveAnimaContext>(sp => sp.GetRequiredService<AnimaContext>());
+        services.AddSingleton<IModuleContext>(sp => sp.GetRequiredService<IActiveAnimaContext>());
         services.AddSingleton<AnimaModuleConfigService>(_ => new AnimaModuleConfigService(animasRoot));
-        services.AddSingleton<IModuleConfig>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
-        services.AddSingleton<IAnimaModuleConfigService>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
+        services.AddSingleton<IModuleConfigStore>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
+        services.AddSingleton<IModuleConfig>(sp => sp.GetRequiredService<IModuleConfigStore>());
         services.AddSingleton<IAnimaRuntimeManager>(sp =>
             new AnimaRuntimeManager(
                 animasRoot,
                 sp.GetRequiredService<ILogger<AnimaRuntimeManager>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
-                sp.GetRequiredService<IAnimaContext>()));
+                sp.GetRequiredService<IActiveAnimaContext>()));
         services.AddSingleton<ICrossAnimaRouter>(sp =>
             new CrossAnimaRouter(
                 sp.GetRequiredService<ILogger<CrossAnimaRouter>>(),

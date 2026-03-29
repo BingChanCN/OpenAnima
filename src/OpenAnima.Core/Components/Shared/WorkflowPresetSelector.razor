@@ -1,11 +1,12 @@
 @using OpenAnima.Core.Workflows
+@inject IStringLocalizer<SharedResources> L
 
 <div class="form-field">
-    <label for="launch-preset">Workflow Template</label>
+    <label for="launch-preset">@L["WorkflowPreset.Label"]</label>
     <select id="launch-preset"
             @onchange="HandleChange"
             style="width: 100%; padding: 8px 16px; background: var(--surface-dark); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 14px; font-family: var(--font-family);">
-        <option value="">None — manual wiring</option>
+        <option value="">@L["WorkflowPreset.NoneManual"]</option>
         @foreach (var preset in Presets)
         {
             <option value="@preset.Name">@preset.DisplayName</option>
@@ -40,8 +41,8 @@
     {
         return presetName switch
         {
-            "preset-codebase-analysis" => "Scans workspace, runs 4 parallel LLM analysis branches, synthesizes a Markdown report.",
-            _ => "Workflow template"
+            "preset-codebase-analysis" => L["WorkflowPreset.CodebaseAnalysisDescription"],
+            _ => L["WorkflowPreset.DefaultDescription"]
         };
     }
 }

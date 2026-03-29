@@ -44,14 +44,16 @@ public class LLMModuleAgentLoopTests
         }
 
         public async IAsyncEnumerable<string> StreamAsync(
-            IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+            IReadOnlyList<ChatMessageInput> messages,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             await Task.CompletedTask;
             yield break;
         }
 
         public async IAsyncEnumerable<StreamingResult> StreamWithUsageAsync(
-            IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+            IReadOnlyList<ChatMessageInput> messages,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             await Task.CompletedTask;
             yield break;
@@ -59,9 +61,9 @@ public class LLMModuleAgentLoopTests
     }
 
     /// <summary>
-    /// IAnimaModuleConfigService that seeds agentEnabled and agentMaxIterations.
+    /// IModuleConfigStore that seeds agentEnabled and agentMaxIterations.
     /// </summary>
-    private class AgentConfigService : IAnimaModuleConfigService
+    private class AgentConfigService : IModuleConfigStore
     {
         private readonly Dictionary<string, string> _config;
 
@@ -105,7 +107,7 @@ public class LLMModuleAgentLoopTests
             string workspaceRoot,
             IReadOnlyDictionary<string, string> parameters,
             CancellationToken ct = default)
-            => Task.FromResult(ToolResult.Ok(_resultData, null, new ToolResultMetadata()));
+            => Task.FromResult(ToolResult.Ok(Descriptor.Name, _resultData, new ToolResultMetadata()));
     }
 
     /// <summary>
@@ -166,7 +168,7 @@ public class LLMModuleAgentLoopTests
     /// </summary>
     private static (LLMModule module, SequenceLlmService spy, EventBus bus) CreateAgentModule(
         SequenceLlmService llmService,
-        IAnimaModuleConfigService configService,
+        IModuleConfigStore configService,
         IWorkspaceTool[]? tools = null)
     {
         tools ??= new IWorkspaceTool[]
@@ -491,7 +493,6 @@ public class LLMModuleAgentLoopTests
     {
         // Arrange: CancellationTokenSource that we cancel after the first LLM call
         var cts = new CancellationTokenSource();
-        var callCount = 0;
 
         // We need a custom LLM service that cancels after the first call
         // Since SequenceLlmService checks ct.ThrowIfCancellationRequested(), we cancel before the 2nd call

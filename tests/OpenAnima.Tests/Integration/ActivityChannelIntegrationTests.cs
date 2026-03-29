@@ -41,15 +41,12 @@ public class ActivityChannelIntegrationTests : IAsyncDisposable
     // ── AnimaRuntime helpers ─────────────────────────────────────────────────
 
     private AnimaRuntime? _runtime;
-    private AnimaRuntime? _runtime2;
-
     private AnimaRuntime CreateRuntime(string animaId = "test-anima") =>
         new AnimaRuntime(animaId, NullLoggerFactory.Instance, hubContext: null);
 
     public async ValueTask DisposeAsync()
     {
         if (_runtime != null) await _runtime.DisposeAsync();
-        if (_runtime2 != null) await _runtime2.DisposeAsync();
     }
 
     // ── Test 1: AnimaRuntime exposes ActivityChannelHost property ────────────

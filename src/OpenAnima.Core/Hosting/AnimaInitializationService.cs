@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OpenAnima.Contracts;
 using OpenAnima.Core.Anima;
+using OpenAnima.Core.Providers;
 using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.Hosting;
@@ -13,22 +15,25 @@ namespace OpenAnima.Core.Hosting;
 public class AnimaInitializationService : IHostedService
 {
     private readonly IAnimaRuntimeManager _animaManager;
-    private readonly IAnimaContext _animaContext;
+    private readonly IActiveAnimaContext _animaContext;
     private readonly IAnimaModuleStateService _moduleStateService;
-    private readonly IAnimaModuleConfigService _moduleConfigService;
+    private readonly IModuleConfigStore _moduleConfigService;
+    private readonly LLMProviderRegistryService _providerRegistry;
     private readonly ILogger<AnimaInitializationService> _logger;
 
     public AnimaInitializationService(
         IAnimaRuntimeManager animaManager,
-        IAnimaContext animaContext,
+        IActiveAnimaContext animaContext,
         IAnimaModuleStateService moduleStateService,
-        IAnimaModuleConfigService moduleConfigService,
+        IModuleConfigStore moduleConfigService,
+        LLMProviderRegistryService providerRegistry,
         ILogger<AnimaInitializationService> logger)
     {
         _animaManager = animaManager;
         _animaContext = animaContext;
         _moduleStateService = moduleStateService;
         _moduleConfigService = moduleConfigService;
+        _providerRegistry = providerRegistry;
         _logger = logger;
     }
 
@@ -36,6 +41,7 @@ public class AnimaInitializationService : IHostedService
     {
         _logger.LogInformation("Initializing Anima runtime...");
 
+        await _providerRegistry.InitializeAsync();
         await _animaManager.InitializeAsync(ct);
         await _moduleStateService.InitializeAsync();
         await _moduleConfigService.InitializeAsync();

@@ -81,8 +81,8 @@ public class PropagationEngineTests
 
         // Assert — B receives the data within 5s
         var completed = await Task.WhenAny(receivedTcs.Task, Task.Delay(5000));
-        Assert.True(receivedTcs.Task.IsCompleted, "ModuleB did not receive data within timeout");
-        Assert.Equal("hello", receivedTcs.Task.Result);
+        Assert.Same(receivedTcs.Task, completed);
+        Assert.Equal("hello", await receivedTcs.Task);
     }
 
     /// <summary>
@@ -136,15 +136,13 @@ public class PropagationEngineTests
         });
 
         // Assert — both B and C receive the data
-        await Task.WhenAll(
-            Task.WhenAny(receivedByB.Task, Task.Delay(5000)),
-            Task.WhenAny(receivedByC.Task, Task.Delay(5000))
-        );
+        var completedByB = await Task.WhenAny(receivedByB.Task, Task.Delay(5000));
+        var completedByC = await Task.WhenAny(receivedByC.Task, Task.Delay(5000));
 
-        Assert.True(receivedByB.Task.IsCompleted, "ModuleB did not receive fan-out data within timeout");
-        Assert.True(receivedByC.Task.IsCompleted, "ModuleC did not receive fan-out data within timeout");
-        Assert.Equal("broadcast", receivedByB.Task.Result);
-        Assert.Equal("broadcast", receivedByC.Task.Result);
+        Assert.Same(receivedByB.Task, completedByB);
+        Assert.Same(receivedByC.Task, completedByC);
+        Assert.Equal("broadcast", await receivedByB.Task);
+        Assert.Equal("broadcast", await receivedByC.Task);
     }
 
     /// <summary>
@@ -193,8 +191,8 @@ public class PropagationEngineTests
         });
 
         var completed = await Task.WhenAny(receivedByB.Task, Task.Delay(5000));
-        Assert.True(receivedByB.Task.IsCompleted, "ModuleB did not receive data in cyclic graph within timeout");
-        Assert.Equal("cycle-test", receivedByB.Task.Result);
+        Assert.Same(receivedByB.Task, completed);
+        Assert.Equal("cycle-test", await receivedByB.Task);
     }
 
     /// <summary>
@@ -252,8 +250,8 @@ public class PropagationEngineTests
 
         // Assert — B receives the data
         var bCompleted = await Task.WhenAny(receivedByB.Task, Task.Delay(5000));
-        Assert.True(receivedByB.Task.IsCompleted, "ModuleB did not receive data within timeout");
-        Assert.Equal("stop-here", receivedByB.Task.Result);
+        Assert.Same(receivedByB.Task, bCompleted);
+        Assert.Equal("stop-here", await receivedByB.Task);
 
         // Assert — C does NOT receive anything (propagation stopped at B)
         var cCompleted = await Task.WhenAny(receivedByC.Task, Task.Delay(1000));

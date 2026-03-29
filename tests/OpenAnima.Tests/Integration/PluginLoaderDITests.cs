@@ -237,7 +237,7 @@ public class PluginLoaderDITests : IDisposable
     private class FakeModuleContext : IModuleContext
     {
         public string ActiveAnimaId => "test-anima-id";
-        public event Action? ActiveAnimaChanged;
+        public event Action? ActiveAnimaChanged { add { } remove { } }
     }
 
     private class FakeEventBus : IEventBus

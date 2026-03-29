@@ -17,7 +17,7 @@
 }
 else if (_run == null)
 {
-    <p>Loading...</p>
+    <p>@L["RunDetail.Loading"]</p>
 }
 else
 {
@@ -39,11 +39,11 @@ else
             <div class="run-budgets">
                 @if (_run.MaxSteps.HasValue)
                 {
-                    <BudgetIndicator Current="@_steps.Count" Max="@_run.MaxSteps" Label="steps" />
+                    <BudgetIndicator Current="@_steps.Count" Max="@_run.MaxSteps" Label="@L["RunDetail.BudgetSteps"]" />
                 }
                 @if (_run.MaxWallSeconds.HasValue)
                 {
-                    <BudgetIndicator Current="@_wallSecondsElapsed" Max="@_run.MaxWallSeconds" Label="seconds" />
+                    <BudgetIndicator Current="@_wallSecondsElapsed" Max="@_run.MaxWallSeconds" Label="@L["RunDetail.BudgetSeconds"]" />
                 }
             </div>
         }

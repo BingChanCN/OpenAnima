@@ -36,14 +36,16 @@ public class LLMModuleToolInjectionTests
         }
 
         public async IAsyncEnumerable<string> StreamAsync(
-            IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+            IReadOnlyList<ChatMessageInput> messages,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             await Task.CompletedTask;
             yield break;
         }
 
         public async IAsyncEnumerable<StreamingResult> StreamWithUsageAsync(
-            IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+            IReadOnlyList<ChatMessageInput> messages,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             await Task.CompletedTask;
             yield break;
@@ -68,7 +70,7 @@ public class LLMModuleToolInjectionTests
             string workspaceRoot,
             IReadOnlyDictionary<string, string> parameters,
             CancellationToken ct = default)
-            => Task.FromResult(ToolResult.Ok("fake", null, new ToolResultMetadata()));
+            => Task.FromResult(ToolResult.Ok(Descriptor.Name, "fake", new ToolResultMetadata()));
     }
 
     /// <summary>

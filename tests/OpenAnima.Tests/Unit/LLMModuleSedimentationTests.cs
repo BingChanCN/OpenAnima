@@ -112,9 +112,7 @@ public class LLMModuleSedimentationTests : IDisposable
         await Task.Delay(50);
 
         // Assert: SedimentAsync was called exactly once
-        Assert.Equal(1, fakeSedimentation.Calls.Count);
-
-        var call = fakeSedimentation.Calls[0];
+        var call = Assert.Single(fakeSedimentation.Calls);
         Assert.Equal(TestAnimaId, call.AnimaId);
         Assert.Equal(expectedResponse, call.Response);
 
@@ -139,8 +137,8 @@ public class LLMModuleSedimentationTests : IDisposable
         await Task.Delay(50);
 
         // Assert: the token received by SedimentAsync is CancellationToken.None
-        Assert.Equal(1, fakeSedimentation.Calls.Count);
-        Assert.Equal(CancellationToken.None, fakeSedimentation.Calls[0].CancellationToken);
+        var call = Assert.Single(fakeSedimentation.Calls);
+        Assert.Equal(CancellationToken.None, call.CancellationToken);
     }
 
     // ── Test 4: Exception in SedimentAsync does not propagate to caller ───────
@@ -218,14 +216,16 @@ internal class SedimentationTestLLMService : ILLMService
         => Task.FromResult(new LLMResult(true, _response, null));
 
     public async IAsyncEnumerable<string> StreamAsync(
-        IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+        IReadOnlyList<ChatMessageInput> messages,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
         await Task.CompletedTask;
         yield break;
     }
 
     public async IAsyncEnumerable<StreamingResult> StreamWithUsageAsync(
-        IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+        IReadOnlyList<ChatMessageInput> messages,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
         await Task.CompletedTask;
         yield break;
@@ -239,7 +239,7 @@ internal class SedimentationFakeModuleContext : IModuleContext
 {
     public SedimentationFakeModuleContext(string animaId) => ActiveAnimaId = animaId;
     public string ActiveAnimaId { get; }
-    public event Action? ActiveAnimaChanged;
+    public event Action? ActiveAnimaChanged { add { } remove { } }
 }
 
 /// <summary>

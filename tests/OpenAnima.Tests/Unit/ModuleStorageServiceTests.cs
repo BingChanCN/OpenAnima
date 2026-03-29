@@ -171,6 +171,6 @@ public class ModuleStorageServiceTests : IDisposable
     private class FakeModuleContext : IModuleContext
     {
         public string ActiveAnimaId { get; set; } = "";
-        public event Action? ActiveAnimaChanged;
+        public event Action? ActiveAnimaChanged { add { } remove { } }
     }
 }

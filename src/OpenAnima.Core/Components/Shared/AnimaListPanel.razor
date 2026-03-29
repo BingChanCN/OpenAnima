@@ -1,7 +1,7 @@
 @using OpenAnima.Core.Anima
 @implements IAsyncDisposable
 @inject IAnimaRuntimeManager AnimaManager
-@inject IAnimaContext AnimaContext
+@inject IActiveAnimaContext AnimaContext
 @inject IStringLocalizer<SharedResources> L
 @inject LanguageService LangSvc
 
@@ -9,7 +9,7 @@
     @if (!SidebarCollapsed)
     {
         <div class="anima-list-header">
-            <span class="anima-list-title">Animas</span>
+            <span class="anima-list-title">@L["Anima.ListTitle"]</span>
             <button class="add-anima-btn" @onclick="OpenCreateDialog" title="@L["Anima.Create"]">+</button>
         </div>
     }

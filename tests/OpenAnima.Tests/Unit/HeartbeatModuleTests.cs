@@ -43,8 +43,8 @@ public class HeartbeatModuleTests
 
         // Assert
         var completed = await Task.WhenAny(tickTcs.Task, Task.Delay(1000));
-        Assert.True(tickTcs.Task.IsCompleted, "TickAsync did not publish to tick port within 1s");
-        Assert.NotEqual(default, tickTcs.Task.Result);
+        Assert.Same(tickTcs.Task, completed);
+        Assert.NotEqual(default, await tickTcs.Task);
     }
 
     /// <summary>
@@ -188,6 +188,6 @@ public class HeartbeatModuleTests
     {
         public TestModuleContext(string animaId) => ActiveAnimaId = animaId;
         public string ActiveAnimaId { get; }
-        public event Action? ActiveAnimaChanged;
+        public event Action? ActiveAnimaChanged { add { } remove { } }
     }
 }

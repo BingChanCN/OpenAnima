@@ -1,5 +1,6 @@
 @using OpenAnima.Core.Runs
 @inject NavigationManager NavigationManager
+@inject IStringLocalizer<SharedResources> L
 
 <div class="run-card" role="link" @onclick="NavigateToDetail" style="cursor: pointer;">
     <div class="run-card-header">
@@ -9,36 +10,36 @@
     </div>
     <div class="run-card-meta">
         <span class="run-card-timestamp">@Run.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss") UTC</span>
-        <span class="run-card-steps">@StepCount steps</span>
+        <span class="run-card-steps">@L["RunCard.StepCount", StepCount]</span>
         <div class="run-card-actions">
             @if (Run.CurrentState == RunState.Running)
             {
                 <button class="btn btn-secondary btn-sm"
-                        aria-label="Pause run @Run.RunId"
+                        aria-label="@L["RunCard.PauseAria", Run.RunId]"
                         @onclick:stopPropagation="true"
                         @onclick="() => OnPause.InvokeAsync(Run.RunId)">
-                    Pause Run
+                    @L["RunCard.Pause"]
                 </button>
                 <button class="btn btn-danger btn-sm"
-                        aria-label="Cancel run @Run.RunId"
+                        aria-label="@L["RunCard.CancelAria", Run.RunId]"
                         @onclick:stopPropagation="true"
                         @onclick="() => OnCancel.InvokeAsync(Run.RunId)">
-                    Cancel Run
+                    @L["RunCard.Cancel"]
                 </button>
             }
             else if (Run.CurrentState == RunState.Paused || Run.CurrentState == RunState.Interrupted)
             {
                 <button class="btn btn-primary btn-sm"
-                        aria-label="Resume run @Run.RunId"
+                        aria-label="@L["RunCard.ResumeAria", Run.RunId]"
                         @onclick:stopPropagation="true"
                         @onclick="() => OnResume.InvokeAsync(Run.RunId)">
-                    Resume Run
+                    @L["RunCard.Resume"]
                 </button>
                 <button class="btn btn-danger btn-sm"
-                        aria-label="Cancel run @Run.RunId"
+                        aria-label="@L["RunCard.CancelAria", Run.RunId]"
                         @onclick:stopPropagation="true"
                         @onclick="() => OnCancel.InvokeAsync(Run.RunId)">
-                    Cancel Run
+                    @L["RunCard.Cancel"]
                 </button>
             }
         </div>
@@ -56,7 +57,7 @@
 
     @if (Run.MaxSteps.HasValue)
     {
-        <BudgetIndicator Current="@StepCount" Max="@Run.MaxSteps" Label="steps" />
+        <BudgetIndicator Current="@StepCount" Max="@Run.MaxSteps" Label="@L["RunDetail.BudgetSteps"]" />
     }
 </div>
 

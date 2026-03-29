@@ -86,6 +86,38 @@ public class ModuleTests
         await module.ShutdownAsync();
     }
 
+    [Fact]
+    public async Task LLMModule_WhenLlmServiceReturnsFailure_PublishesErrorPort()
+    {
+        // Arrange
+        var eventBus = CreateEventBus();
+        var mockLlm = new FakeLLMService(error: "Invalid API key. Check your LLM configuration.");
+        var module = new LLMModule(mockLlm, eventBus, NullLogger<LLMModule>.Instance,
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
+        await module.InitializeAsync();
+
+        var errorTcs = new TaskCompletionSource<string>();
+        eventBus.Subscribe<string>(
+            "LLMModule.port.error",
+            (evt, ct) => { errorTcs.TrySetResult(evt.Payload); return Task.CompletedTask; });
+
+        // Act
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "LLMModule.port.prompt",
+            SourceModuleId = "test",
+            Payload = "Hello"
+        });
+
+        // Assert
+        var error = await WaitWithTimeout(errorTcs.Task, TimeSpan.FromSeconds(5));
+        Assert.Equal("Invalid API key. Check your LLM configuration.", error);
+        Assert.Equal(ModuleExecutionState.Completed, module.GetState());
+
+        await module.ShutdownAsync();
+    }
+
     #endregion
 
     #region ChatInputModule Tests
@@ -192,17 +224,21 @@ public class ModuleTests
     {
         private readonly string? _response;
         private readonly bool _throwError;
+        private readonly string? _error;
 
-        public FakeLLMService(string? response = null, bool throwError = false)
+        public FakeLLMService(string? response = null, bool throwError = false, string? error = null)
         {
             _response = response;
             _throwError = throwError;
+            _error = error;
         }
 
         public Task<LLMResult> CompleteAsync(IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
         {
             if (_throwError)
                 throw new InvalidOperationException("LLM service error");
+            if (_error != null)
+                return Task.FromResult(new LLMResult(false, null, _error));
             return Task.FromResult(new LLMResult(true, _response, null));
         }
 

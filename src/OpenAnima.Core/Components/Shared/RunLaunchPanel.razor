@@ -1,14 +1,15 @@
 @using OpenAnima.Core.Workflows
+@inject IStringLocalizer<SharedResources> L
 
 <div class="launch-panel">
     <fieldset>
-        <legend>New Run</legend>
+        <legend>@L["RunLaunch.NewRun"]</legend>
 
         <div class="form-field">
-            <label for="launch-objective">Objective</label>
+            <label for="launch-objective">@L["RunLaunch.Objective"]</label>
             <input id="launch-objective"
                    type="text"
-                   placeholder="Describe what this run should accomplish"
+                   placeholder="@L["RunLaunch.ObjectivePlaceholder"]"
                    @bind="_objective"
                    @bind:event="oninput" />
             @if (_objectiveError != null)
@@ -18,10 +19,10 @@
         </div>
 
         <div class="form-field">
-            <label for="launch-workspace">Workspace Root</label>
+            <label for="launch-workspace">@L["RunLaunch.WorkspaceRoot"]</label>
             <input id="launch-workspace"
                    type="text"
-                   placeholder="/path/to/repository"
+                   placeholder="@L["RunLaunch.WorkspacePlaceholder"]"
                    @bind="_workspaceRoot"
                    @bind:event="oninput" />
             @if (_workspaceError != null)
@@ -36,7 +37,7 @@
 
         <div class="form-row">
             <div class="form-field">
-                <label for="launch-maxsteps">Max Steps (optional)</label>
+                <label for="launch-maxsteps">@L["RunLaunch.MaxStepsOptional"]</label>
                 <input id="launch-maxsteps"
                        type="number"
                        min="1"
@@ -48,7 +49,7 @@
                 }
             </div>
             <div class="form-field">
-                <label for="launch-maxwall">Max Wall Time (s) (optional)</label>
+                <label for="launch-maxwall">@L["RunLaunch.MaxWallSecondsOptional"]</label>
                 <input id="launch-maxwall"
                        type="number"
                        min="1"
@@ -68,7 +69,7 @@
             {
                 <span class="spinner"></span>
             }
-            Start Run
+            @L["RunLaunch.Start"]
         </button>
 
         @if (_submitError != null)
@@ -151,25 +152,25 @@
 
         if (string.IsNullOrWhiteSpace(_objective))
         {
-            _objectiveError = "Objective is required";
+            _objectiveError = L["RunLaunch.ObjectiveRequired"];
             valid = false;
         }
 
         if (string.IsNullOrWhiteSpace(_workspaceRoot))
         {
-            _workspaceError = "Workspace root is required";
+            _workspaceError = L["RunLaunch.WorkspaceRequired"];
             valid = false;
         }
 
         if (!string.IsNullOrWhiteSpace(_maxStepsStr) && (!int.TryParse(_maxStepsStr, out var steps) || steps <= 0))
         {
-            _maxStepsError = "Max steps must be a positive number";
+            _maxStepsError = L["RunLaunch.MaxStepsPositive"];
             valid = false;
         }
 
         if (!string.IsNullOrWhiteSpace(_maxWallTimeStr) && (!int.TryParse(_maxWallTimeStr, out var wallTime) || wallTime <= 0))
         {
-            _maxWallTimeError = "Max wall time must be a positive number";
+            _maxWallTimeError = L["RunLaunch.MaxWallSecondsPositive"];
             valid = false;
         }
 
@@ -203,7 +204,7 @@
         }
         catch
         {
-            _submitError = "Failed to start run. Check the workspace path and try again.";
+            _submitError = L["RunLaunch.StartFailed"];
         }
         finally
         {

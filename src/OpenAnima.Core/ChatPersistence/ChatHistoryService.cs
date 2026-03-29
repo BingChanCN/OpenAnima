@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Dapper;
-using Microsoft.Extensions.Logging;
 using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.ChatPersistence;
@@ -45,7 +44,7 @@ public class ChatHistoryService
 
         var toolCallsJson = toolCalls.Any() ? JsonSerializer.Serialize(toolCalls) : null;
 
-        await conn.ExecuteAsync(
+        conn.Execute(
             @"INSERT INTO chat_messages (anima_id, role, content, tool_calls_json, input_tokens, output_tokens, created_at)
               VALUES (@AnimaId, @Role, @Content, @ToolCallsJson, @InputTokens, @OutputTokens, @CreatedAt)",
             new
@@ -75,7 +74,7 @@ public class ChatHistoryService
         await using var conn = _factory.CreateConnection();
         await conn.OpenAsync(ct);
 
-        var rows = await conn.QueryAsync<ChatMessageRow>(
+        var rows = conn.Query<ChatMessageRow>(
             @"SELECT role, content, tool_calls_json, input_tokens, output_tokens
               FROM chat_messages
               WHERE anima_id = @AnimaId

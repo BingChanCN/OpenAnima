@@ -52,7 +52,7 @@ public class SedimentationService : ISedimentationService
 
     private readonly IMemoryGraph _memoryGraph;
     private readonly IStepRecorder? _stepRecorder;
-    private readonly IAnimaModuleConfigService? _configService;
+    private readonly IModuleConfig? _configService;
     private readonly LLMProviderRegistryService? _registryService;
     private readonly ILLMProviderRegistry? _providerRegistry;
     private readonly ILogger<SedimentationService> _logger;
@@ -64,7 +64,7 @@ public class SedimentationService : ISedimentationService
     public SedimentationService(
         IMemoryGraph memoryGraph,
         IStepRecorder? stepRecorder,
-        IAnimaModuleConfigService configService,
+        IModuleConfig configService,
         LLMProviderRegistryService registryService,
         ILLMProviderRegistry providerRegistry,
         ILogger<SedimentationService> logger,

@@ -35,10 +35,12 @@ public sealed class AnimaRuntime : IAsyncDisposable
         ILoggerFactory loggerFactory,
         IHubContext<RuntimeHub, IRuntimeClient>? hubContext = null,
         IStepRecorder? stepRecorder = null,
-        IPortRegistry? portRegistry = null)
+        IPortRegistry? portRegistry = null,
+        IEventBus? wiringEventBus = null)
     {
         AnimaId = animaId;
 
+        // Per-Anima isolated bus for internal heartbeat events.
         EventBus = new EventBus(loggerFactory.CreateLogger<EventBus>());
         PluginRegistry = new PluginRegistry();
 
@@ -50,8 +52,13 @@ public sealed class AnimaRuntime : IAsyncDisposable
             logger: loggerFactory.CreateLogger<HeartbeatLoop>(),
             hubContext: hubContext);
 
+        // Module routing uses the shared wiring bus so events reach singleton module
+        // subscriptions (LLMModule, ChatOutputModule) that registered on the global IEventBus.
+        // Falls back to per-Anima EventBus when no shared bus is provided (e.g. tests).
+        var routingBus = wiringEventBus ?? (IEventBus)EventBus;
+
         WiringEngine = new WiringEngine(
-            EventBus,
+            routingBus,
             portRegistry ?? new PortRegistry(),
             animaId: animaId,
             logger: loggerFactory.CreateLogger<WiringEngine>(),
@@ -71,8 +78,8 @@ public sealed class AnimaRuntime : IAsyncDisposable
             },
             onChat: async (item) =>
             {
-                // Deliver chat message to EventBus — WiringEngine routing picks it up from here.
-                await EventBus.PublishAsync(new ModuleEvent<string>
+                // Deliver chat message to routing bus — WiringEngine routing picks it up from here.
+                await routingBus.PublishAsync(new ModuleEvent<string>
                 {
                     EventName = "ChatInputModule.port.userMessage",
                     SourceModuleId = "ChatInputModule",
@@ -81,8 +88,8 @@ public sealed class AnimaRuntime : IAsyncDisposable
             },
             onRoute: async (item) =>
             {
-                // Deliver routing event to this Anima's EventBus.
-                await EventBus.PublishAsync(new ModuleEvent<string>
+                // Deliver routing event to routing bus.
+                await routingBus.PublishAsync(new ModuleEvent<string>
                 {
                     EventName = item.EventName,
                     SourceModuleId = item.SourceModuleId,

@@ -14,7 +14,7 @@ public class WiringInitializationService : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IAnimaRuntimeManager _animaRuntimeManager;
-    private readonly IAnimaContext _animaContext;
+    private readonly IModuleContext _animaContext;
     private readonly ILogger<WiringInitializationService> _logger;
     private readonly string _configDirectory;
 
@@ -65,7 +65,7 @@ public class WiringInitializationService : IHostedService
     public WiringInitializationService(
         IServiceProvider serviceProvider,
         IAnimaRuntimeManager animaRuntimeManager,
-        IAnimaContext animaContext,
+        IModuleContext animaContext,
         ILogger<WiringInitializationService> logger)
     {
         _serviceProvider = serviceProvider;

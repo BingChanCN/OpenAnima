@@ -1,10 +1,12 @@
+@inject IStringLocalizer<SharedResources> L
+
 <div class="token-usage-display">
     <div class="token-section">
-        <span class="label">Tokens:</span>
-        <span>Input: @InputTokens | Output: @OutputTokens | Total: @TotalTokens</span>
+        <span class="label">@L["TokenUsage.Tokens"]:</span>
+        <span>@L["TokenUsage.Input"]: @InputTokens | @L["TokenUsage.Output"]: @OutputTokens | @L["TokenUsage.Total"]: @TotalTokens</span>
     </div>
     <div class="context-section">
-        <span class="label">Context:</span>
+        <span class="label">@L["TokenUsage.Context"]:</span>
         <span class="@GetStatusClass()">@CurrentContextTokens / @MaxContextTokens (@Percentage.ToString("F1")%)</span>
     </div>
 </div>

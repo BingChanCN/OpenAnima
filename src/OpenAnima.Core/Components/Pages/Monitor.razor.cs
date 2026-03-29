@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Localization;
+using OpenAnima.Contracts;
+using OpenAnima.Core;
 using OpenAnima.Core.Anima;
-using OpenAnima.Core.Resources;
 using OpenAnima.Core.Services;
 
 namespace OpenAnima.Core.Components.Pages;
@@ -10,7 +11,7 @@ namespace OpenAnima.Core.Components.Pages;
 public partial class Monitor : IAsyncDisposable
 {
     [Inject] private NavigationManager Navigation { get; set; } = default!;
-    [Inject] private IAnimaContext AnimaContext { get; set; } = default!;
+    [Inject] private IModuleContext AnimaContext { get; set; } = default!;
     [Inject] private LanguageService LangSvc { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResources> L { get; set; } = default!;
 

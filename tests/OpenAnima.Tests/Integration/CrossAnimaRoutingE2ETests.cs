@@ -145,7 +145,7 @@ public class CrossAnimaRoutingE2ETests
         await task;
     }
 
-    private class StubConfig : IAnimaModuleConfigService
+    private class StubConfig : IModuleConfigStore
     {
         private readonly Dictionary<string, string> _config;
         public StubConfig(Dictionary<string, string> config) => _config = config;
@@ -173,8 +173,8 @@ public class CrossAnimaRoutingE2ETests
         public Task<AnimaDescriptor> CloneAsync(string id, CancellationToken ct = default)
             => throw new NotImplementedException();
         public Task InitializeAsync(CancellationToken ct = default) => Task.CompletedTask;
-        public event Action? StateChanged;
-        public event Action? WiringConfigurationChanged;
+        public event Action? StateChanged { add { } remove { } }
+        public event Action? WiringConfigurationChanged { add { } remove { } }
         public void NotifyWiringConfigurationChanged() { }
 
         public AnimaRuntime? GetRuntime(string animaId) =>

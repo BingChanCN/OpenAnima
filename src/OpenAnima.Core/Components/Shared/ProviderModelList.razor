@@ -54,6 +54,7 @@
 
     private List<EditableModel> _editableModels = new();
     private Dictionary<string, string> _validationErrors = new();
+    private bool _structurallyDirty;
 
     private class EditableModel
     {
@@ -65,6 +66,15 @@
 
     protected override void OnParametersSet()
     {
+        // If a structural change (add/remove) was just made locally, skip the rebuild —
+        // the count difference is expected and intentional (the new empty row exists only
+        // in _editableModels until the user types a ModelId, which is filtered in NotifyChange).
+        if (_structurallyDirty)
+        {
+            _structurallyDirty = false;
+            return;
+        }
+
         // Rebuild editable list only if count changed (avoid clobbering in-progress edits)
         if (_editableModels.Count != Models.Count)
         {
@@ -111,12 +121,16 @@
 
     private void AddModel()
     {
+        _structurallyDirty = true;
         _editableModels.Add(new EditableModel());
-        NotifyChange();
+        // Don't call NotifyChange() here — the empty ModelId gets filtered out,
+        // so the parent receives the same list and re-renders the child, which
+        // would rebuild _editableModels and erase the new row.
     }
 
     private void RemoveModel(int idx)
     {
+        _structurallyDirty = true;
         _editableModels.RemoveAt(idx);
         ValidateAndNotify();
     }

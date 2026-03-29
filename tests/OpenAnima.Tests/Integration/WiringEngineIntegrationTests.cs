@@ -231,8 +231,8 @@ public class WiringEngineIntegrationTests
         var result = await Task.WhenAny(receivedByC.Task, Task.Delay(5000));
 
         // Assert
-        Assert.True(receivedByC.Task.IsCompleted);
-        Assert.Equal("hello_B", receivedByC.Task.Result);
+        Assert.Same(receivedByC.Task, result);
+        Assert.Equal("hello_B", await receivedByC.Task);
     }
 
     [Fact]

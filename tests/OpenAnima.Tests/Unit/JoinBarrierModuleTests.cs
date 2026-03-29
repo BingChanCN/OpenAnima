@@ -242,7 +242,7 @@ public class JoinBarrierModuleTests
     private sealed class FakeModuleContext : IModuleContext
     {
         public string ActiveAnimaId => "test-anima";
-        public event Action? ActiveAnimaChanged;
+        public event Action? ActiveAnimaChanged { add { } remove { } }
     }
 
     private sealed class NullDisposable : IDisposable

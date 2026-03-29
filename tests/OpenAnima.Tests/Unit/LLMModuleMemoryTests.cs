@@ -331,14 +331,16 @@ public class CapturingLLMService : ILLMService
     }
 
     public async IAsyncEnumerable<string> StreamAsync(
-        IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+        IReadOnlyList<ChatMessageInput> messages,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
         await Task.CompletedTask;
         yield break;
     }
 
     public async IAsyncEnumerable<StreamingResult> StreamWithUsageAsync(
-        IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
+        IReadOnlyList<ChatMessageInput> messages,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
         await Task.CompletedTask;
         yield break;

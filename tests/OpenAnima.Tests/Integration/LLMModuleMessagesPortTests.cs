@@ -378,7 +378,7 @@ public class LLMModuleMessagesPortTests
             => throw new NotImplementedException();
     }
 
-    private class PresetAnimaModuleConfigService : IAnimaModuleConfigService
+    private class PresetAnimaModuleConfigService : IModuleConfigStore
     {
         private readonly Dictionary<string, Dictionary<string, string>> _configs = new();
 
@@ -438,9 +438,9 @@ public class LLMModuleMessagesPortTests
         public void Dispose() { }
     }
 
-    private class TestAnimaContext : IAnimaContext
+    private class TestAnimaContext : IActiveAnimaContext
     {
-        public string? ActiveAnimaId { get; set; }
+        public string ActiveAnimaId { get; set; } = "";
         public event Action? ActiveAnimaChanged;
 
         public void SetActive(string animaId)

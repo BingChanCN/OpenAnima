@@ -4,11 +4,11 @@
     <span class="impact-count">@AffectedModuleCount</span>
     @if (AffectedModuleCount == 1)
     {
-        <span> LLM module will be affected.</span>
+        <span> @L["Providers.AffectedSingle"]</span>
     }
     else
     {
-        <span> LLM module(s) will be affected.</span>
+        <span> @L["Providers.AffectedPlural"]</span>
     }
 </div>
 

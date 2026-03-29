@@ -37,7 +37,7 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
     private const int DefaultMaxRetries = 2;
 
     private readonly ILLMService _llmService;
-    private readonly IAnimaModuleConfigService _configService;
+    private readonly IModuleConfigStore _configService;
     private readonly IModuleContext _animaContext;
     private readonly IEventBus _eventBus;
     private readonly ILogger<LLMModule> _logger;
@@ -61,7 +61,7 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
         "LLMModule", "1.0.0", "Sends prompt to LLM and outputs response");
 
     public LLMModule(ILLMService llmService, IEventBus eventBus, ILogger<LLMModule> logger,
-        IAnimaModuleConfigService configService, IModuleContext animaContext,
+        IModuleConfigStore configService, IModuleContext animaContext,
         ILLMProviderRegistry providerRegistry, LLMProviderRegistryService registryService,
         ICrossAnimaRouter? router = null,
         IMemoryRecallService? memoryRecallService = null,

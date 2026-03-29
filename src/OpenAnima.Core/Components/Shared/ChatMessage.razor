@@ -14,7 +14,7 @@
                 <span class="typing-cursor">|</span>
             }
         </div>
-        <button class="copy-btn" @onclick="CopyToClipboard" title="Copy to clipboard">
+        <button class="copy-btn" @onclick="CopyToClipboard" title="@L["Common.CopyToClipboard"]">
             @if (_copied)
             {
                 <span class="copied-feedback">&#10003;</span>
@@ -79,7 +79,7 @@ else
                 <div class="tool-badge">@string.Format(L["Chat.ToolCountBadge"], ToolCalls.Count)</div>
             }
         </div>
-        <button class="copy-btn" @onclick="CopyToClipboard" title="Copy to clipboard">
+        <button class="copy-btn" @onclick="CopyToClipboard" title="@L["Common.CopyToClipboard"]">
             @if (_copied)
             {
                 <span class="copied-feedback">&#10003;</span>

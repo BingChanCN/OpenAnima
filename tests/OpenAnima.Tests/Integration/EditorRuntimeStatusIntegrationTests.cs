@@ -90,8 +90,8 @@ public class EditorRuntimeStatusIntegrationTests
 
     private sealed class TestAnimaRuntimeManager : IAnimaRuntimeManager
     {
-        public event Action? StateChanged;
-        public event Action? WiringConfigurationChanged;
+        public event Action? StateChanged { add { } remove { } }
+        public event Action? WiringConfigurationChanged { add { } remove { } }
         public IReadOnlyList<AnimaDescriptor> GetAll() => new List<AnimaDescriptor>();
         public AnimaDescriptor? GetById(string id) => null;
         public Task<AnimaDescriptor> CreateAsync(string name, CancellationToken ct = default) => Task.FromResult(new AnimaDescriptor());
@@ -106,10 +106,10 @@ public class EditorRuntimeStatusIntegrationTests
         public void Dispose() { }
     }
 
-    private sealed class TestAnimaContext : IAnimaContext
+    private sealed class TestAnimaContext : IActiveAnimaContext
     {
         public string ActiveAnimaId => "test-anima";
-        public event Action? ActiveAnimaChanged;
+        public event Action? ActiveAnimaChanged { add { } remove { } }
         public void SetActive(string animaId) { }
     }
 }

@@ -441,7 +441,7 @@ public class PromptInjectionIntegrationTests
     /// <summary>
     /// AnimaModuleConfigService that supports pre-set per-anima per-module configs for testing.
     /// </summary>
-    private class PresetAnimaModuleConfigService : IAnimaModuleConfigService
+    private class PresetAnimaModuleConfigService : IModuleConfigStore
     {
         private readonly Dictionary<string, Dictionary<string, string>> _configs = new();
 
@@ -514,13 +514,13 @@ public class PromptInjectionIntegrationTests
     }
 
     /// <summary>
-    /// Minimal IAnimaContext implementation for tests, with a settable ActiveAnimaId.
+    /// Minimal IActiveAnimaContext implementation for tests, with a settable ActiveAnimaId.
     /// The real AnimaContext (OpenAnima.Core.Anima.AnimaContext) uses SetActive() which
     /// is not convenient in test setup — this class is test-local.
     /// </summary>
-    private class TestAnimaContext : IAnimaContext
+    private class TestAnimaContext : IActiveAnimaContext
     {
-        public string? ActiveAnimaId { get; set; }
+        public string ActiveAnimaId { get; set; } = "";
 
         public event Action? ActiveAnimaChanged;
 

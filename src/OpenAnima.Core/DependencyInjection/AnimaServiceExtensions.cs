@@ -30,8 +30,11 @@ public static class AnimaServiceExtensions
         Directory.CreateDirectory(animasRoot);
 
         services.AddSingleton<AnimaContext>();
-        services.AddSingleton<IModuleContext>(sp => sp.GetRequiredService<AnimaContext>());
+        services.AddSingleton<IActiveAnimaContext>(sp => sp.GetRequiredService<AnimaContext>());
+        services.AddSingleton<IModuleContext>(sp => sp.GetRequiredService<IActiveAnimaContext>());
+#pragma warning disable CS0618
         services.AddSingleton<IAnimaContext>(sp => sp.GetRequiredService<AnimaContext>());
+#pragma warning restore CS0618
 
         // Register AnimaRuntimeManager first.
         services.AddSingleton<IAnimaRuntimeManager>(sp =>
@@ -39,12 +42,13 @@ public static class AnimaServiceExtensions
                 animasRoot,
                 sp.GetRequiredService<ILogger<AnimaRuntimeManager>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
-                sp.GetRequiredService<IAnimaContext>(),
+                sp.GetRequiredService<IActiveAnimaContext>(),
                 sp.GetService<IHubContext<RuntimeHub, IRuntimeClient>>(),
                 router: null,  // Injected after construction to break circular dependency
                 sp.GetRequiredService<ChatInputModule>(),
                 sp.GetService<IStepRecorder>(),
-                sp.GetRequiredService<IPortRegistry>()));
+                sp.GetRequiredService<IPortRegistry>(),
+                sp.GetRequiredService<IEventBus>()));
 
         // Register router — uses Lazy to break circular singleton dependency with IAnimaRuntimeManager.
         services.AddSingleton<ICrossAnimaRouter>(sp =>
@@ -61,8 +65,11 @@ public static class AnimaServiceExtensions
 
         services.AddSingleton<AnimaModuleConfigService>(sp =>
             new AnimaModuleConfigService(animasRoot));
-        services.AddSingleton<IModuleConfig>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
+        services.AddSingleton<IModuleConfigStore>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
+        services.AddSingleton<IModuleConfig>(sp => sp.GetRequiredService<IModuleConfigStore>());
+#pragma warning disable CS0618
         services.AddSingleton<IAnimaModuleConfigService>(sp => sp.GetRequiredService<AnimaModuleConfigService>());
+#pragma warning restore CS0618
 
         services.AddSingleton<IModuleStorage>(sp =>
             new ModuleStorageService(

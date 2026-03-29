@@ -1,7 +1,9 @@
+@inject IStringLocalizer<SharedResources> L
+
 @if (!string.IsNullOrEmpty(Reason))
 {
     <div class="stop-reason-banner" role="alert">
-        <span class="stop-reason-text">Run paused: @Reason</span>
+        <span class="stop-reason-text">@L["Run.StopReasonPrefix"] @Reason</span>
     </div>
 }
 
