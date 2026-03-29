@@ -321,6 +321,74 @@ public class MemoryGraphTests : IDisposable
         Assert.Empty(results);
     }
 
+    // --- SoftDeleteNodeAsync ---
+
+    [Fact]
+    public async Task SoftDeleteNodeAsync_SetsDeprecatedFlag()
+    {
+        // Arrange: write a node, then soft-delete it
+        var node = MakeNode("core://agent/soft-delete-test");
+        await _graph.WriteNodeAsync(node);
+
+        // Act
+        await _graph.SoftDeleteNodeAsync("anima01", "core://agent/soft-delete-test");
+
+        // Assert: GetNodeAsync returns null (deprecated=0 filter hides it)
+        var byUri = await _graph.GetNodeAsync("anima01", "core://agent/soft-delete-test");
+        Assert.Null(byUri);
+
+        // Assert: GetNodeByUuidAsync still returns it (no deprecated filter)
+        var written = await _graph.GetNodeByUuidAsync(
+            (await _graph.GetAllNodesAsync("anima01", includeDeprecated: true)).First().Uuid);
+        Assert.NotNull(written);
+        Assert.True(written!.Deprecated);
+    }
+
+    [Fact]
+    public async Task QueryByPrefixAsync_ExcludesDeprecatedNodes()
+    {
+        // Arrange: write two nodes with same prefix
+        await _graph.WriteNodeAsync(MakeNode("sediment://fact/active"));
+        await _graph.WriteNodeAsync(MakeNode("sediment://fact/deprecated-one"));
+
+        // Soft-delete one of them
+        await _graph.SoftDeleteNodeAsync("anima01", "sediment://fact/deprecated-one");
+
+        // Act
+        var results = await _graph.QueryByPrefixAsync("anima01", "sediment://fact/");
+
+        // Assert: only the non-deprecated one is returned
+        Assert.Single(results);
+        Assert.Equal("sediment://fact/active", results[0].Uri);
+    }
+
+    [Fact]
+    public async Task GetAllNodesAsync_IncludeDeprecated_ReturnsAll()
+    {
+        // Arrange: write a node and soft-delete it
+        await _graph.WriteNodeAsync(MakeNode("core://agent/deprecated-hidden"));
+        await _graph.SoftDeleteNodeAsync("anima01", "core://agent/deprecated-hidden");
+
+        // Act: default (excludes deprecated)
+        var withoutDeprecated = await _graph.GetAllNodesAsync("anima01");
+
+        // Act: include deprecated
+        var withDeprecated = await _graph.GetAllNodesAsync("anima01", includeDeprecated: true);
+
+        // Assert
+        Assert.DoesNotContain(withoutDeprecated, n => n.Uri == "core://agent/deprecated-hidden");
+        Assert.Contains(withDeprecated, n => n.Uri == "core://agent/deprecated-hidden");
+        Assert.True(withDeprecated.First(n => n.Uri == "core://agent/deprecated-hidden").Deprecated);
+    }
+
+    [Fact]
+    public async Task SoftDeleteNodeAsync_NonExistentUri_IsNoOp()
+    {
+        // Should not throw for a URI that doesn't exist
+        await _graph.SoftDeleteNodeAsync("anima01", "core://does-not-exist/soft-delete");
+        // No assertion needed — just verifying no exception is thrown
+    }
+
     // --- Helpers ---
 
     private static MemoryNode MakeNode(
