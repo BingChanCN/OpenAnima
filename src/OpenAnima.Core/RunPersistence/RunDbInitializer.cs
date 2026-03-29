@@ -174,6 +174,17 @@ public class RunDbInitializer
         {
             await conn.ExecuteAsync("ALTER TABLE runs ADD COLUMN workflow_preset TEXT");
         }
+
+        // Check if deprecated column exists on memory_nodes (added in Phase 67)
+        var memoryNodeColumns = await conn.QueryAsync<string>(
+            "SELECT name FROM pragma_table_info('memory_nodes')");
+        var memoryNodeColSet = new HashSet<string>(memoryNodeColumns);
+
+        if (!memoryNodeColSet.Contains("deprecated"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE memory_nodes ADD COLUMN deprecated INTEGER NOT NULL DEFAULT 0");
+            await conn.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_memory_nodes_deprecated ON memory_nodes(anima_id, deprecated)");
+        }
     }
 
     /// <summary>

@@ -25,3 +25,15 @@ public record ToolCallStartedPayload(string ToolName, IReadOnlyDictionary<string
 /// Event payload published when a tool call execution completes (success or failure).
 /// </summary>
 public record ToolCallCompletedPayload(string ToolName, string ResultSummary, bool Success);
+
+/// <summary>
+/// Event payload published when a memory tool operation completes.
+/// Consumed by Phase 68 visibility components (tool cards, summary chips).
+/// </summary>
+public record MemoryOperationPayload(
+    string Operation,      // "create" | "update" | "delete" | "list"
+    string AnimaId,
+    string Uri,
+    string? Content,       // null for delete/list
+    int? NodeCount,        // non-null for list results
+    bool Success);

@@ -67,4 +67,10 @@ public record MemoryNode
 
     /// <summary>ISO 8601 UTC timestamp when this node was last updated.</summary>
     public string UpdatedAt { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Whether this node has been soft-deleted. Deprecated nodes are hidden from recall
+    /// but recoverable from /memory UI. Set via <c>IMemoryGraph.SoftDeleteNodeAsync</c>.
+    /// </summary>
+    public bool Deprecated { get; init; }
 }
