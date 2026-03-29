@@ -1,4 +1,5 @@
 @using OpenAnima.Contracts
+@using OpenAnima.Core.ChatPersistence
 @using OpenAnima.Core.Events
 @using OpenAnima.Core.LLM
 @using OpenAnima.Core.Modules
@@ -18,6 +19,8 @@
 @inject IStringLocalizer<SharedResources> L
 @inject LanguageService LangSvc
 @inject IModuleConfig _moduleConfigService
+@inject ChatHistoryService _chatHistoryService
+@inject ILoggerFactory LoggerFactory
 
 <div class="chat-panel">
     @if (!IsPipelineConfigured())
@@ -99,7 +102,30 @@
     private void OnAnimaChanged()
     {
         _chatSessionState.Messages.Clear();
+        _ = RestoreChatHistoryAsync();
         InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RestoreChatHistoryAsync()
+    {
+        var activeAnimaId = _animaContext.ActiveAnimaId;
+        if (string.IsNullOrEmpty(activeAnimaId))
+            return;
+
+        try
+        {
+            var messages = await _chatHistoryService.LoadHistoryAsync(activeAnimaId, CancellationToken.None);
+            _chatSessionState.Messages.Clear();
+            _chatSessionState.Messages.AddRange(messages);
+
+            // Auto-scroll to bottom
+            await JS.InvokeVoidAsync("scrollChatToBottom", "chat-messages");
+        }
+        catch (Exception ex)
+        {
+            var logger = LoggerFactory?.CreateLogger<ChatPanel>();
+            logger?.LogError(ex, "Failed to restore chat history for Anima {AnimaId}", activeAnimaId);
+        }
     }
 
     private void OnWiringConfigurationChanged()
@@ -252,6 +278,21 @@
 
         var messageTokenCount = _contextManager.CountTokens(userMessage);
         _contextManager.UpdateAfterSend(messageTokenCount);
+
+        // Persist user message to chat database
+        var activeAnimaId = _animaContext.ActiveAnimaId;
+        if (!string.IsNullOrEmpty(activeAnimaId))
+        {
+            await _chatHistoryService.StoreMessageAsync(
+                activeAnimaId,
+                role: "user",
+                content: userMessage,
+                toolCalls: new(),
+                inputTokens: messageTokenCount,
+                outputTokens: 0,
+                CancellationToken.None);
+        }
+
         var eventBusSend = GetActiveEventBus();
         if (eventBusSend != null)
             await eventBusSend.PublishAsync(new ModuleEvent<MessageSentPayload>
@@ -339,6 +380,21 @@
 
             assistantMessage.Content = assistantResponse;
             assistantMessage.IsStreaming = false;
+
+            // Persist assistant message to chat database
+            var activeAnimaId = _animaContext.ActiveAnimaId;
+            if (!string.IsNullOrEmpty(activeAnimaId))
+            {
+                var outputTokens = _contextManager.CountTokens(assistantResponse);
+                await _chatHistoryService.StoreMessageAsync(
+                    activeAnimaId,
+                    role: "assistant",
+                    content: assistantResponse,
+                    toolCalls: assistantMessage.ToolCalls,
+                    inputTokens: 0,
+                    outputTokens: outputTokens,
+                    CancellationToken.None);
+            }
 
             await UpdateAfterResponseAsync(prompt, assistantResponse);
             await InvokeAsync(StateHasChanged);
