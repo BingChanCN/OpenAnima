@@ -54,9 +54,9 @@ Requirements for Intelligent Memory & Persistence milestone. Each maps to roadma
 
 ### Memory Sedimentation
 
-- [ ] **MEMS-01**: Sedimentation prompt generates bilingual (Chinese + English) keywords for memory nodes
-- [ ] **MEMS-02**: Sedimentation prompt generates broader trigger conditions (covers both introduction and query scenarios)
-- [ ] **MEMS-03**: Sedimentation input capped at last 20 messages to control cost and focus
+- [x] **MEMS-01**: Sedimentation prompt generates bilingual (Chinese + English) keywords for memory nodes
+- [x] **MEMS-02**: Sedimentation prompt generates broader trigger conditions (covers both introduction and query scenarios)
+- [x] **MEMS-03**: Sedimentation input capped at last 20 messages to control cost and focus
 
 ### Memory Visibility
 
@@ -127,9 +127,9 @@ Requirements for Intelligent Memory & Persistence milestone. Each maps to roadma
 | MEMT-03 | Phase 67 | Pending |
 | MEMT-04 | Phase 67 | Pending |
 | MEMT-05 | Phase 67 | Pending |
-| MEMS-01 | Phase 67 | Pending |
-| MEMS-02 | Phase 67 | Pending |
-| MEMS-03 | Phase 67 | Pending |
+| MEMS-01 | Phase 67 | Complete |
+| MEMS-02 | Phase 67 | Complete |
+| MEMS-03 | Phase 67 | Complete |
 | MEMV-01 | Phase 68 | Pending |
 | MEMV-02 | Phase 68 | Pending |
 | MEMV-03 | Phase 68 | Pending |

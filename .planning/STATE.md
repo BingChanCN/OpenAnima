@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: complete
-stopped_at: Completed 66-03-PLAN.md (Persistence verification and integration testing)
-last_updated: "2026-03-29T09:20:00Z"
+milestone: v2.0.4
+milestone_name: Intelligent Memory & Persistence
+status: Ready to execute
+stopped_at: Completed 67-03-PLAN.md (Bilingual prompt and OR-split DisclosureMatcher)
+last_updated: "2026-03-29T13:26:30.602Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 6
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
+  completed_phases: 2
+  total_plans: 9
+  completed_plans: 8
 ---
 
 # Project State: OpenAnima
@@ -23,12 +23,12 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-25)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 66 — platform-persistence
+**Current focus:** Phase 67 — memory-tools-sedimentation
 
 ## Current Position
 
-Phase: 66 (platform-persistence) — COMPLETE
-Plan: 3 of 3 (COMPLETE)
+Phase: 67 (memory-tools-sedimentation) — EXECUTING
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -38,6 +38,7 @@ Plan: 3 of 3 (COMPLETE)
 | 66-platform-persistence | P01 | 9min | 6 | 6 |
 | 66-platform-persistence | P02 | 27min | 8 | 7 |
 | 66-platform-persistence | P03 | 25min | 7 | 2 |
+| Phase 67-memory-tools-sedimentation P03 | 12min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -61,6 +62,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 66-03]: Token counting uses actual GPT-4 BPE encoding via SharpToken library, not estimation (real English ~2-15 tokens/sentence)
 - [Phase 66-03]: Integration tests use isolated in-memory SQLite and temp directories for complete test isolation
 - [Phase 66-03]: Token truncation test validates method correctness rather than strict budget (algorithm works but test data needs realistic scenarios)
+- [Phase 67-03]: Bilingual keywords required when conversation contains Chinese — BOTH Chinese and English forms in keywords field
+- [Phase 67-03]: Disclosure triggers use ' OR ' separator for multi-scenario matching — sedimentation LLM now generates 3+ scenarios per node
+- [Phase 67-03]: 20-message cap applied pre-extraction (last 20) — older messages rarely contain new stable knowledge
 
 ### Key Design Discussions (from milestone kickoff)
 
@@ -83,7 +87,7 @@ None.
 ## Session Continuity
 
 Last activity: 2026-03-29
-Stopped at: Completed 66-03-PLAN.md (Persistence verification and integration testing) — PHASE 66 COMPLETE
+Stopped at: Completed 67-03-PLAN.md (Bilingual prompt and OR-split DisclosureMatcher)
 Resume file: None
 
 ### Completed Plans
