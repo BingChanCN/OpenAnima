@@ -5,6 +5,7 @@ using OpenAI;
 using OpenAI.Chat;
 using System.ClientModel;
 using OpenAnima.Contracts;
+using OpenAnima.Core.Events;
 using OpenAnima.Core.Providers;
 using OpenAnima.Core.Runs;
 using OpenAnima.Core.Services;
@@ -67,6 +68,7 @@ public class SedimentationService : ISedimentationService
     private readonly ILLMProviderRegistry? _providerRegistry;
     private readonly ILogger<SedimentationService> _logger;
     private readonly Func<IReadOnlyList<ChatMessage>, CancellationToken, Task<string>>? _llmCallOverride;
+    private readonly IEventBus? _eventBus;
 
     /// <summary>
     /// Production constructor. All provider-related services are required for live LLM calls.
@@ -78,7 +80,8 @@ public class SedimentationService : ISedimentationService
         LLMProviderRegistryService registryService,
         ILLMProviderRegistry providerRegistry,
         ILogger<SedimentationService> logger,
-        Func<IReadOnlyList<ChatMessage>, CancellationToken, Task<string>>? llmCallOverride = null)
+        Func<IReadOnlyList<ChatMessage>, CancellationToken, Task<string>>? llmCallOverride = null,
+        IEventBus? eventBus = null)
     {
         _memoryGraph = memoryGraph ?? throw new ArgumentNullException(nameof(memoryGraph));
         _stepRecorder = stepRecorder;
@@ -87,6 +90,7 @@ public class SedimentationService : ISedimentationService
         _providerRegistry = providerRegistry;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _llmCallOverride = llmCallOverride;
+        _eventBus = eventBus;
     }
 
     /// <inheritdoc/>
@@ -180,6 +184,16 @@ public class SedimentationService : ISedimentationService
 
             var outputSummary = $"{writtenUris.Count} nodes sedimented: {string.Join(", ", writtenUris)}";
             await (_stepRecorder?.RecordStepCompleteAsync(stepId, "Sedimentation", outputSummary, ct) ?? Task.CompletedTask);
+
+            if (_eventBus != null && writtenUris.Count > 0)
+            {
+                await _eventBus.PublishAsync(new ModuleEvent<SedimentationCompletedPayload>
+                {
+                    EventName = "Memory.sedimentation.completed",
+                    SourceModuleId = "SedimentationService",
+                    Payload = new SedimentationCompletedPayload(animaId, writtenUris.Count)
+                }, ct);
+            }
         }
         catch (Exception ex)
         {

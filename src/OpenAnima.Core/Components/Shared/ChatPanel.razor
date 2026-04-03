@@ -80,6 +80,8 @@
     private IDisposable? _llmErrorSubscription;
     private IDisposable? _toolCallStartedSubscription;
     private IDisposable? _toolCallCompletedSubscription;
+    private IDisposable? _memoryOperationSubscription;
+    private IDisposable? _sedimentationCompletedSubscription;
     private List<ChatSessionMessage> Messages => _chatSessionState.Messages;
 
     protected override void OnInitialized()
@@ -91,6 +93,10 @@
             "LLMModule.tool_call.started", HandleToolCallStartedAsync);
         _toolCallCompletedSubscription = EventBus.Subscribe<ToolCallCompletedPayload>(
             "LLMModule.tool_call.completed", HandleToolCallCompletedAsync);
+        _memoryOperationSubscription = EventBus.Subscribe<MemoryOperationPayload>(
+            "Memory.operation", HandleMemoryOperationAsync);
+        _sedimentationCompletedSubscription = EventBus.Subscribe<SedimentationCompletedPayload>(
+            "Memory.sedimentation.completed", HandleSedimentationCompletedAsync);
         LangSvc.LanguageChanged += OnLanguageChanged;
         _animaContext.ActiveAnimaChanged += OnAnimaChanged;
         _animaRuntimeManager.WiringConfigurationChanged += OnWiringConfigurationChanged;
@@ -160,12 +166,9 @@
         var current = Messages.LastOrDefault(m => m.Role == "assistant" && m.IsStreaming);
         if (current != null)
         {
-            current.ToolCalls.Add(new ToolCallInfo
-            {
-                ToolName = evt.Payload.ToolName,
-                Parameters = evt.Payload.Parameters,
-                Status = ToolCallStatus.Running
-            });
+            current.ToolCalls.Add(ChatMemoryVisibilityProjector.CreateToolCallInfo(
+                evt.Payload.ToolName,
+                evt.Payload.Parameters));
             ResetAgentTimeout();
         }
         return InvokeAsync(StateHasChanged);
@@ -186,6 +189,45 @@
             ResetAgentTimeout();
         }
         return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleMemoryOperationAsync(ModuleEvent<MemoryOperationPayload> evt, CancellationToken ct)
+    {
+        if (!evt.Payload.Success || !IsActiveAnimaEvent(evt.Payload.AnimaId))
+        {
+            return;
+        }
+
+        var target = ChatMemoryVisibilityProjector.FindAssistantTarget(Messages);
+        if (target == null || !ChatMemoryVisibilityProjector.ApplyMemoryOperation(target, evt.Payload))
+        {
+            return;
+        }
+
+        ResetAgentTimeout();
+        await PersistAssistantVisibilityAsync(target, ct);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleSedimentationCompletedAsync(
+        ModuleEvent<SedimentationCompletedPayload> evt,
+        CancellationToken ct)
+    {
+        if (!IsActiveAnimaEvent(evt.Payload.AnimaId))
+        {
+            return;
+        }
+
+        var target = ChatMemoryVisibilityProjector.FindAssistantTarget(Messages);
+        if (target == null)
+        {
+            return;
+        }
+
+        ChatMemoryVisibilityProjector.ApplySedimentationSummary(target, evt.Payload.WrittenCount);
+        ResetAgentTimeout();
+        await PersistAssistantVisibilityAsync(target, ct);
+        await InvokeAsync(StateHasChanged);
     }
 
     private void ResetAgentTimeout()
@@ -389,15 +431,19 @@
             var activeAnimaId = _animaContext.ActiveAnimaId;
             if (!string.IsNullOrEmpty(activeAnimaId))
             {
-                var outputTokens = _contextManager.CountTokens(assistantResponse);
-                await _chatHistoryService.StoreMessageAsync(
+                assistantMessage.PersistenceId = await _chatHistoryService.StoreMessageAsync(
                     activeAnimaId,
                     role: "assistant",
                     content: assistantResponse,
                     toolCalls: assistantMessage.ToolCalls,
                     inputTokens: 0,
-                    outputTokens: outputTokens,
+                    outputTokens: _contextManager.CountTokens(assistantResponse),
                     CancellationToken.None);
+
+                if (assistantMessage.SedimentationSummary != null)
+                {
+                    await PersistAssistantVisibilityAsync(assistantMessage, CancellationToken.None);
+                }
             }
 
             await UpdateAfterResponseAsync(prompt, assistantResponse);
@@ -487,12 +533,32 @@
         _navigation.NavigateTo("/editor");
     }
 
+    private bool IsActiveAnimaEvent(string animaId) =>
+        !string.IsNullOrWhiteSpace(animaId) &&
+        string.Equals(animaId, _animaContext.ActiveAnimaId, StringComparison.Ordinal);
+
+    private async Task PersistAssistantVisibilityAsync(ChatSessionMessage message, CancellationToken ct)
+    {
+        if (message.PersistenceId is not long messageId)
+        {
+            return;
+        }
+
+        await _chatHistoryService.UpdateAssistantVisibilityAsync(
+            messageId,
+            message.ToolCalls,
+            message.SedimentationSummary,
+            ct);
+    }
+
     public ValueTask DisposeAsync()
     {
         _chatOutputModule.OnMessageReceived -= HandleChatOutputReceived;
         _llmErrorSubscription?.Dispose();
         _toolCallStartedSubscription?.Dispose();
         _toolCallCompletedSubscription?.Dispose();
+        _memoryOperationSubscription?.Dispose();
+        _sedimentationCompletedSubscription?.Dispose();
         if (_agentTimeoutCts != null)
         {
             try { _agentTimeoutCts.Cancel(); } catch { }
