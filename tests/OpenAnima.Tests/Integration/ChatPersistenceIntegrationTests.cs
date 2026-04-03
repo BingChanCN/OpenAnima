@@ -144,6 +144,54 @@ public class ChatPersistenceIntegrationTests : IAsyncLifetime
         Assert.Contains("sedimentation_json", columns);
     }
 
+    [Fact]
+    public async Task AssistantVisibilityMetadata_SurvivesRestartAfterPostInsertUpdate()
+    {
+        var animaId = "test-anima-visibility";
+        var assistantId = await _service.StoreMessageAsync(
+            animaId,
+            "assistant",
+            "I remembered that for later.",
+            new List<ToolCallInfo>(),
+            inputTokens: 15,
+            outputTokens: 20,
+            CancellationToken.None);
+
+        await _service.UpdateAssistantVisibilityAsync(
+            assistantId,
+            new List<ToolCallInfo>
+            {
+                new()
+                {
+                    ToolName = "memory_update",
+                    Category = ToolCategory.Memory,
+                    TargetUri = "memory://profile/preferences",
+                    FoldedSummary = "Likes pour-over coffee",
+                    Parameters = new Dictionary<string, string> { ["uri"] = "memory://profile/preferences" },
+                    ResultSummary = "Updated memory",
+                    Status = ToolCallStatus.Success
+                }
+            },
+            new SedimentationSummaryInfo { Count = 2 },
+            CancellationToken.None);
+
+        var connStr = $"Data Source={_dbName};Mode=Memory;Cache=Shared";
+        _factory = new ChatDbConnectionFactory(connStr, isRaw: true);
+        _service = new ChatHistoryService(_factory, new NullLogger<ChatHistoryService>());
+
+        var loaded = await _service.LoadHistoryAsync(animaId, CancellationToken.None);
+
+        var message = Assert.Single(loaded);
+        Assert.Equal(assistantId, message.PersistenceId);
+        Assert.NotNull(message.SedimentationSummary);
+        Assert.Equal(2, message.SedimentationSummary!.Count);
+
+        var toolCall = Assert.Single(message.ToolCalls);
+        Assert.Equal(ToolCategory.Memory, toolCall.Category);
+        Assert.Equal("memory://profile/preferences", toolCall.TargetUri);
+        Assert.Equal("Likes pour-over coffee", toolCall.FoldedSummary);
+    }
+
     /// <summary>
     /// Test: MultiAnimaIsolation_DifferentAnimasHaveSeparateHistories
     /// Verifies that chat history for different Animas is kept separate.

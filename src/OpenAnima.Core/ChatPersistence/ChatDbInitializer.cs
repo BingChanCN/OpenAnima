@@ -21,6 +21,7 @@ public class ChatDbInitializer
             role TEXT NOT NULL,
             content TEXT NOT NULL,
             tool_calls_json TEXT,
+            sedimentation_json TEXT,
             input_tokens INTEGER DEFAULT 0,
             output_tokens INTEGER DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -51,6 +52,14 @@ public class ChatDbInitializer
 
         // Create table and indexes. All statements use IF NOT EXISTS so this is idempotent.
         await conn.ExecuteAsync(SchemaScript);
+
+        var columns = await conn.QueryAsync<string>(
+            "SELECT name FROM pragma_table_info('chat_messages')");
+        var columnSet = new HashSet<string>(columns, StringComparer.OrdinalIgnoreCase);
+        if (!columnSet.Contains("sedimentation_json"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE chat_messages ADD COLUMN sedimentation_json TEXT");
+        }
 
         _logger.LogInformation("Chat database initialized");
     }
