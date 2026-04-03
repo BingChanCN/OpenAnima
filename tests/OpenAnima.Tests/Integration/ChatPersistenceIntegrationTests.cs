@@ -98,6 +98,52 @@ public class ChatPersistenceIntegrationTests : IAsyncLifetime
         }
     }
 
+    [Fact]
+    public async Task ChatDbInitializer_CreatesSedimentationColumn()
+    {
+        await using var conn = _factory.CreateConnection();
+        await conn.OpenAsync();
+
+        var columns = (await conn.QueryAsync<string>(
+            "SELECT name FROM pragma_table_info('chat_messages')")).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Contains("sedimentation_json", columns);
+    }
+
+    [Fact]
+    public async Task ChatDbInitializer_MigratesExistingChatMessagesTable()
+    {
+        var dbName = $"LegacyChatMigration_{Guid.NewGuid():N}";
+        var connStr = $"Data Source={dbName};Mode=Memory;Cache=Shared";
+
+        await using var keepAlive = new SqliteConnection(connStr);
+        await keepAlive.OpenAsync();
+
+        await keepAlive.ExecuteAsync(
+            """
+            CREATE TABLE chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                anima_id TEXT NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                tool_calls_json TEXT,
+                input_tokens INTEGER DEFAULT 0,
+                output_tokens INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """);
+
+        var factory = new ChatDbConnectionFactory(connStr, isRaw: true);
+        var initializer = new ChatDbInitializer(factory, new NullLogger<ChatDbInitializer>());
+
+        await initializer.EnsureCreatedAsync();
+
+        var columns = (await keepAlive.QueryAsync<string>(
+            "SELECT name FROM pragma_table_info('chat_messages')")).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Contains("sedimentation_json", columns);
+    }
+
     /// <summary>
     /// Test: MultiAnimaIsolation_DifferentAnimasHaveSeparateHistories
     /// Verifies that chat history for different Animas is kept separate.

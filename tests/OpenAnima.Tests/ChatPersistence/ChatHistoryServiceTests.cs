@@ -88,6 +88,46 @@ public class ChatHistoryServiceTests : IAsyncLifetime
         Assert.Equal(content, (string?)row.content);
     }
 
+    [Fact]
+    public async Task StoreAssistantMessageAsync_ReturnsInsertedRowId_AndStoresSedimentationSummary()
+    {
+        var animaId = "test-anima-1";
+        var insertedId = await _service.StoreMessageAsync(
+            animaId,
+            "assistant",
+            "I saved that memory.",
+            new List<ToolCallInfo>
+            {
+                new()
+                {
+                    ToolName = "memory_create",
+                    Category = ToolCategory.Memory,
+                    TargetUri = "memory://profile/favorites",
+                    FoldedSummary = "Favorite drink: coffee",
+                    Parameters = new Dictionary<string, string> { ["path"] = "profile/favorites" },
+                    ResultSummary = "Created memory",
+                    Status = ToolCallStatus.Success
+                }
+            },
+            inputTokens: 12,
+            outputTokens: 34,
+            CancellationToken.None,
+            new SedimentationSummaryInfo { Count = 2 });
+
+        await using var conn = _factory.CreateConnection();
+        await conn.OpenAsync();
+
+        var row = await conn.QueryFirstOrDefaultAsync<dynamic>(
+            "SELECT id, sedimentation_json FROM chat_messages WHERE id = @Id",
+            new { Id = insertedId });
+
+        Assert.True(insertedId > 0);
+        Assert.NotNull(row);
+        Assert.Equal(insertedId, (long)row!.id);
+        Assert.NotNull((string?)row.sedimentation_json);
+        Assert.Contains("\"Count\":2", (string?)row.sedimentation_json);
+    }
+
     /// <summary>
     /// Test: StoreAssistantMessageAsync_WithToolCalls
     /// Verifies that tool_calls_json is properly serialized and stored.
@@ -132,6 +172,45 @@ public class ChatHistoryServiceTests : IAsyncLifetime
         Assert.Equal(content, (string?)row.content);
         Assert.NotNull(row.tool_calls_json);
         Assert.Contains("read_file", (string?)row.tool_calls_json);
+    }
+
+    [Fact]
+    public async Task LoadHistoryAsync_RestoresPersistenceId_AndVisibilityMetadata()
+    {
+        var animaId = "test-anima-1";
+        var insertedId = await _service.StoreMessageAsync(
+            animaId,
+            "assistant",
+            "I updated your memory.",
+            new List<ToolCallInfo>
+            {
+                new()
+                {
+                    ToolName = "memory_update",
+                    Category = ToolCategory.Memory,
+                    TargetUri = "memory://profile/name",
+                    FoldedSummary = "Preferred name: Alice",
+                    Parameters = new Dictionary<string, string> { ["uri"] = "memory://profile/name" },
+                    ResultSummary = "Updated memory",
+                    Status = ToolCallStatus.Success
+                }
+            },
+            inputTokens: 40,
+            outputTokens: 60,
+            CancellationToken.None,
+            new SedimentationSummaryInfo { Count = 3 });
+
+        var loaded = await _service.LoadHistoryAsync(animaId, CancellationToken.None);
+
+        var message = Assert.Single(loaded);
+        Assert.Equal(insertedId, message.PersistenceId);
+        Assert.NotNull(message.SedimentationSummary);
+        Assert.Equal(3, message.SedimentationSummary!.Count);
+
+        var toolCall = Assert.Single(message.ToolCalls);
+        Assert.Equal(ToolCategory.Memory, toolCall.Category);
+        Assert.Equal("memory://profile/name", toolCall.TargetUri);
+        Assert.Equal("Preferred name: Alice", toolCall.FoldedSummary);
     }
 
     /// <summary>
@@ -275,6 +354,52 @@ public class ChatHistoryServiceTests : IAsyncLifetime
         Assert.NotNull(row);
         // Empty list is stored as null
         Assert.Null(row!.tool_calls_json);
+    }
+
+    [Fact]
+    public async Task UpdateAssistantVisibilityAsync_UpdatesStoredAssistantRow()
+    {
+        var animaId = "test-anima-1";
+        var assistantId = await _service.StoreMessageAsync(
+            animaId,
+            "assistant",
+            "Response before background sedimentation",
+            new List<ToolCallInfo>(),
+            0,
+            0,
+            CancellationToken.None);
+
+        var updatedToolCalls = new List<ToolCallInfo>
+        {
+            new()
+            {
+                ToolName = "memory_create",
+                Category = ToolCategory.Memory,
+                TargetUri = "memory://journal/today",
+                FoldedSummary = "Remembered today's win",
+                Parameters = new Dictionary<string, string> { ["path"] = "journal/today" },
+                ResultSummary = "Created memory",
+                Status = ToolCallStatus.Success
+            }
+        };
+
+        await _service.UpdateAssistantVisibilityAsync(
+            assistantId,
+            updatedToolCalls,
+            new SedimentationSummaryInfo { Count = 1 },
+            CancellationToken.None);
+
+        var loaded = await _service.LoadHistoryAsync(animaId, CancellationToken.None);
+
+        var message = Assert.Single(loaded);
+        Assert.Equal(assistantId, message.PersistenceId);
+        Assert.NotNull(message.SedimentationSummary);
+        Assert.Equal(1, message.SedimentationSummary!.Count);
+
+        var toolCall = Assert.Single(message.ToolCalls);
+        Assert.Equal(ToolCategory.Memory, toolCall.Category);
+        Assert.Equal("memory://journal/today", toolCall.TargetUri);
+        Assert.Equal("Remembered today's win", toolCall.FoldedSummary);
     }
 
     /// <summary>
