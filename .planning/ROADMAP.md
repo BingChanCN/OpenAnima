@@ -176,7 +176,7 @@
 - [x] **Phase 65: Memory Schema Migration** - Four-table data model split with atomic migration and SQLite hardening (completed 2026-03-25)
 - [x] **Phase 66: Platform Persistence** - Wiring layout and chat history survive application restarts (completed 2026-03-29, 3/3 plans)
 - [x] **Phase 67: Memory Tools & Sedimentation** - First-person memory CRUD tools and improved sedimentation quality (completed 2026-03-29)
-- [ ] **Phase 68: Memory Visibility** - Memory operations displayed as tool cards and summary chips in chat
+- [x] **Phase 68: Memory Visibility** - Memory operations displayed as tool cards and summary chips in chat (completed 2026-04-03)
 - [ ] **Phase 69: Background Chat Execution** - LLM streaming survives page navigation with buffer replay
 - [ ] **Phase 70: LLM-Guided Graph Exploration** - Opt-in LLM-driven graph traversal recall with dynamic depth
 
@@ -329,7 +329,7 @@ Plans:
 | 65. Memory Schema Migration | v2.0.4 | 3/3 | Complete | 2026-03-25 |
 | 66. Platform Persistence | v2.0.4 | 3/3 | Complete | 2026-03-29 |
 | 67. Memory Tools & Sedimentation | v2.0.4 | 3/3 | Complete    | 2026-03-29 |
-| 68. Memory Visibility | v2.0.4 | 1/3 | In Progress|  |
+| 68. Memory Visibility | v2.0.4 | 3/3 | Complete   | 2026-04-03 |
 | 69. Background Chat Execution | v2.0.4 | 0/TBD | Not started | - |
 | 70. LLM-Guided Graph Exploration | v2.0.4 | 0/TBD | Not started | - |
 
