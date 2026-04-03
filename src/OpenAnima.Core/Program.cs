@@ -128,12 +128,11 @@ app.MapRazorComponents<OpenAnima.Core.Components.App>()
 app.MapHub<RuntimeHub>("/hubs/runtime");
 
 // --- Ensure Kestrel has a URL to bind ---
-if (!app.Urls.Any())
-    app.Urls.Add("http://localhost:5000");
+StartupUrlResolver.EnsureDefaultUrl(app.Urls, app.Configuration);
 
 // --- Browser auto-launch ---
 var noBrowser = args.Contains("--no-browser");
-var url = app.Urls.FirstOrDefault() ?? "http://localhost:5000";
+var url = StartupUrlResolver.ResolveDisplayUrl(app.Urls, app.Configuration);
 
 app.Lifetime.ApplicationStarted.Register(() =>
 {
