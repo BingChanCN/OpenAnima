@@ -37,3 +37,9 @@ public record MemoryOperationPayload(
     string? Content,       // null for delete/list
     int? NodeCount,        // non-null for list results
     bool Success);
+
+/// <summary>
+/// Event payload published when background sedimentation finishes writing memories
+/// for an assistant response. Consumed by Phase 68 to render a single count-only chip.
+/// </summary>
+public record SedimentationCompletedPayload(string AnimaId, int WrittenCount);
