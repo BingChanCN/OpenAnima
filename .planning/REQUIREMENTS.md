@@ -60,8 +60,8 @@ Requirements for Intelligent Memory & Persistence milestone. Each maps to roadma
 
 ### Memory Visibility
 
-- [ ] **MEMV-01**: Explicit memory tool calls (create/update/delete) displayed as tool cards in chat bubbles (same pattern as workspace tools)
-- [ ] **MEMV-02**: Background sedimentation shows a single collapsed "N memories sedimented" summary chip in chat (not per-node)
+- [x] **MEMV-01**: Explicit memory tool calls (create/update/delete) displayed as tool cards in chat bubbles (same pattern as workspace tools)
+- [x] **MEMV-02**: Background sedimentation shows a single collapsed "N memories sedimented" summary chip in chat (not per-node)
 - [ ] **MEMV-03**: Memory tool cards have distinct visual treatment (ToolCategory.Memory CSS class) to differentiate from workspace tools
 
 ## v2.1+ Requirements (Deferred)
@@ -130,8 +130,8 @@ Requirements for Intelligent Memory & Persistence milestone. Each maps to roadma
 | MEMS-01 | Phase 67 | Complete |
 | MEMS-02 | Phase 67 | Complete |
 | MEMS-03 | Phase 67 | Complete |
-| MEMV-01 | Phase 68 | Pending |
-| MEMV-02 | Phase 68 | Pending |
+| MEMV-01 | Phase 68 | Complete |
+| MEMV-02 | Phase 68 | Complete |
 | MEMV-03 | Phase 68 | Pending |
 
 **Coverage:**

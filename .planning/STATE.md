@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0.4
 milestone_name: Intelligent Memory & Persistence
-status: Ready to plan
-stopped_at: Phase 68 context gathered
-last_updated: "2026-04-01T13:45:43.272Z"
-last_activity: 2026-03-29
+status: Ready to execute
+stopped_at: Completed 68-01-PLAN.md
+last_updated: "2026-04-03T03:22:25.578Z"
+last_activity: 2026-04-03
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 10
 ---
 
 # Project State: OpenAnima
@@ -23,12 +23,12 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-25)
 
 **Core value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
-**Current focus:** Phase 67 — memory-tools-sedimentation
+**Current focus:** Phase 68 — memory-visibility
 
 ## Current Position
 
-Phase: 68
-Plan: Not started
+Phase: 68 (memory-visibility) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -41,6 +41,7 @@ Plan: Not started
 | Phase 67-memory-tools-sedimentation P03 | 12min | 2 tasks | 4 files |
 | Phase 67-memory-tools-sedimentation P01 | 13 | 2 tasks | 8 files |
 | Phase 67-memory-tools-sedimentation P02 | 17 | 2 tasks | 7 files |
+| Phase 68-memory-visibility P01 | 23min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 67-02]: MemoryCreateTool uses 'path' parameter (not 'uri') matching plan spec — distinct from MemoryUpdateTool which uses 'uri' for existing nodes
 - [Phase 67-02]: MemoryUpdateTool retains existing keywords/disclosureTrigger when optional params not provided — non-destructive partial update semantics
 - [Phase 67-02]: All four memory CRUD tools publish MemoryOperationPayload('create'|'update'|'delete'|'list') for Phase 68 visibility
+- [Phase 68-memory-visibility]: Assistant chat messages now carry the persisted chat_messages row id so later visibility updates can target the original row.
+- [Phase 68-memory-visibility]: sedimentation_json is added with an additive pragma_table_info migration so existing chat.db files upgrade safely in place.
+- [Phase 68-memory-visibility]: Chat history loads alias snake_case SQLite columns to explicit DTO property names so visibility metadata round-trips reliably through Dapper.
 
 ### Key Design Discussions (from milestone kickoff)
 
@@ -93,9 +97,9 @@ None.
 
 ## Session Continuity
 
-Last activity: 2026-03-29
-Stopped at: Phase 68 context gathered
-Resume file: .planning/phases/68-memory-visibility/68-CONTEXT.md
+Last activity: 2026-04-03
+Stopped at: Completed 68-01-PLAN.md
+Resume file: None
 
 ### Completed Plans
 
