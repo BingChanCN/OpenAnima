@@ -44,7 +44,11 @@
         {
             @foreach (var message in Messages)
             {
-                <ChatMessage Role="@message.Role" Content="@message.Content" IsStreaming="@message.IsStreaming" ToolCalls="@message.ToolCalls" />
+                <ChatMessage Role="@message.Role"
+                             Content="@message.Content"
+                             IsStreaming="@message.IsStreaming"
+                             ToolCalls="@message.ToolCalls"
+                             SedimentationSummary="@message.SedimentationSummary" />
             }
             @if (!_isGenerating && Messages.Count > 0 && Messages.Last().Role == "assistant")
             {
