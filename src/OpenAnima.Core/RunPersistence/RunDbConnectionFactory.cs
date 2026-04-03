@@ -10,16 +10,22 @@ namespace OpenAnima.Core.RunPersistence;
 /// </summary>
 public class RunDbConnectionFactory
 {
+    private const int BusyTimeoutSeconds = 5;
     private readonly string _connectionString;
 
     /// <summary>
     /// Initializes a production factory that connects to a SQLite file at the given path.
-    /// The connection string is built as <c>Data Source={dbPath}</c>.
+    /// The connection string is built with a five-second default timeout.
     /// </summary>
     /// <param name="dbPath">Absolute or relative path to the SQLite database file.</param>
     public RunDbConnectionFactory(string dbPath)
     {
-        _connectionString = $"Data Source={dbPath};Busy Timeout=5000";
+        var builder = new SqliteConnectionStringBuilder
+        {
+            DataSource = dbPath,
+            DefaultTimeout = BusyTimeoutSeconds
+        };
+        _connectionString = builder.ToString();
     }
 
     /// <summary>
