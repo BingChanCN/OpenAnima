@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenAnima.Contracts;
+using OpenAnima.Core.Events;
 using OpenAnima.Core.Memory;
 using OpenAnima.Core.RunPersistence;
 using OpenAnima.Core.Runs;
@@ -49,7 +50,9 @@ public class SedimentationServiceTests : IDisposable
         new ChatMessageInput("assistant", "Got it, I'll keep that in mind.")
     ];
 
-    private SedimentationService MakeService(Func<IReadOnlyList<ChatMessage>, CancellationToken, Task<string>> llmOverride)
+    private SedimentationService MakeService(
+        Func<IReadOnlyList<ChatMessage>, CancellationToken, Task<string>> llmOverride,
+        IEventBus? eventBus = null)
         => new SedimentationService(
             _graph,
             _stepRecorder,
@@ -57,6 +60,7 @@ public class SedimentationServiceTests : IDisposable
             registryService: null!,
             providerRegistry: null!,
             NullLogger<SedimentationService>.Instance,
+            eventBus: eventBus,
             llmCallOverride: llmOverride);
 
     private static string MakeExtractionJson(params object[] items)
@@ -86,6 +90,23 @@ public class SedimentationServiceTests : IDisposable
         Assert.Equal(2, nodes.Count);
         Assert.Contains(nodes, n => n.Uri == "sediment://fact/proj-sqlite");
         Assert.Contains(nodes, n => n.Uri == "sediment://preference/coding-style");
+    }
+
+    [Fact]
+    public async Task SedimentAsync_WithTwoExtractedItems_PublishesOneSedimentationCompletedEvent()
+    {
+        var llmJson = MakeExtractionJson(
+            new { action = "create", uri = "sediment://fact/proj-sqlite", content = "Project uses SQLite", keywords = "[\"sqlite\",\"dapper\"]", disclosure_trigger = "database" },
+            new { action = "create", uri = "sediment://preference/coding-style", content = "User prefers minimal code", keywords = "[\"coding style\"]", disclosure_trigger = "code style" }
+        );
+        var eventBus = new SedimentFakeEventBus();
+        var service = MakeService((_, _) => Task.FromResult(llmJson), eventBus);
+
+        await service.SedimentAsync("anima-s01", MakeMessages(), "response text", sourceStepId: "step-001");
+
+        var evt = Assert.Single(eventBus.Published.OfType<SedimentationCompletedPayload>());
+        Assert.Equal("anima-s01", evt.AnimaId);
+        Assert.Equal(2, evt.WrittenCount);
     }
 
     // ── Provenance: SourceStepId ──────────────────────────────────────────────
@@ -146,6 +167,18 @@ public class SedimentationServiceTests : IDisposable
         // Assert: no nodes written for this anima
         var nodes = await _graph.QueryByPrefixAsync("anima-s04", "sediment://");
         Assert.Empty(nodes);
+    }
+
+    [Fact]
+    public async Task SedimentAsync_EmptyExtractedArray_DoesNotPublishSedimentationCompletedEvent()
+    {
+        var eventBus = new SedimentFakeEventBus();
+        var llmJson = "{\"extracted\":[],\"skipped_reason\":\"simple greeting exchange\"}";
+        var service = MakeService((_, _) => Task.FromResult(llmJson), eventBus);
+
+        await service.SedimentAsync("anima-s04", MakeMessages(), "response", sourceStepId: null);
+
+        Assert.Empty(eventBus.Published.OfType<SedimentationCompletedPayload>());
     }
 
     // ── Auto-snapshot on update (LIVM-03) ─────────────────────────────────────
@@ -459,5 +492,37 @@ internal class SedimentFakeStepRecorder : IStepRecorder
     {
         FailCalls.Add(new FailCall(stepId, moduleName, ex));
         return Task.CompletedTask;
+    }
+}
+
+internal sealed class SedimentFakeEventBus : IEventBus
+{
+    public List<object> Published { get; } = new();
+
+    public Task PublishAsync<TPayload>(ModuleEvent<TPayload> evt, CancellationToken ct = default)
+    {
+        Published.Add(evt.Payload!);
+        return Task.CompletedTask;
+    }
+
+    public Task<TResponse> SendAsync<TResponse>(string targetModuleId, object request, CancellationToken ct = default)
+        => Task.FromResult(default(TResponse)!);
+
+    public IDisposable Subscribe<TPayload>(
+        string eventName,
+        Func<ModuleEvent<TPayload>, CancellationToken, Task> handler,
+        Func<ModuleEvent<TPayload>, bool>? filter = null) => SedimentNullDisposable.Instance;
+
+    public IDisposable Subscribe<TPayload>(
+        Func<ModuleEvent<TPayload>, CancellationToken, Task> handler,
+        Func<ModuleEvent<TPayload>, bool>? filter = null) => SedimentNullDisposable.Instance;
+}
+
+internal sealed class SedimentNullDisposable : IDisposable
+{
+    public static readonly SedimentNullDisposable Instance = new();
+
+    public void Dispose()
+    {
     }
 }
