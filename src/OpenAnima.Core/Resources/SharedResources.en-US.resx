@@ -656,6 +656,24 @@
   <data name="Chat.ToolCountBadge" xml:space="preserve">
     <value>Used {0} tools</value>
   </data>
+  <data name="Chat.MemoryCreateTitle" xml:space="preserve">
+    <value>Create memory</value>
+  </data>
+  <data name="Chat.MemoryUpdateTitle" xml:space="preserve">
+    <value>Update memory</value>
+  </data>
+  <data name="Chat.MemoryDeleteTitle" xml:space="preserve">
+    <value>Delete memory</value>
+  </data>
+  <data name="Chat.SedimentationChipSingular" xml:space="preserve">
+    <value>{0} memory sedimented</value>
+  </data>
+  <data name="Chat.SedimentationChipPlural" xml:space="preserve">
+    <value>{0} memories sedimented</value>
+  </data>
+  <data name="Chat.MemoryDeleteRecoverable" xml:space="preserve">
+    <value>Soft deleted. Recoverable from Memory page.</value>
+  </data>
   <data name="Chat.AgentRunning" xml:space="preserve">
     <value>Agent is running...</value>
   </data>
