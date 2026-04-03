@@ -28,4 +28,12 @@ public class ToolCallEventPayloadTests
         var payload = new ToolCallCompletedPayload("shell_exec", "Error: command not found", false);
         Assert.False(payload.Success);
     }
+
+    [Fact]
+    public void SedimentationCompletedPayload_HoldsValues()
+    {
+        var payload = new SedimentationCompletedPayload("anima-1", 3);
+        Assert.Equal("anima-1", payload.AnimaId);
+        Assert.Equal(3, payload.WrittenCount);
+    }
 }

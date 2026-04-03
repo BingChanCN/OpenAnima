@@ -27,6 +27,16 @@ public class ChatSessionStateTests
     }
 
     [Fact]
+    public void ToolCallInfo_MemoryVisibilityFields_HaveSafeDefaults()
+    {
+        var info = new ToolCallInfo();
+
+        Assert.Equal(ToolCategory.Generic, info.Category);
+        Assert.Null(info.TargetUri);
+        Assert.Null(info.FoldedSummary);
+    }
+
+    [Fact]
     public void ChatSessionMessage_ToolCalls_StartsEmpty()
     {
         var msg = new ChatSessionMessage();
@@ -41,6 +51,15 @@ public class ChatSessionStateTests
         msg.ToolCalls.Add(new ToolCallInfo { ToolName = "read_file" });
         Assert.Single(msg.ToolCalls);
         Assert.Equal("read_file", msg.ToolCalls[0].ToolName);
+    }
+
+    [Fact]
+    public void ChatSessionMessage_MemoryVisibilityFields_DefaultToNull()
+    {
+        var msg = new ChatSessionMessage();
+
+        Assert.Null(msg.PersistenceId);
+        Assert.Null(msg.SedimentationSummary);
     }
 
 
