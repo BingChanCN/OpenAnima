@@ -1,5 +1,5 @@
 using OpenAI;
-using OpenAI.Chat;
+using OpenAI.Responses;
 using System.ClientModel;
 using OpenAnima.Contracts;
 using OpenAnima.Contracts.Ports;
@@ -26,7 +26,9 @@ namespace OpenAnima.Core.Modules;
 /// Malformed markers trigger a self-correction loop (up to MaxRetries = 2 retries).
 ///
 /// The messages port accepts a JSON-serialized List&lt;ChatMessageInput&gt; for multi-turn
-/// conversation. When both messages and prompt ports fire, messages takes priority.
+/// conversation. The prompt port can also carry conversation history through chat metadata so
+/// normal chat wiring keeps multi-turn context without exposing serialized message lists to users.
+/// When both messages and prompt ports fire, messages takes priority.
 /// </summary>
 [InputPort("messages", PortType.Text)]
 [InputPort("prompt", PortType.Text)]
@@ -35,6 +37,8 @@ namespace OpenAnima.Core.Modules;
 public class LLMModule : IModuleExecutor, IModuleConfigSchema
 {
     private const int DefaultMaxRetries = 2;
+    private static readonly TimeSpan SedimentationQuietPeriod = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan SedimentationPollInterval = TimeSpan.FromMilliseconds(50);
 
     private readonly ILLMService _llmService;
     private readonly IModuleConfigStore _configService;
@@ -55,7 +59,10 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
     private ModuleExecutionState _state = ModuleExecutionState.Idle;
     private Exception? _lastError;
     private readonly SemaphoreSlim _executionGuard = new SemaphoreSlim(1, 1);
+    private readonly SemaphoreSlim _sedimentationExecutionGuard = new SemaphoreSlim(1, 1);
     private volatile bool _messagesPortFired;
+    private int _foregroundExecutionCount;
+    private long _lastForegroundActivityUtcTicks = DateTimeOffset.UtcNow.UtcTicks;
 
     public IModuleMetadata Metadata { get; } = new OpenAnima.Contracts.ModuleMetadataRecord(
         "LLMModule", "1.0.0", "Sends prompt to LLM and outputs response");
@@ -197,8 +204,7 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
             {
                 // Yield to let any concurrently-fired messages handler set the priority flag first.
                 await Task.Yield();
-                var prompt = evt.Payload;
-                await ExecuteInternalAsync(prompt, ct);
+                await ExecuteInternalAsync(evt, ct);
             });
         _subscriptions.Add(sub);
 
@@ -210,7 +216,7 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
                 _messagesPortFired = true;
                 try
                 {
-                    await ExecuteFromMessagesAsync(evt.Payload, ct);
+                    await ExecuteFromMessagesAsync(evt, ct);
                 }
                 finally
                 {
@@ -224,63 +230,107 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
 
     public Task ExecuteAsync(CancellationToken ct = default) => Task.CompletedTask;
 
-    private async Task ExecuteInternalAsync(string prompt, CancellationToken ct)
+    private async Task ExecuteInternalAsync(ModuleEvent<string> evt, CancellationToken ct)
     {
-        // Priority rule: if messages port fired, suppress prompt execution.
-        if (_messagesPortFired) return;
-
-        await _executionGuard.WaitAsync(ct);
+        BeginForegroundExecution();
 
         try
         {
-            if (prompt == null) return;
+            // Priority rule: if messages port fired, suppress prompt execution.
+            if (_messagesPortFired) return;
 
-            var messages = new List<ChatMessageInput> { new("user", prompt) };
-            await ExecuteWithMessagesListAsync(messages, ct);
-        }
-        catch (Exception ex)
-        {
-            _state = ModuleExecutionState.Error;
-            _lastError = ex;
-            _logger.LogError(ex, "LLMModule execution failed");
-            if (!ct.IsCancellationRequested)
+            await _executionGuard.WaitAsync(ct);
+
+            try
             {
-                await PublishErrorAsync(ex.Message, CancellationToken.None);
+                var prompt = evt.Payload;
+                if (prompt == null) return;
+
+                var messages = ResolveConversationMessages(evt.Metadata, prompt, allowPlainTextFallback: true);
+                await ExecuteWithMessagesListAsync(new List<ChatMessageInput>(messages), ct);
             }
-            throw;
+            catch (Exception ex)
+            {
+                _state = ModuleExecutionState.Error;
+                _lastError = ex;
+                _logger.LogError(ex, "LLMModule execution failed");
+                if (!ct.IsCancellationRequested)
+                {
+                    await PublishErrorAsync(ex.Message, CancellationToken.None);
+                }
+                throw;
+            }
+            finally
+            {
+                _executionGuard.Release();
+            }
         }
         finally
         {
-            _executionGuard.Release();
+            EndForegroundExecution();
         }
     }
 
-    private async Task ExecuteFromMessagesAsync(string json, CancellationToken ct)
+    private async Task ExecuteFromMessagesAsync(ModuleEvent<string> evt, CancellationToken ct)
     {
-        var messages = ChatMessageInput.DeserializeList(json);
+        var messages = ResolveConversationMessages(evt.Metadata, evt.Payload, allowPlainTextFallback: false);
         if (messages.Count == 0) return;
 
-        await _executionGuard.WaitAsync(ct);
+        BeginForegroundExecution();
 
         try
         {
-            await ExecuteWithMessagesListAsync(new List<ChatMessageInput>(messages), ct);
-        }
-        catch (Exception ex)
-        {
-            _state = ModuleExecutionState.Error;
-            _lastError = ex;
-            _logger.LogError(ex, "LLMModule execution failed (messages port)");
-            if (!ct.IsCancellationRequested)
+            await _executionGuard.WaitAsync(ct);
+
+            try
             {
-                await PublishErrorAsync(ex.Message, CancellationToken.None);
+                await ExecuteWithMessagesListAsync(new List<ChatMessageInput>(messages), ct);
             }
-            throw;
+            catch (Exception ex)
+            {
+                _state = ModuleExecutionState.Error;
+                _lastError = ex;
+                _logger.LogError(ex, "LLMModule execution failed (messages port)");
+                if (!ct.IsCancellationRequested)
+                {
+                    await PublishErrorAsync(ex.Message, CancellationToken.None);
+                }
+                throw;
+            }
+            finally
+            {
+                _executionGuard.Release();
+            }
         }
         finally
         {
-            _executionGuard.Release();
+            EndForegroundExecution();
         }
+    }
+
+    private static IReadOnlyList<ChatMessageInput> ResolveConversationMessages(
+        Dictionary<string, string>? metadata,
+        string? payload,
+        bool allowPlainTextFallback)
+    {
+        var metadataHistory = ChatPipelineMetadata.GetConversationHistoryOrEmpty(metadata);
+        if (metadataHistory.Count > 0)
+        {
+            return metadataHistory;
+        }
+
+        var messages = ChatMessageInput.DeserializeList(payload);
+        if (messages.Count > 0)
+        {
+            return messages;
+        }
+
+        if (allowPlainTextFallback && !string.IsNullOrWhiteSpace(payload))
+        {
+            return [new ChatMessageInput("user", payload)];
+        }
+
+        return [];
     }
 
     private async Task ExecuteWithMessagesListAsync(List<ChatMessageInput> messages, CancellationToken ct)
@@ -389,7 +439,7 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
         // Call LLM (custom client or global service).
         var result = await CallLlmAsync(animaId, messages, ct);
 
-        if (!result.Success || result.Content == null)
+        if (!HasUsableContent(result))
         {
             await PublishErrorAsync(result.Error ?? "LLMModule did not return any content.", ct);
             _state = ModuleExecutionState.Completed;
@@ -398,21 +448,22 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
 
         if (!useFormatDetection)
         {
-            await PublishResponseAsync(result.Content, ct);
-            TriggerSedimentation(animaId, messages, result.Content);
+            var content = result.Content!;
+            await PublishResponseAsync(content, ct);
+            TriggerSedimentation(animaId, messages, content);
             _state = ModuleExecutionState.Completed;
             _logger.LogDebug("LLMModule execution completed (no format detection)");
             return;
         }
 
         // Format detection + self-correction loop.
-        var currentContent = result.Content;
+        var currentContent = result.Content!;
         var currentMessages = new List<ChatMessageInput>(messages);
         var attempt = 0;
 
         while (true)
         {
-            var detection = _formatDetector.Detect(currentContent, knownServiceNames);
+            var detection = _formatDetector.Detect(currentContent!, knownServiceNames);
 
             if (detection.MalformedMarkerError == null)
             {
@@ -445,14 +496,14 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
             };
 
             var retryResult = await CallLlmAsync(animaId, currentMessages, ct);
-            if (!retryResult.Success || retryResult.Content == null)
+            if (!HasUsableContent(retryResult))
             {
                 await PublishErrorAsync(retryResult.Error ?? "LLMModule retry did not return any content.", ct);
                 _state = ModuleExecutionState.Completed;
                 return;
             }
 
-            currentContent = retryResult.Content;
+            currentContent = retryResult.Content!;
         }
     }
 
@@ -691,31 +742,33 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
     {
         try
         {
-            var clientOptions = new OpenAIClientOptions
+            var client = OpenAIResponsesAdapter.CreateClient(apiUrl, apiKey, modelName);
+            var inputItems = OpenAIResponsesAdapter.MapMessagesForEndpoint(messages, apiUrl);
+            (ResponseResult response, string accumulatedText) streaming;
+            try
             {
-                Endpoint = new Uri(apiUrl)
-            };
-            var chatClient = new ChatClient(
-                model: modelName,
-                credential: new ApiKeyCredential(apiKey),
-                options: clientOptions);
-
-            var chatMessages = new List<ChatMessage>();
-            foreach (var msg in messages)
+                streaming = await OpenAIResponsesAdapter.CompleteStreamingAsync(
+                    client,
+                    inputItems,
+                    ct);
+            }
+            catch (Exception ex) when (OpenAIResponsesAdapter.ShouldRetryWithoutSystemMessages(ex, messages))
             {
-                ChatMessage chatMessage = msg.Role.ToLowerInvariant() switch
-                {
-                    "system" => new SystemChatMessage(msg.Content),
-                    "user" => new UserChatMessage(msg.Content),
-                    "assistant" => new AssistantChatMessage(msg.Content),
-                    "tool" => new UserChatMessage(msg.Content),
-                    _ => new UserChatMessage(msg.Content)
-                };
-                chatMessages.Add(chatMessage);
+                _logger.LogWarning(
+                    ex,
+                    "Custom provider at {Url} rejected system messages; retrying {Model} with instruction fallback.",
+                    apiUrl,
+                    modelName);
+                streaming = await OpenAIResponsesAdapter.CompleteStreamingAsync(
+                    client,
+                    OpenAIResponsesAdapter.MapMessagesForSystemlessProvider(messages),
+                    ct);
             }
 
-            var completion = await chatClient.CompleteChatAsync(chatMessages, cancellationToken: ct);
-            return new LLMResult(true, completion.Value.Content[0].Text, null);
+            var content = OpenAIResponsesAdapter.ExtractOutputText(streaming.response);
+            if (string.IsNullOrWhiteSpace(content))
+                content = streaming.accumulatedText;
+            return new LLMResult(true, content, null);
         }
         catch (Exception ex)
         {
@@ -929,7 +982,7 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
                 // Call LLM
                 var result = await CallLlmAsync(animaId, history, ct);
 
-                if (!result.Success || result.Content == null)
+                if (!HasUsableContent(result))
                 {
                     // Retry once after 2s delay, then publish error
                     try
@@ -943,7 +996,7 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
                     }
 
                     result = await CallLlmAsync(animaId, history, ct);
-                    if (!result.Success || result.Content == null)
+                    if (!HasUsableContent(result))
                     {
                         await PublishErrorAsync(result.Error ?? "Agent LLM call failed after retry.", ct);
                         _state = ModuleExecutionState.Completed;
@@ -957,7 +1010,8 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
                 }
 
                 // Parse tool calls from response
-                var parsed = ToolCallParser.Parse(result.Content);
+                var content = result.Content!;
+                var parsed = ToolCallParser.Parse(content);
 
                 if (parsed.ToolCalls.Count == 0)
                 {
@@ -970,14 +1024,14 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
                 completedIterations++;
                 string? iterStepId = null;
                 iterStepId = _stepRecorder != null
-                    ? await _stepRecorder.RecordStepStartAsync(
-                        animaId, $"AgentIteration #{completedIterations}",
-                        result.Content.Length > 200 ? result.Content[..200] : result.Content,
-                        loopStepId, ct)
+                        ? await _stepRecorder.RecordStepStartAsync(
+                            animaId, $"AgentIteration #{completedIterations}",
+                            content.Length > 200 ? content[..200] : content,
+                            loopStepId, ct)
                     : null;
 
                 // Add assistant message with tool calls to history
-                history.Add(new ChatMessageInput("assistant", result.Content));
+                history.Add(new ChatMessageInput("assistant", content));
 
                 // Execute all tool calls in document order, collect results
                 var toolResultSb = new System.Text.StringBuilder();
@@ -1045,7 +1099,17 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
                 $"{completedIterations} iterations completed in {loopStopwatch.ElapsedMilliseconds}ms", ct);
 
         // Publish final response
-        var responseText = finalText ?? "";
+        var responseText = finalText?.Trim();
+        if (string.IsNullOrWhiteSpace(responseText))
+        {
+            await PublishErrorAsync("Agent loop did not produce any content.", ct);
+            _state = ModuleExecutionState.Completed;
+            if (_stepRecorder != null && loopStepId != null)
+                await _stepRecorder.RecordStepFailedAsync(
+                    loopStepId, "AgentLoop",
+                    new InvalidOperationException("Agent loop did not produce any content."), ct);
+            return;
+        }
 
         if (useFormatDetection)
         {
@@ -1073,6 +1137,9 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
     private static string EscapeXmlContent(string value)
         => value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 
+    private static bool HasUsableContent(LLMResult result)
+        => result.Success && !string.IsNullOrWhiteSpace(result.Content);
+
     /// <summary>
     /// Extracts content text from the XML tool_result envelope and truncates for event transport.
     /// Input format: &lt;tool_result name="..." success="..."&gt;content&lt;/tool_result&gt;
@@ -1092,7 +1159,9 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
     }
 
     /// <summary>
-    /// Fires sedimentation as a background Task.Run after every successful response publication.
+    /// Fires sedimentation as a background task after every successful response publication.
+    /// A short quiet period gives the next foreground chat turn priority so background extraction
+    /// does not immediately contend with follow-up user prompts on single-flight providers.
     /// Snapshots values before Task.Run to avoid closure over mutable state (Pitfall 2).
     /// Uses CancellationToken.None so sedimentation outlives the caller's request (Pitfall 1).
     /// Exceptions are caught and logged — sedimentation must never affect the main LLM pipeline.
@@ -1111,15 +1180,66 @@ public class LLMModule : IModuleExecutor, IModuleConfigSchema
         {
             try
             {
-                await _sedimentationService.SedimentAsync(
-                    capturedAnimaId, capturedMessages, capturedResponse,
-                    null, CancellationToken.None);
+                await WaitForSedimentationWindowAsync(CancellationToken.None);
+                await _sedimentationExecutionGuard.WaitAsync(CancellationToken.None);
+                try
+                {
+                    await WaitForSedimentationWindowAsync(CancellationToken.None);
+                    await _sedimentationService.SedimentAsync(
+                        capturedAnimaId, capturedMessages, capturedResponse,
+                        null, CancellationToken.None);
+                }
+                finally
+                {
+                    _sedimentationExecutionGuard.Release();
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Background sedimentation failed for Anima {AnimaId}", capturedAnimaId);
             }
         }, CancellationToken.None);
+    }
+
+    private void BeginForegroundExecution()
+    {
+        Interlocked.Increment(ref _foregroundExecutionCount);
+        TouchForegroundActivity();
+    }
+
+    private void EndForegroundExecution()
+    {
+        TouchForegroundActivity();
+        Interlocked.Decrement(ref _foregroundExecutionCount);
+    }
+
+    private void TouchForegroundActivity()
+        => Interlocked.Exchange(ref _lastForegroundActivityUtcTicks, DateTimeOffset.UtcNow.UtcTicks);
+
+    private async Task WaitForSedimentationWindowAsync(CancellationToken ct)
+    {
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (Volatile.Read(ref _foregroundExecutionCount) > 0)
+            {
+                await Task.Delay(SedimentationPollInterval, ct);
+                continue;
+            }
+
+            var quietUntilUtcTicks = Interlocked.Read(ref _lastForegroundActivityUtcTicks) + SedimentationQuietPeriod.Ticks;
+            var remainingTicks = quietUntilUtcTicks - DateTimeOffset.UtcNow.UtcTicks;
+            if (remainingTicks > 0)
+            {
+                await Task.Delay(
+                    TimeSpan.FromTicks(Math.Min(remainingTicks, SedimentationPollInterval.Ticks)),
+                    ct);
+                continue;
+            }
+
+            return;
+        }
     }
 
     public Task ShutdownAsync(CancellationToken cancellationToken = default)

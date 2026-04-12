@@ -1,28 +1,55 @@
 using ChatMessageInput = OpenAnima.Contracts.ChatMessageInput;
-using OpenAI.Chat;
 using System.ClientModel;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Options;
+using OpenAI.Responses;
 
 namespace OpenAnima.Core.LLM;
 
 public class LLMService : ILLMService
 {
-    private readonly ChatClient _client;
+    private readonly ResponsesClient _client;
     private readonly ILogger<LLMService> _logger;
+    private readonly string _endpoint;
+    private readonly string _apiKey;
+    private readonly string _model;
 
-    public LLMService(ChatClient client, ILogger<LLMService> logger)
+    public LLMService(ResponsesClient client, ILogger<LLMService> logger, IOptions<LLMOptions> options)
     {
         _client = client;
         _logger = logger;
+        _endpoint = options?.Value?.Endpoint ?? string.Empty;
+        _apiKey = options?.Value?.ApiKey ?? string.Empty;
+        _model = options?.Value?.Model ?? string.Empty;
     }
 
     public async Task<LLMResult> CompleteAsync(IReadOnlyList<ChatMessageInput> messages, CancellationToken ct = default)
     {
         try
         {
-            var chatMessages = MapMessages(messages);
-            var completion = await _client.CompleteChatAsync(chatMessages, cancellationToken: ct);
-            return new LLMResult(true, completion.Value.Content[0].Text, null);
+            (ResponseResult response, string accumulatedText) streaming;
+            try
+            {
+                streaming = await OpenAIResponsesAdapter.CompleteStreamingAsync(
+                    _client,
+                    OpenAIResponsesAdapter.MapMessagesForEndpoint(messages, _endpoint),
+                    ct);
+            }
+            catch (Exception ex) when (OpenAIResponsesAdapter.ShouldRetryWithoutSystemMessages(ex, messages))
+            {
+                _logger.LogWarning(
+                    ex,
+                    "LLM provider rejected system messages; retrying request with instruction fallback.");
+                streaming = await OpenAIResponsesAdapter.CompleteStreamingAsync(
+                    _client,
+                    OpenAIResponsesAdapter.MapMessagesForSystemlessProvider(messages),
+                    ct);
+            }
+
+            var content = OpenAIResponsesAdapter.ExtractOutputText(streaming.response);
+            if (string.IsNullOrWhiteSpace(content))
+                content = streaming.accumulatedText;
+            return new LLMResult(true, content, null);
         }
         catch (ClientResultException ex) when (ex.Status == 401)
         {
@@ -70,15 +97,15 @@ public class LLMService : ILLMService
 
     public async IAsyncEnumerable<string> StreamAsync(IReadOnlyList<ChatMessageInput> messages, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var chatMessages = MapMessages(messages);
-
-        AsyncCollectionResult<StreamingChatCompletionUpdate>? streamingUpdates = null;
+        var inputItems = OpenAIResponsesAdapter.MapMessagesForEndpoint(messages, _endpoint);
 
         // Try to initiate streaming - handle errors by yielding error tokens
         string? initError = null;
+        IAsyncEnumerable<string>? responseStream = null;
+
         try
         {
-            streamingUpdates = _client.CompleteChatStreamingAsync(chatMessages, cancellationToken: ct);
+            responseStream = OpenAIResponsesAdapter.StreamTextAsync(_client, inputItems, ct);
         }
         catch (ClientResultException ex)
         {
@@ -98,29 +125,23 @@ public class LLMService : ILLMService
         }
 
         // Stream tokens
-        await foreach (var update in streamingUpdates!.WithCancellation(ct))
+        await foreach (var chunk in responseStream!.WithCancellation(ct))
         {
-            if (update.ContentUpdate.Count > 0)
-            {
-                yield return update.ContentUpdate[0].Text;
-            }
+            yield return chunk;
         }
     }
 
     public async IAsyncEnumerable<StreamingResult> StreamWithUsageAsync(IReadOnlyList<ChatMessageInput> messages, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var chatMessages = MapMessages(messages);
+        var inputItems = OpenAIResponsesAdapter.MapMessagesForEndpoint(messages, _endpoint);
 
-        int? inputTokens = null;
-        int? outputTokens = null;
-
-        AsyncCollectionResult<StreamingChatCompletionUpdate>? streamingUpdates = null;
+        IAsyncEnumerable<StreamingResult>? responseStream = null;
 
         // Try to initiate streaming - handle errors by yielding error tokens
         string? initError = null;
         try
         {
-            streamingUpdates = _client.CompleteChatStreamingAsync(chatMessages, cancellationToken: ct);
+            responseStream = OpenAIResponsesAdapter.StreamTextWithUsageAsync(_client, inputItems, ct);
         }
         catch (ClientResultException ex)
         {
@@ -140,44 +161,10 @@ public class LLMService : ILLMService
         }
 
         // Stream tokens and capture usage
-        await foreach (var update in streamingUpdates!.WithCancellation(ct))
+        await foreach (var update in responseStream!.WithCancellation(ct))
         {
-            // Capture usage data if available
-            if (update.Usage != null)
-            {
-                inputTokens = update.Usage.InputTokenCount;
-                outputTokens = update.Usage.OutputTokenCount;
-            }
-
-            // Yield content tokens
-            if (update.ContentUpdate.Count > 0)
-            {
-                yield return new StreamingResult(update.ContentUpdate[0].Text, null, null);
-            }
+            yield return update;
         }
-
-        // Yield final result with usage data
-        if (inputTokens.HasValue || outputTokens.HasValue)
-        {
-            yield return new StreamingResult("", inputTokens, outputTokens);
-        }
-    }
-
-    private List<ChatMessage> MapMessages(IReadOnlyList<ChatMessageInput> messages)
-    {
-        var chatMessages = new List<ChatMessage>();
-        foreach (var msg in messages)
-        {
-            ChatMessage chatMessage = msg.Role.ToLowerInvariant() switch
-            {
-                "system" => new SystemChatMessage(msg.Content),
-                "user" => new UserChatMessage(msg.Content),
-                "assistant" => new AssistantChatMessage(msg.Content),
-                _ => new UserChatMessage(msg.Content) // Safe fallback
-            };
-            chatMessages.Add(chatMessage);
-        }
-        return chatMessages;
     }
 
     private string MapClientError(ClientResultException ex)
