@@ -202,6 +202,78 @@ public class LLMModuleMessagesPortTests
         await module.ShutdownAsync();
     }
 
+    [Fact]
+    public async Task PromptPort_WithConversationMetadata_UsesFullHistory()
+    {
+        var eventBus = CreateEventBus();
+        var capturingLlm = new CapturingFakeLlmService("prompt response");
+        var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
+            NullAnimaModuleConfigService.Instance, new TestAnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
+        await module.InitializeAsync();
+
+        var history = new List<ChatMessageInput>
+        {
+            new("user", "first question"),
+            new("assistant", "first answer"),
+            new("user", "second question")
+        };
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "LLMModule.port.prompt",
+            SourceModuleId = "test",
+            Payload = "second question",
+            Metadata = ChatPipelineMetadata.CreateConversationMetadata(history)
+        });
+
+        await Task.Delay(200);
+
+        Assert.NotNull(capturingLlm.LastMessages);
+        Assert.Equal(3, capturingLlm.LastMessages.Count);
+        Assert.Equal("first question", capturingLlm.LastMessages[0].Content);
+        Assert.Equal("first answer", capturingLlm.LastMessages[1].Content);
+        Assert.Equal("second question", capturingLlm.LastMessages[2].Content);
+
+        await module.ShutdownAsync();
+    }
+
+    [Fact]
+    public async Task MessagesPort_WithPlainTextPayloadAndConversationMetadata_UsesFullHistory()
+    {
+        var eventBus = CreateEventBus();
+        var capturingLlm = new CapturingFakeLlmService("messages response");
+        var module = new LLMModule(capturingLlm, eventBus, NullLogger<LLMModule>.Instance,
+            NullAnimaModuleConfigService.Instance, new TestAnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
+        await module.InitializeAsync();
+
+        var history = new List<ChatMessageInput>
+        {
+            new("user", "turn 1"),
+            new("assistant", "reply 1"),
+            new("user", "turn 2")
+        };
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "LLMModule.port.messages",
+            SourceModuleId = "test",
+            Payload = "turn 2",
+            Metadata = ChatPipelineMetadata.CreateConversationMetadata(history)
+        });
+
+        await Task.Delay(200);
+
+        Assert.NotNull(capturingLlm.LastMessages);
+        Assert.Equal(3, capturingLlm.LastMessages.Count);
+        Assert.Equal("turn 1", capturingLlm.LastMessages[0].Content);
+        Assert.Equal("reply 1", capturingLlm.LastMessages[1].Content);
+        Assert.Equal("turn 2", capturingLlm.LastMessages[2].Content);
+
+        await module.ShutdownAsync();
+    }
+
     // -----------------------------------------------------------------------
     // Test 6 (MSG-PORT-06): priority rule — messages port takes priority over prompt
     // -----------------------------------------------------------------------

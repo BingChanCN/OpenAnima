@@ -1,340 +1,408 @@
 # Phase 68: Memory Visibility - Research
 
 **Researched:** 2026-04-01
-**Domain:** Blazor chat UI, event-driven tool visibility, and chat-history persistence
-**Confidence:** MEDIUM
+**Domain:** Blazor chat tool visibility, event correlation, durable chat history, background sedimentation
+**Confidence:** HIGH
 
-<user_constraints>
-## User Constraints (from CONTEXT.md)
+## Summary
 
-### Locked Decisions
-- **D-01:** `memory_create`, `memory_update`, and `memory_delete` reuse the existing chat tool-card skeleton instead of introducing a second bespoke memory-card component model.
-- **D-02:** Memory cards keep the same collapsible interaction pattern as current workspace tool cards so the chat UI remains consistent.
-- **D-03:** The folded state of each explicit memory card shows: operation label, target URI, and a one-line content summary.
-- **D-04:** Expanded state can continue to show parameter and result details through the existing card body pattern; the phase does not require a separate memory-detail layout.
-- **D-05:** For delete operations, the folded state still surfaces the operation label and URI even when no content summary exists.
-- **D-06:** Background sedimentation is surfaced as exactly one collapsed summary chip per assistant response, never one card or chip per sedimented node.
-- **D-07:** The chip displays only the total count of sedimented memories.
-- **D-08:** The chip must not break out create/update counts and must not expand into URI-level detail in this phase.
-- **D-09:** Sedimentation visibility should remain subordinate to the conversation and explicit tool cards; the chat should not read like an operation log.
-- **D-10:** Memory cards must be visually distinct from generic workspace tool cards via `ToolCategory.Memory`.
-- **D-11:** The visual treatment should be medium strength: dedicated iconography plus memory-specific border/title/accent styling and a subtle background or tag treatment.
-- **D-12:** The differentiation must be noticeable at a glance but must not visually overpower assistant message content.
-- **D-13:** The existing card layout and information hierarchy remain recognizable so memory cards still feel part of the same chat system.
-- **D-14:** Explicit memory cards persist with chat history and remain attached to the original assistant bubble after reload or restart.
-- **D-15:** The sedimentation summary chip also persists with chat history and reattaches to the same assistant bubble on replay.
-- **D-16:** Historical replay is part of the feature: users returning later should still be able to see what memory activity happened during that assistant response.
-- **D-17:** Phase 68 should extend the existing chat-history persistence path instead of treating memory visibility as transient UI-only state.
+Phase 68 should extend the existing assistant-message tool-card system rather than introduce a second memory-specific component model. The current chat surface already has the right three anchors:
 
-### Claude's Discretion
-- Exact localized copy for memory card titles and the sedimentation summary chip, as long as the locked information hierarchy above is preserved.
-- Exact truncation length and formatting rules for the folded one-line content summary.
-- Whether soft-delete wording in the UI says "delete" or "deprecate", provided it remains understandable and consistent with soft-delete semantics.
-- Whether `memory_list` keeps generic tool-card styling or joins the memory category, since the locked Phase 68 requirement covers explicit `create` / `update` / `delete` visibility.
+1. `ChatPanel.razor` appends `ToolCallInfo` objects to the current streaming assistant message as `LLMModule.tool_call.started` / `LLMModule.tool_call.completed` events arrive.
+2. `ChatMessage.razor` renders those tool calls as collapsible cards inside the assistant bubble.
+3. `ChatHistoryService` persists `ToolCallInfo` as JSON so tool visibility survives reload.
 
-### Deferred Ideas (OUT OF SCOPE)
-- Per-sedimented-node drilldown or expandable URI list for background sedimentation — out of scope; this phase locks to a single collapsed summary chip.
-- Rich memory-specific cards with dedicated fields like keyword diff, old/new content diff, or provenance detail — intentionally deferred by choosing to reuse the existing tool-card skeleton.
-- Cross-page/background execution guarantees while the user navigates away — belongs to Phase 69, not this visibility phase.
-</user_constraints>
+The main work is not “add a card.” The real work is enriching that existing tool-card model with memory-specific display metadata, adding a separate sedimentation summary payload, and making sure both live updates and persisted replay attach to the correct assistant bubble.
+
+**Primary recommendation:** split the phase into three planning slices:
+- Shared visibility model + chat persistence migration/update path
+- Live event wiring and correlation in `ChatPanel`
+- Rendering/localization/CSS in `ChatMessage`
+
+That keeps the current shell intact, isolates the risky persistence race, and gives the planner a clean dependency structure.
+
+---
 
 <phase_requirements>
 ## Phase Requirements
 
 | ID | Description | Research Support |
 |----|-------------|------------------|
-| MEMV-01 | Explicit memory tool calls (create/update/delete) displayed as tool cards in chat bubbles (same pattern as workspace tools) | Reuse the existing `ToolCallInfo` lifecycle from `LLMModule.tool_call.started/completed`; enrich matching cards with memory-specific folded preview fields instead of creating parallel cards. |
-| MEMV-02 | Background sedimentation shows a single collapsed "N memories sedimented" summary chip in chat (not per-node) | Add one narrow sedimentation-summary payload and persist it on the assistant message after the initial row insert; do not emit per-node UI records. |
-| MEMV-03 | Memory tool cards have distinct visual treatment (`ToolCategory.Memory` CSS class) to differentiate from workspace tools | Add an explicit category/classification field on chat tool-call state and drive CSS/class selection from that field rather than from tool-name string checks in markup. |
+| MEMV-01 | Explicit memory tool calls (`memory_create`, `memory_update`, `memory_delete`) displayed as tool cards in chat bubbles using the same interaction pattern as workspace tools | Reuse the existing `ToolCallInfo` + `ChatMessage` card stack; add memory-specific display fields instead of a second card component |
+| MEMV-02 | Background sedimentation shows a single collapsed `N memories sedimented` summary chip in chat | Add a dedicated sedimentation-complete event and persist a per-message summary object separate from `tool_calls_json` |
+| MEMV-03 | Memory tool cards have distinct visual treatment (`ToolCategory.Memory`) | Classify only `memory_create` / `memory_update` / `memory_delete` as memory cards; keep `memory_list` on the generic tool-card style |
 </phase_requirements>
 
-## Summary
-
-Phase 68 should be implemented as a thin extension of the existing chat tool-card pipeline, not as a second UI system. `ChatPanel.razor` already listens to `LLMModule.tool_call.started` and `LLMModule.tool_call.completed` and builds `ToolCallInfo` records on the in-flight assistant message. Because the explicit memory tools also publish `Memory.operation`, the correct design is to enrich those existing tool cards with `ToolCategory.Memory`, folded preview fields, and memory-specific styling when the matching memory event arrives. If Phase 68 instead appends a new memory card, explicit operations will double-render.
+---
 
-The harder part is sedimentation replay, not explicit tool cards. `LLMModule.TriggerSedimentation(...)` runs after the final assistant response is published, and `ChatPanel` persists the assistant row immediately after the response completes. That means the sedimentation summary chip cannot rely on the initial `StoreMessageAsync(...)` call alone. Phase 68 needs a post-response persistence update path so one summary chip can be attached to the same assistant message after sedimentation finishes.
-
-The phase can stay small if it keeps three slices separate: enrich explicit cards, add one summary-chip event for background sedimentation, and extend chat-history persistence so both survive reload. No new UI library is needed. `## Validation Architecture` should exist for this phase because `.planning/config.json` does not disable Nyquist validation.
-
-**Primary recommendation:** Extend the current tool-card state model with `ToolCategory.Memory` and folded preview metadata, publish one sedimentation-summary payload, and add a chat-history update path so post-response sedimentation visibility persists on the original assistant message.
-
-## Standard Stack
+## Locked Decisions From Context and UI Contract
 
-### Core
-| Library / System | Version | Purpose | Why Standard |
-|------------------|---------|---------|--------------|
-| Razor components in `OpenAnima.Core` | `net8.0` app | Render assistant bubbles, tool cards, and summary chips | Existing chat UI already lives here; Phase 68 is a markup/state extension, not a new frontend stack. |
-| Repo `EventBus` + chat event payloads | in repo | Live delivery of tool lifecycle and memory events | `ChatPanel` already uses this path for tool cards, so memory visibility should stay on the same pipeline. |
-| `Dapper` | 2.1.72 | Persist and restore chat message metadata | `ChatHistoryService` already serializes tool-call JSON through SQLite. |
-| `Microsoft.Data.Sqlite` | 8.0.12 | Durable chat history storage | Existing `chat_messages` table is the required replay path for Phase 68. |
-
-### Supporting
-| Library / System | Version | Purpose | When to Use |
-|------------------|---------|---------|-------------|
-| `xunit` | 2.9.3 | Unit and integration verification | Use for state-mapping, persistence round-trip, and event-order tests. |
-| `dotnet test` | SDK 10.0.103 available locally | Test execution | Use for quick targeted validation during plan execution and full-suite phase gates. |
-
-### Alternatives Considered
-| Instead of | Could Use | Tradeoff |
-|------------|-----------|----------|
-| Extending current tool-card model | A separate memory-card component model | Adds duplicate lifecycle, duplicate persistence rules, and higher regression risk for no user-facing gain. |
-| Updating persisted assistant message metadata after sedimentation | A transient UI-only chip | Violates D-15/D-16 because replay after reload would lose sedimentation visibility. |
-| One quiet summary chip | Per-node sedimentation cards | Conflicts with locked scope and would make chat read like an operation log. |
-
-**Installation:** None — reuse the current app, event bus, and chat persistence stack.
-
-## Architecture Patterns
-
-### Recommended Project Structure
-```text
-src/OpenAnima.Core/
-├── Components/Shared/ChatMessage.razor        # Render memory category cards + sedimentation chip
-├── Components/Shared/ChatMessage.razor.css    # Add memory-specific class treatment
-├── Components/Shared/ChatPanel.razor          # Subscribe, enrich, and persist message visibility state
-├── Services/ChatSessionState.cs               # Add ToolCategory + persisted memory visibility fields
-├── ChatPersistence/ChatHistoryService.cs      # Store/restore and post-store update of visibility metadata
-├── ChatPersistence/ChatDbInitializer.cs       # Add additive chat schema migration if a new JSON column is used
-├── Events/ChatEvents.cs                       # Add sedimentation summary payload
-└── Memory/SedimentationService.cs             # Publish one summary event after write count is known
-```
+### Must Preserve
 
-### Pattern 1: Enrich Existing Explicit Tool Cards
-**What:** Keep the current started/completed card lifecycle and mutate the matching running/completed tool card when `Memory.operation` arrives.
+- Reuse the current collapsible tool-card shell. No second bespoke memory-card component.
+- Folded memory-card header shows: operation label, target URI, one-line content summary.
+- Delete cards still show operation label + URI even when there is no content summary.
+- Sedimentation is exactly one non-expandable summary chip per assistant response.
+- The chip shows total count only. No URI list, no create/update breakdown.
+- Memory cards and sedimentation chip must persist with chat history and re-render on replay.
+- `ToolCategory.Memory` must be visually distinct but subordinate to the assistant response.
+- `memory_list` is not part of the distinct memory-card contract for this phase.
 
-**When to use:** `memory_create`, `memory_update`, and `memory_delete`.
+### Immediate Planning Implication
 
-**Example:**
-```csharp
-var card = current.ToolCalls.LastOrDefault(t =>
-    t.ToolName == "memory_create" && t.Status == ToolCallStatus.Running);
+The view model must distinguish:
+- Generic workspace tool calls
+- Explicit memory tool calls
+- Sedimentation summary metadata
 
-if (card is not null)
-{
-    card.Category = ToolCategory.Memory;
-    card.TargetUri = evt.Payload.Uri;
-    card.FoldedSummary = BuildOneLineSummary(evt.Payload.Operation, evt.Payload.Content);
-}
-```
+Those are three separate concerns even though they all render inside the same assistant bubble.
 
-**Source:** existing tool-card matching in `src/OpenAnima.Core/Components/Shared/ChatPanel.razor`, plus event timing from `src/OpenAnima.Core/Tools/MemoryCreateTool.cs`, `src/OpenAnima.Core/Tools/MemoryUpdateTool.cs`, and `src/OpenAnima.Core/Tools/MemoryDeleteTool.cs`.
+---
 
-### Pattern 2: Persist Sedimentation With a Follow-Up Update
-**What:** Persist the assistant message normally when the response completes, then update the same stored message when the single sedimentation summary becomes available.
+## Existing Implementation Surface
 
-**When to use:** Background sedimentation summary chip only.
+### Chat Rendering
 
-**Example:**
-```csharp
-var messageId = await _chatHistoryService.StoreMessageAsync(...);
-assistantMessage.PersistedMessageId = messageId;
+- `src/OpenAnima.Core/Components/Shared/ChatMessage.razor`
+  - Renders `ToolCalls` above assistant markdown content
+  - Each card is already collapsible and persisted through `ToolCallInfo.IsExpanded`
+  - Tool badge row currently renders only `Used {0} tools`
+- `src/OpenAnima.Core/Components/Shared/ChatMessage.razor.css`
+  - Contains the generic tool-card shell
+  - Has no category styling or summary-chip treatment yet
 
-// later, when sedimentation completes
-assistantMessage.SedimentationSummary = new SedimentationSummaryInfo(count);
-await _chatHistoryService.UpdateVisibilityAsync(messageId, assistantMessage, ct);
-```
+### Live Event Wiring
 
-**Source:** assistant rows are stored in `src/OpenAnima.Core/Components/Shared/ChatPanel.razor`; sedimentation is triggered later in `src/OpenAnima.Core/Modules/LLMModule.cs`.
+- `src/OpenAnima.Core/Components/Shared/ChatPanel.razor`
+  - Subscribes to `LLMModule.tool_call.started`
+  - Subscribes to `LLMModule.tool_call.completed`
+  - Appends tool-call state to the current streaming assistant message
+  - Persists the final assistant message after response completion via `ChatHistoryService.StoreMessageAsync(...)`
 
-### Pattern 3: Keep Sedimentation Separate From Explicit Tool Calls
-**What:** Model the chip as assistant-message metadata, not as a fake tool call.
+### Persistence
 
-**When to use:** MEMV-02.
+- `src/OpenAnima.Core/Services/ChatSessionState.cs`
+  - `ChatSessionMessage` currently stores only `Role`, `Content`, `IsStreaming`, and `ToolCalls`
+  - `ToolCallInfo` stores only generic tool metadata: `ToolName`, `Parameters`, `ResultSummary`, `Status`, `IsExpanded`
+- `src/OpenAnima.Core/ChatPersistence/ChatHistoryService.cs`
+  - Stores `tool_calls_json`
+  - Restores `ToolCallInfo` from JSON
+  - Does not expose the database row `id`
+  - Has no “update assistant message metadata” API
+- `src/OpenAnima.Core/ChatPersistence/ChatDbInitializer.cs`
+  - Creates `chat_messages`
+  - Does not yet support schema migration for new columns
 
-**Example:**
-```csharp
-public sealed class ChatSessionMessage
-{
-    public List<ToolCallInfo> ToolCalls { get; } = new();
-    public SedimentationSummaryInfo? SedimentationSummary { get; set; }
-}
-```
+### Explicit Memory Tool Sources
 
-**Source:** `src/OpenAnima.Core/Services/ChatSessionState.cs` already keeps message-scoped UI state; the chip belongs on the message, not in the global chat stream.
-
-### Anti-Patterns to Avoid
-- **Appending a second explicit memory card:** `Memory.operation` should enrich the existing generic tool card, not create another visible entry.
-- **Treating sedimentation as a tool card:** the requirement is a single quiet chip, not a fourth explicit tool lifecycle.
-- **Persisting by "latest assistant row" heuristic only:** safe replay needs a stable target row or message reference for post-response updates.
-- **Building folded memory previews directly from parameter dumps:** users asked for operation + URI + one-line summary, not raw key/value noise.
-
-## Likely Implementation Slices
-
-### Slice 1: Chat State and Rendering
-- Add `ToolCategory` and folded-preview fields to `ToolCallInfo`.
-- Add assistant-message sedimentation summary state to `ChatSessionMessage`.
-- Update `ChatMessage.razor` and `ChatMessage.razor.css` to render memory-class cards and one collapsed sedimentation chip.
-
-### Slice 2: Live Event Wiring
-- Subscribe `ChatPanel.razor` to `Memory.operation`.
-- Match memory events back onto the existing running/completed memory tool card.
-- Ignore `memory_list` unless the implementer explicitly chooses to style it as memory under the allowed discretion area.
-
-### Slice 3: Sedimentation Summary Event
-- Add one narrow payload in `ChatEvents.cs` for sedimentation completion, carrying at minimum `AnimaId` and `Count`.
-- Publish it from `SedimentationService` after writes complete, not per written node.
-- Attach that summary to the current assistant message in `ChatPanel.razor`.
-
-### Slice 4: Persistence and Replay
-- Extend the chat persistence model so memory visibility reloads with chat history.
-- Explicit tool cards can continue to serialize through the existing tool-call JSON if the new fields are added there.
-- Sedimentation likely needs either a dedicated JSON field/column or a broader message metadata envelope because it is not a tool call and arrives after the initial insert.
-
-## Don't Hand-Roll
-
-| Problem | Don't Build | Use Instead | Why |
-|---------|-------------|-------------|-----|
-| Explicit memory card UI | A second component hierarchy for memory-only cards | The existing `ChatMessage.razor` tool-card skeleton | Reuses collapse behavior, badge layout, and replay semantics already proven in Phase 59/66. |
-| Live visibility updates | Polling, DB reads, or cross-component callbacks | `EventBus` subscriptions in `ChatPanel.razor` | Events already fire at the exact execution points needed. |
-| Sedimentation replay state | A transient in-memory cache only | `ChatHistoryService` plus additive schema update | The phase explicitly requires restart/reload replay. |
-| CSS differentiation | Tool-name string checks scattered through Razor markup | A single `ToolCategory.Memory` classification | Easier to test, avoids markup drift, and directly satisfies MEMV-03. |
-
-**Key insight:** The phase is mostly about state ownership and timing. The UI itself is small if the planner keeps all visibility attached to the existing assistant-message model.
-
-## Common Pitfalls
-
-### Pitfall 1: Duplicate Explicit Memory Cards
-**What goes wrong:** One generic tool card renders from `LLMModule.tool_call.*`, then a second memory card is appended from `Memory.operation`.
-
-**Why it happens:** Both event streams describe the same explicit operation.
-
-**How to avoid:** Match the memory payload back onto the existing `ToolCallInfo` record and mutate that record in place.
-
-**Warning signs:** The chat bubble shows two entries for one `memory_create` or `memory_update`.
-
-### Pitfall 2: Sedimentation Chip Disappears After Reload
-**What goes wrong:** The chip appears live, but replayed chat history does not show it.
-
-**Why it happens:** Sedimentation finishes after the assistant message was already inserted into `chat_messages`.
-
-**How to avoid:** Add a follow-up persistence update path for assistant-message visibility metadata.
-
-**Warning signs:** Live session looks correct; refreshed session loses the sedimentation summary.
-
-### Pitfall 3: Sedimentation Attaches to the Wrong Assistant Bubble
-**What goes wrong:** The chip lands on a later assistant message.
-
-**Why it happens:** Current chat state has no explicit message identifier; "last assistant message" is a brittle heuristic.
-
-**How to avoid:** Capture a stable target row/message reference when the assistant response is first persisted.
-
-**Warning signs:** Fast consecutive prompts or delayed sedimentation produce mismatched chips.
-
-### Pitfall 4: Folded Memory Cards Become Too Noisy
-**What goes wrong:** The collapsed state looks like a raw parameter/result dump.
-
-**Why it happens:** Existing generic card body data is reused without a dedicated folded-preview model.
-
-**How to avoid:** Add explicit folded-preview fields and truncate the content summary to one line.
-
-**Warning signs:** Memory cards are visually taller and harder to scan than workspace cards when collapsed.
-
-## Code Examples
-
-Verified repo patterns that Phase 68 should extend:
-
-### Existing Tool-Card Match/Mutate Pattern
-```csharp
-var info = current.ToolCalls.LastOrDefault(t =>
-    t.ToolName == evt.Payload.ToolName && t.Status == ToolCallStatus.Running);
-
-if (info != null)
-{
-    info.ResultSummary = evt.Payload.ResultSummary;
-    info.Status = evt.Payload.Success ? ToolCallStatus.Success : ToolCallStatus.Failed;
-}
-```
-
-**Source:** `src/OpenAnima.Core/Components/Shared/ChatPanel.razor`
-
-### Sedimentation Happens After Response Publication
-```csharp
-await PublishResponseAsync(responseText, ct);
-TriggerSedimentation(animaId, history, responseText);
-```
-
-**Source:** `src/OpenAnima.Core/Modules/LLMModule.cs`
-
-### Memory Tools Already Publish Explicit Operation Events
-```csharp
-await _eventBus.PublishAsync(new ModuleEvent<MemoryOperationPayload>
-{
-    EventName = "Memory.operation",
-    SourceModuleId = "MemoryTools",
-    Payload = new MemoryOperationPayload("create", animaId, path, content, null, true)
-}, ct);
-```
-
-**Source:** `src/OpenAnima.Core/Tools/MemoryCreateTool.cs`
-
-## Open Questions
-
-1. **What persistence shape should hold the sedimentation chip?**
-   - What we know: explicit tool cards already round-trip through `tool_calls_json`; sedimentation is not a tool call and arrives later.
-   - What's unclear: whether to add a dedicated `memory_visibility_json`/`message_metadata_json` field or broaden the current storage contract.
-   - Recommendation: keep sedimentation separate from tool calls and use a dedicated assistant-message metadata path.
-
-2. **Does Phase 68 need a stable persisted message ID?**
-   - What we know: replay-safe post-response updates are awkward without one.
-   - What's unclear: whether an in-memory reference plus "latest assistant row" is sufficient before Phase 69 introduces background navigation.
-   - Recommendation: if the persistence change is small, return/store the inserted message row ID now; it reduces risk and makes Phase 69 safer later.
-
-## Validation Architecture
-
-### Test Framework
-| Property | Value |
-|----------|-------|
-| Framework | xUnit 2.9.3 |
-| Config file | none |
-| Quick run command | `dotnet test tests/OpenAnima.Tests/OpenAnima.Tests.csproj --filter "FullyQualifiedName~ChatHistoryServiceTests|FullyQualifiedName~ChatSessionStateTests|FullyQualifiedName~LLMModuleSedimentationTests"` |
-| Full suite command | `dotnet test tests/OpenAnima.Tests/OpenAnima.Tests.csproj` |
-
-### Phase Requirements → Test Map
-| Req ID | Behavior | Test Type | Automated Command | File Exists? |
-|--------|----------|-----------|-------------------|-------------|
-| MEMV-01 | Explicit memory tool events enrich existing tool cards and do not duplicate them | unit + integration | `dotnet test tests/OpenAnima.Tests/OpenAnima.Tests.csproj --filter "FullyQualifiedName~MemoryVisibility"` | ❌ Wave 0 |
-| MEMV-02 | One sedimentation summary chip attaches to the originating assistant message and replays after reload | integration | `dotnet test tests/OpenAnima.Tests/OpenAnima.Tests.csproj --filter "FullyQualifiedName~MemoryVisibility|FullyQualifiedName~ChatHistoryService"` | ❌ Wave 0 |
-| MEMV-03 | `ToolCategory.Memory` maps to distinct CSS/class treatment without breaking generic cards | unit + manual smoke | `dotnet test tests/OpenAnima.Tests/OpenAnima.Tests.csproj --filter "FullyQualifiedName~MemoryVisibility"` | ❌ Wave 0 |
-
-### Sampling Rate
-- **Per task commit:** `dotnet test tests/OpenAnima.Tests/OpenAnima.Tests.csproj --filter "FullyQualifiedName~ChatHistoryServiceTests|FullyQualifiedName~ChatSessionStateTests|FullyQualifiedName~MemoryVisibility"`
-- **Per wave merge:** `dotnet test tests/OpenAnima.Tests/OpenAnima.Tests.csproj`
-- **Phase gate:** Full suite green before `/gsd:verify-work`
-
-### Wave 0 Gaps
-- [ ] `tests/OpenAnima.Tests/Unit/MemoryVisibilityStateTests.cs` — category mapping, folded preview formatting, duplicate-card prevention.
-- [ ] `tests/OpenAnima.Tests/ChatPersistence/ChatHistoryServiceMemoryVisibilityTests.cs` — persistence round-trip for new memory visibility metadata and post-response update behavior.
-- [ ] `tests/OpenAnima.Tests/Integration/MemoryVisibilityIntegrationTests.cs` — started → memory event → completed ordering, plus single sedimentation summary attachment.
-- [ ] Manual chat UI smoke for CSS differentiation unless the implementation extracts class-selection logic into a pure helper that can be unit tested.
-
-## Sources
-
-### Primary (HIGH confidence)
-- `.planning/phases/68-memory-visibility/68-CONTEXT.md` — locked scope, persistence expectations, and explicit UX constraints
-- `.planning/REQUIREMENTS.md` — `MEMV-01`, `MEMV-02`, `MEMV-03`
-- `.planning/ROADMAP.md` — phase goal, dependency, and success criteria
-- `.planning/STATE.md` — prior decision that full `ToolCallInfo` persistence exists specifically for Phase 68
-- `src/OpenAnima.Core/Components/Shared/ChatMessage.razor` — current card rendering path
-- `src/OpenAnima.Core/Components/Shared/ChatMessage.razor.css` — current tool-card styling surface
-- `src/OpenAnima.Core/Components/Shared/ChatPanel.razor` — live event subscriptions, tool-card construction, and assistant-message persistence timing
-- `src/OpenAnima.Core/Services/ChatSessionState.cs` — current chat state model
-- `src/OpenAnima.Core/ChatPersistence/ChatHistoryService.cs` — current store/restore contract
-- `src/OpenAnima.Core/ChatPersistence/ChatDbInitializer.cs` — current `chat_messages` schema
-- `src/OpenAnima.Core/Events/ChatEvents.cs` — existing tool and memory payloads
-- `src/OpenAnima.Core/Modules/LLMModule.cs` — event order and sedimentation trigger timing
-- `src/OpenAnima.Core/Memory/SedimentationService.cs` — final write-count source for the chip
 - `src/OpenAnima.Core/Tools/MemoryCreateTool.cs`
 - `src/OpenAnima.Core/Tools/MemoryUpdateTool.cs`
 - `src/OpenAnima.Core/Tools/MemoryDeleteTool.cs`
+
+All three already publish `Memory.operation` with `MemoryOperationPayload`.
+
+Important details:
+- `memory_create` uses parameter `path`
+- `memory_update` / `memory_delete` use parameter `uri`
+- `MemoryOperationPayload` already carries `Operation`, `Uri`, `Content`, and `Success`
+
+### Sedimentation Source
+
+- `src/OpenAnima.Core/Memory/SedimentationService.cs`
+  - Knows `writtenUris.Count`
+  - Currently emits no chat-visible event
+  - Runs in background after the final response through `LLMModule.TriggerSedimentation(...)`
+- `src/OpenAnima.Core/Modules/LLMModule.cs`
+  - Publishes final response
+  - Then calls `TriggerSedimentation(...)`
+  - Sedimentation runs inside `Task.Run(..., CancellationToken.None)`
+
+---
+
+## Key Findings
+
+### 1. Explicit memory cards can be correlated without new LLM-side identifiers
+
+The generic tool lifecycle and the memory-operation event already line up well enough for this phase.
+
+Observed order for a memory tool call:
+- `LLMModule.tool_call.started` is published before tool execution
+- The memory tool publishes `Memory.operation` from inside `ExecuteAsync(...)`
+- `LLMModule.tool_call.completed` is published after the tool returns
+
+This means `ChatPanel` can:
+- Create the generic running card on `tool_call.started`
+- Match the later `Memory.operation` to the latest running card for the same tool and URI/path
+- Apply folded-memory metadata before the completed status arrives
+
+Because agent tool calls execute in document order, matching the most recent running card is sufficient for Phase 68.
+
+### 2. Memory-card classification must happen on tool start, not only on `Memory.operation`
+
+`Memory.operation` is published only after the tool executes successfully.
+
+That is too late for two reasons:
+- Failed `memory_create` / `memory_update` / `memory_delete` calls must still look like memory cards
+- The UI spec requires delete cards to keep memory-category styling even when execution fails
+
+Recommendation:
+- Classify memory cards from `ToolCallStartedPayload.ToolName`
+- Use `Memory.operation` only to hydrate display fields such as operation label, canonical URI, and folded summary
+
+### 3. Sedimentation visibility needs a separate payload from explicit tool visibility
+
+`MemoryOperationPayload` is the wrong shape for the sedimentation chip:
+- It models one operation at a time
+- It has URI/content fields the chip must not expose
+- Sedimentation is best represented as one aggregate count attached to one assistant response
+
+Recommendation:
+- Add a dedicated payload such as `SedimentationCompletedPayload`
+- Suggested fields: `AnimaId`, `WrittenCount`
+- Event name can be distinct, e.g. `Memory.sedimentation.completed`
+
+Keep it count-only for the UI contract. Do not overload the chip event with URI detail.
+
+### 4. Persistence is the hardest part of the phase
+
+Explicit tool cards persist “for free” once `ToolCallInfo` gains the new fields, because `tool_calls_json` already round-trips through JSON.
+
+The sedimentation chip does not.
+
+Current state:
+- There is no `sedimentation_json` or equivalent field in `chat_messages`
+- `ChatHistoryService` can insert rows, but cannot update the just-stored assistant row later
+- `ChatSessionMessage` does not know the backing database row id
+
+Recommendation:
+- Expose the existing `chat_messages.id` as a property on `ChatSessionMessage`
+- Make `StoreMessageAsync(...)` return the inserted row id for assistant messages
+- Add a separate nullable summary payload on `ChatSessionMessage`
+- Add a new `sedimentation_json` column to `chat_messages`
+- Add `UpdateAssistantVisibilityAsync(...)` (or equivalent) to persist post-response metadata updates
+
+### 5. Phase 68 has a real race between response persistence and background sedimentation
+
+`LLMModule` triggers sedimentation in the background after the response is published. `ChatPanel` persists the assistant message after it receives the final response. Either one can win the race.
+
+The implementation therefore cannot assume:
+- “assistant row exists before sedimentation event arrives”, or
+- “sedimentation always arrives later”
+
+Recommendation:
+- Track the new persistence id on the in-memory `ChatSessionMessage`
+- If sedimentation arrives before persistence id is known, update the in-memory message first and persist once the row id exists
+- If sedimentation arrives after persistence id exists, update the row immediately
+
+This race is the main reason the phase should not be planned as a pure CSS/UI task.
+
+### 6. Existing chat DB initialization needs migration logic, not only CREATE TABLE
+
+Phase 66 introduced `chat_messages` already. Existing users may already have `chat.db`.
+
+`ChatDbInitializer` currently uses only a static `CREATE TABLE IF NOT EXISTS` script. That is not enough for adding Phase 68 fields.
+
+Recommendation:
+- Keep `CREATE TABLE IF NOT EXISTS` for new installs
+- Add a lightweight migration step using `pragma_table_info('chat_messages')`
+- If missing, add `sedimentation_json TEXT`
+
+`tool_calls_json` does not need a schema change because richer `ToolCallInfo` serializes into the same column.
+
+### 7. Localization work is part of the phase, not an afterthought
+
+Current resources only provide `Chat.ToolCountBadge`. The UI contract adds new copy:
+- Create memory
+- Update memory
+- Delete memory
+- `1 memory sedimented`
+- `{N} memories sedimented`
+- Delete body copy about soft delete / recovery
+
+Recommendation:
+- Plan resource updates in `SharedResources.resx`, `SharedResources.en-US.resx`, and `SharedResources.zh-CN.resx`
+- Do not hard-code English labels in Razor
+
+---
+
+## Recommended Architecture
+
+### Shared Models
+
+Recommended additions in `ChatSessionState.cs`:
+
+```csharp
+public enum ToolCategory
+{
+    Generic = 0,
+    Memory = 1
+}
+
+public sealed class SedimentationSummaryInfo
+{
+    public int Count { get; set; }
+}
+```
+
+Recommended `ToolCallInfo` additions:
+- `ToolCategory Category`
+- `string DisplayTitle`
+- `string? TargetUri`
+- `string? FoldedSummary`
+- `string? OperationKind`
+
+Recommended `ChatSessionMessage` additions:
+- `long? PersistenceId`
+- `SedimentationSummaryInfo? SedimentationSummary`
+
+The exact names can vary, but the model must make the UI contract explicit instead of recomputing everything in Razor.
+
+### Eventing
+
+Keep existing subscriptions:
+- `LLMModule.tool_call.started`
+- `LLMModule.tool_call.completed`
+
+Add:
+- `Memory.operation` consumption in `ChatPanel`
+- one dedicated sedimentation-complete event
+
+Recommended sedimentation event emission point:
+- `SedimentationService` after writes complete, because it already knows the final count
+
+Recommended implementation detail:
+- inject `IEventBus?` as an optional constructor dependency on `SedimentationService`
+- publish only when `writtenUris.Count > 0`
+
+That avoids changing the `ISedimentationService` return type and keeps most existing tests intact.
+
+### Persistence
+
+Recommended minimal persistence design:
+
+- Continue storing enriched `ToolCallInfo` inside `tool_calls_json`
+- Add `sedimentation_json TEXT` to `chat_messages`
+- Surface `chat_messages.id` through `LoadHistoryAsync(...)`
+- Return inserted id from `StoreMessageAsync(...)`
+- Add update API for assistant visibility metadata after the initial insert
+
+This is the smallest change set that still satisfies replay/persistence requirements.
+
+### Rendering
+
+Recommended `ChatMessage.razor` approach:
+- Keep one tool-card loop
+- Branch only inside the header/body fragments for `ToolCategory.Memory`
+- Render sedimentation chip in the same badge row as the tool-count badge
+- Keep chip non-expandable and visually quieter than cards
+
+The rendering should be driven entirely from model fields prepared earlier by `ChatPanel` and persistence restore.
+
+### Testability
+
+If the `ChatPanel` event handlers start to carry too much mapping logic, extract a small helper/projector instead of leaving all correlation logic inline.
+
+A projector/helper makes these cases unit-testable without a full Blazor component harness:
+- tool-start classification
+- URI/path normalization for memory tools
+- folded-summary construction
+- sedimentation summary attachment
+- persistence-race handling rules
+
+---
+
+## Risks and Pitfalls
+
+### Risk: `memory_list` accidentally styled as a memory card
+
+Why it matters:
+- Context explicitly leaves `memory_list` outside the locked Phase 68 contract
+
+Guardrail:
+- Only classify `memory_create`, `memory_update`, and `memory_delete` as `ToolCategory.Memory`
+
+### Risk: matching the wrong running card
+
+Why it matters:
+- Multiple tool calls can appear in one assistant response
+
+Guardrail:
+- Match by tool name plus URI/path
+- Prefer the latest running card because tools execute sequentially
+
+### Risk: sedimentation chip lost on reload
+
+Why it matters:
+- The chip is not part of `tool_calls_json`
+
+Guardrail:
+- Persist sedimentation summary separately and replay it from DB
+
+### Risk: schema drift for existing `chat.db`
+
+Why it matters:
+- This phase lands after Phase 66; existing users already have the table
+
+Guardrail:
+- Add explicit migration logic in `ChatDbInitializer`
+
+### Risk: UI code recomputes display text on every render from raw parameters
+
+Why it matters:
+- `memory_create` uses `path`, while `memory_update` / `memory_delete` use `uri`
+- replay should not depend on reconstructing the same logic from raw parameters forever
+
+Guardrail:
+- Persist normalized display metadata directly on `ToolCallInfo`
+
+---
+
+## Verification Surface
+
+### Existing Test Files Worth Extending
+
 - `tests/OpenAnima.Tests/ChatPersistence/ChatHistoryServiceTests.cs`
+  - round-trip enriched `ToolCallInfo`
+  - round-trip `sedimentation_json`
+  - verify assistant-message visibility update API
+- `tests/OpenAnima.Tests/Integration/ChatPersistenceIntegrationTests.cs`
+  - replay full conversation with persisted memory metadata
 - `tests/OpenAnima.Tests/Unit/ChatSessionStateTests.cs`
-- `tests/OpenAnima.Tests/Unit/LLMModuleSedimentationTests.cs`
+  - defaults for new `ToolCategory` / sedimentation summary properties
+- `tests/OpenAnima.Tests/Unit/ToolCallEventPayloadTests.cs`
+  - add new sedimentation-complete payload assertions
+- `tests/OpenAnima.Tests/Unit/SedimentationServiceTests.cs`
+  - verify event publication when sedimentation writes > 0 nodes
+- `tests/OpenAnima.Tests/Unit/LLMModuleAgentLoopHardeningTests.cs`
+  - keep existing hardening guarantee that sedimentation sees full history
 
-## Metadata
+### Recommended Manual Checks
 
-**Confidence breakdown:**
-- Standard stack: HIGH - this phase should reuse existing repo technologies and no new library choice is required.
-- Architecture: MEDIUM - the main uncertainty is the exact persistence/update shape for the post-response sedimentation chip.
-- Pitfalls: HIGH - duplicate-card risk and post-store sedimentation timing are directly visible in current code flow.
+- `memory_create` / `memory_update` / `memory_delete` appear as collapsible memory cards during a live chat response
+- cards remain collapsed after refresh/restart
+- delete card still shows URI when there is no summary text
+- sedimentation chip appears once per assistant response and only shows count
+- sedimentation chip reappears after reload for messages where it was persisted
+- generic tool count badge still renders alongside the new chip
 
-**Research date:** 2026-04-01
-**Valid until:** 2026-05-01
+---
+
+## Planning Recommendation
+
+Recommended plan shape:
+
+| Plan | Wave | Objective |
+|------|------|-----------|
+| 01 | 1 | Extend chat visibility models, DB migration, and persistence update APIs |
+| 02 | 2 | Wire `ChatPanel` to classify explicit memory tools, consume `Memory.operation`, and attach/persist sedimentation summary |
+| 03 | 2 | Update `ChatMessage` rendering, CSS, and localized strings for memory cards and sedimentation chip |
+
+Why this split works:
+- Plan 01 isolates the data contract and the persistence race
+- Plans 02 and 03 can proceed in parallel once the data model is stable
+- The phase goal stays aligned to the existing chat architecture instead of scattering logic across unrelated modules
+
+---
+
+*Phase: 68-memory-visibility*
+*Research synthesized from roadmap, context, UI spec, current code, and existing tests on 2026-04-01*

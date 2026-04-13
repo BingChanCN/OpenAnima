@@ -1,11 +1,10 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using OpenAI;
 using OpenAI.Chat;
-using System.ClientModel;
 using OpenAnima.Contracts;
 using OpenAnima.Core.Events;
+using OpenAnima.Core.LLM;
 using OpenAnima.Core.Providers;
 using OpenAnima.Core.Runs;
 using OpenAnima.Core.Services;
@@ -283,19 +282,38 @@ public class SedimentationService : ISedimentationService
         }
 
         var apiKey = _registryService.GetDecryptedApiKey(slug);
-        var opts = new OpenAIClientOptions { Endpoint = new Uri(provider.BaseUrl) };
-        var chatClient = new ChatClient(modelId, new ApiKeyCredential(apiKey), opts);
+        var client = OpenAIResponsesAdapter.CreateClient(provider.BaseUrl, apiKey, modelId);
+        var response = await client.CreateResponseAsync(
+            OpenAIResponsesAdapter.CreateOptions(
+                OpenAIResponsesAdapter.MapMessagesForEndpoint(chatMessages, provider.BaseUrl),
+                streamingEnabled: false),
+            ct);
 
-        var completion = await chatClient.CompleteChatAsync(chatMessages.ToArray(), cancellationToken: ct);
-        return completion.Value.Content[0].Text;
+        return OpenAIResponsesAdapter.ExtractOutputText(response.Value);
     }
 
     private SedimentationResult ParseExtractionResult(string jsonResponse)
     {
         // Try to extract JSON from the response (LLM may wrap in markdown code blocks)
         var json = ExtractJson(jsonResponse);
-        return JsonSerializer.Deserialize<SedimentationResult>(json, SnakeCaseOptions)
-            ?? new SedimentationResult(new List<SedimentedItem>(), "parse returned null");
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            _logger.LogDebug("Sedimentation extractor returned empty content; skipping.");
+            return new SedimentationResult(new List<SedimentedItem>(), "extractor returned empty content");
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<SedimentationResult>(json, SnakeCaseOptions)
+                ?? new SedimentationResult(new List<SedimentedItem>(), "parse returned null");
+        }
+        catch (JsonException)
+        {
+            _logger.LogWarning(
+                "Sedimentation extractor returned invalid JSON; skipping. Response preview: {Preview}",
+                SummarizeForLog(jsonResponse));
+            return new SedimentationResult(new List<SedimentedItem>(), "extractor returned invalid JSON");
+        }
     }
 
     private static string ExtractJson(string text)
@@ -311,7 +329,42 @@ public class SedimentationService : ISedimentationService
             if (lastFence >= 0)
                 trimmed = trimmed[..lastFence];
         }
+
+        trimmed = trimmed.Trim();
+
+        if (trimmed.StartsWith("{") || trimmed.StartsWith("["))
+        {
+            return trimmed;
+        }
+
+        var objectStart = trimmed.IndexOf('{');
+        var objectEnd = trimmed.LastIndexOf('}');
+        if (objectStart >= 0 && objectEnd > objectStart)
+        {
+            return trimmed[objectStart..(objectEnd + 1)].Trim();
+        }
+
+        var arrayStart = trimmed.IndexOf('[');
+        var arrayEnd = trimmed.LastIndexOf(']');
+        if (arrayStart >= 0 && arrayEnd > arrayStart)
+        {
+            return trimmed[arrayStart..(arrayEnd + 1)].Trim();
+        }
+
         return trimmed.Trim();
+    }
+
+    private static string SummarizeForLog(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return "<empty>";
+        }
+
+        var singleLine = text.Replace('\r', ' ').Replace('\n', ' ').Trim();
+        return singleLine.Length <= 160
+            ? singleLine
+            : singleLine[..160] + "...";
     }
 
     private static string? NormalizeKeywords(string? keywords)

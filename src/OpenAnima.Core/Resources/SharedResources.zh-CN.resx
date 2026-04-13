@@ -771,10 +771,10 @@
     <value>为 LLM Agent 提供工具调用能力，如文件读写和搜索</value>
   </data>
   <data name="Port.Description.LLMModule.messages" xml:space="preserve">
-    <value>聊天消息历史</value>
+    <value>多轮对话输入。用于传入序列化后的聊天历史或带 role 的消息列表。</value>
   </data>
   <data name="Port.Description.LLMModule.prompt" xml:space="preserve">
-    <value>系统提示词</value>
+    <value>单轮用户文本输入。普通聊天场景应把 Chat Input 连到这个端口。</value>
   </data>
   <data name="Port.Description.LLMModule.response" xml:space="preserve">
     <value>LLM 生成的回复</value>
@@ -783,7 +783,22 @@
     <value>失败时的错误信息</value>
   </data>
   <data name="Port.Description.ChatInputModule.userMessage" xml:space="preserve">
-    <value>用户聊天消息</value>
+    <value>来自聊天界面的用户文本。普通对话请连接到 LLM 输入端口。</value>
+  </data>
+  <data name="Port.DisplayName.ChatInputModule.userMessage" xml:space="preserve">
+    <value>用户输入</value>
+  </data>
+  <data name="Port.DisplayName.LLMModule.prompt" xml:space="preserve">
+    <value>聊天输入</value>
+  </data>
+  <data name="Port.DisplayName.LLMModule.messages" xml:space="preserve">
+    <value>对话上下文</value>
+  </data>
+  <data name="Port.DisplayName.LLMModule.response" xml:space="preserve">
+    <value>模型回复</value>
+  </data>
+  <data name="Port.DisplayName.ChatOutputModule.displayText" xml:space="preserve">
+    <value>显示回复</value>
   </data>
   <data name="Port.Description.ChatOutputModule.displayText" xml:space="preserve">
     <value>显示在聊天界面的文本</value>

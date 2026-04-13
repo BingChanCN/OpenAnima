@@ -1,5 +1,8 @@
 # Requirements: OpenAnima v2.0.4
 
+> Legacy snapshot note (2026-04-10): the active requirement tracking for this unfinished milestone moved to `.trellis/planning/current-milestone.md` and the Trellis phase task PRDs.
+> This file remains as the legacy requirements snapshot.
+
 **Defined:** 2026-03-25
 **Core Value:** Agents that proactively think and act on their own, while module connections remain deterministic and safe — intelligence without loss of control.
 

@@ -12,10 +12,11 @@ OpenAnima 是一个面向“数字生命 / 主动助手”的本地优先（loca
 
 ## 项目状态
 
-- `v1.0` 已完成：Core Runtime Foundation
-- `v1.1` 开发中：WebUI Runtime Dashboard（Blazor Server + SignalR）
+- 最新已完成版本：`v2.0.3` Editor Experience（2026-03-24）
+- 当前进行中的 milestone：`v2.0.4` Intelligent Memory & Persistence
+- 当前待完成 phase：`69` Background Chat Execution、`70` LLM-Guided Graph Exploration
 
-当前仓库以 `v1.0` 可运行核心为主，`v1.1` 正在推进。
+当前活跃规划已迁移到 `.trellis/planning/`，`.planning/` 保留为历史归档。
 
 ## 已具备能力（Today）
 
@@ -28,8 +29,9 @@ OpenAnima 是一个面向“数字生命 / 主动助手”的本地优先（loca
 
 ## 公开路线图（Roadmap Snapshot）
 
-- `v1.1`：Web 监控与控制面板（实时模块状态、心跳指标、控制操作）
-- `v1.2+`：分层思考循环、LLM 集成增强、可视化编排编辑器、持久化能力
+- `v2.0.4`：Intelligent Memory & Persistence
+- 当前待完成：后台聊天执行恢复、LLM 引导的记忆图探索召回
+- `v2.1+`：记忆别名、embedding recall、模块生态与更多运行时能力
 
 ## 快速开始
 
@@ -85,7 +87,8 @@ src/OpenAnima.Contracts   # 契约层
 src/OpenAnima.Core        # Runtime 核心
 samples/SampleModule      # 示例模块源码
 modules/SampleModule      # 示例模块产物
-.planning                 # 项目规划与路线图
+.trellis                  # 当前工作流、任务、规范、活跃规划
+.planning                 # 旧规划工作流归档
 ```
 
 ## 适合谁
@@ -96,11 +99,13 @@ modules/SampleModule      # 示例模块产物
 
 ## 文档入口
 
-- 项目总览：`.planning/PROJECT.md`
-- 当前需求：`.planning/REQUIREMENTS.md`
-- 路线图：`.planning/ROADMAP.md`
+- 当前活跃规划入口：`.trellis/planning/README.md`
+- 当前 milestone：`.trellis/planning/current-milestone.md`
+- Phase 69 任务：`.trellis/tasks/04-10-phase-69-background-chat-execution/prd.md`
+- Phase 70 任务：`.trellis/tasks/04-10-phase-70-llm-guided-graph-exploration/prd.md`
+- 历史规划归档：`.planning/`
 
 ## 贡献
 
 欢迎通过 Issue / PR 参与。  
-在提交前，建议先阅读 `.planning` 下的需求与路线图，确保变更与当前里程碑一致。
+在提交前，建议先阅读 `.trellis/planning/` 下的当前规划与任务文档，确保变更与当前里程碑一致。

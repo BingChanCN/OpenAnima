@@ -1,5 +1,8 @@
 # Roadmap: OpenAnima
 
+> Legacy snapshot note (2026-04-10): active planning for the unfinished `v2.0.4` milestone now lives in `.trellis/planning/current-milestone.md`.
+> Use the Trellis phase tasks for ongoing work. This file remains as the historical roadmap snapshot from the legacy `.planning/` workflow.
+
 ## Milestones
 
 - ✅ **v1.0 Core Platform** — Phases 1-2 (shipped 2026-02-21)

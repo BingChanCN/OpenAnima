@@ -1,0 +1,6 @@
+{"file": ".gemini/commands/trellis/finish-work.toml", "reason": "Finish work checklist"}
+{"file": ".gemini/commands/trellis/check-backend.toml", "reason": "Backend check spec"}
+{"file": ".gemini/commands/trellis/check-frontend.toml", "reason": "Frontend check spec"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Verify frontend language convention wording stays consistent"}
+{"file": ".trellis/spec/guides/index.md", "reason": "Verify shared guide entry point includes collaboration language rule"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Verify backend language convention wording stays consistent"}

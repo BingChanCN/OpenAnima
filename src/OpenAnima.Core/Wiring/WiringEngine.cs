@@ -282,7 +282,10 @@ public class WiringEngine : IWiringEngine
         {
             EventName = targetEventName,
             SourceModuleId = sourceModuleRuntimeName,
-            Payload = copiedPayload
+            Payload = copiedPayload,
+            Metadata = evt.Metadata != null
+                ? new Dictionary<string, string>(evt.Metadata)
+                : null
         }, ct);
     }
 }

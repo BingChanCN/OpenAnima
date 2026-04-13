@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using OpenAnima.Contracts;
 using OpenAnima.Core.Anima;
 using OpenAnima.Core.Modules;
 
@@ -52,6 +53,33 @@ public class ChatChannelIntegrationTests : IAsyncDisposable
         Assert.Equal("test message", received);
     }
 
+    [Fact]
+    public async Task ChatInputModule_RoutesMetadataThrough_ChatChannel()
+    {
+        _runtime = CreateRuntime();
+        var chatInput = new ChatInputModule(_runtime.EventBus, NullLogger<ChatInputModule>.Instance);
+        chatInput.SetChannelHost(_runtime.ActivityChannelHost);
+
+        var eventReceived = new TaskCompletionSource<ModuleEvent<string>>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _runtime.EventBus.Subscribe<string>(
+            "ChatInputModule.port.userMessage",
+            (evt, ct) =>
+            {
+                eventReceived.TrySetResult(evt);
+                return Task.CompletedTask;
+            });
+
+        var metadata = new Dictionary<string, string> { ["chat.conversationHistoryJson"] = "[{\"role\":\"user\",\"content\":\"hi\"}]" };
+        await chatInput.SendMessageAsync("test message", CancellationToken.None, metadata);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        var received = await eventReceived.Task.WaitAsync(cts.Token);
+
+        Assert.NotNull(received.Metadata);
+        Assert.Equal(metadata["chat.conversationHistoryJson"], received.Metadata!["chat.conversationHistoryJson"]);
+    }
+
     // ── Test 2: ChatInputModule falls back to direct publish when no host ────
 
     [Fact]
@@ -79,6 +107,32 @@ public class ChatChannelIntegrationTests : IAsyncDisposable
 
         Assert.Equal("fallback test", received);
         Assert.Equal(OpenAnima.Contracts.ModuleExecutionState.Completed, chatInput.GetState());
+    }
+
+    [Fact]
+    public async Task ChatInputModule_FallbackPublish_PreservesMetadata()
+    {
+        var eventBus = new OpenAnima.Core.Events.EventBus(NullLogger<OpenAnima.Core.Events.EventBus>.Instance);
+        var chatInput = new ChatInputModule(eventBus, NullLogger<ChatInputModule>.Instance);
+
+        var eventReceived = new TaskCompletionSource<ModuleEvent<string>>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        eventBus.Subscribe<string>(
+            "ChatInputModule.port.userMessage",
+            (evt, ct) =>
+            {
+                eventReceived.TrySetResult(evt);
+                return Task.CompletedTask;
+            });
+
+        var metadata = new Dictionary<string, string> { ["chat.conversationHistoryJson"] = "[]" };
+        await chatInput.SendMessageAsync("fallback test", CancellationToken.None, metadata);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        var received = await eventReceived.Task.WaitAsync(cts.Token);
+
+        Assert.NotNull(received.Metadata);
+        Assert.Equal("[]", received.Metadata!["chat.conversationHistoryJson"]);
     }
 
     // ── Test 3: Chat channel processes messages in FIFO order ────────────────

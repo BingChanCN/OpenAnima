@@ -118,6 +118,35 @@ public class ModuleTests
         await module.ShutdownAsync();
     }
 
+    [Fact]
+    public async Task LLMModule_WhenLlmServiceReturnsEmptyContent_PublishesErrorPort()
+    {
+        var eventBus = CreateEventBus();
+        var mockLlm = new FakeLLMService(response: "   ");
+        var module = new LLMModule(mockLlm, eventBus, NullLogger<LLMModule>.Instance,
+            NullAnimaModuleConfigService.Instance, new AnimaContext(),
+            NullLLMProviderRegistry.Instance, NullRegistryServiceFactory.Instance, router: null);
+        await module.InitializeAsync();
+
+        var errorTcs = new TaskCompletionSource<string>();
+        eventBus.Subscribe<string>(
+            "LLMModule.port.error",
+            (evt, ct) => { errorTcs.TrySetResult(evt.Payload); return Task.CompletedTask; });
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "LLMModule.port.prompt",
+            SourceModuleId = "test",
+            Payload = "Hello"
+        });
+
+        var error = await WaitWithTimeout(errorTcs.Task, TimeSpan.FromSeconds(5));
+        Assert.Equal("LLMModule did not return any content.", error);
+        Assert.Equal(ModuleExecutionState.Completed, module.GetState());
+
+        await module.ShutdownAsync();
+    }
+
     #endregion
 
     #region ChatInputModule Tests

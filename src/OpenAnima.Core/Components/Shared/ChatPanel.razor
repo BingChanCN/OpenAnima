@@ -1,26 +1,15 @@
 @using OpenAnima.Contracts
-@using OpenAnima.Core.ChatPersistence
-@using OpenAnima.Core.Events
-@using OpenAnima.Core.LLM
-@using OpenAnima.Core.Modules
 @using OpenAnima.Core.Services
-@using OpenAnima.Core.Wiring
 @using OpenAnima.Core.Anima
 @implements IAsyncDisposable
-@inject ChatInputModule _chatInputModule
-@inject ChatOutputModule _chatOutputModule
-@inject IEventBus EventBus
+@inject ChatBackgroundExecutionService _chatExecutionService
 @inject ChatContextManager _contextManager
-@inject ChatSessionState _chatSessionState
 @inject IAnimaRuntimeManager _animaRuntimeManager
 @inject IModuleContext _animaContext
 @inject NavigationManager _navigation
 @inject IJSRuntime JS
 @inject IStringLocalizer<SharedResources> L
 @inject LanguageService LangSvc
-@inject IModuleConfig _moduleConfigService
-@inject ChatHistoryService _chatHistoryService
-@inject ILoggerFactory LoggerFactory
 
 <div class="chat-panel">
     @if (!IsPipelineConfigured())
@@ -50,7 +39,7 @@
                              ToolCalls="@message.ToolCalls"
                              SedimentationSummary="@message.SedimentationSummary" />
             }
-            @if (!_isGenerating && Messages.Count > 0 && Messages.Last().Role == "assistant")
+            @if (!_chatExecutionService.IsGenerating && Messages.Count > 0 && Messages.Last().Role == "assistant")
             {
                 <button class="regenerate-btn" @onclick="RegenerateLastResponse">
                     <span>🔄</span> @L["Chat.Regenerate"]
@@ -65,77 +54,24 @@
         MaxContextTokens="@_contextManager.MaxContextTokens" />
     <div class="chat-input-wrapper">
         <ChatInput OnSend="SendMessage"
-                   IsDisabled="@(_isGenerating || IsContextLimitReached() || !IsPipelineConfigured())"
-                   IsAgentRunning="@(_isGenerating && _isAgentMode)"
-                   OnCancel="CancelAgentExecution" />
+                   IsDisabled="@(_chatExecutionService.IsGenerating || IsContextLimitReached() || !IsPipelineConfigured())"
+                   IsAgentRunning="@(_chatExecutionService.IsGenerating && _chatExecutionService.IsAgentMode)"
+                   OnCancel="CancelGeneration" />
     </div>
 </div>
 
 @code {
-    private bool _isGenerating;
-    private bool _isAgentMode;
-    private CancellationTokenSource _generationCts = new();
-    private CancellationTokenSource? _agentTimeoutCts;
-    private TaskCompletionSource<string>? _pendingAssistantResponse;
-    private IDisposable? _llmErrorSubscription;
-    private IDisposable? _toolCallStartedSubscription;
-    private IDisposable? _toolCallCompletedSubscription;
-    private IDisposable? _memoryOperationSubscription;
-    private IDisposable? _sedimentationCompletedSubscription;
-    private List<ChatSessionMessage> Messages => _chatSessionState.Messages;
+    private int _lastRenderedMessageCount = -1;
+    private string? _lastRenderedTailKey;
+    private IReadOnlyList<ChatSessionMessage> Messages => _chatExecutionService.Messages;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         _contextManager.OnStateChanged += HandleContextManagerChanged;
-        _chatOutputModule.OnMessageReceived += HandleChatOutputReceived;
-        _llmErrorSubscription = EventBus.Subscribe<string>("LLMModule.port.error", HandleLlmErrorAsync);
-        _toolCallStartedSubscription = EventBus.Subscribe<ToolCallStartedPayload>(
-            "LLMModule.tool_call.started", HandleToolCallStartedAsync);
-        _toolCallCompletedSubscription = EventBus.Subscribe<ToolCallCompletedPayload>(
-            "LLMModule.tool_call.completed", HandleToolCallCompletedAsync);
-        _memoryOperationSubscription = EventBus.Subscribe<MemoryOperationPayload>(
-            "Memory.operation", HandleMemoryOperationAsync);
-        _sedimentationCompletedSubscription = EventBus.Subscribe<SedimentationCompletedPayload>(
-            "Memory.sedimentation.completed", HandleSedimentationCompletedAsync);
+        _chatExecutionService.OnStateChanged += HandleChatExecutionStateChanged;
         LangSvc.LanguageChanged += OnLanguageChanged;
-        _animaContext.ActiveAnimaChanged += OnAnimaChanged;
         _animaRuntimeManager.WiringConfigurationChanged += OnWiringConfigurationChanged;
-    }
-
-    private void HandleContextManagerChanged()
-    {
-        InvokeAsync(StateHasChanged);
-    }
-
-    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
-
-    private void OnAnimaChanged()
-    {
-        _chatSessionState.Messages.Clear();
-        _ = RestoreChatHistoryAsync();
-        InvokeAsync(StateHasChanged);
-    }
-
-    private async Task RestoreChatHistoryAsync()
-    {
-        var activeAnimaId = _animaContext.ActiveAnimaId;
-        if (string.IsNullOrEmpty(activeAnimaId))
-            return;
-
-        try
-        {
-            var messages = await _chatHistoryService.LoadHistoryAsync(activeAnimaId, CancellationToken.None);
-            _chatSessionState.Messages.Clear();
-            _chatSessionState.Messages.AddRange(messages);
-
-            // Auto-scroll to bottom
-            await JS.InvokeVoidAsync("scrollChatToBottom", "chat-messages");
-        }
-        catch (Exception ex)
-        {
-            var logger = LoggerFactory?.CreateLogger<ChatPanel>();
-            logger?.LogError(ex, "Failed to restore chat history for Anima {AnimaId}", activeAnimaId);
-        }
+        await _chatExecutionService.InitializeAsync();
     }
 
     private void OnWiringConfigurationChanged()
@@ -146,118 +82,13 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private void HandleChatOutputReceived(string assistantText)
-    {
-        _pendingAssistantResponse?.TrySetResult(assistantText);
-    }
+    private void HandleContextManagerChanged() => InvokeAsync(StateHasChanged);
 
-    private Task HandleLlmErrorAsync(ModuleEvent<string> evt, CancellationToken ct)
-    {
-        if (!string.IsNullOrWhiteSpace(evt.Payload))
-        {
-            _pendingAssistantResponse?.TrySetResult($"LLM error: {evt.Payload}");
-        }
+    private void HandleChatExecutionStateChanged() => InvokeAsync(StateHasChanged);
 
-        return Task.CompletedTask;
-    }
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
-    private Task HandleToolCallStartedAsync(ModuleEvent<ToolCallStartedPayload> evt, CancellationToken ct)
-    {
-        var current = Messages.LastOrDefault(m => m.Role == "assistant" && m.IsStreaming);
-        if (current != null)
-        {
-            current.ToolCalls.Add(ChatMemoryVisibilityProjector.CreateToolCallInfo(
-                evt.Payload.ToolName,
-                evt.Payload.Parameters));
-            ResetAgentTimeout();
-        }
-        return InvokeAsync(StateHasChanged);
-    }
-
-    private Task HandleToolCallCompletedAsync(ModuleEvent<ToolCallCompletedPayload> evt, CancellationToken ct)
-    {
-        var current = Messages.LastOrDefault(m => m.Role == "assistant" && m.IsStreaming);
-        if (current != null)
-        {
-            var info = current.ToolCalls.LastOrDefault(t =>
-                t.ToolName == evt.Payload.ToolName && t.Status == ToolCallStatus.Running);
-            if (info != null)
-            {
-                info.ResultSummary = evt.Payload.ResultSummary;
-                info.Status = evt.Payload.Success ? ToolCallStatus.Success : ToolCallStatus.Failed;
-            }
-            ResetAgentTimeout();
-        }
-        return InvokeAsync(StateHasChanged);
-    }
-
-    private async Task HandleMemoryOperationAsync(ModuleEvent<MemoryOperationPayload> evt, CancellationToken ct)
-    {
-        if (!evt.Payload.Success || !IsActiveAnimaEvent(evt.Payload.AnimaId))
-        {
-            return;
-        }
-
-        var target = ChatMemoryVisibilityProjector.FindAssistantTarget(Messages);
-        if (target == null || !ChatMemoryVisibilityProjector.ApplyMemoryOperation(target, evt.Payload))
-        {
-            return;
-        }
-
-        ResetAgentTimeout();
-        await PersistAssistantVisibilityAsync(target, ct);
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task HandleSedimentationCompletedAsync(
-        ModuleEvent<SedimentationCompletedPayload> evt,
-        CancellationToken ct)
-    {
-        if (!IsActiveAnimaEvent(evt.Payload.AnimaId))
-        {
-            return;
-        }
-
-        var target = ChatMemoryVisibilityProjector.FindAssistantTarget(Messages);
-        if (target == null)
-        {
-            return;
-        }
-
-        ChatMemoryVisibilityProjector.ApplySedimentationSummary(target, evt.Payload.WrittenCount);
-        ResetAgentTimeout();
-        await PersistAssistantVisibilityAsync(target, ct);
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private void ResetAgentTimeout()
-    {
-        if (_agentTimeoutCts != null)
-        {
-            try { _agentTimeoutCts.Cancel(); } catch { }
-            try { _agentTimeoutCts.Dispose(); } catch { }
-        }
-        _agentTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-        // Re-register cancellation: when this timeout fires, cancel the generation CTS
-        _agentTimeoutCts.Token.Register(() =>
-        {
-            try { _generationCts.Cancel(); } catch { }
-        });
-    }
-
-    private bool IsAgentModeEnabled()
-    {
-        var activeId = _animaContext.ActiveAnimaId;
-        if (activeId == null) return false;
-        var config = _moduleConfigService.GetConfig(activeId, "LLMModule");
-        return config.TryGetValue("agentEnabled", out var val) &&
-               bool.TryParse(val, out var enabled) && enabled;
-    }
-
-    private void CancelAgentExecution()
-    {
-        _generationCts.Cancel();
-    }
+    private void CancelGeneration() => _chatExecutionService.CancelGeneration();
 
     private bool IsContextLimitReached()
     {
@@ -274,17 +105,12 @@
         return ChatPipelineConfigurationValidator.IsConfigured(currentConfig);
     }
 
-    private IEventBus? GetActiveEventBus()
-    {
-        var activeId = _animaContext.ActiveAnimaId;
-        if (activeId == null) return null;
-        return _animaRuntimeManager.GetOrCreateRuntime(activeId).EventBus;
-    }
-
     private async Task SendMessage(string userMessage)
     {
-        if (string.IsNullOrWhiteSpace(userMessage) || _isGenerating)
+        if (string.IsNullOrWhiteSpace(userMessage) || _chatExecutionService.IsGenerating)
+        {
             return;
+        }
 
         if (!IsPipelineConfigured())
         {
@@ -292,224 +118,35 @@
             return;
         }
 
-        var history = Messages
-            .Where(m => !m.IsStreaming)
-            .Select(m => new ChatMessageInput(m.Role, m.Content))
-            .ToList();
-
-        if (!_contextManager.CanSendMessage(history, userMessage))
+        var result = await _chatExecutionService.SendMessageAsync(userMessage);
+        if (result.Status == ChatCommandStatus.ContextLimitReached)
         {
-            var currentTokens = _contextManager.CurrentContextTokens;
-            var maxTokens = _contextManager.MaxContextTokens;
-            var utilization = _contextManager.GetContextUtilization();
-
-            await JS.InvokeVoidAsync("chatHelpers.showContextLimitModal", currentTokens, maxTokens);
-            var eventBus = GetActiveEventBus();
-            if (eventBus != null)
-                await eventBus.PublishAsync(new ModuleEvent<ContextLimitReachedPayload>
-                {
-                    EventName = "ContextLimitReached",
-                    SourceModuleId = "OpenAnima.Core",
-                    Payload = new ContextLimitReachedPayload(currentTokens, maxTokens, utilization)
-                });
-            return;
+            await JS.InvokeVoidAsync("chatHelpers.showContextLimitModal", result.CurrentTokens, result.MaxTokens);
         }
 
-        Messages.Add(new ChatSessionMessage
-        {
-            Role = "user",
-            Content = userMessage,
-            IsStreaming = false
-        });
-
-        var messageTokenCount = _contextManager.CountTokens(userMessage);
-        _contextManager.UpdateAfterSend(messageTokenCount);
-
-        // Persist user message to chat database
-        var activeAnimaId = _animaContext.ActiveAnimaId;
-        if (!string.IsNullOrEmpty(activeAnimaId))
-        {
-            await _chatHistoryService.StoreMessageAsync(
-                activeAnimaId,
-                role: "user",
-                content: userMessage,
-                toolCalls: new(),
-                inputTokens: messageTokenCount,
-                outputTokens: 0,
-                CancellationToken.None);
-        }
-
-        var eventBusSend = GetActiveEventBus();
-        if (eventBusSend != null)
-            await eventBusSend.PublishAsync(new ModuleEvent<MessageSentPayload>
-            {
-                EventName = "MessageSent",
-                SourceModuleId = "OpenAnima.Core",
-                Payload = new MessageSentPayload(userMessage, messageTokenCount, DateTime.UtcNow)
-            });
-
-        var assistantMessage = new ChatSessionMessage
-        {
-            Role = "assistant",
-            Content = "",
-            IsStreaming = true
-        };
-        Messages.Add(assistantMessage);
-
-        await GenerateAssistantResponseAsync(userMessage, assistantMessage);
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task RegenerateLastResponse()
     {
-        if (_isGenerating || !IsPipelineConfigured())
+        if (_chatExecutionService.IsGenerating || !IsPipelineConfigured())
         {
             await InvokeAsync(StateHasChanged);
             return;
         }
 
-        var lastAssistantIndex = Messages.FindLastIndex(m => m.Role == "assistant");
-        if (lastAssistantIndex == -1)
-            return;
-
-        var lastUserMessage = Messages
-            .Take(lastAssistantIndex)
-            .LastOrDefault(m => m.Role == "user");
-
-        if (lastUserMessage == null)
-            return;
-
-        Messages.RemoveAt(lastAssistantIndex);
-
-        var assistantMessage = new ChatSessionMessage
-        {
-            Role = "assistant",
-            Content = "",
-            IsStreaming = true
-        };
-        Messages.Add(assistantMessage);
-
-        await GenerateAssistantResponseAsync(lastUserMessage.Content, assistantMessage);
+        await _chatExecutionService.RegenerateLastResponseAsync();
     }
 
-    private async Task GenerateAssistantResponseAsync(string prompt, ChatSessionMessage assistantMessage)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        ResetGenerationCancellation();
-
-        _isGenerating = true;
-        _isAgentMode = IsAgentModeEnabled();
-        await InvokeAsync(StateHasChanged);
-
-        CancellationTokenSource? timeoutCts = null;
-        CancellationTokenSource? linkedCts = null;
-
-        try
+        var tailKey = BuildTailRenderKey();
+        if (firstRender || _lastRenderedMessageCount != Messages.Count || _lastRenderedTailKey != tailKey)
         {
-            if (_isAgentMode)
-            {
-                _agentTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-                _agentTimeoutCts.Token.Register(() =>
-                {
-                    try { _generationCts.Cancel(); } catch { }
-                });
-                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_generationCts.Token);
-            }
-            else
-            {
-                timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_generationCts.Token, timeoutCts.Token);
-            }
-
-            var responseTask = CreatePendingAssistantResponse(linkedCts.Token);
-
-            await _chatInputModule.SendMessageAsync(prompt, linkedCts.Token);
-            var assistantResponse = await responseTask;
-
-            assistantMessage.Content = assistantResponse;
-            assistantMessage.IsStreaming = false;
-
-            // Persist assistant message to chat database
-            var activeAnimaId = _animaContext.ActiveAnimaId;
-            if (!string.IsNullOrEmpty(activeAnimaId))
-            {
-                assistantMessage.PersistenceId = await _chatHistoryService.StoreMessageAsync(
-                    activeAnimaId,
-                    role: "assistant",
-                    content: assistantResponse,
-                    toolCalls: assistantMessage.ToolCalls,
-                    inputTokens: 0,
-                    outputTokens: _contextManager.CountTokens(assistantResponse),
-                    CancellationToken.None);
-
-                if (assistantMessage.SedimentationSummary != null)
-                {
-                    await PersistAssistantVisibilityAsync(assistantMessage, CancellationToken.None);
-                }
-            }
-
-            await UpdateAfterResponseAsync(prompt, assistantResponse);
-            await InvokeAsync(StateHasChanged);
+            _lastRenderedMessageCount = Messages.Count;
+            _lastRenderedTailKey = tailKey;
             await ScrollToBottomIfNeededAsync();
         }
-        catch (OperationCanceledException) when (!_isAgentMode && timeoutCts != null && timeoutCts.IsCancellationRequested && !_generationCts.IsCancellationRequested)
-        {
-            assistantMessage.Content = "No response arrived from the module pipeline. Open the editor and verify ChatInputModule \u2192 LLMModule \u2192 ChatOutputModule wiring.";
-            assistantMessage.IsStreaming = false;
-            await InvokeAsync(StateHasChanged);
-        }
-        catch (OperationCanceledException)
-        {
-            assistantMessage.Content += "\n\n[Cancelled]";
-            assistantMessage.IsStreaming = false;
-            await InvokeAsync(StateHasChanged);
-        }
-        finally
-        {
-            _pendingAssistantResponse = null;
-            _isGenerating = false;
-            _isAgentMode = false;
-            linkedCts?.Dispose();
-            timeoutCts?.Dispose();
-            if (_agentTimeoutCts != null)
-            {
-                try { _agentTimeoutCts.Cancel(); } catch { }
-                try { _agentTimeoutCts.Dispose(); } catch { }
-                _agentTimeoutCts = null;
-            }
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private Task<string> CreatePendingAssistantResponse(CancellationToken cancellationToken)
-    {
-        var completion = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pendingAssistantResponse = completion;
-
-        if (cancellationToken.CanBeCanceled)
-        {
-            cancellationToken.Register(() => completion.TrySetCanceled(cancellationToken));
-        }
-
-        return completion.Task;
-    }
-
-    private async Task UpdateAfterResponseAsync(string prompt, string assistantResponse)
-    {
-        var inputTokens = _contextManager.CountTokens(prompt);
-        var outputTokens = _contextManager.CountTokens(assistantResponse);
-        _contextManager.UpdateAfterResponse(inputTokens, outputTokens, outputTokens);
-
-        var eventBus = GetActiveEventBus();
-        if (eventBus != null)
-            await eventBus.PublishAsync(new ModuleEvent<ResponseReceivedPayload>
-            {
-                EventName = "ResponseReceived",
-                SourceModuleId = "OpenAnima.Core",
-                Payload = new ResponseReceivedPayload(
-                    assistantResponse,
-                    inputTokens,
-                    outputTokens,
-                    DateTime.UtcNow)
-            });
     }
 
     private async Task ScrollToBottomIfNeededAsync()
@@ -521,56 +158,33 @@
         }
     }
 
-    private void ResetGenerationCancellation()
-    {
-        _generationCts.Cancel();
-        _generationCts.Dispose();
-        _generationCts = new CancellationTokenSource();
-    }
-
     private void OpenEditor()
     {
         _navigation.NavigateTo("/editor");
     }
 
-    private bool IsActiveAnimaEvent(string animaId) =>
-        !string.IsNullOrWhiteSpace(animaId) &&
-        string.Equals(animaId, _animaContext.ActiveAnimaId, StringComparison.Ordinal);
-
-    private async Task PersistAssistantVisibilityAsync(ChatSessionMessage message, CancellationToken ct)
+    private string BuildTailRenderKey()
     {
-        if (message.PersistenceId is not long messageId)
+        if (Messages.Count == 0)
         {
-            return;
+            return "";
         }
 
-        await _chatHistoryService.UpdateAssistantVisibilityAsync(
-            messageId,
-            message.ToolCalls,
-            message.SedimentationSummary,
-            ct);
+        var tail = Messages[^1];
+        return string.Join("|",
+            tail.Role,
+            tail.IsStreaming,
+            tail.Content.Length,
+            tail.ToolCalls.Count,
+            tail.SedimentationSummary?.Count ?? 0);
     }
 
     public ValueTask DisposeAsync()
     {
-        _chatOutputModule.OnMessageReceived -= HandleChatOutputReceived;
-        _llmErrorSubscription?.Dispose();
-        _toolCallStartedSubscription?.Dispose();
-        _toolCallCompletedSubscription?.Dispose();
-        _memoryOperationSubscription?.Dispose();
-        _sedimentationCompletedSubscription?.Dispose();
-        if (_agentTimeoutCts != null)
-        {
-            try { _agentTimeoutCts.Cancel(); } catch { }
-            try { _agentTimeoutCts.Dispose(); } catch { }
-        }
         _contextManager.OnStateChanged -= HandleContextManagerChanged;
+        _chatExecutionService.OnStateChanged -= HandleChatExecutionStateChanged;
         LangSvc.LanguageChanged -= OnLanguageChanged;
-        _animaContext.ActiveAnimaChanged -= OnAnimaChanged;
         _animaRuntimeManager.WiringConfigurationChanged -= OnWiringConfigurationChanged;
-
-        _generationCts.Cancel();
-        _generationCts.Dispose();
 
         return ValueTask.CompletedTask;
     }

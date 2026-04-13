@@ -13,6 +13,10 @@ progress:
   completed_plans: 10
 ---
 
+> Legacy snapshot note (2026-04-10): active milestone tracking moved to `.trellis/planning/current-milestone.md`.
+> This file is kept as a frozen snapshot of the legacy `.planning/` workflow.
+> It stopped updating on 2026-04-03 and still showed Phase 68 in progress; the Trellis canonical record resolves that state and records Phase 68 complete on 2026-04-03.
+
 # Project State: OpenAnima
 
 **Last updated:** 2026-03-29

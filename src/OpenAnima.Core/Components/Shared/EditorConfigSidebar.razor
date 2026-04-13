@@ -73,7 +73,7 @@
                             {
                                 @foreach (var port in inputs)
                                 {
-                                    <span class="port-item">@port.Name (@port.Type)</span>
+                                    <span class="port-item" title="@GetPortTooltip(port)">@GetPortDisplayName(port) [@port.Name] (@port.Type)</span>
                                 }
                             }
                         </div>
@@ -87,7 +87,7 @@
                             {
                                 @foreach (var port in outputs)
                                 {
-                                    <span class="port-item">@port.Name (@port.Type)</span>
+                                    <span class="port-item" title="@GetPortTooltip(port)">@GetPortDisplayName(port) [@port.Name] (@port.Type)</span>
                                 }
                             }
                         </div>
@@ -503,6 +503,24 @@
         var key = $"Module.Description.{moduleName}";
         var localized = L[key];
         return localized.ResourceNotFound ? L["Editor.Config.NoDescription"].Value : localized.Value;
+    }
+
+    private string GetPortDisplayName(PortMetadata port)
+    {
+        var key = $"Port.DisplayName.{port.ModuleName}.{port.Name}";
+        var localized = L[key];
+        return localized.ResourceNotFound ? port.Name : localized.Value;
+    }
+
+    private string GetPortTooltip(PortMetadata port)
+    {
+        var key = (port.ModuleName == "HttpRequestModule" && port.Name == "body")
+            ? $"Port.Description.{port.ModuleName}.{port.Name}.{port.Direction}"
+            : $"Port.Description.{port.ModuleName}.{port.Name}";
+        var localized = L[key];
+        return localized.ResourceNotFound
+            ? $"{GetPortDisplayName(port)} [{port.Name}] ({port.Type})"
+            : $"{GetPortDisplayName(port)} [{port.Name}]: {localized.Value} ({port.Type})";
     }
 
     private void HandleConfigChanged(string key, string newValue)

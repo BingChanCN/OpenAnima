@@ -1,0 +1,4 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/planning/README.md", "reason": "Canonical Trellis planning entry introduced by this migration"}
+{"file": ".trellis/planning/current-milestone.md", "reason": "Current unfinished milestone migrated from legacy planning"}
+{"file": "README.md", "reason": "Top-level contributor entry point updated to Trellis"}

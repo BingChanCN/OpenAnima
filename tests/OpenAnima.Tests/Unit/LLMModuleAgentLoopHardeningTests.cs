@@ -385,6 +385,22 @@ public class LLMModuleAgentLoopHardeningTests
     private static string ToolCallResponse(string toolName = "file_read", string paramValue = "/test.txt")
         => $"<tool_call name=\"{toolName}\"><param name=\"path\">{paramValue}</param></tool_call>";
 
+    private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(25);
+        }
+
+        throw new TimeoutException($"Condition was not met within {timeout.TotalMilliseconds}ms.");
+    }
+
     // ── HARD-03 bracket steps ─────────────────────────────────────────────────
 
     [Fact]
@@ -631,7 +647,7 @@ public class LLMModuleAgentLoopHardeningTests
 
         // Act
         await TriggerMessagesAsync(module, eventBus, UserMessagesJson());
-        await Task.Delay(100); // let background sedimentation complete
+        await WaitForConditionAsync(() => sed.CallCount == 1, TimeSpan.FromSeconds(2));
 
         // Assert: sedimentation received history including assistant and tool role messages
         Assert.Equal(1, sed.CallCount);

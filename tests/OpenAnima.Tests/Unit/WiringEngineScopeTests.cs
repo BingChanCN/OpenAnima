@@ -127,6 +127,66 @@ public class WiringEngineScopeTests
         Assert.All(capturedId, c => Assert.True(Uri.IsHexDigit(c), $"char '{c}' is not hex"));
     }
 
+    [Fact]
+    public async Task ForwardPayloadAsync_PreservesMetadata()
+    {
+        var eventBus = new InMemoryEventBus();
+        var portRegistry = new SimplePortRegistry();
+
+        portRegistry.RegisterPorts("SourceMod",
+        [
+            new PortMetadata("out", PortType.Text, PortDirection.Output, "SourceMod")
+        ]);
+
+        var engine = new WiringEngine(
+            eventBus,
+            portRegistry,
+            animaId: "test-anima");
+
+        var config = new WiringConfiguration
+        {
+            Name = "meta-test",
+            Nodes =
+            [
+                new ModuleNode { ModuleId = "src", ModuleName = "SourceMod" },
+                new ModuleNode { ModuleId = "tgt", ModuleName = "TargetMod" }
+            ],
+            Connections =
+            [
+                new PortConnection
+                {
+                    SourceModuleId = "src",
+                    SourcePortName = "out",
+                    TargetModuleId = "tgt",
+                    TargetPortName = "in"
+                }
+            ]
+        };
+
+        engine.LoadConfiguration(config);
+
+        var forwarded = new TaskCompletionSource<ModuleEvent<string>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        eventBus.Subscribe<string>(
+            "TargetMod.port.in",
+            (evt, ct) =>
+            {
+                forwarded.TrySetResult(evt);
+                return Task.CompletedTask;
+            });
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "SourceMod.port.out",
+            SourceModuleId = "SourceMod",
+            Payload = "hello",
+            Metadata = new Dictionary<string, string> { ["chat.conversationHistoryJson"] = "[]" }
+        }, CancellationToken.None);
+
+        var forwardedEvent = await forwarded.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        Assert.NotNull(forwardedEvent.Metadata);
+        Assert.Equal("[]", forwardedEvent.Metadata!["chat.conversationHistoryJson"]);
+    }
+
     // ── Test doubles ─────────────────────────────────────────────────────────
 
     private sealed class SpyStepRecorder : IStepRecorder

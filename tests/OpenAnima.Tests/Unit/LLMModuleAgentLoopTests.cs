@@ -273,6 +273,42 @@ public class LLMModuleAgentLoopTests
     }
 
     [Fact]
+    public async Task AgentLoop_EmptyResponse_PublishesError()
+    {
+        var llm = new SequenceLlmService(
+            new LLMResult(true, "   ", null),
+            new LLMResult(true, "", null));
+
+        var (module, _, eventBus) = CreateAgentModule(llm, new AgentConfigService(enabled: true));
+        await module.InitializeAsync();
+
+        var errorTcs = new TaskCompletionSource<string>();
+        eventBus.Subscribe<string>("LLMModule.port.response", (evt, ct) =>
+        {
+            errorTcs.TrySetException(new Exception($"Unexpected response: {evt.Payload}"));
+            return Task.CompletedTask;
+        });
+        eventBus.Subscribe<string>("LLMModule.port.error", (evt, ct) =>
+        {
+            errorTcs.TrySetResult(evt.Payload ?? "");
+            return Task.CompletedTask;
+        });
+
+        await eventBus.PublishAsync(new ModuleEvent<string>
+        {
+            EventName = "LLMModule.port.messages",
+            SourceModuleId = "test",
+            Payload = UserMessagesJson()
+        });
+
+        var completed = await Task.WhenAny(errorTcs.Task, Task.Delay(TimeSpan.FromSeconds(10)));
+        Assert.Same(errorTcs.Task, completed);
+        Assert.Equal("Agent LLM call failed after retry.", await errorTcs.Task);
+
+        await module.ShutdownAsync();
+    }
+
+    [Fact]
     public async Task AgentLoop_OneToolCall_LoopsTwice()
     {
         // Arrange: call 1 returns tool_call, call 2 returns final answer

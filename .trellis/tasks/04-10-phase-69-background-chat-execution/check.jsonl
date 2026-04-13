@@ -1,0 +1,8 @@
+{"file": ".gemini/commands/trellis/finish-work.toml", "reason": "Finish work checklist"}
+{"file": ".gemini/commands/trellis/check-backend.toml", "reason": "Backend check spec"}
+{"file": ".gemini/commands/trellis/check-frontend.toml", "reason": "Frontend check spec"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Cross-layer review checklist for phase 69"}
+{"file": "src/OpenAnima.Core/Modules/LLMModule.cs", "reason": "Verify streaming lifecycle and cancellation semantics against implementation"}
+{"file": "src/OpenAnima.Core/Components/Shared/ChatPanel.razor", "reason": "Verify UI attach/detach behavior against implementation"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Verify disposal and service/component state ownership after refactor"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verify structured cancellation and runtime service quality for background chat execution"}

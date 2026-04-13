@@ -4,7 +4,7 @@ namespace OpenAnima.Core.Services;
 
 /// <summary>
 /// Validates whether the current wiring configuration can support ChatPanel conversation flow.
-/// Required chain: ChatInputModule.userMessage -> LLMModule.prompt -> ChatOutputModule.displayText.
+/// Required chain: ChatInputModule.userMessage -> LLMModule.(prompt|messages) -> ChatOutputModule.displayText.
 /// </summary>
 public static class ChatPipelineConfigurationValidator
 {

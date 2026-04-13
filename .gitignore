@@ -59,6 +59,10 @@ appsettings.json
 ## Runtime logs
 nohup.out
 
+## Local AI tooling state
+.claude/settings.local.json
+.claude/worktrees/
+
 ## Build output
 dist/
 

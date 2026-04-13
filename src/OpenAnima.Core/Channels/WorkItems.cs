@@ -11,7 +11,8 @@ internal record TickWorkItem(CancellationToken Ct);
 /// </summary>
 /// <param name="Message">The user message text.</param>
 /// <param name="Ct">Cancellation token for this chat request.</param>
-internal record ChatWorkItem(string Message, CancellationToken Ct);
+/// <param name="Metadata">Optional metadata accompanying the chat request.</param>
+internal record ChatWorkItem(string Message, CancellationToken Ct, Dictionary<string, string>? Metadata = null);
 
 /// <summary>
 /// Work item representing a cross-Anima routing event to be processed by the routing channel consumer.

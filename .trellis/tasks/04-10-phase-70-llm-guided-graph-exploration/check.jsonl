@@ -1,0 +1,6 @@
+{"file": ".gemini/commands/trellis/finish-work.toml", "reason": "Finish work checklist"}
+{"file": ".gemini/commands/trellis/check-backend.toml", "reason": "Backend check spec"}
+{"file": ".gemini/commands/trellis/check-frontend.toml", "reason": "Frontend check spec"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Cross-layer review checklist for phase 70"}
+{"file": "src/OpenAnima.Core/Memory/MemoryRecallService.cs", "reason": "Verify recall pipeline ordering, guards, and budgets against implementation"}
+{"file": "src/OpenAnima.Core/Components/Pages/Settings.razor", "reason": "Verify settings/UI contract for exploration model selection"}

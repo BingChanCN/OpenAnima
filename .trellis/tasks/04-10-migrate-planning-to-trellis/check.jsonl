@@ -1,0 +1,3 @@
+{"file": ".gemini/commands/trellis/finish-work.toml", "reason": "Finish work checklist"}
+{"file": ".trellis/workflow.md", "reason": "Workflow now documents the canonical planning location"}
+{"file": ".planning/STATE.md", "reason": "Legacy state file should clearly redirect to Trellis without deleting history"}

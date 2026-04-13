@@ -79,6 +79,22 @@ public class LLMModuleSedimentationTests : IDisposable
         await task;
     }
 
+    private static async Task WaitForSedimentationCallAsync(FakeSedimentationService service, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (service.Calls.Count > 0)
+            {
+                return;
+            }
+
+            await Task.Delay(25);
+        }
+
+        throw new TimeoutException($"Sedimentation call did not arrive within {timeout.TotalMilliseconds}ms.");
+    }
+
     // ── Test 1: backward compatibility when service is null ───────────────────
 
     [Fact]
@@ -108,8 +124,7 @@ public class LLMModuleSedimentationTests : IDisposable
         // Act
         await InvokeAsync(module);
 
-        // Wait briefly for the background Task.Run to complete
-        await Task.Delay(50);
+        await WaitForSedimentationCallAsync(fakeSedimentation, TimeSpan.FromSeconds(2));
 
         // Assert: SedimentAsync was called exactly once
         var call = Assert.Single(fakeSedimentation.Calls);
@@ -133,8 +148,7 @@ public class LLMModuleSedimentationTests : IDisposable
         // Act
         await InvokeAsync(module);
 
-        // Wait briefly for the background task
-        await Task.Delay(50);
+        await WaitForSedimentationCallAsync(fakeSedimentation, TimeSpan.FromSeconds(2));
 
         // Assert: the token received by SedimentAsync is CancellationToken.None
         var call = Assert.Single(fakeSedimentation.Calls);

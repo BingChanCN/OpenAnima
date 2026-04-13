@@ -69,7 +69,7 @@
             <title>@GetPortTooltip(port)</title>
         </circle>
 
-        @((MarkupString)$"<text x=\"14\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\" style=\"pointer-events: none\">{port.Name}</text>")
+        @((MarkupString)$"<text x=\"14\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\" style=\"pointer-events: none\">{GetPortDisplayName(port)}</text>")
     }
 
     <!-- Output ports (right side) -->
@@ -85,7 +85,7 @@
             <title>@GetPortTooltip(port)</title>
         </circle>
 
-        @((MarkupString)$"<text x=\"{_nodeWidth - 14}\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\" text-anchor=\"end\" style=\"pointer-events: none\">{port.Name}</text>")
+        @((MarkupString)$"<text x=\"{_nodeWidth - 14}\" y=\"{portY + 4}\" fill=\"#8b8fa3\" font-size=\"11\" font-family=\"var(--font-family)\" text-anchor=\"end\" style=\"pointer-events: none\">{GetPortDisplayName(port)}</text>")
     }
 </g>
 
@@ -210,13 +210,21 @@
 
     private string GetPortTooltip(PortMetadata port)
     {
+        var displayName = GetPortDisplayName(port);
         var portKey = (port.ModuleName == "HttpRequestModule" && port.Name == "body")
             ? $"Port.Description.{port.ModuleName}.{port.Name}.{port.Direction}"
             : $"Port.Description.{port.ModuleName}.{port.Name}";
         var localized = L[portKey];
         if (localized.ResourceNotFound)
-            return $"{port.Name} ({port.Type})";
-        return $"{port.Name}: {localized.Value} ({port.Type})";
+            return $"{displayName} [{port.Name}] ({port.Type})";
+        return $"{displayName} [{port.Name}]: {localized.Value} ({port.Type})";
+    }
+
+    private string GetPortDisplayName(PortMetadata port)
+    {
+        var key = $"Port.DisplayName.{port.ModuleName}.{port.Name}";
+        var localized = L[key];
+        return localized.ResourceNotFound ? port.Name : localized.Value;
     }
 
     private void OnLanguageChanged() => InvokeAsync(() => { LangSvc.EnsureThreadCulture(); StateHasChanged(); });

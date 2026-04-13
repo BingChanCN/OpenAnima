@@ -1,9 +1,8 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using OpenAI;
-using OpenAI.Chat;
 using System.ClientModel;
 using OpenAnima.Contracts;
+using OpenAnima.Core.LLM;
 
 namespace OpenAnima.Core.Providers;
 
@@ -318,12 +317,9 @@ public class LLMProviderRegistryService : ILLMProviderRegistry
                 ? string.Empty
                 : ApiKeyProtector.Decrypt(provider.EncryptedApiKey, _encryptionKey);
 
-            var opts = new OpenAIClientOptions { Endpoint = new Uri(provider.BaseUrl) };
             var firstModelId = provider.Models.FirstOrDefault()?.ModelId ?? "gpt-4";
-            var client = new ChatClient(firstModelId, new ApiKeyCredential(decryptedKey), opts);
-
-            var messages = new ChatMessage[] { new UserChatMessage("ping") };
-            await client.CompleteChatAsync(messages, cancellationToken: ct);
+            var client = OpenAIResponsesAdapter.CreateClient(provider.BaseUrl, decryptedKey, firstModelId);
+            await client.CreateResponseAsync("ping", cancellationToken: ct);
 
             _logger.LogInformation("Connection test succeeded for provider '{Slug}'", slug);
             return new ConnectionTestResult(true, null);

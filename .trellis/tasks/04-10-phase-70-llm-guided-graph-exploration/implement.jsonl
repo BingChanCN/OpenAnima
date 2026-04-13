@@ -1,0 +1,8 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Phase 70 spans memory recall, LLM selection, settings, and module config boundaries"}
+{"file": "src/OpenAnima.Core/Memory/MemoryRecallService.cs", "reason": "Current recall pipeline to extend with graph exploration pass"}
+{"file": "src/OpenAnima.Core/Modules/LLMModule.cs", "reason": "Current memory recall injection point and runtime call path"}
+{"file": "src/OpenAnima.Core/Components/Pages/Settings.razor", "reason": "Potential settings surface for exploration model selection"}
+{"file": "src/OpenAnima.Core/Providers/LLMProviderRegistryService.cs", "reason": "Provider/model registry patterns for secondary exploration model configuration"}

@@ -83,7 +83,10 @@ public sealed class AnimaRuntime : IAsyncDisposable
                 {
                     EventName = "ChatInputModule.port.userMessage",
                     SourceModuleId = "ChatInputModule",
-                    Payload = item.Message
+                    Payload = item.Message,
+                    Metadata = item.Metadata != null
+                        ? new Dictionary<string, string>(item.Metadata)
+                        : null
                 }, item.Ct);
             },
             onRoute: async (item) =>

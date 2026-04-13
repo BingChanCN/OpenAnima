@@ -771,10 +771,10 @@
     <value>Provides tool-calling capabilities for LLM Agents such as file read/write and search</value>
   </data>
   <data name="Port.Description.LLMModule.messages" xml:space="preserve">
-    <value>Chat message history input</value>
+    <value>Multi-turn conversation input. Use this when sending a serialized chat history or role-tagged message list.</value>
   </data>
   <data name="Port.Description.LLMModule.prompt" xml:space="preserve">
-    <value>System prompt text</value>
+    <value>Single-turn user text input. This is the normal port for Chat Input connections.</value>
   </data>
   <data name="Port.Description.LLMModule.response" xml:space="preserve">
     <value>LLM generated response</value>
@@ -783,7 +783,22 @@
     <value>Error message on failure</value>
   </data>
   <data name="Port.Description.ChatInputModule.userMessage" xml:space="preserve">
-    <value>User chat message</value>
+    <value>User text from the chat UI. Connect this to LLM input for normal conversations.</value>
+  </data>
+  <data name="Port.DisplayName.ChatInputModule.userMessage" xml:space="preserve">
+    <value>User Input</value>
+  </data>
+  <data name="Port.DisplayName.LLMModule.prompt" xml:space="preserve">
+    <value>Chat Input</value>
+  </data>
+  <data name="Port.DisplayName.LLMModule.messages" xml:space="preserve">
+    <value>Conversation</value>
+  </data>
+  <data name="Port.DisplayName.LLMModule.response" xml:space="preserve">
+    <value>Reply</value>
+  </data>
+  <data name="Port.DisplayName.ChatOutputModule.displayText" xml:space="preserve">
+    <value>Displayed Reply</value>
   </data>
   <data name="Port.Description.ChatOutputModule.displayText" xml:space="preserve">
     <value>Text to display in chat</value>

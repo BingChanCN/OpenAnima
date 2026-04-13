@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.SignalR;
 using OpenAnima.Core.Services;
 using OpenAnima.Core.LLM;
 using OpenAI;
-using OpenAI.Chat;
+using OpenAI.Responses;
 using Microsoft.Extensions.Options;
 using System.ClientModel;
 using OpenAnima.Core.DependencyInjection;
@@ -38,14 +38,14 @@ builder.Services.AddOptions<LLMOptions>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-builder.Services.AddSingleton<ChatClient>(sp =>
+builder.Services.AddSingleton<ResponsesClient>(sp =>
 {
     var options = sp.GetRequiredService<IOptions<LLMOptions>>().Value;
     var clientOptions = new OpenAIClientOptions
     {
         Endpoint = new Uri(options.Endpoint)
     };
-    return new ChatClient(
+    return new ResponsesClient(
         model: options.Model,
         credential: new ApiKeyCredential(options.ApiKey),
         options: clientOptions);
@@ -62,6 +62,7 @@ builder.Services.AddSingleton<TokenCounter>(sp =>
 
 builder.Services.AddSingleton<ChatContextManager>();
 builder.Services.AddScoped<ChatSessionState>();
+builder.Services.AddScoped<ChatBackgroundExecutionService>();
 
 // --- Register Anima services ---
 builder.Services.AddAnimaServices();

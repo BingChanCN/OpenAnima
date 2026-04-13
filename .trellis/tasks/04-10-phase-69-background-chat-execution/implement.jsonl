@@ -1,0 +1,12 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": "src/OpenAnima.Core/Components/Shared/ChatPanel.razor", "reason": "Existing chat lifecycle, navigation, cancellation, and restore flow"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Phase 69 spans chat UI, session state, runtime streaming, and persistence boundaries"}
+{"file": "src/OpenAnima.Core/ChatPersistence/ChatHistoryService.cs", "reason": "Persisted chat storage pattern for replay and resume"}
+{"file": "src/OpenAnima.Core/Services/ChatSessionState.cs", "reason": "Current per-circuit chat state boundary that must be revisited for background execution"}
+{"file": "src/OpenAnima.Core/Modules/LLMModule.cs", "reason": "Existing streaming and sedimentation execution flow"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "ChatPanel remains a Blazor component with service-driven state and cleanup requirements"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Background execution service adds non-trivial runtime logic and cancellation flow"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Phase 69 moves in-flight chat ownership from component lifecycle into scoped service state"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Phase 69 must separate cancellation from timeout/failure in background execution"}

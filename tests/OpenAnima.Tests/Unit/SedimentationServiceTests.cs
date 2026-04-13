@@ -253,6 +253,47 @@ public class SedimentationServiceTests : IDisposable
         Assert.Null(exception);
     }
 
+    [Fact]
+    public async Task SedimentAsync_EmptyResponse_SkipsWithoutFailure()
+    {
+        // Arrange
+        var service = MakeService((_, _) => Task.FromResult(string.Empty));
+
+        // Act
+        await service.SedimentAsync("anima-s07-empty", MakeMessages(), "response", sourceStepId: null);
+
+        // Assert
+        var nodes = await _graph.QueryByPrefixAsync("anima-s07-empty", "sediment://");
+        Assert.Empty(nodes);
+        Assert.Empty(_stepRecorder.FailCalls);
+        Assert.Contains(_stepRecorder.CompleteCalls, call =>
+            call.ModuleName == "Sedimentation" &&
+            call.OutputSummary == "Skipped: extractor returned empty content");
+    }
+
+    [Fact]
+    public async Task SedimentAsync_JsonWrappedInProse_ExtractsPayload()
+    {
+        // Arrange
+        var wrapped = """
+            Here is the extracted memory JSON:
+
+            ```json
+            {"extracted":[{"action":"create","uri":"sediment://fact/wrapped","content":"Wrapped fact","keywords":"[\"wrapped\"]","disclosure_trigger":"wrapper"}],"skipped_reason":null}
+            ```
+            """;
+        var service = MakeService((_, _) => Task.FromResult(wrapped));
+
+        // Act
+        await service.SedimentAsync("anima-s07-wrapped", MakeMessages(), "response", sourceStepId: null);
+
+        // Assert
+        var node = await _graph.GetNodeAsync("anima-s07-wrapped", "sediment://fact/wrapped");
+        Assert.NotNull(node);
+        Assert.Equal("Wrapped fact", node.Content);
+        Assert.Empty(_stepRecorder.FailCalls);
+    }
+
     // ── Keywords normalization: comma-separated input ─────────────────────────
 
     [Fact]

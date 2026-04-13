@@ -44,7 +44,10 @@ public class ChatInputModule : IModuleExecutor
     /// Routes through ActivityChannelHost chat channel when available (production path),
     /// or falls back to direct EventBus publish when no channel host is wired (test path).
     /// </summary>
-    public async Task SendMessageAsync(string message, CancellationToken ct = default)
+    public async Task SendMessageAsync(
+        string message,
+        CancellationToken ct = default,
+        Dictionary<string, string>? metadata = null)
     {
         _state = ModuleExecutionState.Running;
         _lastError = null;
@@ -54,7 +57,7 @@ public class ChatInputModule : IModuleExecutor
             if (_channelHost != null)
             {
                 // Production path: enqueue to chat channel for serial processing
-                _channelHost.EnqueueChat(new ChatWorkItem(message, ct));
+                _channelHost.EnqueueChat(new ChatWorkItem(message, ct, metadata));
                 _state = ModuleExecutionState.Completed;
                 _logger.LogDebug("ChatInputModule enqueued message to chat channel");
             }
@@ -65,7 +68,10 @@ public class ChatInputModule : IModuleExecutor
                 {
                     EventName = $"{Metadata.Name}.port.userMessage",
                     SourceModuleId = Metadata.Name,
-                    Payload = message
+                    Payload = message,
+                    Metadata = metadata != null
+                        ? new Dictionary<string, string>(metadata)
+                        : null
                 }, ct);
                 _state = ModuleExecutionState.Completed;
                 _logger.LogDebug("ChatInputModule published message directly (no channel host)");
